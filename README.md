@@ -5,14 +5,14 @@
 
 ## 📌 **Description du Projet**
 **StaffEase Pro** est une **application web** conçue pour **simplifier la gestion des quarts de travail, des présences et des demandes** (congés, permissions, couvertures de quarts) dans les entreprises.
-Ce projet a été développé dans le cadre d'un **examen de développement web et mobile**, en utilisant **uniquement PHP natif, JavaScript pur, HTML5 et CSS3** pour garantir une **compatibilité maximale** avec les hébergements gratuits comme **InfinityFree**.
+Ce projet a été développé dans le cadre d'un **examen de développement web et mobile**, en utilisant **uniquement PHP natif, JavaScript pur, HTML5 et CSS3
 
 ---
 
 ---
 
 ## 👥 **Rôles et Permissions**
-*(Nouvelle section ajoutée pour clarifier les différences entre les rôles)*
+
    **Rôle**               | **Description**                                                                                     | **Permissions**                                                                                     |
  |------------------------|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
  | **Super Admin**       | **Rôle le plus élevé** : Gère **toutes les entreprises** et les **utilisateurs globaux**.          | ✅ Créer/modifier/supprimer des **entreprises**. <br> ✅ Assigner le rôle **Admin** aux utilisateurs pour une entreprise. <br> ✅ Configurer l’**`allowed_ip_range`** pour chaque entreprise. <br> ❌ **Ne peut pas** gérer les employés ou les départements d’une entreprise spécifique (c’est le rôle de l’Admin). |
