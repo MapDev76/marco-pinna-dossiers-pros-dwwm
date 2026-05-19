@@ -1,81 +1,163 @@
-# **StaffEase Pro**
-*Gestion des quarts de travail, des présences et des demandes pour les entreprises (hôtels, hôpitaux, cliniques, etc.)*
+# **StaffEase Pro - Guide de Développement pour l'Examen**
+*Gestion des quarts de travail, des présences et des demandes pour les entreprises (hôtels, hôpitaux, etc.)*
 
 ---
 
 ## 📌 **Description du Projet**
-**StaffEase Pro** est une **application web** conçue pour **simplifier la gestion des quarts de travail, des présences et des demandes** (congés, permissions, couvertures de quarts) dans les entreprises.
-Ce projet a été développé dans le cadre d'un **examen de développement web et mobile**, en utilisant **uniquement PHP natif, JavaScript pur, HTML5 et CSS3
+**StaffEase Pro** est une application web simple et complète développée en **PHP natif**, **MySQL**, **HTML5**, **CSS3** et **JavaScript pur**. L'objectif est de fournir une solution fonctionnelle pour gérer :
+- les **quarts de travail** (création, modification, assignation),
+- les **présences** et signatures numériques locales,
+- les **demandes** des employés (remplacement, congés, permissions),
+- les **documents** (contrats, certificats, justificatifs).
+
+
+## 🧩 **Structure du projet**
+Le projet doit rester simple et organisé :
+
+- **Backend (PHP + MySQL)** : dossier `backend/` (ou racine si vous préférez PHP pur). Contient la logique métier, l'accès à la base de données, les APIs simples (endpoints PHP qui retournent JSON ou incluent des vues).
+- **Frontend** : dossier `public/` ou `frontend/` contenant `index.php` (point d'entrée web), `assets/` (CSS, JS, images), et les vues HTML/partials.
+- **Config/DB** : `config/` pour les fichiers de configuration et `migrations/` ou `sql/` pour le schéma de base de données.
+
+Exemple de structure recommandée :
+
+- `README.md` (ce fichier)
+- `index.php` (routeur simple en PHP)
+- `backend/`
+  - `db.php` (connexion PDO)
+  - `models/` (fichiers PHP pour accès DB)
+  - `controllers/` (logique métier)
+  - `api/` (endpoints JSON)
+- `public/`
+  - `assets/css/` (styles)
+  - `assets/js/` (scripts)
+  - `views/` (partials, pages)
+- `sql/` (script de création de la BDD)
+- `config/` (paramètres, .env.example)
 
 ---
 
----
+## 🤖 **Instructions pour Copilot**
+Copilot doit suivre un flux itératif et explicite :
 
-## 👥 **Rôles et Permissions**
+1. Lire `README.md` et la structure actuelle du répertoire.
+2. Proposer un plan d'implémentation clair en étapes (API, DB, pages principales).
+3. Générer les fichiers de base (connexion DB, index.php routeur, modèles simples).
+4. Implémenter un cas d'utilisation complet (ex : création et affichage d'un quart).
+5. Ajouter validation, sécurité basique (préparer les requêtes PDO), et messages d'erreur utiles.
+6. Tester localement avec le serveur PHP intégré et documenter comment lancer l'application.
 
-   **Rôle**               | **Description**                                                                                     | **Permissions**                                                                                     |
- |------------------------|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
- | **Super Admin**       | **Rôle le plus élevé** : Gère **toutes les entreprises** et les **utilisateurs globaux**.          | ✅ Créer/modifier/supprimer des **entreprises**. <br> ✅ Assigner le rôle **Admin** aux utilisateurs pour une entreprise. <br> ✅ Configurer l’**`allowed_ip_range`** pour chaque entreprise. <br> ❌ **Ne peut pas** gérer les employés ou les départements d’une entreprise spécifique (c’est le rôle de l’Admin). |
- | **Admin**             | Gère **une seule entreprise** : départements, employés, quarts, présences.                         | ✅ **CRUD** sur les départements de son entreprise. <br> ✅ **CRUD** sur les employés de son entreprise. <br> ✅ Gérer les **quarts de travail** (création, assignation). <br> ✅ **Valider les présences** (uniquement si l’employé est connecté au réseau local). <br> ✅ **Approuver/Refuser** les demandes (couverture de quart, congé). <br> ✅ **Visualiser les rapports** (heures travaillées, retards). <br> ❌ **Ne peut pas** créer/supprimer des entreprises. |
- | **Chef de Département** | Gère **un département spécifique** : quarts et employés de son département.                       | ✅ Gérer les **quarts de travail** pour son département. <br> ✅ **Assigner des quarts** aux employés de son département. <br> ✅ **Approuver/Refuser** les demandes de son département. <br> ❌ **Ne peut pas** gérer les entreprises ou les départements hors de son scope. |
- | **Employé**           | Utilisateur standard : visualise ses quarts et fait des demandes.                                | ✅ **Visualiser ses quarts** assignés. <br> ✅ **Signer sa présence** (uniquement depuis le réseau local). <br> ✅ **Faire des demandes** (couverture de quart, congé, permission). <br> ❌ **Ne peut pas** modifier les quarts ou les données d’autres employés. |
-
----
-
----
-
-## 🛠 **Technologies Utilisées**
- | **Catégorie**       | **Technologies**                                                                                     | **Justification**                                                                                     |
- |----------------------|-----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
- | **Langages**         | PHP (natif), JavaScript (pur), HTML5, CSS3                                                          | **PHP** pour la logique côté serveur, **JavaScript** pour l'interactivité côté client.              |
- | **Base de Données**  | MySQL                                                                                              | Base de données relationnelle **gratuite et largement supportée**.                                |
- | **Hébergement**      | InfinityFree (ou tout hébergement supportant PHP/MySQL)                                           | **Gratuit**, compatible avec PHP natif et MySQL.                                                   |
- | **Outils**           | VS Code, FileZilla (pour le déploiement FTP), MySQL Workbench (pour la base de données)           | **VS Code** pour le développement, **FileZilla** pour le déploiement.                              |
- | **Design**           | CSS3 (avec Flexbox/Grid), pas de framework (Bootstrap, Tailwind, etc.)                              | **Apprentissage des fondamentaux** du CSS.                                                          |
+Consignes spécifiques :
+- Utiliser PDO pour les requêtes SQL et préparer les statements.
+- Séparer clairement logique et présentation (controllers vs views).
+- Ne pas introduire de frameworks externes.
 
 ---
 
+## 🗂️ **Fichiers à créer (ordre logique)**
+Créer les fichiers dans cet ordre pour un développement progressif et testable :
+
+1. `sql/schema.sql` — script de création des tables essentielles (`users`, `shifts`, `attendance`, `requests`, `departments`).
+2. `config/env.example` — variables de connexion à la BDD.
+3. `backend/db.php` — wrapper PDO pour la connexion et helper `getPDO()`.
+4. `index.php` — routeur frontal (voir section `Routing` ci-dessous).
+5. `backend/models/User.php` — modèle minimal pour `users`.
+6. `backend/controllers/ShiftController.php` — endpoints CRUD pour les quarts.
+7. `public/views/shifts/list.php` — page d’affichage des quarts.
+8. `public/assets/js/app.js` — interactions JS de base (fetch pour API).
+9. `public/assets/css/styles.css` — styles minimaux.
+10. `backend/api/shifts.php` — point d’accès JSON pour lister/créer/mettre à jour les shifts.
+
+Commencer par un chemin critique minimal : DB → connexion → modèle → route → vue.
+
 ---
 
-## 🚀 **Comment Accéder au Projet ?**
+## ⚖️ **Comment séparer Frontend / Backend**
+- Backend : toute la logique d'accès aux données et règles métier doit résider dans `backend/`.
+- Frontend : fichiers statiques (HTML/CSS/JS) et vues doivent être dans `public/`.
+- Communication : via requêtes internes (inclusions PHP pour rendu côté serveur) ou via appels AJAX `fetch()` vers `backend/api/*.php` qui retournent JSON.
 
-### **1. Prérequis**
-- Un **hébergement web** supportant **PHP 7.4+** et **MySQL** (ex. InfinityFree, 000WebHost, XAMPP/MAMP pour le développement local).
-- Un **navigateur web moderne** (Chrome, Firefox, Edge).
-- Un **client FTP** (ex. FileZilla) pour déployer les fichiers.
+Bonnes pratiques :
+- Ne pas exécuter de logique SQL directement dans les fichiers `views`.
+- Les controllers reçoivent les entrées (GET/POST), valident, appellent les modèles, puis renvoient une vue ou JSON.
 
 ---
 
-### **2. Installation et Déploiement**
-#### **📥 Déploiement sur InfinityFree**
-1. **Télécharger les fichiers** du projet depuis ce dépôt.
-2. **Créer une base de données MySQL** :
-   - Allez dans **cPanel > MySQL Databases**.
-   - Créez une nouvelle base de données (ex. `staff_ease_pro`).
-   - Créez un utilisateur MySQL et associez-le à la base de données.
-3. **Importer le schéma de la base de données** :
-   - Utilisez **phpMyAdmin** (disponible dans cPanel) pour importer le fichier `database/staff_ease_pro.sql`.
-4. **Configurer les informations de la base de données** :
-   - Modifiez le fichier `includes/config.php` avec les **identifiants de votre base de données** :
-     ```php
-     define('DB_HOST', 'sqlXXX.epizy.com'); // Hôte InfinityFree
-     define('DB_USER', 'epiz_XXXXXX');      // Utilisateur MySQL
-     define('DB_PASS', 'votre_mot_de_passe'); // Mot de passe MySQL
-     define('DB_NAME', 'epiz_XXXXXX_staff_ease_pro'); // Nom de la base de données
-     ```
-5. **Télécharger les fichiers via FTP** :
-   - Utilisez **FileZilla** pour télécharger tous les fichiers dans le dossier `public_html` de votre hébergement.
-6. **Accéder à l'application** :
-   - Visitez votre domaine (ex. `https://votre-site.epizy.com`).
+## 🛣️ **Routing simple avec `index.php`**
+Utiliser `index.php` comme point d’entrée pour simplifier l'examen :
 
-#### **💻 Développement Local (XAMPP/MAMP)**
-1. **Installer XAMPP/MAMP** pour avoir un serveur local (Apache + MySQL).
-2. **Cloner le projet** dans le dossier `htdocs` (XAMPP) ou `www` (MAMP).
-3. **Créer la base de données** via phpMyAdmin (`http://localhost/phpmyadmin`).
-4. **Importer le schéma** `database/staff_ease_pro.sql`.
-5. **Configurer `includes/config.php`** :
-   ```php
-   define('DB_HOST', 'localhost');
-   define('DB_USER', 'root');
-   define('DB_PASS', '');
-   define('DB_NAME', 'staff_ease_pro');
+1. Placer `index.php` dans la racine publique (`public/` ou racine du projet si vous servez depuis `/`).
+2. Lire la variable `$_GET['route']` ou la `PATH_INFO` pour déterminer la route.
+3. Exemple minimal :
+
+```php
+// index.php (extrait)
+require __DIR__ . '/backend/db.php';
+$route = $_GET['route'] ?? 'home';
+switch ($route) {
+    case 'shifts':
+        require __DIR__ . '/public/views/shifts/list.php';
+        break;
+    case 'api_shifts':
+        require __DIR__ . '/backend/api/shifts.php';
+        break;
+    default:
+        require __DIR__ . '/public/views/home.php';
+}
+```
+
+4. Lancer localement :
+
+```bash
+php -S localhost:8000
+```
+
+ et visiter `http://localhost:8000/index.php?route=shifts`
+
+---
+
+## ✅ **Conseils pour l'examen — expliquer la logique et le fonctionnement**
+Lors de la présentation/examen, structurez clairement vos explications :
+
+- **Contexte** : expliquer le besoin (gestion des quarts, contraintes d’accès local pour les signatures).
+- **Architecture** : montrer la séparation `backend/` vs `public/` et comment les données circulent.
+- **Flux principal** (ex : création d’un shift) :
+  1. L’utilisateur soumet le formulaire (frontend JS ou POST simple).
+ 2. `index.php` ou controller route la requête vers `backend/controllers/ShiftController.php`.
+ 3. Le controller valide les données et appelle `backend/models/Shift.php`.
+ 4. Le modèle exécute la requête PDO préparée et retourne le résultat.
+  5. Le controller renvoie une vue ou JSON, et le frontend met à jour l’interface.
+- **Sécurité et validation** : montrer l’utilisation de requêtes préparées PDO, la validation côté serveur, et la gestion d’erreurs.
+- **Démonstration** : préparer un scénario reproduit (ex : créer 2 employés, créer un shift, marquer la présence). Montrer les requêtes réseau (tab Réseau du navigateur) et la sortie SQL si besoin.
+
+Points à expliciter lors de l’oral :
+- Pourquoi PDO et statements préparés ? (sécurité contre injections SQL)
+- Pourquoi séparer controllers/models/views ? (maintenabilité)
+- Comment le routeur `index.php` simplifie le déploiement sur un hébergeur basique.
+
+---
+
+## 🔁 **Commandes utiles**
+
+- Démarrer serveur de développement PHP :
+
+```bash
+php -S localhost:8000
+```
+
+- Importer la BDD (MySQL) :
+
+```bash
+mysql -u root -p < sql/schema.sql
+```
+
+---
+
+## ✍️ **Remarques finales pour Copilot / Développeur**
+- Travailler itérativement : implémenter un chemin critique et le démontrer avant d’ajouter des fonctionnalités secondaires.
+- Documenter chaque endpoint minimalement (route, méthode, paramètres attendus, réponse JSON exemple).
+- Fournir des scripts SQL simples et un `config/env.example` pour faciliter l’installation.
+
+Bonne chance pour l’examen — si tu veux, je peux générer :
+- le script `sql/schema.sql` initial,
+- `backend/db.php` avec PDO,
+- un `backend/api/shifts.php` minimal et une page `public/views/shifts/list.php`.
