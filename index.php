@@ -1,5 +1,6 @@
 <?php
 $route = $_GET['route'] ?? 'home';
+$pageFile = require __DIR__ . '/app/router.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -16,15 +17,7 @@ $route = $_GET['route'] ?? 'home';
 
 <main class="content">
 <?php
-switch ($route) {
-        case 'login':
-                require __DIR__ . '/public/views/login.php';
-                break;
-        case 'home':
-        default:
-                require __DIR__ . '/public/views/home.php';
-                break;
-}
+require $pageFile;
 ?>
 </main>
 
