@@ -10,6 +10,9 @@
 - les **demandes** des employés (remplacement, congés, permissions),
 - les **documents** (contrats, certificats, justificatifs).
 
+Ce README est conçu pour guider Copilot (ou tout contributeur) pas à pas pendant le développement et pour préparer une démo/examen claire et reproductible.
+
+---
 
 ## 🧩 **Structure du projet**
 Le projet doit rester simple et organisé :

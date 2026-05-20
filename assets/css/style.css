@@ -25,15 +25,121 @@ body {
 
 h1 { margin: 0; padding: 0.5rem 0; }
 
-/* Top navigation */
-.topnav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
-.topnav-inner { position: relative; max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 72px; padding: 0 1rem; background: rgba(255,255,255,0.85); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-.nav-left, .nav-right { width: 120px; display: flex; align-items: center; }
-.nav-center { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; }
-.logo { height: 56px; }
-.nav-btn { text-decoration: none; color: #222; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; }
-.nav-btn-login { padding: 0.5rem 0.75rem; border-radius: 999px; background: rgba(255,255,255,0.9); border: 1px solid rgba(225,225,225,0.95); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-.nav-icon { width: 22px; height: 22px; display: block; }
+/* Transparent top navbar with centered logo */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+.topnav {
+  width: 100%;
+}
+
+.topnav-inner {
+  position: relative;
+  max-width: 100%;
+  margin: 0 auto;
+  height: 78px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgb(255, 255, 255);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.nav-left,
+.nav-right {
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+}
+
+.nav-right {
+  justify-content: flex-end;
+}
+
+.nav-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+}
+
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo {
+  height: 72px;
+  width: auto;
+  display: block;
+}
+
+/* Reusable icon container: add another .icon-btn inside .icon-group */
+.icon-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgb(255, 255, 255);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.icon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
 
 /* Ensure main content sits below the fixed navbar */
-.content { margin-top: 100px; }
+.content {
+  margin-top: 110px;
+}
+
+@media (max-width: 760px) {
+  .topnav-inner {
+    height: 70px;
+    padding: 0 12px;
+  }
+
+  .nav-left,
+  .nav-right {
+    min-width: 120px;
+  }
+
+  .logo {
+    height: 38px;
+  }
+
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+}
+
