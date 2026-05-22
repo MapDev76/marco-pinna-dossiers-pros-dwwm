@@ -1,6 +1,6 @@
 <div>
-	<h1>Bienvenue sur StaffEase Pro</h1>
-	<p>Cette page d'accueil contient les informations principales du projet, tableaux de bord et liens rapides.</p>
+	<h1>Welcome to StaffEase Pro</h1>
+	<p>This home page contains the main information about the project, dashboards, and quick links.</p>
 
 	<section>
 		<h2>Fonctionnalités principales</h2>

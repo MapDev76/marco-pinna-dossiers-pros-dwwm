@@ -1,16 +1,16 @@
 <div>
 	<h1>Connexion</h1>
+	<p>User registration is exclusively managed by your department manager or administration.</p>
+		<p>Please contact them to request an account.</p>
 	<form action="?route=login" method="post" class="login-form">
 		<div>
-			<label for="email">Email</label>
-			<input type="email" id="email" name="email" required>
+			<input type="email" id="email" placeholder="email" name="email" required>
 		</div>
 		<div>
-			<label for="password">Mot de passe</label>
-			<input type="password" id="password" name="password" required>
+			<input type="password" id="password" placeholder="password" name="password" required>
 		</div>
 		<div>
-			<button type="submit">Se connecter</button>
+			<button type="submit">Sign In</button>
 		</div>
 	</form>
 </div>
