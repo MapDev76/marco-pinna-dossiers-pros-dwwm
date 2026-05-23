@@ -17,25 +17,27 @@ Ce README est conçu pour guider Copilot (ou tout contributeur) pas à pas penda
 ## 🧩 **Structure du projet**
 Le projet doit rester simple et organisé :
 
-- **Backend (PHP + MySQL)** : dossier `backend/` (ou racine si vous préférez PHP pur). Contient la logique métier, l'accès à la base de données, les APIs simples (endpoints PHP qui retournent JSON ou incluent des vues).
-- **Frontend** : dossier `public/` ou `frontend/` contenant `index.php` (point d'entrée web), `assets/` (CSS, JS, images), et les vues HTML/partials.
-- **Config/DB** : `config/` pour les fichiers de configuration et `migrations/` ou `sql/` pour le schéma de base de données.
+- **Backend (PHP + MySQL)** : dossier `backend/`. Contient la logique métier, l'accès à la base de données, les APIs simples et les helpers PHP.
+- **Frontend** : dossier `public/` contenant les assets publics et les pages visibles par l'utilisateur.
+- **Config/DB** : `config/` pour les fichiers de configuration et `db/` pour le schéma de base de données.
+- **Shared layout** : dossier `app/layout/` pour les partials communs comme l'en-tête.
 
 Exemple de structure recommandée :
 
 - `README.md` (ce fichier)
-- `index.php` (routeur simple en PHP)
+- `index.php` (routeur frontal au niveau racine)
 - `backend/`
   - `db.php` (connexion PDO)
   - `models/` (fichiers PHP pour accès DB)
   - `controllers/` (logique métier)
   - `api/` (endpoints JSON)
+- `app/layout/` (partials partagés comme `header.php`)
 - `public/`
   - `assets/css/` (styles)
   - `assets/js/` (scripts)
-  - `views/` (partials, pages)
-- `sql/` (script de création de la BDD)
-- `config/` (paramètres, .env.example)
+  - `views/` (pages)
+- `db/` (script de création de la BDD)
+- `config/` (paramètres, `.env.example`)
 
 ---
 

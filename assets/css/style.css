@@ -1,12 +1,13 @@
-/* Global background for all pages: replace assets/images/background.jpg with your image */
+/* Styles globaux : structure générale, fond et comportement de base de l'interface. */
 html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
 }
 
+/* Fond de page et police principale. */
 body {
-  background-image: url('/assets/images/background-light.jpg');
+  background-image: url('../images/background-light.jpg');
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center center;
@@ -15,11 +16,12 @@ body {
   color: #222;
 }
 
+/* Titres principaux visibles dans les vues. */
 h1 { 
   color: #9D7910;
   text-align: center; }
 
-/* Transparent top navbar with centered logo */
+/* Barre de navigation supérieure fixe avec logo centré. */
 .header {
   position: fixed;
   top: 0;
@@ -86,7 +88,7 @@ h1 {
   display: block;
 }
 
-/* Reusable icon container: add another .icon-btn inside .icon-group */
+/* Groupe d'icônes réutilisable pour les actions rapides. */
 .icon-group {
   display: inline-flex;
   align-items: center;
@@ -130,7 +132,7 @@ h1 {
   display: block;
 }
 
-/* Main content card: centered, elevated */
+/* Carte principale centrée pour le contenu des vues. */
 .content {
   position: absolute;
   top: 52%;

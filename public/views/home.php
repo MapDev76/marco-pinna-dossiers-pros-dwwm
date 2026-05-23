@@ -1,3 +1,4 @@
+<!-- Page d'accueil : présente les fonctionnalités principales du projet. -->
 <div>
 	<h1>Welcome to StaffEase Pro</h1>
 	<p>This home page contains the main information about the project, dashboards, and quick links.</p>

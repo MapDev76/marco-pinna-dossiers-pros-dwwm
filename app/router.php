@@ -1,5 +1,5 @@
 <?php
-
+// Routeur simple : associe une valeur de route à une vue située dans public/views.
 $route = $_GET['route'] ?? 'home';
 
 $routes = [

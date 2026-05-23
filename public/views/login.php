@@ -1,3 +1,4 @@
+<!-- Page de connexion : affiche le formulaire de base pour accéder au tableau de bord. -->
 <div>
 	<h1>Connexion</h1>
 	<p>User registration is exclusively managed by your department manager or administration.</p>
