@@ -6,7 +6,7 @@ $companies = $companies ?? [];
 ?>
 <div class="admin-shell">
     <div class="admin-hero">
-        <h1>Companies</h1>
+        <h1>Entreprises</h1>
         <p>Gérer les entreprises rattachées à l'application.</p>
     </div>
 
@@ -94,6 +94,9 @@ $companies = $companies ?? [];
                     </tr>
                 </thead>
                 <tbody>
+                    <?php if (empty($companies)): ?>
+                        <tr><td colspan="6">Aucune entreprise à afficher.</td></tr>
+                    <?php endif; ?>
                     <?php foreach ($companies as $company): ?>
                         <tr>
                             <td><?php echo e($company['name']); ?></td>

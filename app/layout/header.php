@@ -9,11 +9,11 @@ $basePath = $basePath ?? (function () {
 })();
 ?>
 <header class="header">
-    <nav class="topnav" aria-label="Main navigation">
+    <nav class="topnav" aria-label="Navigation principale">
         <div class="topnav-inner">
             <div class="nav-left">
                 <?php if ($route === 'dashboard'): ?>
-                    <div class="icon-group" aria-label="Quick actions left">
+                    <div class="icon-group" aria-label="Actions rapides à gauche">
                         <a href="#" class="icon-btn" aria-label="Document">
                             <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
                         </a>
@@ -24,36 +24,55 @@ $basePath = $basePath ?? (function () {
                 <?php endif; ?>
             </div>
 
-            <div class="nav-center">
-                <a href="?route=home" class="logo-link" aria-label="StaffEase Pro Home">
+                <div class="nav-center">
+                <a href="<?php echo appUrl('home'); ?>" class="logo-link" aria-label="StaffEase Pro Home">
                     <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="StaffEase Pro" class="logo">
                 </a>
             </div>
 
             <div class="nav-right">
-                <div class="icon-group" aria-label="Quick actions right">
+                <div class="icon-group" aria-label="Actions rapides à droite">
                     <?php if ($currentUser !== null): ?>
-                        <a href="<?php echo appUrl('dashboard'); ?>" class="icon-btn" aria-label="Dashboard">
+                        <a href="<?php echo appUrl('dashboard'); ?>" class="icon-btn" aria-label="Tableau de bord">
                             <img src="<?php echo $basePath; ?>/assets/icons/home.svg" alt="" class="nav-icon">
                         </a>
-                        <a href="<?php echo appUrl('users'); ?>" class="icon-btn" aria-label="Users">
-                            <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
-                        </a>
-                        <a href="<?php echo appUrl('companies'); ?>" class="icon-btn" aria-label="Companies">
-                            <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
-                        </a>
-                        <a href="<?php echo appUrl('departments'); ?>" class="icon-btn" aria-label="Departments">
-                            <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="" class="nav-icon">
-                        </a>
-                        <a href="<?php echo appUrl('logout'); ?>" class="icon-btn" aria-label="Logout">
+                        <?php if (($currentUser['role'] ?? null) === 'super_admin'): ?>
+                            <a href="<?php echo appUrl('users'); ?>" class="icon-btn" aria-label="Utilisateurs">
+                                <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
+                            </a>
+                            <a href="<?php echo appUrl('companies'); ?>" class="icon-btn" aria-label="Entreprises">
+                                <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
+                            </a>
+                            <a href="<?php echo appUrl('departments'); ?>" class="icon-btn" aria-label="Départements">
+                                <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="" class="nav-icon">
+                            </a>
+                        <?php elseif (($currentUser['role'] ?? null) === 'admin'): ?>
+                            <a href="<?php echo appUrl('users'); ?>" class="icon-btn" aria-label="Utilisateurs">
+                                <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
+                            </a>
+                            <a href="<?php echo appUrl('companies'); ?>" class="icon-btn" aria-label="Entreprises">
+                                <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
+                            </a>
+                            <a href="<?php echo appUrl('departments'); ?>" class="icon-btn" aria-label="Départements">
+                                <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="" class="nav-icon">
+                            </a>
+                        <?php elseif (($currentUser['role'] ?? null) === 'department_manager'): ?>
+                            <a href="<?php echo appUrl('users'); ?>" class="icon-btn" aria-label="Utilisateurs">
+                                <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
+                            </a>
+                            <a href="<?php echo appUrl('departments'); ?>" class="icon-btn" aria-label="Départements">
+                                <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="" class="nav-icon">
+                            </a>
+                        <?php endif; ?>
+                        <a href="<?php echo appUrl('logout'); ?>" class="icon-btn" aria-label="Déconnexion">
                             <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="" class="nav-icon">
                         </a>
                     <?php elseif ($route === 'home'): ?>
-                        <a href="?route=login" class="icon-btn" aria-label="Login">
+                        <a href="<?php echo appUrl('login'); ?>" class="icon-btn" aria-label="Connexion">
                             <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="" class="nav-icon">
                         </a>
                     <?php else: ?>
-                        <a href="?route=home" class="icon-btn" aria-label="Back to home">
+                        <a href="<?php echo appUrl('home'); ?>" class="icon-btn" aria-label="Retour à l'accueil">
                             <img src="<?php echo $basePath; ?>/assets/icons/home.svg" alt="" class="nav-icon">
                         </a>
                     <?php endif; ?>

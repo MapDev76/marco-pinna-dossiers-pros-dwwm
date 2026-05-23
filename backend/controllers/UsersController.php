@@ -5,12 +5,35 @@ require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
-requireSuperAdmin();
+if (!isLoggedIn()) {
+    setFlash('error', 'Veuillez vous connecter pour continuer.');
+    redirectTo('login');
+}
+
+$currentUser = currentUser();
+$role = $currentUser['role'] ?? 'employee';
+
+if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+    setFlash('error', 'Accès refusé.');
+    redirectTo('dashboard');
+}
 
 $pdo = getPDO();
 $userModel = new UserModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
 $companyModel = new CompanyModel($pdo);
+
+$scopeStatement = $pdo->prepare(
+    'SELECT u.id, u.department_id, d.company_id
+     FROM users u
+     LEFT JOIN departments d ON d.id = u.department_id
+     WHERE u.id = :id
+     LIMIT 1'
+);
+$scopeStatement->execute(['id' => $currentUser['id']]);
+$scope = $scopeStatement->fetch() ?: [];
+$scopeCompanyId = isset($scope['company_id']) ? (int) $scope['company_id'] : null;
+$scopeDepartmentId = isset($scope['department_id']) ? (int) $scope['department_id'] : null;
 
 $pageTitle = 'Gestion des utilisateurs';
 $viewFile = __DIR__ . '/../../public/views/admin/users.php';
@@ -85,6 +108,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$users = $userModel->allWithRelations();
+if ($role === 'admin' && $scopeCompanyId !== null) {
+    $usersStatement = $pdo->prepare(
+        'SELECT u.*, d.name AS department_name, c.name AS company_name
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         LEFT JOIN companies c ON c.id = d.company_id
+         WHERE d.company_id = :company_id
+         ORDER BY u.created_at DESC, u.id DESC'
+    );
+    $usersStatement->execute(['company_id' => $scopeCompanyId]);
+    $users = $usersStatement->fetchAll();
+} elseif ($role === 'department_manager' && $scopeDepartmentId !== null) {
+    $usersStatement = $pdo->prepare(
+        'SELECT u.*, d.name AS department_name, c.name AS company_name
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         LEFT JOIN companies c ON c.id = d.company_id
+         WHERE u.department_id = :department_id
+         ORDER BY u.created_at DESC, u.id DESC'
+    );
+    $usersStatement->execute(['department_id' => $scopeDepartmentId]);
+    $users = $usersStatement->fetchAll();
+} else {
+    $users = $userModel->allWithRelations();
+}
+
 $departments = $departmentModel->allForSelect();
 $companies = $companyModel->all();

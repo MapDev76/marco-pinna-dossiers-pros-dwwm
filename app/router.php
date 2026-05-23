@@ -3,14 +3,16 @@
 $route = $_GET['route'] ?? 'home';
 
 $routes = [
-    'home' => __DIR__ . '/../public/views/home.php',
-    'login' => __DIR__ . '/../backend/controllers/AuthController.php',
-    'logout' => __DIR__ . '/../backend/controllers/AuthController.php',
-    'dashboard' => __DIR__ . '/../backend/controllers/DashboardController.php',
-    'users' => __DIR__ . '/../backend/controllers/UsersController.php',
-    'companies' => __DIR__ . '/../backend/controllers/CompaniesController.php',
-    'departments' => __DIR__ . '/../backend/controllers/DepartmentsController.php',
-    '404' => __DIR__ . '/../public/views/404.php',
+    'home' => realpath(__DIR__ . '/../public/views/home.php'),
+    'login' => realpath(__DIR__ . '/../backend/controllers/AuthController.php'),
+    'logout' => realpath(__DIR__ . '/../backend/controllers/AuthController.php'),
+    'dashboard' => realpath(__DIR__ . '/../backend/controllers/DashboardController.php'),
+    'api-dashboard' => realpath(__DIR__ . '/../backend/controllers/ApiDashboardController.php'),
+    'my-space' => realpath(__DIR__ . '/../backend/controllers/EmployeeSpaceController.php'),
+    'users' => realpath(__DIR__ . '/../backend/controllers/UsersController.php'),
+    'companies' => realpath(__DIR__ . '/../backend/controllers/CompaniesController.php'),
+    'departments' => realpath(__DIR__ . '/../backend/controllers/DepartmentsController.php'),
+    '404' => realpath(__DIR__ . '/../public/views/404.php'),
 ];
 
 return $routes[$route] ?? $routes['404'];

@@ -4,6 +4,23 @@ $editing = $editingUser ?? null;
 $formData = $formData ?? [];
 $users = $users ?? [];
 $departments = $departments ?? [];
+$companies = $companies ?? [];
+$roleLabels = [
+    'super_admin' => 'Super Admin',
+    'admin' => 'Administrateur',
+    'department_manager' => 'Chef de département',
+    'employee' => 'Employé',
+];
+$statusLabels = [
+    'active' => 'Actif',
+    'inactive' => 'Inactif',
+];
+$currentRole = currentUser()['role'] ?? 'employee';
+$availableRoles = $currentRole === 'super_admin'
+    ? ['super_admin', 'admin', 'department_manager', 'employee']
+    : ($currentRole === 'admin'
+        ? ['admin', 'department_manager', 'employee']
+        : ['employee']);
 ?>
 <div class="admin-shell">
     <div class="admin-hero">
@@ -56,8 +73,8 @@ $departments = $departments ?? [];
             <label>
                 <span>Rôle</span>
                 <select name="role">
-                    <?php foreach (['super_admin', 'admin', 'department_manager', 'employee'] as $optionRole): ?>
-                        <option value="<?php echo e($optionRole); ?>" <?php echo $role === $optionRole ? 'selected' : ''; ?>><?php echo e($optionRole); ?></option>
+                    <?php foreach ($availableRoles as $optionRole): ?>
+                        <option value="<?php echo e($optionRole); ?>" <?php echo $role === $optionRole ? 'selected' : ''; ?>><?php echo e($roleLabels[$optionRole] ?? $optionRole); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
@@ -106,14 +123,19 @@ $departments = $departments ?? [];
                     </tr>
                 </thead>
                 <tbody>
+                    <?php if (empty($users)): ?>
+                        <tr>
+                            <td colspan="7">Aucun utilisateur à afficher.</td>
+                        </tr>
+                    <?php endif; ?>
                     <?php foreach ($users as $user): ?>
                         <tr>
                             <td><?php echo e($user['first_name'] . ' ' . $user['last_name']); ?></td>
                             <td><?php echo e($user['email']); ?></td>
-                            <td><span class="pill"><?php echo e($user['role']); ?></span></td>
+                            <td><span class="pill"><?php echo e($roleLabels[$user['role']] ?? $user['role']); ?></span></td>
                             <td><?php echo e($user['department_name'] ?? '-'); ?></td>
                             <td><?php echo e($user['company_name'] ?? '-'); ?></td>
-                            <td><?php echo e($user['status']); ?></td>
+                            <td><?php echo e($statusLabels[$user['status']] ?? $user['status']); ?></td>
                             <td class="table-actions">
                                 <a href="<?php echo appUrl('users', ['action' => 'edit', 'id' => (int) $user['id']]); ?>">Modifier</a>
                                 <form method="post" class="inline-form" onsubmit="return confirm('Supprimer cet utilisateur ?');">

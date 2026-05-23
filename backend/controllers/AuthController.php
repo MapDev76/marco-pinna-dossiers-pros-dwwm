@@ -4,7 +4,7 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
 
 $userModel = new UserModel(getPDO());
-$pageTitle = 'Connexion Super Admin';
+$pageTitle = 'Connexion StaffEase Pro';
 $viewFile = __DIR__ . '/../../public/views/auth/login.php';
 $loginEmail = trim($_POST['email'] ?? '');
 $loginError = null;
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $user = $userModel->findByEmail($loginEmail);
 
-        if (!$user || $user['status'] !== 'active' || $user['role'] !== 'super_admin' || !password_verify($password, $user['password'])) {
+        if (!$user || $user['status'] !== 'active' || !password_verify($password, $user['password'])) {
             $loginError = 'Identifiants invalides ou accès refusé.';
         } else {
             $_SESSION['auth_user'] = [
@@ -47,7 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'department_id' => $user['department_id'],
             ];
 
-            setFlash('success', 'Connexion réussie. Bienvenue Super Admin.');
+            $welcomeLabel = match ($user['role']) {
+                'super_admin' => 'Super Admin',
+                'admin' => 'Admin',
+                'department_manager' => 'Chef de département',
+                'employee' => 'Employé',
+                default => 'utilisateur',
+            };
+
+            setFlash('success', 'Connexion réussie. Bienvenue ' . $welcomeLabel . '.');
             redirectTo('dashboard');
         }
     }

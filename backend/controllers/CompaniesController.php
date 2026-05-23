@@ -3,10 +3,33 @@
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
-requireSuperAdmin();
+if (!isLoggedIn()) {
+    setFlash('error', 'Veuillez vous connecter pour continuer.');
+    redirectTo('login');
+}
 
 $pdo = getPDO();
 $companyModel = new CompanyModel($pdo);
+$currentUser = currentUser();
+$role = $currentUser['role'] ?? 'employee';
+
+if (!in_array($role, ['super_admin', 'admin'], true)) {
+    setFlash('error', 'Accès refusé.');
+    redirectTo('dashboard');
+}
+
+$scopeCompanyId = null;
+if ($role === 'admin') {
+    $scopeStatement = $pdo->prepare(
+        'SELECT d.company_id
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         WHERE u.id = :id
+         LIMIT 1'
+    );
+    $scopeStatement->execute(['id' => $currentUser['id']]);
+    $scopeCompanyId = (int) ($scopeStatement->fetchColumn() ?: 0) ?: null;
+}
 
 $pageTitle = 'Gestion des entreprises';
 $viewFile = __DIR__ . '/../../public/views/admin/companies.php';
@@ -70,3 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $companies = $companyModel->all();
+
+if ($role === 'admin' && $scopeCompanyId !== null) {
+    $companyStatement = $pdo->prepare('SELECT * FROM companies WHERE id = :id ORDER BY created_at DESC, id DESC');
+    $companyStatement->execute(['id' => $scopeCompanyId]);
+    $companies = $companyStatement->fetchAll();
+}

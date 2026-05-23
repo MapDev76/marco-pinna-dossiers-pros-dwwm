@@ -4,11 +4,37 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
-requireSuperAdmin();
+if (!isLoggedIn()) {
+    setFlash('error', 'Veuillez vous connecter pour continuer.');
+    redirectTo('login');
+}
 
 $pdo = getPDO();
 $departmentModel = new DepartmentModel($pdo);
 $companyModel = new CompanyModel($pdo);
+$currentUser = currentUser();
+$role = $currentUser['role'] ?? 'employee';
+
+if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+    setFlash('error', 'Accès refusé.');
+    redirectTo('dashboard');
+}
+
+$scopeCompanyId = null;
+$scopeDepartmentId = null;
+if ($role !== 'super_admin') {
+    $scopeStatement = $pdo->prepare(
+        'SELECT u.department_id, d.company_id
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         WHERE u.id = :id
+         LIMIT 1'
+    );
+    $scopeStatement->execute(['id' => $currentUser['id']]);
+    $scope = $scopeStatement->fetch() ?: [];
+    $scopeCompanyId = isset($scope['company_id']) ? (int) $scope['company_id'] : null;
+    $scopeDepartmentId = isset($scope['department_id']) ? (int) $scope['department_id'] : null;
+}
 
 $pageTitle = 'Gestion des départements';
 $viewFile = __DIR__ . '/../../public/views/admin/departments.php';
@@ -63,4 +89,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $departments = $departmentModel->allWithCompany();
+
+if ($role === 'admin' && $scopeCompanyId !== null) {
+    $departmentStatement = $pdo->prepare(
+        'SELECT d.*, c.name AS company_name
+         FROM departments d
+         LEFT JOIN companies c ON c.id = d.company_id
+         WHERE d.company_id = :company_id
+         ORDER BY d.created_at DESC, d.id DESC'
+    );
+    $departmentStatement->execute(['company_id' => $scopeCompanyId]);
+    $departments = $departmentStatement->fetchAll();
+}
+
+if ($role === 'department_manager' && $scopeDepartmentId !== null) {
+    $departmentStatement = $pdo->prepare(
+        'SELECT d.*, c.name AS company_name
+         FROM departments d
+         LEFT JOIN companies c ON c.id = d.company_id
+         WHERE d.id = :department_id
+         ORDER BY d.created_at DESC, d.id DESC'
+    );
+    $departmentStatement->execute(['department_id' => $scopeDepartmentId]);
+    $departments = $departmentStatement->fetchAll();
+}
 $companies = $companyModel->all();

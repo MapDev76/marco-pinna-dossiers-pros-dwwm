@@ -1,8 +1,8 @@
-<!-- Page de connexion Super Admin : authentifie uniquement les comptes autorisés à gérer l'administration. -->
+<!-- Page de connexion commune : authentifie tous les rôles actifs. -->
 <?php $loginError = $loginError ?? null; ?>
 <div class="auth-card">
-    <h1>Connexion Super Admin</h1>
-    <p>Cette interface est réservée aux comptes Super Admin pour gérer les utilisateurs, les entreprises et les départements.</p>
+    <h1>Connexion</h1>
+    <p>Utilise tes identifiants pour accéder à ton espace selon ton rôle.</p>
 
     <?php if ($loginError !== null): ?>
         <div class="flash flash-error"><?php echo e($loginError); ?></div>

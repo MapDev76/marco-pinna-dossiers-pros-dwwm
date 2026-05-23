@@ -71,6 +71,9 @@ $departments = $departments ?? [];
                     </tr>
                 </thead>
                 <tbody>
+                    <?php if (empty($departments)): ?>
+                        <tr><td colspan="4">Aucun département à afficher.</td></tr>
+                    <?php endif; ?>
                     <?php foreach ($departments as $department): ?>
                         <tr>
                             <td><?php echo e($department['name']); ?></td>
