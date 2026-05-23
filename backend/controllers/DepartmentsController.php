@@ -1,7 +1,5 @@
 <?php
 
-require_once __DIR__ . '/../bootstrap.php';
-require_once __DIR__ . '/../models/DepartmentModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
 if (!isLoggedIn()) {
@@ -35,6 +33,8 @@ if ($role !== 'super_admin') {
     $scopeCompanyId = isset($scope['company_id']) ? (int) $scope['company_id'] : null;
     $scopeDepartmentId = isset($scope['department_id']) ? (int) $scope['department_id'] : null;
 }
+
+// Chaque rôle ne voit que sa zone: entreprise entière pour l'admin, département unique pour le chef de département.
 
 $pageTitle = 'Gestion des départements';
 $viewFile = __DIR__ . '/../../public/views/admin/departments.php';
@@ -113,4 +113,5 @@ if ($role === 'department_manager' && $scopeDepartmentId !== null) {
     $departmentStatement->execute(['department_id' => $scopeDepartmentId]);
     $departments = $departmentStatement->fetchAll();
 }
+
 $companies = $companyModel->all();

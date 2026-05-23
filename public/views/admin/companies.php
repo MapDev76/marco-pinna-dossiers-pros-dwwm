@@ -3,6 +3,14 @@
 $editing = $editingCompany ?? null;
 $formData = $formData ?? [];
 $companies = $companies ?? [];
+$typeLabels = [
+    'hotel' => 'Hôtel',
+    'hospital' => 'Hôpital',
+    'clinic' => 'Clinique',
+    'elderly_center' => 'Maison de retraite',
+    'restaurant' => 'Restaurant',
+    'other' => 'Autre',
+];
 ?>
 <div class="admin-shell">
     <div class="admin-hero">
@@ -100,7 +108,7 @@ $companies = $companies ?? [];
                     <?php foreach ($companies as $company): ?>
                         <tr>
                             <td><?php echo e($company['name']); ?></td>
-                            <td><?php echo e($company['type']); ?></td>
+                            <td><?php echo e($typeLabels[$company['type']] ?? $company['type']); ?></td>
                             <td><?php echo e($company['city'] ?? '-'); ?></td>
                             <td><?php echo e($company['phone'] ?? '-'); ?></td>
                             <td><?php echo e($company['email'] ?? '-'); ?></td>
