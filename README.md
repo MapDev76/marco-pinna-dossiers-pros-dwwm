@@ -17,7 +17,7 @@ Ce README est conçu pour guider Copilot (ou tout contributeur) pas à pas penda
 ## 🧩 **Structure du projet**
 Le projet doit rester simple et organisé :
 
-- **Backend (PHP + MySQL)** : dossier `backend/`. Contient la logique métier, l'accès à la base de données, les APIs simples et les helpers PHP.
+- **Backend (PHP + MySQL)** : dossier `backend/`. Contient la logique métier, l'accès à la base de données, les contrôleurs et les modèles MVC.
 - **Frontend** : dossier `public/` contenant les assets publics et les pages visibles par l'utilisateur.
 - **Config/DB** : `config/` pour les fichiers de configuration et `db/` pour le schéma de base de données.
 - **Shared layout** : dossier `app/layout/` pour les partials communs comme l'en-tête.
@@ -28,14 +28,16 @@ Exemple de structure recommandée :
 - `index.php` (routeur frontal au niveau racine)
 - `backend/`
   - `db.php` (connexion PDO)
-  - `models/` (fichiers PHP pour accès DB)
-  - `controllers/` (logique métier)
+  - `bootstrap.php` (initialisation de session et helpers)
+  - `helpers.php` (fonctions communes: flash, routes, auth)
+  - `controllers/` (contrôleurs MVC)
+  - `models/` (modèles MVC)
   - `api/` (endpoints JSON)
 - `app/layout/` (partials partagés comme `header.php`)
 - `public/`
   - `assets/css/` (styles)
   - `assets/js/` (scripts)
-  - `views/` (pages)
+  - `views/` (pages publiques et pages d'administration)
 - `db/` (script de création de la BDD)
 - `config/` (paramètres, `.env.example`)
 
@@ -45,9 +47,9 @@ Exemple de structure recommandée :
 Copilot doit suivre un flux itératif et explicite :
 
 1. Lire `README.md` et la structure actuelle du répertoire.
-2. Proposer un plan d'implémentation clair en étapes (API, DB, pages principales).
-3. Générer les fichiers de base (connexion DB, index.php routeur, modèles simples).
-4. Implémenter un cas d'utilisation complet (ex : création et affichage d'un quart).
+2. Proposer un plan d'implémentation clair en étapes (MVC, DB, pages principales).
+3. Générer les fichiers de base (bootstrap, connexion DB, routeur, modèles, contrôleurs).
+4. Implémenter un cas d'utilisation complet (ex : connexion Super Admin, création et affichage d'un utilisateur).
 5. Ajouter validation, sécurité basique (préparer les requêtes PDO), et messages d'erreur utiles.
 6. Tester localement avec le serveur PHP intégré et documenter comment lancer l'application.
 
@@ -55,6 +57,13 @@ Consignes spécifiques :
 - Utiliser PDO pour les requêtes SQL et préparer les statements.
 - Séparer clairement logique et présentation (controllers vs views).
 - Ne pas introduire de frameworks externes.
+
+## 🔐 **Flux Super Admin**
+
+- Le compte `super_admin` se connecte sur la page `?route=login`.
+- La session stocke l'utilisateur authentifié dans `$_SESSION['auth_user']`.
+- Les routes `dashboard`, `users`, `companies` et `departments` sont protégées par `requireSuperAdmin()`.
+- Les pages d'administration permettent de créer, modifier et supprimer les utilisateurs, les companies et les départements.
 
 ---
 
