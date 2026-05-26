@@ -50,6 +50,94 @@ class UserModel
         return $statement->fetchAll();
     }
 
+    public function countByCompanyId(int $companyId): int
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*)
+             FROM users u
+             LEFT JOIN departments d ON d.id = u.department_id
+             WHERE d.company_id = :company_id'
+        );
+        $statement->execute(['company_id' => $companyId]);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    public function profileWithRelations(int $id): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.department_id,
+                    d.name AS department_name, d.company_id, c.name AS company_name
+             FROM users u
+             LEFT JOIN departments d ON d.id = u.department_id
+             LEFT JOIN companies c ON c.id = d.company_id
+             WHERE u.id = :id
+             LIMIT 1'
+        );
+        $statement->execute(['id' => $id]);
+
+        $profile = $statement->fetch();
+
+        return $profile ?: null;
+    }
+
+    public function teamByDepartmentId(int $departmentId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.status
+             FROM users u
+             WHERE u.department_id = :department_id
+             ORDER BY u.last_name, u.first_name'
+        );
+        $statement->execute(['department_id' => $departmentId]);
+
+        return $statement->fetchAll();
+    }
+
+    public function companyUsersByCompanyId(int $companyId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.status, d.name AS department_name
+             FROM users u
+             LEFT JOIN departments d ON d.id = u.department_id
+             WHERE d.company_id = :company_id
+             ORDER BY u.last_name, u.first_name'
+        );
+        $statement->execute(['company_id' => $companyId]);
+
+        return $statement->fetchAll();
+    }
+
+    public function employeeShifts(int $userId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT us.id, us.work_date, us.status, s.name AS shift_name, s.start_time, s.end_time, d.name AS department_name
+             FROM user_shifts us
+             INNER JOIN shifts s ON s.id = us.shift_id
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE us.user_id = :user_id
+             ORDER BY us.work_date DESC, us.id DESC
+             LIMIT 10'
+        );
+        $statement->execute(['user_id' => $userId]);
+
+        return $statement->fetchAll();
+    }
+
+    public function employeeRequests(int $userId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, type, title, status, created_at
+             FROM requests
+             WHERE user_id = :user_id
+             ORDER BY created_at DESC, id DESC
+             LIMIT 10'
+        );
+        $statement->execute(['user_id' => $userId]);
+
+        return $statement->fetchAll();
+    }
+
     public function create(array $data): int
     {
         $statement = $this->pdo->prepare(

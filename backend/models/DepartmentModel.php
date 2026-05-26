@@ -68,4 +68,12 @@ class DepartmentModel
     {
         return (int) $this->pdo->query('SELECT COUNT(*) FROM departments')->fetchColumn();
     }
+
+    public function countByCompanyId(int $companyId): int
+    {
+        $statement = $this->pdo->prepare('SELECT COUNT(*) FROM departments WHERE company_id = :company_id');
+        $statement->execute(['company_id' => $companyId]);
+
+        return (int) $statement->fetchColumn();
+    }
 }
