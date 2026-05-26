@@ -32,34 +32,14 @@ $dashboardSidebarSections = [];
 if ($role === 'super_admin') {
     $dashboardSidebarSections = [
         [
-            'title' => 'Gestion',
+            'title' => 'Administration',
             'icon' => '⚙',
             'buttons' => [
-                ['label' => 'Utilisateurs', 'target' => 'modal-super-actions', 'variant' => 'active'],
-                ['label' => 'Entreprises', 'target' => 'modal-super-directory'],
-                ['label' => 'Départements', 'target' => 'modal-super-actions'],
-            ],
-        ],
-        [
-            'title' => 'Departments',
-            'icon' => '📁',
-            'buttons' => [
                 ['label' => 'Companies', 'target' => 'modal-super-directory', 'variant' => 'active'],
-                ['label' => 'Actions', 'target' => 'modal-super-actions'],
-            ],
-        ],
-        [
-            'title' => 'Requests',
-            'icon' => '✉',
-            'buttons' => [
-                ['label' => 'Mes requests', 'target' => 'modal-global-requests'],
-            ],
-        ],
-        [
-            'title' => 'Notifications',
-            'icon' => '🔔',
-            'buttons' => [
-                ['label' => 'Mes notifications', 'target' => 'modal-global-notifications'],
+                ['label' => 'Users', 'target' => 'modal-super-actions'],
+                ['label' => 'Documents', 'target' => 'modal-documents'],
+                ['label' => 'Requests', 'target' => 'modal-admin-requests'],
+                ['label' => 'Notifications', 'target' => 'modal-admin-notifications'],
             ],
         ],
     ];

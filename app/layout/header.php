@@ -16,7 +16,7 @@ $basePath = $basePath ?? (function () {
                     <div class="header-user-info">
                         <div class="header-user-name"><?php echo e(($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')); ?></div>
                         <div class="header-user-meta">
-                            <?php echo e($currentUser['company_name'] ?? ''); ?><?php if (!empty($currentUser['department_name'])): ?> — <?php echo e($currentUser['department_name']); ?><?php endif; ?>
+                            <?php echo e(($currentUser['role'] ?? '')); ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -42,7 +42,7 @@ $basePath = $basePath ?? (function () {
                                 <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
                             </button>
                             <button type="button" class="icon-btn" aria-label="Paramètres" data-modal-target="modal-settings">
-                                <img src="<?php echo $basePath; ?>/assets/icons/light.svg" alt="" class="nav-icon">
+                                <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
                             </button>
                         <?php elseif (($currentUser['role'] ?? null) === 'admin'): ?>
                             <button type="button" class="icon-btn" aria-label="Utilisateurs" data-modal-target="modal-admin-employees">
@@ -51,12 +51,15 @@ $basePath = $basePath ?? (function () {
                             <button type="button" class="icon-btn" aria-label="Entreprises" data-modal-target="modal-admin-departments">
                                 <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
                             </button>
+                            <button type="button" class="icon-btn" aria-label="Paramètres" data-modal-target="modal-settings">
+                                <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
+                            </button>
                         <?php elseif (($currentUser['role'] ?? null) === 'department_manager'): ?>
                             <button type="button" class="icon-btn" aria-label="Utilisateurs" data-modal-target="modal-manager-team">
                                 <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
                             </button> 
                             <button type="button" class="icon-btn" aria-label="Paramètres" data-modal-target="modal-settings">
-                                <img src="<?php echo $basePath; ?>/assets/icons/light.svg" alt="" class="nav-icon">
+                                <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
                             </button>
                         <?php endif; ?>
                         <a href="<?php echo appUrl('logout'); ?>" class="icon-btn" aria-label="Déconnexion">

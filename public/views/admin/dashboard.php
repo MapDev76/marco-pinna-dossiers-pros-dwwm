@@ -42,16 +42,10 @@ $calendarTemplates = [
 
 <div class="admin-shell dashboard-shell">
     <div class="admin-hero">
-        <h1><?php echo e($pageTitle ?? 'Tableau de bord'); ?></h1>
-        <p>
-            Bienvenue <?php echo e($currentUser['first_name'] ?? 'utilisateur'); ?>.
-            <?php if (!empty($profile['company_name'])): ?>
-                Entreprise: <?php echo e($profile['company_name']); ?>.
-            <?php endif; ?>
-            <?php if (!empty($profile['department_name'])): ?>
-                Département: <?php echo e($profile['department_name']); ?>.
-            <?php endif; ?>
-        </p>
+        <?php if (($currentUser['role'] ?? '') === 'super_admin'): ?>
+            <h1><?php echo e($pageTitle ?? 'Tableau de bord'); ?></h1>
+        <?php endif; ?>
+        <!-- No welcome message or titles for non-super users per design -->
     </div>
 
         <div class="dashboard-main">
@@ -141,9 +135,11 @@ $calendarTemplates = [
 <div class="dashboard-overlay" id="dashboard-overlay" hidden></div>
 
 <?php if ($role === 'super_admin'): ?>
-    <section class="dashboard-modal" id="modal-super-directory" hidden>
+    <section class="dashboard-modal dashboard-settings-modal" id="modal-super-directory" hidden>
         <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
-        <h2>Entreprises, directeurs assignés et départements</h2>
+        <div class="admin-actions">
+            <button type="button" class="admin-action-link">Ajouter une entreprise</button>
+        </div>
         <div class="dashboard-directory-grid">
             <?php if (empty($moduleRows['company_directory'] ?? [])): ?>
                 <p>Aucune entreprise trouvée.</p>
@@ -154,6 +150,14 @@ $calendarTemplates = [
                     <p>Ville: <?php echo e($company['city'] ?? '-'); ?></p>
                     <p><strong>Directeurs:</strong> <?php echo e(empty($company['admins']) ? 'Aucun assigné' : implode(', ', $company['admins'])); ?></p>
                     <p><strong>Départements:</strong> <?php echo e(empty($company['departments']) ? 'Aucun département' : implode(', ', $company['departments'])); ?></p>
+                    <div class="company-actions">
+                        <button type="button" class="admin-action-link">Gérer les départements</button>
+                        <button type="button" class="admin-action-link">Gérer les employés</button>
+                        <button type="button" class="admin-action-link">Assigner un chef de département</button>
+                        <button type="button" class="admin-action-link">Définir IP signature</button>
+                        <button type="button" class="admin-action-link">Modifier</button>
+                        <button type="button" class="admin-action-link">Supprimer</button>
+                    </div>
                 </article>
             <?php endforeach; ?>
         </div>

@@ -9,8 +9,7 @@ $sidebarRoleLabel = $dashboardSidebarRoleLabel ?? 'Utilisateur';
 <aside class="app-sidebar" aria-label="Navigation latérale du dashboard">
     <div class="dashboard-sidebar-shell">
         <div class="dashboard-sidebar-brand">
-            <p class="dashboard-sidebar-brand-kicker">StaffEase Pro</p>
-            <h2><?php echo e($sidebarRoleLabel); ?></h2>
+            <!-- Brand/title intentionally empty to match design: no title above sidebar -->
         </div>
 
         <?php foreach ($dashboardSidebarSections as $section): ?>
