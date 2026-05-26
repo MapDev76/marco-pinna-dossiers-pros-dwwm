@@ -76,4 +76,17 @@ class DepartmentModel
 
         return (int) $statement->fetchColumn();
     }
+
+    public function byCompanyId(int $companyId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, company_id, name, description
+             FROM departments
+             WHERE company_id = :company_id
+             ORDER BY name ASC, id DESC'
+        );
+        $statement->execute(['company_id' => $companyId]);
+
+        return $statement->fetchAll();
+    }
 }

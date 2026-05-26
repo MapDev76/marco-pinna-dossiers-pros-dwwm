@@ -17,6 +17,8 @@ $pageTitle = $pageTitle ?? 'StaffEase Pro';
 $viewFile = $viewFile ?? $targetFile;
 $flashSuccess = getFlash('success');
 $flashError = getFlash('error');
+$isDashboardRoute = $route === 'dashboard';
+$cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time());
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -26,16 +28,20 @@ $flashError = getFlash('error');
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title><?php echo e($pageTitle); ?></title>
         <link rel="icon" href="<?php echo $basePath; ?>/assets/images/faviconStaffeasePro.jpg" type="image/jpeg">
-        <link rel="stylesheet" href="<?php echo $basePath; ?>/assets/css/style.css">
+        <link rel="stylesheet" href="<?php echo $basePath; ?>/assets/css/style.css?v=<?php echo e($cssVersion); ?>">
 </head>
-<body>
+<body class="<?php echo $isDashboardRoute ? 'route-dashboard' : ''; ?>">
 
 <?php
 // En-tête partagé utilisé par toutes les pages.
 require __DIR__ . '/app/layout/header.php';
 ?>
 
-<main class="content">
+<?php if ($isDashboardRoute && isLoggedIn()): ?>
+<?php require __DIR__ . '/app/layout/sidebar.php'; ?>
+<?php endif; ?>
+
+<main class="content<?php echo $isDashboardRoute ? ' content-dashboard' : ''; ?>">
 <?php if ($flashSuccess !== null): ?>
         <div class="flash flash-success"><?php echo e($flashSuccess); ?></div>
 <?php endif; ?>

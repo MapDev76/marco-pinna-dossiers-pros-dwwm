@@ -130,12 +130,110 @@ class UserModel
             'SELECT id, type, title, status, created_at
              FROM requests
              WHERE user_id = :user_id
+               AND type <> :notification_type
              ORDER BY created_at DESC, id DESC
              LIMIT 10'
         );
-        $statement->execute(['user_id' => $userId]);
+        $statement->execute([
+            'user_id' => $userId,
+            'notification_type' => 'notification',
+        ]);
 
         return $statement->fetchAll();
+    }
+
+    public function companyRequestsByCompanyId(int $companyId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT r.id, r.type, r.title, r.status, r.created_at,
+                    u.first_name, u.last_name, d.name AS department_name
+             FROM requests r
+             INNER JOIN users u ON u.id = r.user_id
+             LEFT JOIN departments d ON d.id = u.department_id
+             WHERE d.company_id = :company_id
+               AND r.type <> :notification_type
+             ORDER BY r.created_at DESC, r.id DESC
+             LIMIT 20'
+        );
+        $statement->execute([
+            'company_id' => $companyId,
+            'notification_type' => 'notification',
+        ]);
+
+        return $statement->fetchAll();
+    }
+
+    public function userNotifications(int $userId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, type, title, message, status, created_at
+             FROM requests
+             WHERE user_id = :user_id
+               AND type = :notification_type
+             ORDER BY created_at DESC, id DESC
+             LIMIT 20'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'notification_type' => 'notification',
+        ]);
+
+        return $statement->fetchAll();
+    }
+
+    public function createNotificationForUser(int $userId, string $title, string $message): int
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO requests (user_id, type, title, message, status)
+             VALUES (:user_id, :type, :title, :message, :status)'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'type' => 'notification',
+            'title' => $title,
+            'message' => $message,
+            'status' => 'pending',
+        ]);
+
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    public function updateNotificationForUser(int $notificationId, int $userId, string $title, string $message): bool
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE requests
+             SET title = :title,
+                 message = :message
+             WHERE id = :id
+               AND user_id = :user_id
+               AND type = :type'
+        );
+        $statement->execute([
+            'title' => $title,
+            'message' => $message,
+            'id' => $notificationId,
+            'user_id' => $userId,
+            'type' => 'notification',
+        ]);
+
+        return $statement->rowCount() > 0;
+    }
+
+    public function createRequestForUser(int $userId, string $type, string $title, string $message): int
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO requests (user_id, type, title, message, status)
+             VALUES (:user_id, :type, :title, :message, :status)'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'type' => $type,
+            'title' => $title,
+            'message' => $message,
+            'status' => 'pending',
+        ]);
+
+        return (int) $this->pdo->lastInsertId();
     }
 
     public function create(array $data): int

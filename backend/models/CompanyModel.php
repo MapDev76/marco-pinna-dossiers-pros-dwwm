@@ -61,4 +61,28 @@ class CompanyModel
     {
         return (int) $this->pdo->query('SELECT COUNT(*) FROM companies')->fetchColumn();
     }
+
+    public function directoryWithAdminsAndDepartments(): array
+    {
+        $statement = $this->pdo->query(
+            'SELECT c.id, c.name, c.city,
+                    GROUP_CONCAT(DISTINCT CONCAT(u.first_name, " ", u.last_name) ORDER BY u.last_name SEPARATOR "||") AS admins,
+                    GROUP_CONCAT(DISTINCT d.name ORDER BY d.name SEPARATOR "||") AS departments
+             FROM companies c
+             LEFT JOIN departments d ON d.company_id = c.id
+             LEFT JOIN users u ON u.department_id = d.id AND u.role = "admin"
+             GROUP BY c.id, c.name, c.city
+             ORDER BY c.name ASC'
+        );
+
+        $rows = $statement->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['admins'] = empty($row['admins']) ? [] : array_values(array_filter(explode('||', (string) $row['admins'])));
+            $row['departments'] = empty($row['departments']) ? [] : array_values(array_filter(explode('||', (string) $row['departments'])));
+        }
+        unset($row);
+
+        return $rows;
+    }
 }
