@@ -145,18 +145,18 @@ $calendarTemplates = [
                 <p>Aucune entreprise trouvée.</p>
             <?php endif; ?>
             <?php foreach (($moduleRows['company_directory'] ?? []) as $company): ?>
-                <article class="dashboard-directory-card">
+                    <article class="dashboard-directory-card" data-company-id="<?php echo e($company['id']); ?>">
                     <h3><?php echo e($company['name']); ?></h3>
                     <p>Ville: <?php echo e($company['city'] ?? '-'); ?></p>
                     <p><strong>Directeurs:</strong> <?php echo e(empty($company['admins']) ? 'Aucun assigné' : implode(', ', $company['admins'])); ?></p>
                     <p><strong>Départements:</strong> <?php echo e(empty($company['departments']) ? 'Aucun département' : implode(', ', $company['departments'])); ?></p>
                     <div class="company-actions">
-                        <button type="button" class="admin-action-link">Gérer les départements</button>
-                        <button type="button" class="admin-action-link">Gérer les employés</button>
-                        <button type="button" class="admin-action-link">Assigner un chef de département</button>
-                        <button type="button" class="admin-action-link">Définir IP signature</button>
-                        <button type="button" class="admin-action-link">Modifier</button>
-                        <button type="button" class="admin-action-link">Supprimer</button>
+                        <button type="button" class="admin-action-link" data-action="manage-departments">Gérer les départements</button>
+                        <button type="button" class="admin-action-link" data-action="manage-employees">Gérer les employés</button>
+                        <button type="button" class="admin-action-link" data-action="assign-head">Assigner un chef de département</button>
+                        <button type="button" class="admin-action-link" data-action="set-ip">Définir IP signature</button>
+                        <button type="button" class="admin-action-link" data-action="edit">Modifier</button>
+                        <button type="button" class="admin-action-link" data-action="delete">Supprimer</button>
                     </div>
                 </article>
             <?php endforeach; ?>
@@ -524,6 +524,96 @@ $calendarTemplates = [
         if (event.key === 'Escape') {
             closeAll();
         }
+    });
+})();
+</script>
+
+<script>
+(() => {
+    const apiCompanies = '<?php echo appUrl('api-companies'); ?>';
+    const apiDepartments = '<?php echo appUrl('api-departments'); ?>';
+    const apiUsers = '<?php echo appUrl('api-users'); ?>';
+
+    document.querySelectorAll('.dashboard-directory-card').forEach(card => {
+        const companyId = card.getAttribute('data-company-id');
+        if (!companyId) return;
+
+        card.querySelectorAll('.company-actions [data-action]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const action = btn.getAttribute('data-action');
+
+                try {
+                    if (action === 'set-ip') {
+                        const ip = prompt('Adresse IP pour la signature (laisser vide per rimuovere):');
+                        if (ip === null) return;
+                        const res = await fetch(apiCompanies, { method: 'POST', body: JSON.stringify({ action: 'set_signature_ip', company_id: companyId, ip }) });
+                        const j = await res.json();
+                        if (!j.ok) alert('Erreur: ' + (j.error || 'unknown')); else alert('IP mise à jour');
+                        return;
+                    }
+
+                    if (action === 'delete') {
+                        if (!confirm('Confirmer la suppression de cette entreprise ?')) return;
+                        const res = await fetch(apiCompanies, { method: 'POST', body: JSON.stringify({ action: 'delete', id: companyId }) });
+                        const j = await res.json();
+                        if (!j.ok) alert('Erreur: ' + (j.error || 'unknown')); else location.reload();
+                        return;
+                    }
+
+                    if (action === 'manage-departments') {
+                        const res = await fetch(apiDepartments, { method: 'POST', body: JSON.stringify({ action: 'list', company_id: companyId }) });
+                        const j = await res.json();
+                        if (!j.ok) { alert('Erreur: ' + (j.error || 'unknown')); return; }
+                        const list = j.departments.map(d => `${d.id}: ${d.name}`).join('\n') || 'Aucun département';
+                        const cmd = prompt('Départements:\n' + list + '\n\nPour créer: saisir un nouveau nom. Pour supprimer: del:<id>');
+                        if (!cmd) return;
+                        if (cmd.startsWith('del:')) {
+                            const id = cmd.split(':')[1];
+                            const r = await fetch(apiDepartments, { method: 'POST', body: JSON.stringify({ action: 'delete', id }) });
+                            const jr = await r.json(); if (!jr.ok) alert('Erreur: ' + (jr.error || 'unknown')); else location.reload();
+                        } else {
+                            const r = await fetch(apiDepartments, { method: 'POST', body: JSON.stringify({ action: 'create', company_id: companyId, name: cmd }) });
+                            const jr = await r.json(); if (!jr.ok) alert('Erreur: ' + (jr.error || 'unknown')); else location.reload();
+                        }
+                        return;
+                    }
+
+                    if (action === 'manage-employees') {
+                        const res = await fetch(apiUsers, { method: 'POST', body: JSON.stringify({ action: 'list_by_company', company_id: companyId }) });
+                        const j = await res.json();
+                        if (!j.ok) { alert('Erreur: ' + (j.error || 'unknown')); return; }
+                        const list = j.users.map(u => `${u.id}: ${u.first_name} ${u.last_name} (${u.role})`).join('\n') || 'Aucun employé';
+                        const cmd = prompt('Employés:\n' + list + '\n\nPour créer: new:First Last,email,role. Pour supprimer: del:<id>');
+                        if (!cmd) return;
+                        if (cmd.startsWith('del:')) {
+                            const id = cmd.split(':')[1];
+                            const r = await fetch(apiUsers, { method: 'POST', body: JSON.stringify({ action: 'delete', id }) });
+                            const jr = await r.json(); if (!jr.ok) alert('Erreur: ' + (jr.error || 'unknown')); else location.reload();
+                        } else if (cmd.startsWith('new:')) {
+                            const payload = cmd.substring(4).split(',');
+                            const name = payload[0] || ''; const email = payload[1] || ''; const role = payload[2] || 'employee';
+                            const names = name.split(' '); const first = names.shift(); const last = names.join(' ') || '';
+                            const r = await fetch(apiUsers, { method: 'POST', body: JSON.stringify({ action: 'create', department_id: null, first_name: first, last_name: last, email, role }) });
+                            const jr = await r.json(); if (!jr.ok) alert('Erreur: ' + (jr.error || 'unknown')); else location.reload();
+                        }
+                        return;
+                    }
+
+                    if (action === 'assign-head') {
+                        alert('Utilisez le flux Gérer les employés puis assign-head via UI futura.');
+                        return;
+                    }
+
+                    if (action === 'edit') {
+                        alert('Edit company — UI non implementata ancora.');
+                        return;
+                    }
+
+                } catch (err) {
+                    alert('Erreur réseau: ' + err.message);
+                }
+            });
+        });
     });
 })();
 </script>
