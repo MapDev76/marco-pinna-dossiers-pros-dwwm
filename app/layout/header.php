@@ -14,12 +14,15 @@ $basePath = $basePath ?? (function () {
             <div class="nav-left">
                 <?php if ($route === 'dashboard'): ?>
                     <div class="icon-group" aria-label="Actions rapides à gauche">
-                        <a href="#" class="icon-btn" aria-label="Document">
+                        <button type="button" class="icon-btn" aria-label="Documents" data-modal-target="modal-documents">
                             <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
-                        </a>
-                        <a href="#" class="icon-btn" aria-label="Print">
+                        </button>
+                        <button type="button" class="icon-btn" aria-label="Planification" data-modal-target="modal-schedule">
+                            <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
+                        </button>
+                        <button type="button" class="icon-btn" aria-label="Print">
                             <img src="<?php echo $basePath; ?>/assets/icons/print-outline.svg" alt="" class="nav-icon">
-                        </a>
+                        </button>
                     </div>
                 <?php endif; ?>
             </div>
@@ -37,32 +40,32 @@ $basePath = $basePath ?? (function () {
                             <img src="<?php echo $basePath; ?>/assets/icons/home.svg" alt="" class="nav-icon">
                         </a>
                         <?php if (($currentUser['role'] ?? null) === 'super_admin'): ?>
-                            <a href="<?php echo appUrl('users'); ?>" class="icon-btn" aria-label="Utilisateurs">
+                            <button type="button" class="icon-btn" aria-label="Utilisateurs" data-modal-target="modal-global-requests">
                                 <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
-                            </a>
-                            <a href="<?php echo appUrl('companies'); ?>" class="icon-btn" aria-label="Entreprises">
+                            </button>
+                            <button type="button" class="icon-btn" aria-label="Entreprises" data-modal-target="modal-super-directory">
                                 <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
-                            </a>
-                            <a href="<?php echo appUrl('departments'); ?>" class="icon-btn" aria-label="Départements">
-                                <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="" class="nav-icon">
-                            </a>
+                            </button>
+                            <button type="button" class="icon-btn" aria-label="Paramètres" data-modal-target="modal-settings">
+                                <img src="<?php echo $basePath; ?>/assets/icons/light.svg" alt="" class="nav-icon">
+                            </button>
                         <?php elseif (($currentUser['role'] ?? null) === 'admin'): ?>
-                            <a href="<?php echo appUrl('users'); ?>" class="icon-btn" aria-label="Utilisateurs">
+                            <button type="button" class="icon-btn" aria-label="Utilisateurs" data-modal-target="modal-admin-employees">
                                 <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
-                            </a>
-                            <a href="<?php echo appUrl('companies'); ?>" class="icon-btn" aria-label="Entreprises">
+                            </button>
+                            <button type="button" class="icon-btn" aria-label="Entreprises" data-modal-target="modal-admin-departments">
                                 <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
-                            </a>
-                            <a href="<?php echo appUrl('departments'); ?>" class="icon-btn" aria-label="Départements">
-                                <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="" class="nav-icon">
-                            </a>
+                            </button>
+                            <button type="button" class="icon-btn" aria-label="Paramètres" data-modal-target="modal-settings">
+                                <img src="<?php echo $basePath; ?>/assets/icons/light.svg" alt="" class="nav-icon">
+                            </button>
                         <?php elseif (($currentUser['role'] ?? null) === 'department_manager'): ?>
-                            <a href="<?php echo appUrl('users'); ?>" class="icon-btn" aria-label="Utilisateurs">
+                            <button type="button" class="icon-btn" aria-label="Utilisateurs" data-modal-target="modal-manager-team">
                                 <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
-                            </a>
-                            <a href="<?php echo appUrl('departments'); ?>" class="icon-btn" aria-label="Départements">
-                                <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="" class="nav-icon">
-                            </a>
+                            </button> 
+                            <button type="button" class="icon-btn" aria-label="Paramètres" data-modal-target="modal-settings">
+                                <img src="<?php echo $basePath; ?>/assets/icons/light.svg" alt="" class="nav-icon">
+                            </button>
                         <?php endif; ?>
                         <a href="<?php echo appUrl('logout'); ?>" class="icon-btn" aria-label="Déconnexion">
                             <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="" class="nav-icon">

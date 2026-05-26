@@ -22,6 +22,22 @@ $requestTypeLabels = [
     'other' => 'Autre',
     'admin_note' => 'Note admin',
 ];
+
+$weekDays = [
+    ['label' => 'DAY WEEK', 'day' => 'XX'],
+    ['label' => 'TUESDAY', 'day' => '24'],
+    ['label' => 'WEDNESDAY', 'day' => '25'],
+    ['label' => 'THURSDAY', 'day' => '26'],
+    ['label' => 'FRIDAY', 'day' => '27'],
+    ['label' => 'SATURDAY', 'day' => '28', 'highlight' => true],
+    ['label' => 'SUNDAY', 'day' => '29'],
+];
+
+$calendarTemplates = [
+    ['time' => '06:00 - 14:00', 'title' => 'Reception', 'meta' => 'Assigné au département'],
+    ['time' => '14:00 - 22:00', 'title' => 'Housekeeping', 'meta' => 'Shift de jour'],
+    ['time' => '22:00 - 06:00', 'title' => 'Night auditor', 'meta' => 'Shift de nuit'],
+];
 ?>
 
 <div class="admin-shell dashboard-shell">
@@ -38,7 +54,7 @@ $requestTypeLabels = [
         </p>
     </div>
 
-    <div class="dashboard-main">
+        <div class="dashboard-main">
             <?php if ($role === 'super_admin'): ?>
                 <div class="admin-grid">
                     <section class="admin-card admin-stat">
@@ -54,36 +70,40 @@ $requestTypeLabels = [
                         <span class="admin-stat-label">Départements</span>
                     </section>
                 </div>
-            <?php elseif ($role === 'admin'): ?>
-                <div class="admin-grid">
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value"><?php echo e(count($moduleRows['company_users'] ?? [])); ?></span>
-                        <span class="admin-stat-label">Employés de l'entreprise</span>
-                    </section>
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value"><?php echo e($stats['departments'] ?? 0); ?></span>
-                        <span class="admin-stat-label">Départements</span>
-                    </section>
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value"><?php echo e(count($moduleRows['company_requests'] ?? [])); ?></span>
-                        <span class="admin-stat-label">Requests récentes</span>
-                    </section>
-                </div>
-            <?php elseif ($role === 'department_manager'): ?>
-                <div class="admin-grid">
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value"><?php echo e(count($moduleRows['team'] ?? [])); ?></span>
-                        <span class="admin-stat-label">Collègues du département</span>
-                    </section>
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value">1</span>
-                        <span class="admin-stat-label">Département géré</span>
-                    </section>
-                    <section class="admin-card admin-stat">
-                        <span class="admin-stat-value">0</span>
-                        <span class="admin-stat-label">Demandes en attente</span>
-                    </section>
-                </div>
+            <?php elseif ($role === 'admin' || $role === 'department_manager'): ?>
+                <section class="admin-card dashboard-calendar-shell">
+                    <div class="dashboard-calendar-headline">
+                        <div>
+                            <h2>Calendrier interactif</h2>
+                            <p><?php echo $role === 'admin' ? 'Planification de l’entreprise' : 'Planification du département'; ?></p>
+                        </div>
+                        <button type="button" class="admin-action-link" data-modal-target="modal-schedule">Planning</button>
+                    </div>
+
+                    <div class="dashboard-calendar">
+                        <?php foreach ($weekDays as $index => $dayInfo): ?>
+                            <article class="dashboard-calendar-column <?php echo !empty($dayInfo['highlight']) ? 'is-highlight' : ''; ?>">
+                                <header class="dashboard-calendar-head">
+                                    <span class="dashboard-calendar-weekday"><?php echo e($dayInfo['label']); ?></span>
+                                    <span class="dashboard-calendar-day"><?php echo e($dayInfo['day']); ?></span>
+                                </header>
+                                <div class="dashboard-calendar-body">
+                                    <?php foreach ($calendarTemplates as $template): ?>
+                                        <button type="button" class="dashboard-calendar-card" data-modal-target="modal-schedule">
+                                            <span class="dashboard-calendar-time"><?php echo e($template['time']); ?></span>
+                                            <span class="dashboard-calendar-title"><?php echo e($template['title']); ?></span>
+                                            <span class="dashboard-calendar-meta"><?php echo e($template['meta']); ?></span>
+                                        </button>
+                                    <?php endforeach; ?>
+
+                                    <button type="button" class="dashboard-calendar-card is-add" data-modal-target="modal-schedule">
+                                        + Ajouter
+                                    </button>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
             <?php else: ?>
                 <section class="admin-card">
                     <h2>Mes quarts</h2>

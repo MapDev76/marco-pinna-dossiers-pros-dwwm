@@ -32,6 +32,15 @@ $dashboardSidebarSections = [];
 if ($role === 'super_admin') {
     $dashboardSidebarSections = [
         [
+            'title' => 'Gestion',
+            'icon' => '⚙',
+            'buttons' => [
+                ['label' => 'Utilisateurs', 'target' => 'modal-super-actions', 'variant' => 'active'],
+                ['label' => 'Entreprises', 'target' => 'modal-super-directory'],
+                ['label' => 'Départements', 'target' => 'modal-super-actions'],
+            ],
+        ],
+        [
             'title' => 'Departments',
             'icon' => '📁',
             'buttons' => [
@@ -56,6 +65,15 @@ if ($role === 'super_admin') {
     ];
 } elseif ($role === 'admin') {
     $dashboardSidebarSections = [
+        [
+            'title' => 'Gestion',
+            'icon' => '⚙',
+            'buttons' => [
+                ['label' => 'Utilisateurs', 'target' => 'modal-admin-employees', 'variant' => 'active'],
+                ['label' => 'Entreprises', 'target' => 'modal-admin-departments'],
+                ['label' => 'Départements', 'target' => 'modal-admin-departments'],
+            ],
+        ],
         [
             'title' => 'Departments',
             'icon' => '📁',
@@ -84,6 +102,13 @@ if ($role === 'super_admin') {
 } elseif ($role === 'department_manager') {
     $dashboardSidebarSections = [
         [
+            'title' => 'Gestion',
+            'icon' => '⚙',
+            'buttons' => [
+                ['label' => 'Équipe', 'target' => 'modal-manager-team', 'variant' => 'active'],
+            ],
+        ],
+        [
             'title' => 'Employees',
             'icon' => '👥',
             'buttons' => [
@@ -107,6 +132,14 @@ if ($role === 'super_admin') {
     ];
 } else {
     $dashboardSidebarSections = [
+        [
+            'title' => 'Gestion',
+            'icon' => '⚙',
+            'buttons' => [
+                ['label' => 'Requests', 'target' => 'modal-global-requests', 'variant' => 'active'],
+                ['label' => 'Notifications', 'target' => 'modal-global-notifications'],
+            ],
+        ],
         [
             'title' => 'Requests',
             'icon' => '✉',
