@@ -76,6 +76,22 @@ h1 {
   align-items: center;
 }
 
+.header-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.header-user-name {
+  font-weight: 800;
+  color: #222;
+}
+
+.header-user-meta {
+  font-size: 0.86rem;
+  color: #666;
+}
+
 .logo-link {
   display: inline-flex;
   align-items: center;
@@ -943,6 +959,32 @@ button.admin-action-link {
   text-align: left;
 }
 
+.documents-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1rem;
+}
+
+.documents-actions .admin-form {
+  background: #fff;
+  padding: 0.6rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.documents-list h3 {
+  margin-top: 0;
+}
+
+.file-actions a,
+.file-actions button {
+  margin-right: 0.5rem;
+}
+
+.admin-table td .admin-action-link {
+  display: inline-block;
+}
+
 .dashboard-modal-close {
   float: right;
   width: 34px;
@@ -959,6 +1001,31 @@ button.admin-action-link {
 .dashboard-settings-modal,
 .dashboard-schedule-modal {
   width: min(1180px, calc(100vw - 36px));
+}
+
+.settings-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.9rem 0 1rem;
+}
+
+.settings-summary-card {
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fffdf4 0%, #f8f1da 100%);
+  border: 1px solid rgba(157, 121, 16, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.settings-summary-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9d7910;
 }
 
 .settings-tabs,
@@ -1000,6 +1067,7 @@ button.admin-action-link {
   border: 1px solid rgba(0, 0, 0, 0.08);
   background: #fff;
   padding: 0.85rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
 }
 
 .settings-card.is-highlight,
@@ -1015,6 +1083,13 @@ button.admin-action-link {
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.4rem;
+}
+
+.settings-card p,
+.schedule-card p {
+  margin: 0;
+  line-height: 1.45;
+  color: #333;
 }
 
 .settings-badge,
@@ -1064,6 +1139,17 @@ button.admin-action-link {
   border: 1px solid rgba(0, 0, 0, 0.16);
   background: rgba(255, 255, 255, 0.96);
   box-sizing: border-box;
+}
+
+.settings-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.settings-actions .admin-action-link {
+  min-width: 112px;
 }
 
 .dashboard-directory-grid {
@@ -1143,6 +1229,10 @@ button.admin-action-link {
   .schedule-board,
   .settings-form-grid,
   .schedule-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-summary {
     grid-template-columns: 1fr;
   }
 

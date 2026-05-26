@@ -74,7 +74,6 @@ $calendarTemplates = [
                 <section class="admin-card dashboard-calendar-shell">
                     <div class="dashboard-calendar-headline">
                         <div>
-                            <h2>Calendrier interactif</h2>
                             <p><?php echo $role === 'admin' ? 'Planification de l’entreprise' : 'Planification du département'; ?></p>
                         </div>
                         <button type="button" class="admin-action-link" data-modal-target="modal-schedule">Planning</button>
@@ -242,7 +241,7 @@ $calendarTemplates = [
         </div>
     </section>
 
-    <section class="dashboard-modal" id="modal-admin-requests" hidden>
+    <section class="dashboard-modal dashboard-settings-modal" id="modal-admin-requests" hidden>
         <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
         <h2>Requests de l'entreprise</h2>
 
@@ -295,7 +294,7 @@ $calendarTemplates = [
         </div>
     </section>
 
-    <section class="dashboard-modal" id="modal-admin-notifications" hidden>
+    <section class="dashboard-modal dashboard-settings-modal" id="modal-admin-notifications" hidden>
         <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
         <h2>Notifications</h2>
 
@@ -372,7 +371,7 @@ $calendarTemplates = [
     </section>
 <?php endif; ?>
 
-<section class="dashboard-modal" id="modal-global-requests" hidden>
+<section class="dashboard-modal dashboard-settings-modal" id="modal-global-requests" hidden>
     <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
     <h2>Mes requests</h2>
 
@@ -428,7 +427,7 @@ $calendarTemplates = [
     </div>
 </section>
 
-<section class="dashboard-modal" id="modal-global-notifications" hidden>
+<section class="dashboard-modal dashboard-settings-modal" id="modal-global-notifications" hidden>
     <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
     <h2>Mes notifications</h2>
 

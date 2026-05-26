@@ -12,17 +12,12 @@ $basePath = $basePath ?? (function () {
     <nav class="topnav" aria-label="Navigation principale">
         <div class="topnav-inner">
             <div class="nav-left">
-                <?php if ($route === 'dashboard'): ?>
-                    <div class="icon-group" aria-label="Actions rapides à gauche">
-                        <button type="button" class="icon-btn" aria-label="Documents" data-modal-target="modal-documents">
-                            <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" class="nav-icon">
-                        </button>
-                        <button type="button" class="icon-btn" aria-label="Planification" data-modal-target="modal-schedule">
-                            <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
-                        </button>
-                        <button type="button" class="icon-btn" aria-label="Print">
-                            <img src="<?php echo $basePath; ?>/assets/icons/print-outline.svg" alt="" class="nav-icon">
-                        </button>
+                <?php if ($route === 'dashboard' && $currentUser !== null): ?>
+                    <div class="header-user-info">
+                        <div class="header-user-name"><?php echo e(($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')); ?></div>
+                        <div class="header-user-meta">
+                            <?php echo e($currentUser['company_name'] ?? ''); ?><?php if (!empty($currentUser['department_name'])): ?> — <?php echo e($currentUser['department_name']); ?><?php endif; ?>
+                        </div>
                     </div>
                 <?php endif; ?>
             </div>
@@ -55,9 +50,6 @@ $basePath = $basePath ?? (function () {
                             </button>
                             <button type="button" class="icon-btn" aria-label="Entreprises" data-modal-target="modal-admin-departments">
                                 <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="" class="nav-icon">
-                            </button>
-                            <button type="button" class="icon-btn" aria-label="Paramètres" data-modal-target="modal-settings">
-                                <img src="<?php echo $basePath; ?>/assets/icons/light.svg" alt="" class="nav-icon">
                             </button>
                         <?php elseif (($currentUser['role'] ?? null) === 'department_manager'): ?>
                             <button type="button" class="icon-btn" aria-label="Utilisateurs" data-modal-target="modal-manager-team">
