@@ -98,7 +98,77 @@
 /* Ensure icon-group on right matches style */
 .admin-navbar-right .icon-group { gap: 10px; }
 
+/* Public header for home/login */
+.admin-header.is-public .admin-navbar-inner {
+    position: relative;
+    min-height: 92px;
+    padding: 10px 20px;
+    justify-content: center;
+    background: var(--color-bg);
+    border-top: 1px solid rgba(255, 255, 255, 0.98);
+    border-left: 1px solid rgba(255, 255, 255, 0.96);
+    border-right: 4px solid rgba(0, 0, 0, 0.16);
+    border-bottom: 5px solid rgba(0, 0, 0, 0.22);
+    box-shadow:
+        0 18px 30px var(--color-shadow),
+        6px 8px 0 rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.admin-header.is-public .public-navbar-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-header.is-public .public-brand-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-header.is-public .public-brand-logo {
+    width: 210px;
+    max-width: 42vw;
+    height: auto;
+    object-fit: contain;
+}
+
+.admin-header.is-public .public-navbar-right {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.admin-header.is-public .public-login-btn {
+    width: 40px;
+    height: 40px;
+}
+
+.admin-header.is-public .admin-brand-text,
+.admin-header.is-public .admin-brand-sub,
+.admin-header.is-public .hotel-meta,
+.admin-header.is-public .admin-navbar-left,
+.admin-header.is-public .admin-navbar-right {
+    display: none;
+}
+
+/* Login page keeps the same public header but without the right icon */
+.admin-header.is-login .public-navbar-right {
+    display: none;
+}
+
 @media (max-width: 900px) {
     .admin-navbar-center { display: none; }
     .hotel-submeta { display: none; }
+
+    .admin-header.is-public .public-brand-logo {
+        width: 170px;
+    }
+
+    .admin-header.is-public .admin-navbar-inner {
+        padding: 8px 14px;
+    }
 }
