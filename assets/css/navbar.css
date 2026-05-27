@@ -101,17 +101,15 @@
 /* Public header for home/login */
 .admin-header.is-public .admin-navbar-inner {
     position: relative;
-    min-height: 92px;
-    padding: 10px 20px;
+    min-height: 26px;
+    padding: 3px 6px 3px 6px;
     justify-content: center;
     background: var(--color-bg);
     border-top: 1px solid rgba(255, 255, 255, 0.98);
     border-left: 1px solid rgba(255, 255, 255, 0.96);
-    border-right: 4px solid rgba(0, 0, 0, 0.16);
+    border-right: 0;
     border-bottom: 5px solid rgba(0, 0, 0, 0.22);
     box-shadow:
-        0 18px 30px var(--color-shadow),
-        6px 8px 0 rgba(0, 0, 0, 0.04),
         inset 0 1px 0 rgba(255, 255, 255, 1),
         inset -1px -1px 0 rgba(0, 0, 0, 0.04);
 }
@@ -120,6 +118,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: translateX(-4px);
 }
 
 .admin-header.is-public .public-brand-link {
@@ -129,22 +128,22 @@
 }
 
 .admin-header.is-public .public-brand-logo {
-    width: 210px;
-    max-width: 42vw;
+    width: 80px;
+    max-width: 30vw;
     height: auto;
     object-fit: contain;
 }
 
 .admin-header.is-public .public-navbar-right {
     position: absolute;
-    right: 20px;
+    right: 0;
     top: 50%;
-    transform: translateY(-50%);
+    transform: translateY(-50%) translateX(-9px);
 }
 
 .admin-header.is-public .public-login-btn {
-    width: 40px;
-    height: 40px;
+    width: 28px;
+    height: 28px;
 }
 
 .admin-header.is-public .admin-brand-text,
@@ -165,10 +164,15 @@
     .hotel-submeta { display: none; }
 
     .admin-header.is-public .public-brand-logo {
-        width: 170px;
+        width: 64px;
     }
 
     .admin-header.is-public .admin-navbar-inner {
-        padding: 8px 14px;
+        padding: 3px 4px 3px 4px;
+    }
+
+    .admin-header.is-public .public-navbar-right .public-login-btn {
+        width: 24px;
+        height: 24px;
     }
 }
