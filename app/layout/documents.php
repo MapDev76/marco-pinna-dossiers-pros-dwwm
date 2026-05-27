@@ -9,7 +9,7 @@ $currentUser = currentUser();
     <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
     <div class="documents-grid">
         <div class="documents-actions">
-            <form method="post" action="<?php echo appUrl('documents_upload'); ?>" enctype="multipart/form-data" class="admin-form">
+            <form id="documents-upload-form" method="post" action="<?php echo appUrl('documents_upload'); ?>" enctype="multipart/form-data" class="admin-form">
                 <label>
                     Charger un document
                     <input type="file" name="document_file" required>
@@ -64,3 +64,31 @@ $currentUser = currentUser();
         </div>
     </div>
 </section>
+<script>
+(function(){
+    const form = document.getElementById('documents-upload-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submit = form.querySelector('button[type=submit]');
+        if (submit) submit.disabled = true;
+        try {
+            if (typeof AppAPI === 'undefined') {
+                alert('Erreur: ressources JS manquantes.');
+                return;
+            }
+            const res = await AppAPI.uploadForm(form);
+            if (res && res.success) {
+                alert('Téléversement réussi');
+                location.reload();
+            } else {
+                alert('Erreur: ' + (res && res.error ? res.error : 'Erreur serveur'));
+            }
+        } catch (err) {
+            alert('Erreur réseau: ' + err.message);
+        } finally {
+            if (submit) submit.disabled = false;
+        }
+    });
+})();
+</script>

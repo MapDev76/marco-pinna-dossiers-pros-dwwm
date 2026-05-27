@@ -1,0 +1,397 @@
+/* =============================================
+   PAGES ADMIN
+   =============================================
+   Styles pour les pages d'administration:
+   tableaux, formulaires, cartes, etc.
+   ============================================= */
+
+.admin-shell {
+    width: 100%;
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.admin-hero {
+    text-align: left;
+}
+
+.admin-hero h1,
+.admin-card h2 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-xs);
+}
+
+/* Grille pour les cartes admin */
+.admin-grid {
+    width: 100%;
+    display: grid;
+    gap: var(--spacing-md);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Cartes admin */
+.admin-card {
+    width: 100%;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--box-shadow-md);
+    box-sizing: border-box;
+    text-align: left;
+}
+
+/* Statistiques admin */
+.admin-stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    align-items: flex-start;
+}
+
+.admin-stat-value {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-extra-bold);
+    color: var(--color-text);
+}
+
+.admin-stat-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-light);
+}
+
+/* Actions admin */
+.admin-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.admin-action-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 1rem;
+    border-radius: var(--border-radius-md);
+    text-decoration: none;
+    background: var(--color-secondary);
+    color: var(--color-bg);
+    font-weight: var(--font-weight-bold);
+}
+
+.admin-action-link-secondary {
+    background: #e8e8e8;
+    color: var(--color-text);
+}
+
+/* =============================================
+   FORMULAIRES ADMIN
+   ============================================= */
+.admin-form {
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.admin-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-md);
+}
+
+.admin-form label {
+    display: grid;
+    gap: var(--spacing-xs);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form textarea {
+    width: 100%;
+    min-height: 46px;
+    padding: 0.7rem 0.85rem;
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.96);
+    box-sizing: border-box;
+}
+
+.admin-form textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* =============================================
+   TABLEAUX ADMIN
+   ============================================= */
+.table-wrap {
+    width: 100%;
+    overflow: auto;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+.admin-table th,
+.admin-table td {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-bottom: 1px solid var(--color-border-light);
+    vertical-align: middle;
+}
+
+.admin-table th {
+    text-align: left;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-light);
+}
+
+/* =============================================
+   DOCUMENTS
+   ============================================= */
+.documents-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: var(--spacing-md);
+}
+
+.documents-actions .admin-form {
+    background: var(--color-bg);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border-light);
+    margin-bottom: var(--spacing-md);
+}
+
+.documents-actions .admin-form label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+}
+
+.documents-actions .admin-form input[type="file"] {
+    width: 100%;
+    margin-top: var(--spacing-xs);
+    padding: var(--spacing-xs);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--border-radius-md);
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+}
+
+.documents-actions .admin-form select {
+    width: 100%;
+    margin-top: var(--spacing-xs);
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.documents-actions .form-actions {
+    margin-top: var(--spacing-md);
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+/* Lista dei documenti */
+.documents-list {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.documents-list h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-md);
+    color: var(--color-text);
+    font-size: var(--font-size-lg);
+}
+
+/* =============================================
+   PARAMÈTRES (IMPOSTAZIONI)
+   ============================================= */
+.settings-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-sm);
+    margin: var(--spacing-md) 0;
+}
+
+.settings-summary-card {
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-lg);
+    background: linear-gradient(180deg, #fffdf4 0%, #f8f1da 100%);
+    border: 1px solid rgba(157, 121, 16, 0.16);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.settings-summary-label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-primary);
+}
+
+/* =============================================
+   SCHEDULE (CALENDARIO)
+   ============================================= */
+.settings-tabs,
+.schedule-toolbar {
+    display: flex;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
+    margin: var(--spacing-md) 0;
+}
+
+.settings-tab,
+.schedule-pill {
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--border-radius-full);
+    padding: 0.45rem 0.85rem;
+    background: #f7f7f7;
+    color: var(--color-text-light);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.settings-tab:hover,
+.schedule-pill:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.settings-tab.is-active,
+.schedule-pill.is-active {
+    background: var(--color-secondary);
+    color: var(--color-bg);
+    border-color: var(--color-secondary);
+}
+
+.settings-board,
+.schedule-board {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-md);
+    margin: var(--spacing-md) 0;
+}
+
+.settings-card,
+.schedule-card {
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border-light);
+    background: var(--color-bg);
+    padding: var(--spacing-md);
+    box-shadow: var(--box-shadow-sm);
+}
+
+.settings-card.is-highlight,
+.schedule-card.is-highlight {
+    border-color: rgba(157, 121, 16, 0.24);
+    background: linear-gradient(180deg, #fff8dd 0%, #fffdf4 100%);
+}
+
+.settings-card-head,
+.schedule-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+}
+
+.settings-card p,
+.schedule-card p {
+    margin: 0;
+    line-height: 1.45;
+    color: var(--color-text);
+}
+
+.settings-badge,
+.schedule-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+}
+
+.settings-color,
+.schedule-color {
+    font-family: monospace;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+}
+
+.settings-meta {
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-light);
+}
+
+.settings-form-grid,
+.schedule-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.settings-field,
+.schedule-field {
+    display: grid;
+    gap: var(--spacing-xs);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+}
+
+.settings-field input,
+.schedule-field input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.65rem 0.8rem;
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.96);
+    box-sizing: border-box;
+}
+
+.settings-field input[readonly],
+.schedule-field input[readonly] {
+    background: rgba(240, 240, 240, 0.5);
+    cursor: not-allowed;
+    border-color: var(--color-border-light);
+}
+
+/* =============================================
+   RÉPERTOIRE (DIRETTOIO)
+   ============================================= */
+.dashboard-directory-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-md);
+}
+
+.dashboard-directory-card {
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border-light);
+    background: rgba(248, 248, 248, 0.95);
+    padding: var(--spacing-md);
+}
+
+.dashboard-directory-card h3 {
+    margin: 0 0 var(--spacing-sm);
+}
+
+/* Formulaire de note */
+.dashboard-note-form {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--color-border-light);
+}

@@ -6,19 +6,7 @@ CREATE DATABASE IF NOT EXISTS staff_ease_pro
 
 USE staff_ease_pro;
 
-SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE IF EXISTS requests;
-DROP TABLE IF EXISTS attendances;
-DROP TABLE IF EXISTS user_shifts;
-DROP TABLE IF EXISTS shifts;
-DROP TABLE IF EXISTS documents;
-DROP TABLE IF EXISTS digital_signatures;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS departments;
-DROP TABLE IF EXISTS companies;
-
-SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE companies (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -26,10 +14,10 @@ CREATE TABLE companies (
   type ENUM('hotel', 'hospital', 'clinic', 'elderly_center', 'restaurant', 'other') NOT NULL DEFAULT 'other',
   address TEXT,
   city VARCHAR(80),
-  province VARCHAR(20),
   zip_code VARCHAR(10),
   phone VARCHAR(30),
   email VARCHAR(120),
+  signature_ip VARCHAR(45) NULL COMMENT 'IP address allowed for digital signatures',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -171,8 +159,8 @@ CREATE TABLE requests (
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO companies (name, type, address, city, province, zip_code, phone, email)
-VALUES ('Azienda Test', 'hotel', 'Via Esempio 123', 'Roma', 'RM', '00100', '0612345678', 'info@aziendatest.it');
+INSERT INTO companies (name, type, address, city, zip_code, phone, email, signature_ip)
+VALUES ('Azienda Test', 'hotel', 'Via Esempio 123', 'Roma', '00100', '0612345678', 'info@aziendatest.it', NULL);
 
 INSERT INTO departments (company_id, name, description)
 VALUES (1, 'Reception', 'Dipartimento reception');

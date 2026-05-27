@@ -1,0 +1,275 @@
+/* =============================================
+   RESPONSIVE DESIGN
+   =============================================
+   Adaptation de l'interface pour les différentes tailles d'écran.
+   ============================================= */
+
+@media (max-width: 1100px) {
+    /* Écrans moyens (tablettes, petits écrans) */
+    .app-sidebar {
+        position: static;
+        margin: 84px 10px 0;
+        width: auto;
+    }
+
+    .route-dashboard .content.content-dashboard {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        width: calc(100% - 32px);
+        max-width: calc(100% - 32px);
+        transform: none;
+        overflow: auto;
+    }
+
+    .dashboard-sidebar-shell {
+        width: 100%;
+        min-height: auto;
+    }
+
+    .topnav-inner {
+        height: 72px;
+        padding: 0 16px;
+        border-right-width: 3px;
+        border-bottom-width: 4px;
+        box-shadow:
+            0 14px 24px rgba(0, 0, 0, 0.16),
+            4px 6px 0 rgba(0, 0, 0, 0.03),
+            inset 0 1px 0 rgba(255, 255, 255, 1);
+    }
+
+    .nav-left,
+    .nav-right {
+        min-width: 140px;
+    }
+
+    .logo {
+        height: 58px;
+    }
+
+    .icon-group {
+        gap: 6px;
+        padding: 3px;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.98),
+            0 3px 8px rgba(0, 0, 0, 0.07);
+    }
+
+    .icon-btn {
+        width: 34px;
+        height: 34px;
+    }
+
+    .content {
+        width: min(calc(100vw - 32px), 100%);
+        height: auto;
+        min-height: 0;
+        max-height: calc(100vh - 120px);
+        padding: var(--spacing-md) var(--spacing-md);
+        border-radius: var(--border-radius-lg);
+        top: 54%;
+        border-right-width: 4px;
+        border-bottom-width: 5px;
+        box-shadow:
+            0 16px 28px rgba(0, 0, 0, 0.18),
+            6px 8px 0 rgba(0, 0, 0, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 1);
+    }
+
+    .content:has(.login-form) {
+        width: min(520px, calc(100vw - 32px));
+        max-height: calc(100vh - 120px);
+    }
+
+    .dashboard-directory-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-modal {
+        width: calc(100vw - 18px);
+        max-height: calc(100vh - 70px);
+        padding: 0.95rem;
+    }
+
+    .dashboard-settings-modal,
+    .dashboard-schedule-modal,
+    .dashboard-documents-modal {
+        width: calc(100vw - 18px);
+    }
+
+    .settings-board,
+    .schedule-board,
+    .settings-form-grid,
+    .schedule-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-calendar {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .dashboard-calendar-headline {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dashboard-sidebar-shell {
+        padding: 0.7rem 0.5rem;
+    }
+}
+
+@media (max-width: 760px) {
+    /* Écrans petits (mobile) */
+    .topnav-inner {
+        height: 64px;
+        padding: 0 10px;
+        border-right-width: 3px;
+        border-bottom-width: 4px;
+        box-shadow:
+            0 10px 18px rgba(0, 0, 0, 0.14),
+            4px 5px 0 rgba(0, 0, 0, 0.03),
+            inset 0 1px 0 rgba(255, 255, 255, 1);
+    }
+
+    .nav-left,
+    .nav-right {
+        min-width: 92px;
+    }
+
+    .logo {
+        height: 42px;
+    }
+
+    .nav-center {
+        transform: translateX(-50%) scale(0.92);
+    }
+
+    .icon-group {
+        gap: 4px;
+        padding: 3px;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.98),
+            0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    .icon-btn {
+        width: 30px;
+        height: 30px;
+    }
+
+    .content {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: calc(100% - 12px);
+        height: auto;
+        min-height: 0;
+        max-height: none;
+        margin: 78px auto 10px;
+        padding: var(--spacing-md);
+        border-radius: var(--border-radius-md);
+        background: rgba(255, 255, 255, 0.98);
+        border-top: 1px solid rgba(255, 255, 255, 0.98);
+        border-left: 1px solid rgba(255, 255, 255, 0.96);
+        border-right: 4px solid rgba(0, 0, 0, 0.16);
+        border-bottom: 5px solid rgba(0, 0, 0, 0.22);
+        box-shadow:
+            0 12px 22px rgba(0, 0, 0, 0.12),
+            6px 7px 0 rgba(0, 0, 0, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 1);
+    }
+
+    .content:has(.login-form) {
+        width: calc(100% - 12px);
+        padding: 0.95rem;
+    }
+
+    h1 {
+        font-size: var(--font-size-xl);
+    }
+
+    .app-sidebar {
+        margin: 74px 6px 0;
+    }
+
+    .route-dashboard .content.content-dashboard {
+        width: calc(100% - 12px);
+        max-width: calc(100% - 12px);
+    }
+}
+
+@media (max-width: 480px) {
+    /* Écrans très petits (mobile) */
+    .topnav-inner {
+        height: 60px;
+        padding: 0 8px;
+        border-right-width: 2px;
+        border-bottom-width: 3px;
+        box-shadow:
+            0 8px 14px rgba(0, 0, 0, 0.12),
+            3px 4px 0 rgba(0, 0, 0, 0.03),
+            inset 0 1px 0 rgba(255, 255, 255, 1);
+    }
+
+    .nav-left,
+    .nav-right {
+        min-width: 72px;
+    }
+
+    .logo {
+        height: 36px;
+    }
+
+    .nav-center {
+        transform: translateX(-50%) scale(0.86);
+    }
+
+    .icon-group {
+        gap: 3px;
+    }
+
+    .icon-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .nav-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .content {
+        width: calc(100% - 12px);
+        min-height: 0;
+        margin: 70px auto 8px;
+        padding: 0.9rem;
+        border-radius: var(--border-radius-sm);
+        border-right-width: 3px;
+        border-bottom-width: 4px;
+    }
+
+    .content:has(.login-form) .login-form button {
+        min-height: 48px;
+    }
+
+    .content:has(.login-form) input {
+        min-height: 48px;
+        border-radius: var(--border-radius-md);
+    }
+
+    h1 {
+        font-size: var(--font-size-lg);
+    }
+}

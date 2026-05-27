@@ -6,6 +6,12 @@ class DepartmentModel
     {
     }
 
+    /**
+     * allWithCompany
+     * Retourne la liste des départements avec le nom de l'entreprise associée.
+     * Rôle: consultation pour Super Admin et admin.
+     */
+
     public function allWithCompany(): array
     {
         $statement = $this->pdo->query(
@@ -18,12 +24,22 @@ class DepartmentModel
         return $statement->fetchAll();
     }
 
+    /**
+     * allForSelect
+     * Retourne id, company_id et nom pour utiliser dans des listes déroulantes.
+     */
+
     public function allForSelect(): array
     {
         $statement = $this->pdo->query('SELECT id, company_id, name FROM departments ORDER BY name ASC');
 
         return $statement->fetchAll();
     }
+
+    /**
+     * findById
+     * Recherche un département par son id.
+     */
 
     public function findById(int $id): ?array
     {
@@ -33,6 +49,12 @@ class DepartmentModel
 
         return $department ?: null;
     }
+
+    /**
+     * create
+     * Crée un département pour une entreprise donnée.
+     * Rôle: CRUD accessible par Super Admin et admin.
+     */
 
     public function create(array $data): int
     {
@@ -44,6 +66,11 @@ class DepartmentModel
 
         return (int) $this->pdo->lastInsertId();
     }
+
+    /**
+     * update
+     * Met à jour un département (company_id, name, description).
+     */
 
     public function update(int $id, array $data): void
     {
@@ -58,16 +85,31 @@ class DepartmentModel
         $statement->execute($data);
     }
 
+    /**
+     * delete
+     * Supprime un département par id.
+     */
+
     public function delete(int $id): void
     {
         $statement = $this->pdo->prepare('DELETE FROM departments WHERE id = :id');
         $statement->execute(['id' => $id]);
     }
 
+    /**
+     * count
+     * Retourne le nombre total de départements.
+     */
+
     public function count(): int
     {
         return (int) $this->pdo->query('SELECT COUNT(*) FROM departments')->fetchColumn();
     }
+
+    /**
+     * countByCompanyId
+     * Nombre de départements pour une entreprise.
+     */
 
     public function countByCompanyId(int $companyId): int
     {
@@ -76,6 +118,11 @@ class DepartmentModel
 
         return (int) $statement->fetchColumn();
     }
+
+    /**
+     * byCompanyId
+     * Liste des départements d'une entreprise spécifique.
+     */
 
     public function byCompanyId(int $companyId): array
     {

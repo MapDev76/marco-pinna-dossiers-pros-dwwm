@@ -1,0 +1,74 @@
+/* =============================================
+   VARIABLES CSS GLOBALES
+   =============================================
+   Ce fichier centralise toutes les variables CSS utilisées dans le projet.
+   Modifiez ces valeurs pour adapter le design global.
+   ============================================= */
+
+:root {
+    /* =============================================
+       COULEURS PRINCIPALES
+       ============================================= */
+    --color-primary: #9D7910;          /* Or principal */
+    --color-primary-light: #d2aa2d;    /* Or clair */
+    --color-primary-dark: #8c6b0d;     /* Or foncé */
+    --color-secondary: #111;          /* Noir */
+    --color-text: #222;               /* Texte principal */
+    --color-text-light: #666;        /* Texte secondaire */
+    --color-text-lighter: #9d9d9d;    /* Texte tertiaire */
+    --color-bg: #ffffff;              /* Fond blanc */
+    --color-bg-light: rgba(255, 255, 255, 0.96); /* Fond semi-transparent */
+    --color-bg-card: rgba(255, 255, 255, 0.98); /* Fond des cartes */
+    --color-border: rgba(0, 0, 0, 0.16);      /* Bordure principale */
+    --color-border-light: rgba(0, 0, 0, 0.08); /* Bordure légère */
+
+    /* Couleurs pour les messages flash */
+    --color-success-bg: rgba(46, 125, 50, 0.12);
+    --color-success-border: rgba(46, 125, 50, 0.30);
+    --color-success-text: #1b5e20;
+    --color-error-bg: rgba(198, 40, 40, 0.10);
+    --color-error-border: rgba(198, 40, 40, 0.28);
+    --color-error-text: #8e1d1d;
+
+    /* Couleurs pour les badges */
+    --color-badge-bg: rgba(157, 121, 16, 0.15);
+    --color-badge-text: #7a5d0c;
+
+    /* =============================================
+       POLICES
+       ============================================= */
+    --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.82rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.35rem;
+    --font-size-xl: 1.6rem;
+    --font-size-2xl: 2rem;
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-bold: 700;
+    --font-weight-extra-bold: 800;
+
+    /* =============================================
+       BORDURES ET OMBRES
+       ============================================= */
+    --border-radius-sm: 8px;
+    --border-radius-md: 12px;
+    --border-radius-lg: 14px;
+    --border-radius-xl: 16px;
+    --border-radius-full: 999px;
+
+    --box-shadow-sm: 0 4px 8px rgba(0, 0, 0, 0.08);
+    --box-shadow-md: 0 10px 20px rgba(0, 0, 0, 0.08);
+    --box-shadow-lg: 0 20px 34px rgba(0, 0, 0, 0.20);
+    --box-shadow-xl: 0 30px 50px rgba(0, 0, 0, 0.35);
+
+    /* =============================================
+       ESPACEMENTS
+       ============================================= */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+}

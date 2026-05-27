@@ -1,0 +1,48 @@
+/* =============================================
+   MODAL (FENÊTRES POP-UP)
+   ============================================= */
+
+.dashboard-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(11, 14, 18, 0.58);
+    z-index: 1200;
+}
+
+.dashboard-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(900px, calc(100vw - 36px));
+    max-height: calc(100vh - 100px);
+    overflow: auto;
+    z-index: 1210;
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-lg);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--box-shadow-xl);
+    text-align: left;
+}
+
+/* Modal specifici */
+.dashboard-settings-modal,
+.dashboard-schedule-modal,
+.dashboard-documents-modal {
+    width: min(1180px, calc(100vw - 36px));
+}
+
+/* Bouton pour fermer la modal */
+.dashboard-modal-close {
+    float: right;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--border-radius-full);
+    border: 0;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--color-bg);
+    background: var(--color-secondary);
+}

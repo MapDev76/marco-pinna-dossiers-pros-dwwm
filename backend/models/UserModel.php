@@ -6,6 +6,12 @@ class UserModel
     {
     }
 
+    /**
+     * findByEmail
+     * Retourne l'utilisateur correspondant à l'email (utilisé par AuthController).
+     * Rôle: login / authentication.
+     */
+
     public function findByEmail(string $email): ?array
     {
         $statement = $this->pdo->prepare(
@@ -17,6 +23,11 @@ class UserModel
         return $user ?: null;
     }
 
+    /**
+     * findById
+     * Retourne un utilisateur par id (utilisé par plusieurs APIs).
+     */
+
     public function findById(int $id): ?array
     {
         $statement = $this->pdo->prepare(
@@ -27,6 +38,11 @@ class UserModel
 
         return $user ?: null;
     }
+
+    /**
+     * allWithRelations
+     * Retourne tous les utilisateurs avec leurs relations department/company (utilisé pour l'admin).
+     */
 
     public function allWithRelations(): array
     {
@@ -41,6 +57,11 @@ class UserModel
         return $statement->fetchAll();
     }
 
+    /**
+     * allForSelect
+     * Liste minimale d'utilisateurs pour select inputs.
+     */
+
     public function allForSelect(): array
     {
         $statement = $this->pdo->query(
@@ -49,6 +70,11 @@ class UserModel
 
         return $statement->fetchAll();
     }
+
+    /**
+     * countByCompanyId
+     * Nombre d'utilisateurs per company (utilisé pour stats).
+     */
 
     public function countByCompanyId(int $companyId): int
     {
@@ -62,6 +88,11 @@ class UserModel
 
         return (int) $statement->fetchColumn();
     }
+
+    /**
+     * profileWithRelations
+     * Retourne le profil de l'utilisateur avec department et company (utilisé pour dashboard).
+     */
 
     public function profileWithRelations(int $id): ?array
     {
@@ -81,6 +112,11 @@ class UserModel
         return $profile ?: null;
     }
 
+    /**
+     * teamByDepartmentId
+     * Liste des membres d'un département (utilisé par Department Manager / Super Admin).
+     */
+
     public function teamByDepartmentId(int $departmentId): array
     {
         $statement = $this->pdo->prepare(
@@ -93,6 +129,11 @@ class UserModel
 
         return $statement->fetchAll();
     }
+
+    /**
+     * companyUsersByCompanyId
+     * Retourne les utilisateurs appartenant à une entreprise (via departments).
+     */
 
     public function companyUsersByCompanyId(int $companyId): array
     {
@@ -107,6 +148,11 @@ class UserModel
 
         return $statement->fetchAll();
     }
+
+    /**
+     * employeeShifts
+     * Retourne i turni assegnati a un dipendente.
+     */
 
     public function employeeShifts(int $userId): array
     {
@@ -123,6 +169,11 @@ class UserModel
 
         return $statement->fetchAll();
     }
+
+    /**
+     * employeeRequests / companyRequestsByCompanyId / userNotifications
+     * Fonctions per recuperare richieste e notifiche per utente o company.
+     */
 
     public function employeeRequests(int $userId): array
     {

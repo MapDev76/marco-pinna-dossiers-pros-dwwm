@@ -1,0 +1,68 @@
+/* =============================================
+   STYLES DE BASE
+   =============================================
+   Réinitialisation des styles par défaut du navigateur
+   et définition des styles globaux.
+   ============================================= */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+body {
+    background-image: url('../images/background-light.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-attachment: fixed;
+    font-family: var(--font-primary);
+    color: var(--color-text);
+}
+
+/* =============================================
+   TYPOGRAPHIE
+   ============================================= */
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    line-height: 1.2;
+    color: var(--color-primary);
+}
+
+h1 {
+    font-size: var(--font-size-2xl);
+    text-align: center;
+}
+
+p {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+
+/* Suppression des styles par défaut des listes */
+ul, ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Styles des liens */
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Styles des boutons */
+button {
+    cursor: pointer;
+    font-family: inherit;
+}
+
+/* Styles des images */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}

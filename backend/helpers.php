@@ -6,7 +6,6 @@
  * Ces fonctions sont utilisées dans les contrôleurs et les vues pour simplifier le code et éviter les répétitions.
  */
 
-
 function startAppSession(): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -29,6 +28,13 @@ function appBasePath(): string
     return rtrim($scriptDir, '/');
 }
 
+/**
+ * appUrl
+ * Retourne l'URL complète pour une route donnée.
+ * Utilisé par les vues et contrôleurs pour construire des liens.
+ * Rôle: utilisé par toutes les vues et contrôleurs (global).
+ */
+
 function appUrl(string $route, array $params = []): string
 {
     $query = array_merge(['route' => $route], $params);
@@ -42,6 +48,13 @@ function redirectTo(string $route, array $params = []): never
     header('Location: ' . appUrl($route, $params));
     exit;
 }
+
+/**
+ * e
+ * Échappe une valeur pour affichage HTML (prévention XSS).
+ * Utilisé par les vues quand elles affichent des données utilisateur.
+ * Rôle: sécurité côté affichage (toutes les vues).
+ */
 
 /**
  * Fonction d'échappement pour la sécurité
@@ -67,6 +80,13 @@ function jsonResponse(array $payload, int $statusCode = 200): never
 }
 
 /**
+ * setFlash / getFlash
+ * Stocke et récupère des messages flash dans la session.
+ * Utilisé par les contrôleurs pour informer l'utilisateur après redirection.
+ * Rôle: notifications temporanee per l'utente.
+ */
+
+/**
  * Fonctions de gestion des messages flash
  * Permettent de stocker des messages temporaires dans la session pour les afficher après une redirection.
  */
@@ -87,6 +107,13 @@ function getFlash(string $key): ?string
 
     return $message;
 }
+
+/**
+ * currentUser / isLoggedIn / role helpers
+ * Fournissent l'information sur l'utilisateur connecté et ses rôles.
+ * Utilisés par les contrôleurs pour vérifier i permessi prima delle azioni.
+ * Rôle: contrôle d'accès côté serveur (tous les contrôleurs backend).
+ */
 
 /**
  * Fonctions d'authentification et de gestion des utilisateurs
