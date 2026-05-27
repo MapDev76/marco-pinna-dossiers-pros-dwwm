@@ -19,7 +19,7 @@ if (($_GET['route'] ?? 'login') === 'logout') {
 
     session_destroy();
     session_start();
-    setFlash('success', 'Vous êtes déconnecté.');
+    setFlash('success', 'You have been logged out successfully.');
     redirectTo('login');
 }
 
@@ -31,12 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = (string) ($_POST['password'] ?? '');
 
     if ($loginEmail === '' || $password === '') {
-        $loginError = 'Veuillez remplir l’email et le mot de passe.';
+        $loginError = 'Please, insert your email and password.';
     } else {
         $user = $userModel->findByEmail($loginEmail);
 
         if (!$user || $user['status'] !== 'active' || !password_verify($password, $user['password'])) {
-            $loginError = 'Identifiants invalides ou accès refusé.';
+            $loginError = 'Invalid credentials or access denied.';
         } else {
             $_SESSION['auth_user'] = [
                 'id' => (int) $user['id'],
@@ -50,12 +50,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $welcomeLabel = match ($user['role']) {
                 'super_admin' => 'Super Admin',
                 'admin' => 'Admin',
-                'department_manager' => 'Chef de département',
-                'employee' => 'Employé',
-                default => 'utilisateur',
+                'department_manager' => 'Department Manager',
+                'employee' => 'Employee',
+                default => 'User',
             };
 
-            setFlash('success', 'Connexion réussie. Bienvenue ' . $welcomeLabel . '.');
+            setFlash('success', 'Login successful. Welcome ' . $welcomeLabel . '.');
             redirectTo('dashboard');
         }
     }
