@@ -23,5 +23,57 @@
 			<li>✅ Super Admins – Get full control over your workforce management system.</li>
 		</ul>
 
+
+		<!-- Editable feature boxes: allow entering texts for each area -->
+		<section class="editable-features">
+			<div class="editable-grid">
+				<div class="feature-box">
+					<label for="f_reporting"><strong>Reporting &amp; Analytics</strong></label>
+					<textarea id="f_reporting" class="feature-input" readonly>Shift coverage reports (e.g., over/under-staffing).
+Attendance trends (late arrivals, absences, overtime).
+Exportable data (PDF, Excel) for HR and payroll.</textarea>
+				</div>
+
+				<div class="feature-box">
+					<label for="f_attendance"><strong>Digital Attendance Tracking</strong></label>
+					<textarea id="f_attendance" class="feature-input" readonly>Digital signature check-ins to eliminate manual errors.
+Real-time presence monitoring with wifi validation.
+Attendance reports for payroll and compliance.</textarea>
+				</div>
+
+				<div class="feature-box">
+					<label for="f_documents"><strong>Document Management &amp; Compliance</strong></label>
+					<textarea id="f_documents" class="feature-input" readonly>Secure upload, storage, and sharing of employee documents:
+Medical certificates
+Employment contracts
+Automated reminders for expiring documents.</textarea>
+				</div>
+
+				<div class="feature-box">
+					<label for="f_roles"><strong>User Roles &amp; Access Control</strong></label>
+					<textarea id="f_roles" class="feature-input" readonly>Multiple user roles with custom permissions
+Granular access levels to protect sensitive data.
+Multi-Device Access : Fully responsive design dedicated mobile and tablet.</textarea>
+				</div>
+
+				<div class="feature-box">
+					<label for="f_security"><strong>Security &amp; Compliance</strong></label>
+					<textarea id="f_security" class="feature-input" readonly>End-to-end encryption for all data.
+GDPR-compliant (data protection for employees).
+Two-factor authentication (2FA) for admin accounts.
+Audit logs to track all actions.</textarea>
+				</div>
+
+				<div class="feature-box">
+					<label for="f_shifts"><strong>Smart Shift Management</strong></label>
+					<textarea id="f_shifts" class="feature-input" readonly>Auto-fill shifts based on employee availability, skills, and workload.
+Real-time conflict detection to avoid overbooking or clashes.
+Shift templates for recurring schedules (e.g., morning, afternoon, night shifts).</textarea>
+				</div>
+			</div>
+		</section>
+
 	</section>
+
+	
 </div>

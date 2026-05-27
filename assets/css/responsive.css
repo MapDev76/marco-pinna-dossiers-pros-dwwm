@@ -127,6 +127,13 @@
 
 @media (max-width: 760px) {
     /* Écrans petits (mobile) */
+    .content,
+    .route-dashboard .content.content-dashboard {
+        max-height: none;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .topnav-inner {
         height: 64px;
         padding: 0 10px;
@@ -169,10 +176,7 @@
         top: auto;
         left: auto;
         transform: none;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        display: block;
         width: calc(100% - 12px);
         height: auto;
         min-height: 0;
@@ -207,6 +211,12 @@
     .route-dashboard .content.content-dashboard {
         width: calc(100% - 12px);
         max-width: calc(100% - 12px);
+    }
+
+    .content:has(.home-page),
+    .content:has(.login-form) {
+        top: auto;
+        transform: none;
     }
 }
 
@@ -256,6 +266,8 @@
         margin: 70px auto 8px;
         padding: 0.9rem;
         border-radius: var(--border-radius-sm);
+        max-height: none;
+        overflow: auto;
         border-right-width: 3px;
         border-bottom-width: 4px;
     }
@@ -271,5 +283,86 @@
 
     h1 {
         font-size: var(--font-size-lg);
+    }
+}
+
+/* Consolidated media queries moved from other CSS files */
+@media (max-width: 1100px) {
+    .home-features-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .editable-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+    .editable-grid { grid-template-columns: 1fr; }
+    .feature-input { min-height: 90px; font-size: 11px; }
+}
+
+@media (max-width: 760px) {
+    .home-features-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        margin-top: 1.5rem;
+    }
+
+    .feature-card {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 1100px) {
+    .content {
+        position: relative;
+        top: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        margin: 84px auto 18px;
+        width: calc(100% - 32px);
+        max-width: calc(100% - 32px);
+        padding: 1rem;
+        box-sizing: border-box;
+        overflow: visible;
+    }
+
+    /* Keep text centered while allowing page vertical scroll */
+    .content > * {
+        text-align: center;
+    }
+
+    .home-page h1,
+    .home-intro h2 {
+        text-align: center;
+    }
+}
+
+@media (max-width: 760px) {
+    html, body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    body {
+        background-attachment: scroll;
+    }
+}
+
+@media (max-width: 900px) {
+    .admin-header.is-public .public-brand-logo {
+        width: 64px;
+    }
+
+    .admin-header.is-public .admin-navbar-inner {
+        padding: 3px 4px 3px 4px;
+    }
+
+    .admin-header.is-public .public-navbar-right .public-login-btn {
+        width: 24px;
+        height: 24px;
     }
 }

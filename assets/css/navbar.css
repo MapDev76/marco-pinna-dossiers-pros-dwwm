@@ -159,20 +159,4 @@
     display: none;
 }
 
-@media (max-width: 900px) {
-    .admin-navbar-center { display: none; }
-    .hotel-submeta { display: none; }
 
-    .admin-header.is-public .public-brand-logo {
-        width: 64px;
-    }
-
-    .admin-header.is-public .admin-navbar-inner {
-        padding: 3px 4px 3px 4px;
-    }
-
-    .admin-header.is-public .public-navbar-right .public-login-btn {
-        width: 24px;
-        height: 24px;
-    }
-}

@@ -2,7 +2,7 @@
 <?php $loginError = $loginError ?? null; ?>
 <div class="auth-card">
     <h1>Connexion</h1>
-    <p>Utilise tes identifiants pour accéder à ton espace selon ton rôle.</p>
+    <p>User registration is exclusively managed by your department manager or administration.    Please contact them to request an account.</p>
 
     <?php if ($loginError !== null): ?>
         <div class="flash flash-error"><?php echo e($loginError); ?></div>
