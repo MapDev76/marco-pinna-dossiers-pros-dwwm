@@ -48,6 +48,7 @@ $availableRoles = $currentRole === 'super_admin'
             $role = $formData['role'] ?? ($editing['role'] ?? 'employee');
             $status = $formData['status'] ?? ($editing['status'] ?? 'active');
             $departmentId = (string) ($formData['department_id'] ?? ($editing['department_id'] ?? ''));
+            $companyId = (string) ($formData['company_id'] ?? ($editing['company_id'] ?? ''));
             ?>
 
             <label>
@@ -65,6 +66,17 @@ $availableRoles = $currentRole === 'super_admin'
             <label>
                 <span>Téléphone</span>
                 <input type="text" name="phone" value="<?php echo e($phone); ?>">
+            </label>
+            <label>
+                <span>Entreprise</span>
+                <select name="company_id">
+                    <option value="">Aucune</option>
+                    <?php foreach ($companies as $company): ?>
+                        <option value="<?php echo (int) $company['id']; ?>" <?php echo $companyId === (string) $company['id'] ? 'selected' : ''; ?>>
+                            <?php echo e($company['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </label>
             <label>
                 <span>Mot de passe <?php echo $editing ? '(laisser vide pour conserver)' : ''; ?></span>

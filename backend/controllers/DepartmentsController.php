@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../models/DepartmentModel.php';
+require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
 if (!isLoggedIn()) {
@@ -8,6 +10,7 @@ if (!isLoggedIn()) {
 }
 
 $pdo = getPDO();
+$userModel = new UserModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
 $companyModel = new CompanyModel($pdo);
 $currentUser = currentUser();
@@ -18,21 +21,9 @@ if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
     redirectTo('dashboard');
 }
 
-$scopeCompanyId = null;
-$scopeDepartmentId = null;
-if ($role !== 'super_admin') {
-    $scopeStatement = $pdo->prepare(
-        'SELECT u.department_id, d.company_id
-         FROM users u
-         LEFT JOIN departments d ON d.id = u.department_id
-         WHERE u.id = :id
-         LIMIT 1'
-    );
-    $scopeStatement->execute(['id' => $currentUser['id']]);
-    $scope = $scopeStatement->fetch() ?: [];
-    $scopeCompanyId = isset($scope['company_id']) ? (int) $scope['company_id'] : null;
-    $scopeDepartmentId = isset($scope['department_id']) ? (int) $scope['department_id'] : null;
-}
+$profile = $userModel->profileWithRelations((int) $currentUser['id']) ?? [];
+$scopeCompanyId = isset($profile['company_id']) ? (int) $profile['company_id'] : null;
+$scopeDepartmentId = isset($profile['department_id']) ? (int) $profile['department_id'] : null;
 
 // Chaque rôle ne voit que sa zone: entreprise entière pour l'admin, département unique pour le chef de département.
 
@@ -44,6 +35,7 @@ $formData = [
     'company_id' => '',
     'name' => '',
     'description' => '',
+    'head_user_id' => '',
 ];
 
 if (isset($_GET['action'], $_GET['id']) && $_GET['action'] === 'edit') {
@@ -58,8 +50,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'company_id' => $companyId,
         'name' => trim((string) ($_POST['name'] ?? '')),
         'description' => trim((string) ($_POST['description'] ?? '')),
+        'head_user_id' => ($_POST['head_user_id'] ?? '') !== '' ? (int) $_POST['head_user_id'] : null,
     ];
     $formData = $payload;
+
+    if ($role === 'admin' && $scopeCompanyId !== null) {
+        $payload['company_id'] = $scopeCompanyId;
+    } elseif ($role === 'department_manager' && $scopeCompanyId !== null) {
+        $payload['company_id'] = $scopeCompanyId;
+    }
 
     if ($action === 'delete') {
         if ($id > 0) {
@@ -89,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $departments = $departmentModel->allWithCompany();
+$users = $userModel->allForSelect();
 
 if ($role === 'admin' && $scopeCompanyId !== null) {
     $departmentStatement = $pdo->prepare(
@@ -115,3 +115,21 @@ if ($role === 'department_manager' && $scopeDepartmentId !== null) {
 }
 
 $companies = $companyModel->all();
+
+if ($role === 'admin' && $scopeCompanyId !== null) {
+    $companies = array_values(array_filter($companies, static fn (array $company): bool => (int) $company['id'] === $scopeCompanyId));
+    $users = array_values(array_filter($users, static function (array $user) use ($pdo, $scopeCompanyId): bool {
+        $statement = $pdo->prepare(
+            'SELECT COALESCE(u.company_id, d.company_id) AS company_id
+             FROM users u
+             LEFT JOIN departments d ON d.id = u.department_id
+             WHERE u.id = :id
+             LIMIT 1'
+        );
+        $statement->execute(['id' => $user['id']]);
+        return (int) ($statement->fetchColumn() ?: 0) === $scopeCompanyId;
+    }));
+} elseif ($role === 'department_manager' && $scopeCompanyId !== null && $scopeDepartmentId !== null) {
+    $companies = array_values(array_filter($companies, static fn (array $company): bool => (int) $company['id'] === $scopeCompanyId));
+    $users = array_values(array_filter($users, static fn (array $user): bool => (int) ($user['id'] ?? 0) > 0));
+}

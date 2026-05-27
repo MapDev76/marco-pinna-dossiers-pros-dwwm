@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
+require_once __DIR__ . '/../models/DepartmentModel.php';
 
 if (!isLoggedIn() || !isSuperAdmin()) {
     jsonResponse(['error' => 'Unauthorized'], 403);
@@ -8,6 +9,7 @@ if (!isLoggedIn() || !isSuperAdmin()) {
 
 $pdo = getPDO();
 $userModel = new UserModel($pdo);
+$departmentModel = new DepartmentModel($pdo);
 
 $raw = file_get_contents('php://input');
 $input = json_decode($raw, true) ?: $_POST;
@@ -23,14 +25,42 @@ try {
             break;
 
         case 'create':
+            $departmentId = $input['department_id'] ?? null;
+            $companyId = $input['company_id'] ?? null;
+            $userRole = trim((string) ($input['role'] ?? 'employee'));
+
+            if ($userRole === 'super_admin') {
+                $departmentId = null;
+                $companyId = null;
+            } elseif ($userRole === 'admin') {
+                $departmentId = null;
+                if ($companyId === null || $companyId === '') {
+                    jsonResponse(['ok' => false, 'error' => 'company_id required for admin'], 400);
+                }
+            } else {
+                if ($departmentId === null || $departmentId === '') {
+                    jsonResponse(['ok' => false, 'error' => 'department_id required for department_manager/employee'], 400);
+                }
+                $department = $departmentModel->findById((int) $departmentId);
+                if (!$department) {
+                    jsonResponse(['ok' => false, 'error' => 'department not found'], 404);
+                }
+                $departmentCompanyId = isset($department['company_id']) ? (int) $department['company_id'] : null;
+                if ($companyId === null || $companyId === '') {
+                    $companyId = $departmentCompanyId;
+                } elseif ((int) $companyId !== $departmentCompanyId) {
+                    jsonResponse(['ok' => false, 'error' => 'company_id does not match department company'], 400);
+                }
+            }
             $data = [
-                'department_id' => $input['department_id'] ?? null,
+                'department_id' => $departmentId,
+                'company_id' => $companyId,
                 'first_name' => trim((string) ($input['first_name'] ?? '')),
                 'last_name' => trim((string) ($input['last_name'] ?? '')),
                 'email' => trim((string) ($input['email'] ?? '')),
                 'phone' => $input['phone'] ?? null,
                 'password' => password_hash($input['password'] ?? 'changeme', PASSWORD_DEFAULT),
-                'role' => $input['role'] ?? 'employee',
+                'role' => $userRole,
                 'status' => $input['status'] ?? 'active',
             ];
             if ($data['first_name'] === '' || $data['last_name'] === '' || $data['email'] === '') {
@@ -44,13 +74,45 @@ try {
         case 'update':
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
+            $departmentId = $input['department_id'] ?? null;
+            $companyId = $input['company_id'] ?? null;
+            $userRole = trim((string) ($input['role'] ?? 'employee'));
+
+            if ($userRole === 'super_admin') {
+                $departmentId = null;
+                $companyId = null;
+            } elseif ($userRole === 'admin') {
+                $departmentId = null;
+                if ($companyId === null || $companyId === '') {
+                    jsonResponse(['ok' => false, 'error' => 'company_id required for admin'], 400);
+                }
+            } else {
+                if ($departmentId === null || $departmentId === '') {
+                    jsonResponse(['ok' => false, 'error' => 'department_id required for department_manager/employee'], 400);
+                }
+                $department = $departmentModel->findById((int) $departmentId);
+                if (!$department) {
+                    jsonResponse(['ok' => false, 'error' => 'department not found'], 404);
+                }
+                $departmentCompanyId = isset($department['company_id']) ? (int) $department['company_id'] : null;
+                if ($companyId === null || $companyId === '') {
+                    $companyId = $departmentCompanyId;
+                } elseif ((int) $companyId !== $departmentCompanyId) {
+                    jsonResponse(['ok' => false, 'error' => 'company_id does not match department company'], 400);
+                }
+            }
+            if (($companyId === null || $companyId === '') && !empty($departmentId)) {
+                $department = $departmentModel->findById((int) $departmentId);
+                $companyId = $department['company_id'] ?? null;
+            }
             $payload = [
-                'department_id' => $input['department_id'] ?? null,
+                'department_id' => $departmentId,
+                'company_id' => $companyId,
                 'first_name' => $input['first_name'] ?? '',
                 'last_name' => $input['last_name'] ?? '',
                 'email' => $input['email'] ?? '',
                 'phone' => $input['phone'] ?? null,
-                'role' => $input['role'] ?? 'employee',
+                'role' => $userRole,
                 'status' => $input['status'] ?? 'active',
             ];
             if (!empty($input['password'])) {

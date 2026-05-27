@@ -2,6 +2,12 @@
 // Bandeau partagé de l'application : logo, navigation rapide et icônes contextuelles.
 $route = $route ?? ($_GET['route'] ?? 'home');
 $currentUser = currentUser();
+$roleLabels = [
+    'super_admin' => 'Super Admin',
+    'admin' => 'Admin',
+    'department_manager' => 'Chef de département',
+    'employee' => 'Employé',
+];
 $isPublicPage = in_array($route, ['home', 'login'], true);
 $basePath = $basePath ?? (function () {
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
@@ -32,10 +38,10 @@ $basePath = $basePath ?? (function () {
                 </div>
                 <?php if ($currentUser !== null): ?>
                 <div class="hotel-meta">
-                    <div class="hotel-name"></div>
+                    <div class="hotel-name">StaffEase Pro</div>
                     <div class="hotel-submeta">
                         <span class="employee-name"><?php echo e(($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')); ?></span>
-                        <span class="employee-role"><?php echo e(ucfirst($currentUser['role'] ?? 'employee')); ?> connected</span>
+                        <span class="employee-role"><?php echo e($roleLabels[$currentUser['role'] ?? 'employee'] ?? ucfirst((string) ($currentUser['role'] ?? 'employee'))); ?></span>
                         <span class="employee-email"><?php echo e($currentUser['email'] ?? 'employee@example.com'); ?></span>
                     </div>
                 </div>
@@ -45,7 +51,7 @@ $basePath = $basePath ?? (function () {
             <!-- Center: big title -->
             <div class="admin-navbar-section admin-navbar-center">
                 <div class="admin-brand-large">
-                    <img src="<?php echo $basePath; ?>/assets/icons/IconaStaffeasePro.jpg" alt="StaffEase Pro" class="admin-brand-icon">
+                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="StaffEase Pro" class="admin-brand-icon">
                     <div class="admin-brand-text">Dashboard <strong>Admin</strong></div>
                     <div class="admin-brand-sub">Hotel Staff Management</div>
                 </div>
@@ -55,14 +61,17 @@ $basePath = $basePath ?? (function () {
             <div class="admin-navbar-section admin-navbar-right">
                 <div class="icon-group" role="toolbar" aria-label="Actions rapides">
                     <?php if ($currentUser !== null): ?>
-                        <a href="#" class="icon-btn" title="Imprimer">
-                            <img src="<?php echo $basePath; ?>/assets/icons/print-outline.svg" alt="print" class="nav-icon">
+                        <a href="<?php echo appUrl('logout'); ?>" class="icon-btn" title="Déconnexion">
+                            <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="logout" class="nav-icon">
                         </a>
                         <button type="button" class="icon-btn" title="Paramètres" data-modal-target="modal-settings">
                             <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="settings" class="nav-icon">
                         </button>
-                        <a href="<?php echo appUrl('logout'); ?>" class="icon-btn" title="Déconnexion">
-                            <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="logout" class="nav-icon">
+                        <a href="#" class="icon-btn" title="Documents">
+                            <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="documents" class="nav-icon">
+                        </a>
+                        <a href="#" class="icon-btn" title="Imprimer">
+                            <img src="<?php echo $basePath; ?>/assets/icons/print-outline.svg" alt="print" class="nav-icon">
                         </a>
                     <?php else: ?>
                         <a href="<?php echo appUrl('login'); ?>" class="icon-btn" title="Connexion">

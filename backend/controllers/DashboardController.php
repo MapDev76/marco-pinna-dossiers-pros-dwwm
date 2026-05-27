@@ -35,8 +35,9 @@ if ($role === 'super_admin') {
             'title' => 'Administration',
             'icon' => '⚙',
             'buttons' => [
-                ['label' => 'Companies', 'target' => 'modal-super-directory', 'variant' => 'active'],
-                ['label' => 'Users', 'target' => 'modal-super-actions'],
+                ['label' => 'CRUD Companies', 'target' => 'modal-super-directory', 'variant' => 'active'],
+                ['label' => 'CRUD Departments', 'target' => 'modal-super-actions'],
+                ['label' => 'CRUD Users', 'target' => 'modal-super-actions'],
                 ['label' => 'Documents', 'target' => 'modal-documents'],
                 ['label' => 'Requests', 'target' => 'modal-admin-requests'],
                 ['label' => 'Notifications', 'target' => 'modal-admin-notifications'],

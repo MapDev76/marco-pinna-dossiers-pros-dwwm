@@ -46,8 +46,8 @@ class CompanyModel
     public function create(array $data): int
     {
         $statement = $this->pdo->prepare(
-            'INSERT INTO companies (name, type, address, city, province, zip_code, phone, email)
-             VALUES (:name, :type, :address, :city, :province, :zip_code, :phone, :email)'
+            'INSERT INTO companies (name, type, address, city, zip_code, phone, email, logo_path, signature_ip)
+             VALUES (:name, :type, :address, :city, :zip_code, :phone, :email, :logo_path, :signature_ip)'
         );
         $statement->execute($data);
 
@@ -68,10 +68,11 @@ class CompanyModel
                  type = :type,
                  address = :address,
                  city = :city,
-                 province = :province,
                  zip_code = :zip_code,
                  phone = :phone,
-                 email = :email
+                 email = :email,
+                 logo_path = :logo_path,
+                 signature_ip = :signature_ip
              WHERE id = :id'
         );
         $data['id'] = $id;
@@ -109,13 +110,18 @@ class CompanyModel
     public function directoryWithAdminsAndDepartments(): array
     {
         $statement = $this->pdo->query(
-            'SELECT c.id, c.name, c.city,
-                    GROUP_CONCAT(DISTINCT CONCAT(u.first_name, " ", u.last_name) ORDER BY u.last_name SEPARATOR "||") AS admins,
-                    GROUP_CONCAT(DISTINCT d.name ORDER BY d.name SEPARATOR "||") AS departments
+            'SELECT c.id, c.name, c.city, c.logo_path, c.signature_ip,
+                    COUNT(DISTINCT d.id) AS departments_count,
+                    COUNT(DISTINCT u_all.id) AS users_count,
+                    GROUP_CONCAT(DISTINCT CONCAT(u_admin.first_name, " ", u_admin.last_name) ORDER BY u_admin.last_name SEPARATOR "||") AS admins,
+                    GROUP_CONCAT(DISTINCT d.name ORDER BY d.name SEPARATOR "||") AS departments,
+                    GROUP_CONCAT(DISTINCT CONCAT(u_head.first_name, " ", u_head.last_name) ORDER BY u_head.last_name SEPARATOR "||") AS heads
              FROM companies c
              LEFT JOIN departments d ON d.company_id = c.id
-             LEFT JOIN users u ON u.department_id = d.id AND u.role = "admin"
-             GROUP BY c.id, c.name, c.city
+             LEFT JOIN users u_all ON COALESCE(u_all.company_id, d.company_id) = c.id
+             LEFT JOIN users u_admin ON u_admin.department_id = d.id AND u_admin.role IN ("super_admin", "admin")
+             LEFT JOIN users u_head ON u_head.id = d.head_user_id
+               GROUP BY c.id, c.name, c.city, c.logo_path, c.signature_ip
              ORDER BY c.name ASC'
         );
 
@@ -124,6 +130,9 @@ class CompanyModel
         foreach ($rows as &$row) {
             $row['admins'] = empty($row['admins']) ? [] : array_values(array_filter(explode('||', (string) $row['admins'])));
             $row['departments'] = empty($row['departments']) ? [] : array_values(array_filter(explode('||', (string) $row['departments'])));
+            $row['heads'] = empty($row['heads']) ? [] : array_values(array_filter(explode('||', (string) $row['heads'])));
+            $row['departments_count'] = (int) ($row['departments_count'] ?? 0);
+            $row['users_count'] = (int) ($row['users_count'] ?? 0);
         }
         unset($row);
 

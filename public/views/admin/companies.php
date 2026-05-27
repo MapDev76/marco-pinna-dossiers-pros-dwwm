@@ -35,10 +35,11 @@ $typeLabels = [
             $type = $formData['type'] ?? ($editing['type'] ?? 'other');
             $address = $formData['address'] ?? ($editing['address'] ?? '');
             $city = $formData['city'] ?? ($editing['city'] ?? '');
-            $province = $formData['province'] ?? ($editing['province'] ?? '');
             $zipCode = $formData['zip_code'] ?? ($editing['zip_code'] ?? '');
             $phone = $formData['phone'] ?? ($editing['phone'] ?? '');
             $email = $formData['email'] ?? ($editing['email'] ?? '');
+            $logoPath = $formData['logo_path'] ?? ($editing['logo_path'] ?? '');
+            $signatureIp = $formData['signature_ip'] ?? ($editing['signature_ip'] ?? '');
             ?>
 
             <label>
@@ -62,10 +63,6 @@ $typeLabels = [
                 <input type="text" name="city" value="<?php echo e($city); ?>">
             </label>
             <label>
-                <span>Province</span>
-                <input type="text" name="province" value="<?php echo e($province); ?>">
-            </label>
-            <label>
                 <span>Code postal</span>
                 <input type="text" name="zip_code" value="<?php echo e($zipCode); ?>">
             </label>
@@ -76,6 +73,14 @@ $typeLabels = [
             <label>
                 <span>Email</span>
                 <input type="email" name="email" value="<?php echo e($email); ?>">
+            </label>
+            <label>
+                <span>Logo (chemin ou URL)</span>
+                <input type="text" name="logo_path" value="<?php echo e($logoPath); ?>" placeholder="assets/images/...">
+            </label>
+            <label>
+                <span>Signature IP</span>
+                <input type="text" name="signature_ip" value="<?php echo e($signatureIp); ?>" placeholder="Laisser vide si non utilisé">
             </label>
 
             <div class="form-actions">

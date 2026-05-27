@@ -4,6 +4,7 @@ $editing = $editingDepartment ?? null;
 $formData = $formData ?? [];
 $companies = $companies ?? [];
 $departments = $departments ?? [];
+$users = $users ?? [];
 ?>
 <div class="admin-shell">
     <div class="admin-hero">
@@ -27,6 +28,7 @@ $departments = $departments ?? [];
             $companyId = (string) ($formData['company_id'] ?? ($editing['company_id'] ?? ''));
             $name = $formData['name'] ?? ($editing['name'] ?? '');
             $description = $formData['description'] ?? ($editing['description'] ?? '');
+            $headUserId = (string) ($formData['head_user_id'] ?? ($editing['head_user_id'] ?? ''));
             ?>
 
             <label>
@@ -43,6 +45,17 @@ $departments = $departments ?? [];
             <label>
                 <span>Nom</span>
                 <input type="text" name="name" value="<?php echo e($name); ?>" required>
+            </label>
+            <label>
+                <span>Chef de département</span>
+                <select name="head_user_id">
+                    <option value="">Aucun</option>
+                    <?php foreach ($users as $user): ?>
+                        <option value="<?php echo (int) $user['id']; ?>" <?php echo $headUserId === (string) $user['id'] ? 'selected' : ''; ?>>
+                            <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </label>
             <label class="span-2">
                 <span>Description</span>
@@ -66,18 +79,20 @@ $departments = $departments ?? [];
                     <tr>
                         <th>Nom</th>
                         <th>Entreprise</th>
+                        <th>Chef</th>
                         <th>Description</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($departments)): ?>
-                        <tr><td colspan="4">Aucun département à afficher.</td></tr>
+                        <tr><td colspan="5">Aucun département à afficher.</td></tr>
                     <?php endif; ?>
                     <?php foreach ($departments as $department): ?>
                         <tr>
                             <td><?php echo e($department['name']); ?></td>
                             <td><?php echo e($department['company_name'] ?? '-'); ?></td>
+                            <td><?php echo e($department['head_user_name'] ?? '-'); ?></td>
                             <td><?php echo e($department['description'] ?? '-'); ?></td>
                             <td class="table-actions">
                                 <a href="<?php echo appUrl('departments', ['action' => 'edit', 'id' => (int) $department['id']]); ?>">Modifier</a>

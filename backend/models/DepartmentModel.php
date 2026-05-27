@@ -15,9 +15,10 @@ class DepartmentModel
     public function allWithCompany(): array
     {
         $statement = $this->pdo->query(
-            'SELECT d.*, c.name AS company_name
+            'SELECT d.*, c.name AS company_name, CONCAT(hu.first_name, " ", hu.last_name) AS head_user_name
              FROM departments d
              LEFT JOIN companies c ON c.id = d.company_id
+             LEFT JOIN users hu ON hu.id = d.head_user_id
              ORDER BY d.created_at DESC, d.id DESC'
         );
 
@@ -59,8 +60,8 @@ class DepartmentModel
     public function create(array $data): int
     {
         $statement = $this->pdo->prepare(
-            'INSERT INTO departments (company_id, name, description)
-             VALUES (:company_id, :name, :description)'
+            'INSERT INTO departments (company_id, name, description, head_user_id)
+             VALUES (:company_id, :name, :description, :head_user_id)'
         );
         $statement->execute($data);
 
@@ -78,7 +79,8 @@ class DepartmentModel
             'UPDATE departments
              SET company_id = :company_id,
                  name = :name,
-                 description = :description
+                 description = :description,
+                 head_user_id = :head_user_id
              WHERE id = :id'
         );
         $data['id'] = $id;
@@ -127,10 +129,11 @@ class DepartmentModel
     public function byCompanyId(int $companyId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, company_id, name, description
-             FROM departments
-             WHERE company_id = :company_id
-             ORDER BY name ASC, id DESC'
+            'SELECT d.id, d.company_id, d.name, d.description, d.head_user_id, CONCAT(u.first_name, " ", u.last_name) AS head_user_name
+             FROM departments d
+             LEFT JOIN users u ON u.id = d.head_user_id
+             WHERE d.company_id = :company_id
+             ORDER BY d.name ASC, d.id DESC'
         );
         $statement->execute(['company_id' => $companyId]);
 

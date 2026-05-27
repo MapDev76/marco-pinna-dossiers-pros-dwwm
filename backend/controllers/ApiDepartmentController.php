@@ -26,7 +26,12 @@ try {
             $companyId = (int) ($input['company_id'] ?? 0);
             $name = trim((string) ($input['name'] ?? ''));
             if ($companyId <= 0 || $name === '') jsonResponse(['ok' => false, 'error' => 'company_id and name required'], 400);
-            $id = $deptModel->create(['company_id' => $companyId, 'name' => $name, 'description' => $input['description'] ?? null]);
+            $id = $deptModel->create([
+                'company_id' => $companyId,
+                'name' => $name,
+                'description' => $input['description'] ?? null,
+                'head_user_id' => $input['head_user_id'] ?? null,
+            ]);
             $dept = $deptModel->findById($id);
             jsonResponse(['ok' => true, 'department' => $dept]);
             break;
@@ -34,7 +39,12 @@ try {
         case 'update':
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
-            $deptModel->update($id, ['company_id' => $input['company_id'], 'name' => $input['name'], 'description' => $input['description'] ?? null]);
+            $deptModel->update($id, [
+                'company_id' => $input['company_id'],
+                'name' => $input['name'],
+                'description' => $input['description'] ?? null,
+                'head_user_id' => $input['head_user_id'] ?? null,
+            ]);
             jsonResponse(['ok' => true]);
             break;
 

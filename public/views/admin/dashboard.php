@@ -64,6 +64,46 @@ $calendarTemplates = [
                         <span class="admin-stat-label">Départements</span>
                     </section>
                 </div>
+
+                <section class="admin-card company-directory-section">
+                    <div class="dashboard-calendar-headline">
+                        <div>
+                            <p>Entreprises</p>
+                            <h2>Vue d'ensemble des sociétés</h2>
+                        </div>
+                        <button type="button" class="admin-action-link" data-modal-target="modal-super-directory">Ouvrir le CRUD</button>
+                    </div>
+
+                    <div class="dashboard-company-grid">
+                        <?php if (empty($moduleRows['company_directory'] ?? [])): ?>
+                            <p>Aucune entreprise à afficher.</p>
+                        <?php endif; ?>
+
+                        <?php foreach (($moduleRows['company_directory'] ?? []) as $company): ?>
+                            <article class="dashboard-company-card">
+                                <div class="dashboard-company-card-head">
+                                    <div>
+                                        <h3><?php echo e($company['name']); ?></h3>
+                                        <p><?php echo e($company['city'] ?? '-'); ?></p>
+                                    </div>
+                                    <?php if (!empty($company['logo_path'])): ?>
+                                        <img src="<?php echo e($company['logo_path']); ?>" alt="<?php echo e($company['name']); ?>" class="dashboard-company-logo">
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="dashboard-company-metrics">
+                                    <div><span>Users</span><strong><?php echo e($company['users_count'] ?? 0); ?></strong></div>
+                                    <div><span>Departements</span><strong><?php echo e($company['departments_count'] ?? 0); ?></strong></div>
+                                    <div><span>Signature IP</span><strong><?php echo e($company['signature_ip'] ?: '-'); ?></strong></div>
+                                </div>
+
+                                <p><strong>Admins:</strong> <?php echo e(empty($company['admins']) ? 'Aucun' : implode(', ', $company['admins'])); ?></p>
+                                <p><strong>Chefs de département:</strong> <?php echo e(empty($company['heads']) ? 'Aucun' : implode(', ', $company['heads'])); ?></p>
+                                <p><strong>Départements:</strong> <?php echo e(empty($company['departments']) ? 'Aucun' : implode(', ', $company['departments'])); ?></p>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager'): ?>
                 <section class="admin-card dashboard-calendar-shell">
                     <div class="dashboard-calendar-headline">

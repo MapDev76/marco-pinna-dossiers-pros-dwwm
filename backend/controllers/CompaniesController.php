@@ -40,10 +40,11 @@ $formData = [
     'type' => 'other',
     'address' => '',
     'city' => '',
-    'province' => '',
     'zip_code' => '',
     'phone' => '',
     'email' => '',
+    'logo_path' => '',
+    'signature_ip' => '',
 ];
 
 if (isset($_GET['action'], $_GET['id']) && $_GET['action'] === 'edit') {
@@ -58,10 +59,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'type' => trim((string) ($_POST['type'] ?? 'other')),
         'address' => trim((string) ($_POST['address'] ?? '')),
         'city' => trim((string) ($_POST['city'] ?? '')),
-        'province' => trim((string) ($_POST['province'] ?? '')),
         'zip_code' => trim((string) ($_POST['zip_code'] ?? '')),
         'phone' => trim((string) ($_POST['phone'] ?? '')),
         'email' => trim((string) ($_POST['email'] ?? '')),
+        'logo_path' => trim((string) ($_POST['logo_path'] ?? '')),
+        'signature_ip' => trim((string) ($_POST['signature_ip'] ?? '')),
     ];
     $formData = $payload;
 

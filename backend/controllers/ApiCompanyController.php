@@ -31,10 +31,11 @@ try {
                 'type' => $input['type'] ?? 'other',
                 'address' => $input['address'] ?? null,
                 'city' => $input['city'] ?? null,
-                'province' => $input['province'] ?? null,
                 'zip_code' => $input['zip_code'] ?? null,
                 'phone' => $input['phone'] ?? null,
                 'email' => $input['email'] ?? null,
+                'logo_path' => $input['logo_path'] ?? null,
+                'signature_ip' => $input['signature_ip'] ?? null,
             ];
 
             $id = $companyModel->create($data);
@@ -53,10 +54,11 @@ try {
                 'type' => $input['type'] ?? 'other',
                 'address' => $input['address'] ?? null,
                 'city' => $input['city'] ?? null,
-                'province' => $input['province'] ?? null,
                 'zip_code' => $input['zip_code'] ?? null,
                 'phone' => $input['phone'] ?? null,
                 'email' => $input['email'] ?? null,
+                'logo_path' => $input['logo_path'] ?? null,
+                'signature_ip' => $input['signature_ip'] ?? null,
             ];
 
             $companyModel->update($id, $data);
