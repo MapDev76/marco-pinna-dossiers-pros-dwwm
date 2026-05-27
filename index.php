@@ -57,7 +57,10 @@ require __DIR__ . '/app/layout/header.php';
                                         <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 2 9 7.17V19h9c.82 0 1.54-.5 1.84-1.25L23 12.5c.09-.23.14-.47.14-.72v-1.78c0-.55-.45-1-1-1z" />
                                 </svg>
                         </span>
-                        <div class="flash-body"><?php echo e($flashSuccess); ?></div>
+                        <div class="flash-body">
+                                <div class="flash-title">Congratulations!</div>
+                                <p><?php echo e($flashSuccess); ?></p>
+                        </div>
                 </div>
 <?php endif; ?>
 
@@ -69,10 +72,14 @@ require __DIR__ . '/app/layout/header.php';
                         </button>
                         <span class="flash-icon" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.54 13.54L13.41 12l2.13-3.54L15.13 7 12 10.13 8.87 7 7.46 8.46 9.59 12 7.46 15.54 8.87 17 12 13.87 15.13 17z" />
+                                        <path class="triangle" d="M1 21h22L12 2 1 21z" />
+                                        <path class="exclam" d="M12 8.5c-.28 0-.5.22-.5.5v4.5c0 .28.22.5.5.5s.5-.22.5-.5V9c0-.28-.22-.5-.5-.5zm0 8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
                                 </svg>
                         </span>
-                        <div class="flash-body"><?php echo e($flashError); ?></div>
+                        <div class="flash-body">
+                                <div class="flash-title">Oops!</div>
+                                <p><?php echo e($flashError); ?></p>
+                        </div>
                 </div>
 <?php endif; ?>
 

@@ -15,7 +15,10 @@
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.54 13.54L13.41 12l2.13-3.54L15.13 7 12 10.13 8.87 7 7.46 8.46 9.59 12 7.46 15.54 8.87 17 12 13.87 15.13 17z" />
                 </svg>
             </span>
-            <div class="flash-body"><?php echo e($loginError); ?></div>
+            <div class="flash-body">
+                <div class="flash-title">Oops!</div>
+                <p><?php echo e($loginError); ?></p>
+            </div>
         </div>
     <?php endif; ?>
 
