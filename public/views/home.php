@@ -29,46 +29,32 @@
 			<div class="editable-grid">
 				<div class="feature-box">
 					<label for="f_reporting"><strong>Reporting &amp; Analytics</strong></label>
-					<textarea id="f_reporting" class="feature-input" readonly>Shift coverage reports (e.g., over/under-staffing).
-Attendance trends (late arrivals, absences, overtime).
-Exportable data (PDF, Excel) for HR and payroll.</textarea>
+					<div id="f_reporting" class="feature-input" aria-readonly="true" role="textbox">Shift coverage reports (e.g., over/under-staffing).<br>Attendance trends (late arrivals, absences, overtime).<br>Exportable data (PDF, Excel) for HR and payroll.</div>
 				</div>
 
 				<div class="feature-box">
 					<label for="f_attendance"><strong>Digital Attendance Tracking</strong></label>
-					<textarea id="f_attendance" class="feature-input" readonly>Digital signature check-ins to eliminate manual errors.
-Real-time presence monitoring with wifi validation.
-Attendance reports for payroll and compliance.</textarea>
+					<div id="f_attendance" class="feature-input" aria-readonly="true" role="textbox">Digital signature check-ins to eliminate manual errors.<br>Real-time presence monitoring with wifi validation.<br>Attendance reports for payroll and compliance.</div>
 				</div>
 
 				<div class="feature-box">
 					<label for="f_documents"><strong>Document Management &amp; Compliance</strong></label>
-					<textarea id="f_documents" class="feature-input" readonly>Secure upload, storage, and sharing of employee documents:
-Medical certificates
-Employment contracts
-Automated reminders for expiring documents.</textarea>
+					<div id="f_documents" class="feature-input" aria-readonly="true" role="textbox">Secure upload, storage, and sharing of employee documents:<br>Medical certificates<br>Employment contracts<br>Automated reminders for expiring documents.</div>
 				</div>
 
 				<div class="feature-box">
 					<label for="f_roles"><strong>User Roles &amp; Access Control</strong></label>
-					<textarea id="f_roles" class="feature-input" readonly>Multiple user roles with custom permissions
-Granular access levels to protect sensitive data.
-Multi-Device Access : Fully responsive design dedicated mobile and tablet.</textarea>
+					<div id="f_roles" class="feature-input" aria-readonly="true" role="textbox">Multiple user roles with custom permissions<br>Granular access levels to protect sensitive data.<br>Multi-Device Access : Fully responsive design dedicated mobile and tablet.</div>
 				</div>
 
 				<div class="feature-box">
 					<label for="f_security"><strong>Security &amp; Compliance</strong></label>
-					<textarea id="f_security" class="feature-input" readonly>End-to-end encryption for all data.
-GDPR-compliant (data protection for employees).
-Two-factor authentication (2FA) for admin accounts.
-Audit logs to track all actions.</textarea>
+					<div id="f_security" class="feature-input" aria-readonly="true" role="textbox">End-to-end encryption for all data.<br>GDPR-compliant (data protection for employees).<br>Two-factor authentication (2FA) for admin accounts.<br>Audit logs to track all actions.</div>
 				</div>
 
 				<div class="feature-box">
 					<label for="f_shifts"><strong>Smart Shift Management</strong></label>
-					<textarea id="f_shifts" class="feature-input" readonly>Auto-fill shifts based on employee availability, skills, and workload.
-Real-time conflict detection to avoid overbooking or clashes.
-Shift templates for recurring schedules (e.g., morning, afternoon, night shifts).</textarea>
+					<div id="f_shifts" class="feature-input" aria-readonly="true" role="textbox">Auto-fill shifts based on employee availability, skills, and workload.<br>Real-time conflict detection to avoid overbooking or clashes.<br>Shift templates for recurring schedules (e.g., morning, afternoon, night shifts).</div>
 				</div>
 			</div>
 		</section>
