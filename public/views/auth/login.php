@@ -1,13 +1,13 @@
-<!-- Page de connexion commune : authentifie tous les rôles actifs. -->
+<!-- Shared login page: authenticates all active roles. -->
 <?php $loginError = $loginError ?? null; ?>
 <div class="auth-card">
-    <h1>Connexion</h1>
-    <p>User registration is exclusively managed by your department manager or administration.    Please contact them to request an account.</p>
+    <h1>Login</h1>
+    <p>User registration is managed exclusively by your department manager or administration. Please contact them to request an account.</p>
 
     <?php if ($loginError !== null): ?>
         <div id="flash-backdrop-login" class="flash-backdrop"></div>
         <div id="flash-login" class="flash flash-error" role="alert" aria-live="assertive" data-backdrop="flash-backdrop-login">
-            <button class="flash-close" aria-label="Chiudi messaggio">
+            <button class="flash-close" aria-label="Close message">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.29 9.18 12 2.88 5.71 4.29 4.29 10.59 10.59 17.89 4.29z"/></svg>
             </button>
             <span class="flash-icon" aria-hidden="true">
@@ -16,7 +16,7 @@
                 </svg>
             </span>
             <div class="flash-body">
-                <div class="flash-title">Oops!</div>
+                <div class="flash-title">Login error</div>
                 <p><?php echo e($loginError); ?></p>
             </div>
         </div>
@@ -27,10 +27,10 @@
             <input type="email" id="email" placeholder="Email" name="email" value="<?php echo e($loginEmail ?? ''); ?>" required>
         </div>
         <div>
-            <input type="password" id="password" placeholder="Mot de passe" name="password" required>
+            <input type="password" id="password" placeholder="Password" name="password" required>
         </div>
         <div>
-            <button type="submit">Se connecter</button>
+            <button type="submit">Sign in</button>
         </div>
     </form>
 </div>

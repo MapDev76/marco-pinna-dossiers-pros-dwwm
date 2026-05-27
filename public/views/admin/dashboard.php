@@ -1,4 +1,4 @@
-<!-- Tableau de bord commun : navigation latérale et modales centrées selon le rôle connecté. -->
+<!-- Shared dashboard: sidebar navigation and centered modals by logged-in role. -->
 <?php
 $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
@@ -6,25 +6,25 @@ $profile = $profile ?? [];
 $moduleRows = $moduleRows ?? [];
 $roleLabels = [
     'super_admin' => 'Super Admin',
-    'admin' => 'Administrateur',
-    'department_manager' => 'Chef de département',
-    'employee' => 'Employé',
+    'admin' => 'Admin',
+    'department_manager' => 'Department Manager',
+    'employee' => 'Employee',
 ];
 $requestStatusLabels = [
-    'pending' => 'En attente',
-    'approved' => 'Approuvée',
-    'rejected' => 'Refusée',
+    'pending' => 'Pending',
+    'approved' => 'Approved',
+    'rejected' => 'Rejected',
 ];
 $requestTypeLabels = [
     'notification' => 'Notification',
-    'leave' => 'Congé',
-    'shift_change' => 'Changement de quart',
-    'other' => 'Autre',
-    'admin_note' => 'Note admin',
+    'leave' => 'Leave',
+    'shift_change' => 'Shift change',
+    'other' => 'Other',
+    'admin_note' => 'Admin note',
 ];
 
 $weekDays = [
-    ['label' => 'DAY WEEK', 'day' => 'XX'],
+    ['label' => 'MONDAY', 'day' => 'XX'],
     ['label' => 'TUESDAY', 'day' => '24'],
     ['label' => 'WEDNESDAY', 'day' => '25'],
     ['label' => 'THURSDAY', 'day' => '26'],
@@ -34,9 +34,9 @@ $weekDays = [
 ];
 
 $calendarTemplates = [
-    ['time' => '06:00 - 14:00', 'title' => 'Reception', 'meta' => 'Assigné au département'],
-    ['time' => '14:00 - 22:00', 'title' => 'Housekeeping', 'meta' => 'Shift de jour'],
-    ['time' => '22:00 - 06:00', 'title' => 'Night auditor', 'meta' => 'Shift de nuit'],
+    ['time' => '06:00 - 14:00', 'title' => 'Reception', 'meta' => 'Assigned to department'],
+    ['time' => '14:00 - 22:00', 'title' => 'Housekeeping', 'meta' => 'Day shift'],
+    ['time' => '22:00 - 06:00', 'title' => 'Night auditor', 'meta' => 'Night shift'],
 ];
 ?>
 
@@ -53,30 +53,30 @@ $calendarTemplates = [
                 <div class="admin-grid">
                     <section class="admin-card admin-stat">
                         <span class="admin-stat-value"><?php echo e($stats['users'] ?? 0); ?></span>
-                        <span class="admin-stat-label">Utilisateurs</span>
+                        <span class="admin-stat-label">Users</span>
                     </section>
                     <section class="admin-card admin-stat">
                         <span class="admin-stat-value"><?php echo e($stats['companies'] ?? 0); ?></span>
-                        <span class="admin-stat-label">Entreprises</span>
+                        <span class="admin-stat-label">Companies</span>
                     </section>
                     <section class="admin-card admin-stat">
                         <span class="admin-stat-value"><?php echo e($stats['departments'] ?? 0); ?></span>
-                        <span class="admin-stat-label">Départements</span>
+                        <span class="admin-stat-label">Departments</span>
                     </section>
                 </div>
 
                 <section class="admin-card company-directory-section">
                     <div class="dashboard-calendar-headline">
                         <div>
-                            <p>Entreprises</p>
-                            <h2>Vue d'ensemble des sociétés</h2>
+                            <p>Companies</p>
+                            <h2>Company overview</h2>
                         </div>
-                        <button type="button" class="admin-action-link" data-modal-target="modal-super-directory">Ouvrir le CRUD</button>
+                        <button type="button" class="admin-action-link" data-modal-target="modal-super-directory">Open CRUD</button>
                     </div>
 
                     <div class="dashboard-company-grid">
                         <?php if (empty($moduleRows['company_directory'] ?? [])): ?>
-                            <p>Aucune entreprise à afficher.</p>
+                            <p>No companies to display.</p>
                         <?php endif; ?>
 
                         <?php foreach (($moduleRows['company_directory'] ?? []) as $company): ?>
@@ -93,13 +93,13 @@ $calendarTemplates = [
 
                                 <div class="dashboard-company-metrics">
                                     <div><span>Users</span><strong><?php echo e($company['users_count'] ?? 0); ?></strong></div>
-                                    <div><span>Departements</span><strong><?php echo e($company['departments_count'] ?? 0); ?></strong></div>
+                                    <div><span>Departments</span><strong><?php echo e($company['departments_count'] ?? 0); ?></strong></div>
                                     <div><span>Signature IP</span><strong><?php echo e($company['signature_ip'] ?: '-'); ?></strong></div>
                                 </div>
 
-                                <p><strong>Admins:</strong> <?php echo e(empty($company['admins']) ? 'Aucun' : implode(', ', $company['admins'])); ?></p>
-                                <p><strong>Chefs de département:</strong> <?php echo e(empty($company['heads']) ? 'Aucun' : implode(', ', $company['heads'])); ?></p>
-                                <p><strong>Départements:</strong> <?php echo e(empty($company['departments']) ? 'Aucun' : implode(', ', $company['departments'])); ?></p>
+                                <p><strong>Admins:</strong> <?php echo e(empty($company['admins']) ? 'None' : implode(', ', $company['admins'])); ?></p>
+                                <p><strong>Department heads:</strong> <?php echo e(empty($company['heads']) ? 'None' : implode(', ', $company['heads'])); ?></p>
+                                <p><strong>Departments:</strong> <?php echo e(empty($company['departments']) ? 'None' : implode(', ', $company['departments'])); ?></p>
                             </article>
                         <?php endforeach; ?>
                     </div>
@@ -108,9 +108,9 @@ $calendarTemplates = [
                 <section class="admin-card dashboard-calendar-shell">
                     <div class="dashboard-calendar-headline">
                         <div>
-                            <p><?php echo $role === 'admin' ? 'Planification de l’entreprise' : 'Planification du département'; ?></p>
+                            <p><?php echo $role === 'admin' ? 'Company planning' : 'Department planning'; ?></p>
                         </div>
-                        <button type="button" class="admin-action-link" data-modal-target="modal-schedule">Planning</button>
+                        <button type="button" class="admin-action-link" data-modal-target="modal-schedule">Schedule</button>
                     </div>
 
                     <div class="dashboard-calendar">
@@ -130,7 +130,7 @@ $calendarTemplates = [
                                     <?php endforeach; ?>
 
                                     <button type="button" class="dashboard-calendar-card is-add" data-modal-target="modal-schedule">
-                                        + Ajouter
+                                        + Add
                                     </button>
                                 </div>
                             </article>
@@ -139,21 +139,21 @@ $calendarTemplates = [
                 </section>
             <?php else: ?>
                 <section class="admin-card">
-                    <h2>Mes quarts</h2>
+                    <h2>My shifts</h2>
                     <div class="table-wrap">
                         <table class="admin-table">
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Quart</th>
-                                    <th>Département</th>
-                                    <th>Statut</th>
+                                    <th>Shift</th>
+                                    <th>Department</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($moduleRows['shifts'] ?? [])): ?>
                                     <tr>
-                                        <td colspan="4">Aucun quart disponible pour le moment.</td>
+                                        <td colspan="4">No shifts available right now.</td>
                                     </tr>
                                 <?php endif; ?>
                                 <?php foreach (($moduleRows['shifts'] ?? []) as $shift): ?>
@@ -205,11 +205,11 @@ $calendarTemplates = [
 
     <section class="dashboard-modal" id="modal-super-actions" hidden>
         <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
-        <h2>Actions Super Admin</h2>
+        <h2>Super Admin Actions</h2>
         <div class="admin-actions">
-            <a class="admin-action-link" href="<?php echo appUrl('users'); ?>">Gérer les utilisateurs</a>
-            <a class="admin-action-link" href="<?php echo appUrl('companies'); ?>">Gérer les entreprises</a>
-            <a class="admin-action-link" href="<?php echo appUrl('departments'); ?>">Gérer les départements</a>
+            <a class="admin-action-link" href="<?php echo appUrl('users'); ?>">Manage users</a>
+            <a class="admin-action-link" href="<?php echo appUrl('companies'); ?>">Manage companies</a>
+            <a class="admin-action-link" href="<?php echo appUrl('departments'); ?>">Manage departments</a>
         </div>
     </section>
 <?php endif; ?>
@@ -217,8 +217,8 @@ $calendarTemplates = [
 <?php if ($role === 'admin'): ?>
     <section class="dashboard-modal" id="modal-admin-departments" hidden>
         <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
-        <h2>Départements</h2>
-        <p>Gestion des départements de votre entreprise.</p>
+        <h2>Departments</h2>
+        <p>Manage the departments for your company.</p>
         <div class="table-wrap">
             <table class="admin-table">
                 <thead>
@@ -230,7 +230,7 @@ $calendarTemplates = [
                 <tbody>
                     <?php if (empty($moduleRows['company_departments'] ?? [])): ?>
                         <tr>
-                            <td colspan="2">Aucun département trouvé.</td>
+                            <td colspan="2">No departments found.</td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach (($moduleRows['company_departments'] ?? []) as $department): ?>
@@ -249,8 +249,8 @@ $calendarTemplates = [
 
     <section class="dashboard-modal" id="modal-admin-employees" hidden>
         <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
-        <h2>Employés</h2>
-        <p>Gestion des employés de votre entreprise.</p>
+        <h2>Employees</h2>
+        <p>Manage the employees in your company.</p>
         <div class="table-wrap">
             <table class="admin-table">
                 <thead>
@@ -265,7 +265,7 @@ $calendarTemplates = [
                 <tbody>
                     <?php if (empty($moduleRows['company_users'] ?? [])): ?>
                         <tr>
-                            <td colspan="5">Aucun utilisateur rattaché à cette entreprise.</td>
+                            <td colspan="5">No users are linked to this company.</td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach (($moduleRows['company_users'] ?? []) as $companyUser): ?>
@@ -287,13 +287,13 @@ $calendarTemplates = [
 
     <section class="dashboard-modal dashboard-settings-modal" id="modal-admin-requests" hidden>
         <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
-        <h2>Requests de l'entreprise</h2>
+        <h2>Company requests</h2>
 
         <form method="post" action="<?php echo appUrl('dashboard'); ?>" class="admin-form">
             <input type="hidden" name="dashboard_action" value="create_request">
             <input type="hidden" name="request_type" value="admin_note">
             <label>
-                Titre
+                Title
                 <input type="text" name="request_title" required>
             </label>
             <label>
@@ -301,7 +301,7 @@ $calendarTemplates = [
                 <textarea name="request_message" required></textarea>
             </label>
             <div class="form-actions">
-                <button type="submit">Créer une request</button>
+                <button type="submit">Create request</button>
             </div>
         </form>
 
@@ -309,18 +309,18 @@ $calendarTemplates = [
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>Employé</th>
-                        <th>Département</th>
+                        <th>Employee</th>
+                        <th>Department</th>
                         <th>Type</th>
-                        <th>Titre</th>
-                        <th>Statut</th>
+                        <th>Title</th>
+                        <th>Status</th>
                         <th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($moduleRows['company_requests'] ?? [])): ?>
                         <tr>
-                            <td colspan="6">Aucune request récente.</td>
+                            <td colspan="6">No recent requests.</td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach (($moduleRows['company_requests'] ?? []) as $request): ?>
@@ -345,7 +345,7 @@ $calendarTemplates = [
         <form method="post" action="<?php echo appUrl('dashboard'); ?>" class="admin-form">
             <input type="hidden" name="dashboard_action" value="create_notification">
             <label>
-                Titre
+                Title
                 <input type="text" name="notification_title" required>
             </label>
             <label>
@@ -353,12 +353,12 @@ $calendarTemplates = [
                 <textarea name="notification_message" required></textarea>
             </label>
             <div class="form-actions">
-                <button type="submit">Créer une notification</button>
+                <button type="submit">Create notification</button>
             </div>
         </form>
 
         <?php if (empty($moduleRows['notifications'] ?? [])): ?>
-            <p>Aucune notification pour le moment.</p>
+            <p>No notifications at the moment.</p>
         <?php endif; ?>
 
         <?php foreach (($moduleRows['notifications'] ?? []) as $notification): ?>
@@ -366,7 +366,7 @@ $calendarTemplates = [
                 <input type="hidden" name="dashboard_action" value="update_notification">
                 <input type="hidden" name="notification_id" value="<?php echo e($notification['id']); ?>">
                 <label>
-                    Titre
+                    Title
                     <input type="text" name="notification_title" value="<?php echo e($notification['title'] ?? ''); ?>" required>
                 </label>
                 <label>
@@ -374,7 +374,7 @@ $calendarTemplates = [
                     <textarea name="notification_message" required><?php echo e($notification['message'] ?? ''); ?></textarea>
                 </label>
                 <div class="form-actions">
-                    <button type="submit">Mettre à jour</button>
+                    <button type="submit">Update</button>
                 </div>
             </form>
         <?php endforeach; ?>
@@ -384,7 +384,7 @@ $calendarTemplates = [
 <?php if ($role === 'department_manager'): ?>
     <section class="dashboard-modal" id="modal-manager-team" hidden>
         <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
-        <h2>Équipe du département</h2>
+        <h2>Department team</h2>
         <div class="table-wrap">
             <table class="admin-table">
                 <thead>
@@ -398,7 +398,7 @@ $calendarTemplates = [
                 <tbody>
                     <?php if (empty($moduleRows['team'] ?? [])): ?>
                         <tr>
-                            <td colspan="4">Aucun collègue trouvé dans ce département.</td>
+                            <td colspan="4">No colleagues found in this department.</td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach (($moduleRows['team'] ?? []) as $teamMember): ?>
@@ -417,20 +417,20 @@ $calendarTemplates = [
 
 <section class="dashboard-modal dashboard-settings-modal" id="modal-global-requests" hidden>
     <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
-    <h2>Mes requests</h2>
+    <h2>My requests</h2>
 
     <form method="post" action="<?php echo appUrl('dashboard'); ?>" class="admin-form">
         <input type="hidden" name="dashboard_action" value="create_request">
         <label>
             Type
             <select name="request_type" required>
-                <option value="leave">Congé</option>
-                <option value="shift_change">Changement de quart</option>
-                <option value="other">Autre</option>
+                <option value="leave">Leave</option>
+                <option value="shift_change">Shift change</option>
+                <option value="other">Other</option>
             </select>
         </label>
         <label>
-            Titre
+            Title
             <input type="text" name="request_title" required>
         </label>
         <label>
@@ -438,7 +438,7 @@ $calendarTemplates = [
             <textarea name="request_message" required></textarea>
         </label>
         <div class="form-actions">
-            <button type="submit">Créer une request</button>
+            <button type="submit">Create request</button>
         </div>
     </form>
 
@@ -447,15 +447,15 @@ $calendarTemplates = [
             <thead>
                 <tr>
                     <th>Type</th>
-                    <th>Titre</th>
-                    <th>Statut</th>
+                    <th>Title</th>
+                    <th>Status</th>
                     <th>Date</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($moduleRows['requests'] ?? [])): ?>
                     <tr>
-                        <td colspan="4">Aucune request enregistrée.</td>
+                        <td colspan="4">No requests recorded.</td>
                     </tr>
                 <?php endif; ?>
                 <?php foreach (($moduleRows['requests'] ?? []) as $request): ?>
@@ -473,12 +473,12 @@ $calendarTemplates = [
 
 <section class="dashboard-modal dashboard-settings-modal" id="modal-global-notifications" hidden>
     <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
-    <h2>Mes notifications</h2>
+    <h2>My notifications</h2>
 
     <form method="post" action="<?php echo appUrl('dashboard'); ?>" class="admin-form">
         <input type="hidden" name="dashboard_action" value="create_notification">
         <label>
-            Titre
+            Title
             <input type="text" name="notification_title" required>
         </label>
         <label>
@@ -486,12 +486,12 @@ $calendarTemplates = [
             <textarea name="notification_message" required></textarea>
         </label>
         <div class="form-actions">
-            <button type="submit">Créer une notification</button>
+            <button type="submit">Create notification</button>
         </div>
     </form>
 
     <?php if (empty($moduleRows['notifications'] ?? [])): ?>
-        <p>Aucune notification pour le moment.</p>
+        <p>No notifications at the moment.</p>
     <?php endif; ?>
 
     <?php foreach (($moduleRows['notifications'] ?? []) as $notification): ?>
@@ -499,7 +499,7 @@ $calendarTemplates = [
             <input type="hidden" name="dashboard_action" value="update_notification">
             <input type="hidden" name="notification_id" value="<?php echo e($notification['id']); ?>">
             <label>
-                Titre
+                Title
                 <input type="text" name="notification_title" value="<?php echo e($notification['title'] ?? ''); ?>" required>
             </label>
             <label>
@@ -507,7 +507,7 @@ $calendarTemplates = [
                 <textarea name="notification_message" required><?php echo e($notification['message'] ?? ''); ?></textarea>
             </label>
             <div class="form-actions">
-                <button type="submit">Mettre à jour</button>
+                <button type="submit">Update</button>
             </div>
         </form>
     <?php endforeach; ?>

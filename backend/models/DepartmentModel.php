@@ -52,6 +52,31 @@ class DepartmentModel
     }
 
     /**
+     * findByNameAndCompanyId
+     * Retourne le premier département correspondant à un nom donné pour une entreprise.
+     */
+
+    public function findByNameAndCompanyId(string $name, ?int $companyId = null): ?array
+    {
+        if ($companyId !== null) {
+            $statement = $this->pdo->prepare(
+                'SELECT * FROM departments WHERE name = :name AND company_id = :company_id ORDER BY id ASC LIMIT 1'
+            );
+            $statement->execute([
+                'name' => $name,
+                'company_id' => $companyId,
+            ]);
+        } else {
+            $statement = $this->pdo->prepare('SELECT * FROM departments WHERE name = :name ORDER BY id ASC LIMIT 1');
+            $statement->execute(['name' => $name]);
+        }
+
+        $department = $statement->fetch();
+
+        return $department ?: null;
+    }
+
+    /**
      * create
      * Crée un département pour une entreprise donnée.
      * Rôle: CRUD accessible par Super Admin et admin.

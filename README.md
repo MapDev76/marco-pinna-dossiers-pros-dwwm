@@ -1,41 +1,41 @@
 # StaffEase Pro
 
-Application PHP/MySQL simple pour la gestion des quarts, présences, demandes et documents.
+Simple PHP/MySQL application for managing shifts, attendance, requests, and documents.
 
-## Objectif
-Le projet doit rester lisible, simple et facile à présenter à l'examen. La structure actuelle s'appuie sur un routeur frontal, des contrôleurs PHP, des modèles PDO et des vues serveur.
+## Goal
+The project should stay readable, simple, and easy to present for the exam. The current structure uses a front controller, PHP controllers, PDO models, and server-rendered views.
 
 ## Structure
-- `index.php` : point d'entrée unique.
-- `backend/` : bootstrap, helpers, contrôleurs, modèles, endpoints JSON.
-- `app/layout/` : éléments partagés de l'interface.
-- `public/views/` : pages visibles selon le rôle.
-- `public/assets/` : CSS, icônes et images.
-- `config/` : paramètres de connexion.
-- `db/` : schéma SQL.
+- `index.php`: single entry point.
+- `backend/`: bootstrap, helpers, controllers, models, JSON endpoints.
+- `app/layout/`: shared interface elements.
+- `public/views/`: role-based pages.
+- `public/assets/`: CSS, icons, and images.
+- `config/`: connection settings.
+- `db/`: SQL schema.
 
-## Règles de base
-- Tout le texte visible doit rester en français.
-- Le formulaire de connexion est unique pour tous les rôles.
-- La page d'accueil reste publique.
-- Le tableau de bord change selon le rôle connecté.
-- Les endpoints JSON sont utilisés pour les besoins REST ou AJAX et retournent du JSON via le routeur.
+## Basic rules
+- All visible text must stay in English.
+- The login form is shared by all roles.
+- The home page remains public.
+- The dashboard changes according to the signed-in role.
+- JSON endpoints are used for REST or AJAX needs and return JSON through the router.
 
-## Point JSON existant
-- `?route=api-dashboard` renvoie une réponse JSON.
-- Il sert à exposer les données du tableau de bord sans HTML.
+## Existing JSON route
+- `?route=api-dashboard` returns a JSON response.
+- It exposes dashboard data without HTML.
 
-## Organisation conseillée pour l'examen
-1. Montrer le routeur et l'authentification.
-2. Expliquer la séparation entre contrôleurs, modèles et vues.
-3. Montrer une action simple de CRUD.
-4. Montrer l'endpoint JSON.
-5. Expliquer la configuration pour l'hébergement.
+## Suggested exam flow
+1. Show the router and authentication.
+2. Explain the separation between controllers, models, and views.
+3. Show a simple CRUD action.
+4. Show the JSON endpoint.
+5. Explain the hosting setup.
 
-## Déploiement
-- Le projet est prévu pour fonctionner sur un hébergement PHP/MySQL standard comme InfinityFree.
-- Les chemins sont construits de manière relative pour rester valides en racine ou en sous-dossier.
+## Deployment
+- The project is designed to work on a standard PHP/MySQL hosting such as InfinityFree.
+- Paths are built relatively so they remain valid at the root or inside a subfolder.
 
-## Remarques
-- Les fichiers de test temporaires ont été supprimés.
-- Le code doit rester sobre, sans couches inutiles ni logique cachée dans les vues.
+## Notes
+- Temporary test files were removed.
+- The code should stay lean, without unnecessary layers or hidden logic in the views.

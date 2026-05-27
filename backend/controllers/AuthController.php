@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = (string) ($_POST['password'] ?? '');
 
     if ($loginEmail === '' || $password === '') {
-        $loginError = 'Please, insert your email and password.';
+        $loginError = 'Please enter your email and password.';
     } else {
         $user = $userModel->findByEmail($loginEmail);
 

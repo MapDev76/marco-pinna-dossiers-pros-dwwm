@@ -35,9 +35,9 @@ if ($role === 'super_admin') {
             'title' => 'Administration',
             'icon' => '⚙',
             'buttons' => [
-                ['label' => 'CRUD Companies', 'target' => 'modal-super-directory', 'variant' => 'active'],
-                ['label' => 'CRUD Departments', 'target' => 'modal-super-actions'],
-                ['label' => 'CRUD Users', 'target' => 'modal-super-actions'],
+                ['label' => 'Companies', 'target' => 'modal-super-directory', 'variant' => 'active'],
+                ['label' => 'Departments', 'target' => 'modal-super-actions'],
+                ['label' => 'Users', 'target' => 'modal-super-actions'],
                 ['label' => 'Documents', 'target' => 'modal-documents'],
                 ['label' => 'Requests', 'target' => 'modal-admin-requests'],
                 ['label' => 'Notifications', 'target' => 'modal-admin-notifications'],
@@ -47,12 +47,12 @@ if ($role === 'super_admin') {
 } elseif ($role === 'admin') {
     $dashboardSidebarSections = [
         [
-            'title' => 'Gestion',
+            'title' => 'Management',
             'icon' => '⚙',
             'buttons' => [
-                ['label' => 'Utilisateurs', 'target' => 'modal-admin-employees', 'variant' => 'active'],
-                ['label' => 'Entreprises', 'target' => 'modal-admin-departments'],
-                ['label' => 'Départements', 'target' => 'modal-admin-departments'],
+                ['label' => 'Users', 'target' => 'modal-admin-employees', 'variant' => 'active'],
+                ['label' => 'Companies', 'target' => 'modal-admin-departments'],
+                ['label' => 'Departments', 'target' => 'modal-admin-departments'],
             ],
         ],
         [
@@ -69,24 +69,24 @@ if ($role === 'super_admin') {
             'title' => 'Requests',
             'icon' => '✉',
             'buttons' => [
-                ['label' => 'Mes requests', 'target' => 'modal-global-requests'],
+                ['label' => 'My requests', 'target' => 'modal-global-requests'],
             ],
         ],
         [
             'title' => 'Notifications',
             'icon' => '🔔',
             'buttons' => [
-                ['label' => 'Mes notifications', 'target' => 'modal-global-notifications'],
+                ['label' => 'My notifications', 'target' => 'modal-global-notifications'],
             ],
         ],
     ];
 } elseif ($role === 'department_manager') {
     $dashboardSidebarSections = [
         [
-            'title' => 'Gestion',
+            'title' => 'Management',
             'icon' => '⚙',
             'buttons' => [
-                ['label' => 'Équipe', 'target' => 'modal-manager-team', 'variant' => 'active'],
+                ['label' => 'Team', 'target' => 'modal-manager-team', 'variant' => 'active'],
             ],
         ],
         [
@@ -100,21 +100,21 @@ if ($role === 'super_admin') {
             'title' => 'Requests',
             'icon' => '✉',
             'buttons' => [
-                ['label' => 'Mes requests', 'target' => 'modal-global-requests'],
+                ['label' => 'My requests', 'target' => 'modal-global-requests'],
             ],
         ],
         [
             'title' => 'Notifications',
             'icon' => '🔔',
             'buttons' => [
-                ['label' => 'Mes notifications', 'target' => 'modal-global-notifications'],
+                ['label' => 'My notifications', 'target' => 'modal-global-notifications'],
             ],
         ],
     ];
 } else {
     $dashboardSidebarSections = [
         [
-            'title' => 'Gestion',
+            'title' => 'Management',
             'icon' => '⚙',
             'buttons' => [
                 ['label' => 'Requests', 'target' => 'modal-global-requests', 'variant' => 'active'],
@@ -125,14 +125,14 @@ if ($role === 'super_admin') {
             'title' => 'Requests',
             'icon' => '✉',
             'buttons' => [
-                ['label' => 'Mes requests', 'target' => 'modal-global-requests', 'variant' => 'active'],
+                ['label' => 'My requests', 'target' => 'modal-global-requests', 'variant' => 'active'],
             ],
         ],
         [
             'title' => 'Notifications',
             'icon' => '🔔',
             'buttons' => [
-                ['label' => 'Mes notifications', 'target' => 'modal-global-notifications', 'variant' => 'active'],
+                ['label' => 'My notifications', 'target' => 'modal-global-notifications', 'variant' => 'active'],
             ],
         ],
     ];
@@ -142,11 +142,11 @@ $companyId = isset($profile['company_id']) ? (int) $profile['company_id'] : null
 $departmentId = isset($profile['department_id']) ? (int) $profile['department_id'] : null;
 
 $pageTitle = match ($role) {
-    'super_admin' => 'Tableau de bord Super Admin',
-    'admin' => 'Tableau de bord Administrateur',
-    'department_manager' => 'Tableau de bord Chef de département',
-    'employee' => 'Tableau de bord Employé',
-    default => 'Tableau de bord',
+    'super_admin' => 'Super Admin Dashboard',
+    'admin' => 'Admin Dashboard',
+    'department_manager' => 'Department Manager Dashboard',
+    'employee' => 'Employee Dashboard',
+    default => 'Dashboard',
 };
 
 $viewFile = __DIR__ . '/../../public/views/admin/dashboard.php';
@@ -179,10 +179,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $requestType = trim((string) ($_POST['request_type'] ?? 'other'));
 
         if ($requestTitle === '' || $requestMessage === '') {
-            setFlash('error', 'Le titre et le message de la demande sont obligatoires.');
+            setFlash('error', 'The request title and message are required.');
         } else {
             $userModel->createRequestForUser((int) $currentUser['id'], $requestType, $requestTitle, $requestMessage);
-            setFlash('success', 'Demande envoyée avec succès.');
+            setFlash('success', 'Request sent successfully.');
         }
 
         redirectTo('dashboard');
@@ -193,10 +193,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notificationMessage = trim((string) ($_POST['notification_message'] ?? ''));
 
         if ($notificationTitle === '' || $notificationMessage === '') {
-            setFlash('error', 'Le titre et le message de la notification sont obligatoires.');
+            setFlash('error', 'The notification title and message are required.');
         } else {
             $userModel->createNotificationForUser((int) $currentUser['id'], $notificationTitle, $notificationMessage);
-            setFlash('success', 'Notification créée avec succès.');
+            setFlash('success', 'Notification created successfully.');
         }
 
         redirectTo('dashboard');
@@ -208,7 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notificationMessage = trim((string) ($_POST['notification_message'] ?? ''));
 
         if ($notificationId <= 0 || $notificationTitle === '' || $notificationMessage === '') {
-            setFlash('error', 'Données de notification incomplètes.');
+            setFlash('error', 'Incomplete notification data.');
             redirectTo('dashboard');
         }
 
@@ -220,9 +220,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
 
         if ($updated) {
-            setFlash('success', 'Notification mise à jour.');
+            setFlash('success', 'Notification updated.');
         } else {
-            setFlash('error', 'Notification introuvable ou non autorisée.');
+            setFlash('error', 'Notification not found or not allowed.');
         }
 
         redirectTo('dashboard');

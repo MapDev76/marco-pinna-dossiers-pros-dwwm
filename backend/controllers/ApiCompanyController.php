@@ -23,7 +23,7 @@ try {
         case 'create':
             $name = trim((string) ($input['name'] ?? ''));
             if ($name === '') {
-                jsonResponse(['ok' => false, 'error' => 'Name required'], 400);
+                jsonResponse(['ok' => false, 'error' => 'Name is required'], 400);
             }
 
             $data = [
@@ -82,7 +82,7 @@ try {
                 jsonResponse(['ok' => false, 'error' => 'Invalid company_id'], 400);
             }
 
-            // Ensure column exists
+            // Vérifier que la colonne existe
             $colStmt = $pdo->query("SHOW COLUMNS FROM companies LIKE 'signature_ip'");
             $has = $colStmt->fetch();
             if (!$has) {

@@ -11,20 +11,20 @@ $currentUser = currentUser();
         <div class="documents-actions">
             <form id="documents-upload-form" method="post" action="<?php echo appUrl('documents_upload'); ?>" enctype="multipart/form-data" class="admin-form">
                 <label>
-                    Charger un document
+                    Upload a document
                     <input type="file" name="document_file" required>
                 </label>
                 <label>
                     Type
                     <select name="document_type">
-                        <option value="contract">Contrat</option>
-                        <option value="medical">Visite médicale</option>
-                        <option value="attestation">Attestation</option>
-                        <option value="other">Autre</option>
+                        <option value="contract">Contract</option>
+                        <option value="medical">Medical</option>
+                        <option value="attestation">Certificate</option>
+                        <option value="other">Other</option>
                     </select>
                 </label>
                 <div class="form-actions">
-                    <button type="submit">Téléverser</button>
+                    <button type="submit">Upload</button>
                 </div>
             </form>
         </div>
@@ -44,17 +44,17 @@ $currentUser = currentUser();
                     <tbody>
                         <?php if (empty($moduleRows['documents'] ?? [])): ?>
                             <tr>
-                                <td colspan="4">Aucun document disponible.</td>
+                                <td colspan="4">No documents available.</td>
                             </tr>
                         <?php endif; ?>
                         <?php foreach (($moduleRows['documents'] ?? []) as $doc): ?>
                             <tr>
                                 <td><?php echo e($doc['type'] ?? '-'); ?></td>
-                                <td><?php echo e($doc['name'] ?? 'Fichier'); ?></td>
-                                <td><?php echo e($doc['status'] ?? 'Actif'); ?></td>
+                                <td><?php echo e($doc['name'] ?? 'File'); ?></td>
+                                <td><?php echo e($doc['status'] ?? 'Active'); ?></td>
                                 <td>
-                                    <a class="admin-action-link" href="<?php echo e($doc['url'] ?? '#'); ?>" download>Télécharger</a>
-                                    <button type="button" class="admin-action-link">Voir</button>
+                                    <a class="admin-action-link" href="<?php echo e($doc['url'] ?? '#'); ?>" download>Download</a>
+                                    <button type="button" class="admin-action-link">View</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -74,18 +74,18 @@ $currentUser = currentUser();
         if (submit) submit.disabled = true;
         try {
             if (typeof AppAPI === 'undefined') {
-                alert('Erreur: ressources JS manquantes.');
+                alert('Error: missing JS resources.');
                 return;
             }
             const res = await AppAPI.uploadForm(form);
             if (res && res.success) {
-                alert('Téléversement réussi');
+                alert('Upload successful');
                 location.reload();
             } else {
-                alert('Erreur: ' + (res && res.error ? res.error : 'Erreur serveur'));
+                alert('Error: ' + (res && res.error ? res.error : 'Server error'));
             }
         } catch (err) {
-            alert('Erreur réseau: ' + err.message);
+            alert('Network error: ' + err.message);
         } finally {
             if (submit) submit.disabled = false;
         }

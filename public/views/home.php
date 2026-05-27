@@ -1,4 +1,4 @@
-<!-- Page d'accueil : présente les fonctionnalités principales du projet. -->
+<!-- Home page: presents the main features of the project. -->
 <?php $currentUser = currentUser(); ?>
 <div class="home-page">
 	<h1>Welcome to StaffEase Pro</h1>
@@ -24,7 +24,7 @@
 		</ul>
 
 
-		<!-- Editable feature boxes: allow entering texts for each area -->
+		<!-- Feature panels: read-only summaries for each area -->
 		<section class="editable-features">
 			<div class="editable-grid">
 				<div class="feature-box">

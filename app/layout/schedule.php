@@ -8,16 +8,16 @@ $role = $currentUser['role'] ?? 'employee';
 ?>
 <section class="dashboard-modal dashboard-schedule-modal" id="modal-schedule" hidden>
     <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
-    <h2>Planning interactif</h2>
-    <p>Gestion des colonnes du planning, des shifts et des affectations par département.</p>
+    <h2>Interactive schedule</h2>
+    <p>Manage schedule columns, shifts, and department assignments.</p>
 
     <div class="schedule-toolbar">
-        <button type="button" class="schedule-pill is-active">Shift Times</button>
+        <button type="button" class="schedule-pill is-active">Shift times</button>
         <button type="button" class="schedule-pill">Roles</button>
         <button type="button" class="schedule-pill">Departments</button>
         <button type="button" class="schedule-pill">Coverage</button>
         <button type="button" class="schedule-pill">Occupancy</button>
-        <button type="button" class="schedule-pill">Absence Types</button>
+        <button type="button" class="schedule-pill">Absence types</button>
     </div>
 
     <div class="schedule-board">
@@ -61,26 +61,26 @@ $role = $currentUser['role'] ?? 'employee';
 
     <div class="schedule-form-grid">
         <label class="schedule-field">
-            Nom de la mission
+            Task name
             <input type="text" value="Reception" readonly>
         </label>
         <label class="schedule-field">
-            Couleur
+            Color
             <input type="text" value="#b98b12" readonly>
         </label>
         <label class="schedule-field">
-            Icône
+            Icon
             <input type="text" value="🔑" readonly>
         </label>
         <label class="schedule-field">
-            Département
+            Department
             <input type="text" value="Front Office" readonly>
         </label>
     </div>
 
     <div class="admin-actions settings-actions">
-        <button type="button" class="admin-action-link">Créer</button>
-        <button type="button" class="admin-action-link">Modifier</button>
-        <button type="button" class="admin-action-link">Supprimer</button>
+        <button type="button" class="admin-action-link">Create</button>
+        <button type="button" class="admin-action-link">Edit</button>
+        <button type="button" class="admin-action-link">Delete</button>
     </div>
 </section>

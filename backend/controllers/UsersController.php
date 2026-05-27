@@ -25,6 +25,8 @@ $companyModel = new CompanyModel($pdo);
 $profile = $userModel->profileWithRelations((int) $currentUser['id']) ?? [];
 $scopeCompanyId = isset($profile['company_id']) ? (int) $profile['company_id'] : null;
 $scopeDepartmentId = isset($profile['department_id']) ? (int) $profile['department_id'] : null;
+$defaultReceptionDepartment = $departmentModel->findByNameAndCompanyId('Reception', $scopeCompanyId);
+$defaultReceptionDepartmentId = isset($defaultReceptionDepartment['id']) ? (int) $defaultReceptionDepartment['id'] : null;
 
 $pageTitle = 'Gestion des utilisateurs';
 $viewFile = __DIR__ . '/../../public/views/admin/users.php';
@@ -58,7 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $departmentId = null;
             $companyId = null;
         } elseif ($userRole === 'admin') {
-            $departmentId = null;
+            if ($departmentId === null) {
+                $departmentId = $defaultReceptionDepartmentId;
+            }
+            if ($departmentId !== null) {
+                $department = $departmentModel->findById($departmentId);
+                $companyId = isset($department['company_id']) ? (int) $department['company_id'] : null;
+            }
         } elseif ($departmentId !== null) {
             $department = $departmentModel->findById($departmentId);
             $companyId = isset($department['company_id']) ? (int) $department['company_id'] : null;
@@ -69,11 +77,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $userRole = 'employee';
         }
         if ($userRole === 'admin') {
-            $departmentId = null;
+            if ($departmentId === null) {
+                $departmentId = $defaultReceptionDepartmentId;
+            }
+            if ($departmentId !== null) {
+                $department = $departmentModel->findById($departmentId);
+                if (isset($department['company_id']) && (int) $department['company_id'] !== $scopeCompanyId) {
+                    $error = 'The department must belong to your company.';
+                }
+                $companyId = $scopeCompanyId;
+            }
         } elseif ($departmentId !== null) {
             $department = $departmentModel->findById($departmentId);
             if (isset($department['company_id']) && (int) $department['company_id'] !== $scopeCompanyId) {
-                $error = 'Le département doit appartenir à votre entreprise.';
+                $error = 'The department must belong to your company.';
             }
             $companyId = $scopeCompanyId;
         }
@@ -105,29 +122,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($error === null) {
         if ($payload['first_name'] === '' || $payload['last_name'] === '' || $payload['email'] === '') {
-            $error = 'Les champs prénom, nom et email sont obligatoires.';
+            $error = 'First name, last name, and email are required.';
         } elseif (!filter_var($payload['email'], FILTER_VALIDATE_EMAIL)) {
-            $error = 'Adresse email invalide.';
+            $error = 'Invalid email address.';
         } elseif (!in_array($payload['role'], ['super_admin', 'admin', 'department_manager', 'employee'], true)) {
-            $error = 'Rôle invalide.';
+            $error = 'Invalid role.';
         } elseif (!in_array($payload['status'], ['active', 'inactive'], true)) {
-            $error = 'Statut invalide.';
+            $error = 'Invalid status.';
         } elseif ($payload['role'] === 'super_admin' && ($payload['department_id'] !== null || $payload['company_id'] !== null)) {
-            $error = 'Un Super Admin ne doit être lié à aucun département ni entreprise.';
+            $error = 'A Super Admin must not be linked to any department or company.';
         } elseif ($payload['role'] === 'admin' && $payload['company_id'] === null) {
-            $error = 'Un Admin doit être lié à une entreprise.';
+            $error = 'An Admin must be linked to a company.';
         } elseif (in_array($payload['role'], ['department_manager', 'employee'], true) && $payload['department_id'] === null) {
-            $error = 'Un chef de département ou employé doit être lié à un département.';
+            $error = 'A department manager or employee must be linked to a department.';
         } else {
             $password = trim((string) ($_POST['password'] ?? ''));
 
             if ($action === 'create') {
                 if ($password === '') {
-                    $error = 'Le mot de passe est obligatoire pour la création.';
+                    $error = 'A password is required to create the user.';
                 } else {
                     $payload['password'] = password_hash($password, PASSWORD_DEFAULT);
                     $userModel->create($payload);
-                    setFlash('success', 'Utilisateur créé.');
+                    setFlash('success', 'User created.');
                     redirectTo('users');
                 }
             } elseif ($action === 'update' && $id > 0) {
@@ -135,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $payload['password'] = password_hash($password, PASSWORD_DEFAULT);
                 }
                 $userModel->update($id, $payload);
-                setFlash('success', 'Utilisateur mis à jour.');
+                setFlash('success', 'User updated.');
                 redirectTo('users');
             }
         }
