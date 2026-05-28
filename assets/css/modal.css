@@ -5,8 +5,8 @@
 .dashboard-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(10, 12, 16, 0.74);
-    backdrop-filter: blur(6px);
+    background: rgba(10, 12, 16, 0.42);
+    backdrop-filter: blur(3px);
     z-index: 9990;
 }
 
@@ -35,18 +35,18 @@
     transform: none;
     width: 100%;
     height: 100%;
-    padding: 12px;
+    padding: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(10, 12, 16, 0.74);
-    backdrop-filter: blur(6px);
+    background: rgba(10, 12, 16, 0.42);
+    backdrop-filter: blur(3px);
 }
 
 .crud-modal-card {
     width: 100%;
-    max-width: min(1180px, calc(100% - 24px));
-    max-height: calc(100vh - 24px);
+    max-width: min(1240px, calc(100% - 20px));
+    max-height: calc(100vh - 20px);
     overflow: auto;
     padding: var(--spacing-md);
     border-radius: 30px;
@@ -72,30 +72,48 @@
 }
 
 
-.crud-modal-tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 32px;
-    padding: 0 12px;
-    border-radius: var(--border-radius-full);
-    background: rgba(185, 139, 18, 0.12);
-    font-size: 0.82rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
 .crud-modal-body {
     display: grid;
     gap: var(--spacing-md);
 }
 
 .crud-panel {
-    padding: var(--spacing-md);
-    border-radius: 24px;
+    padding: var(--spacing-sm);
+    border-radius: 18px;
     background: var(--color-bg);
     border: 1px solid var(--color-border-light);
     box-shadow: var(--box-shadow-md);
+}
+
+.crud-panel-grid-wide {
+    grid-template-columns: minmax(340px, 1fr) minmax(260px, 1fr);
+}
+
+.crud-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.crud-form label {
+    display: grid;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.crud-form input,
+.crud-form select,
+.crud-form textarea {
+    width: 100%;
+}
+
+.crud-form .span-2 {
+    grid-column: span 2;
+}
+
+.crud-modal-subtitle {
+    margin: 0;
+    color: var(--color-text-light);
 }
 
 .crud-panel h3,
@@ -112,26 +130,37 @@
 /* Compact company card grid inside the modal */
 .company-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: var(--spacing-sm);
     align-items: start;
 }
 
 .company-card {
-    padding: 10px 12px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 14px;
     background: linear-gradient(180deg, #ffffff, #fbfbfb);
     border: 1px solid rgba(0,0,0,0.04);
     box-shadow: 0 6px 18px rgba(0,0,0,0.06);
     min-height: 44px;
     display: flex;
-    align-items: center;
-    justify-content: flex-start;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-direction: column;
     overflow: hidden;
+}
+
+.company-card--stacked {
+    gap: 8px;
 }
 
 .company-card-head {
     width: 100%;
+}
+
+.company-card-meta {
+    font-size: 0.82rem;
+    color: var(--color-text-light);
+    margin-top: 2px;
 }
 
 .company-card-title {
@@ -142,9 +171,59 @@
     text-overflow: ellipsis;
 }
 
-/*   */
-.company-card .company-card-actions {
-    display: none;
+.company-card-actions {
+    width: 100%;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.company-card-actions--inline {
+    justify-content: space-between;
+}
+
+.company-card-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(185, 139, 18, 0.12);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.company-card-action {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: #fff;
+    color: var(--color-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.company-card-action.is-danger {
+    color: #b42318;
+}
+
+.company-card-delete-form {
+    margin: 0;
+}
+
+.crud-panel-list {
+    display: grid;
+    gap: var(--spacing-sm);
+}
 }
 
 .crud-panel-list {
@@ -210,6 +289,20 @@ body.modal-open {
     }
     .company-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    .crud-form,
+    .crud-panel-grid,
+    .crud-panel-grid-wide {
+        grid-template-columns: 1fr;
+    }
+
+    .crud-form .span-2 {
+        grid-column: auto;
+    }
+
+    .company-card-actions--inline {
+        justify-content: flex-start;
     }
 }
 

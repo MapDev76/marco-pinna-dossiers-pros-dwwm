@@ -17,8 +17,223 @@
     const crudModal = document.getElementById('crud-modal');
     const crudTitle = document.getElementById('crud-modal-title');
     const crudSubtitle = document.getElementById('crud-modal-subtitle');
-    const crudTag = document.getElementById('crud-modal-tag');
     const crudBody = document.getElementById('crud-modal-body');
+    let lastFocusedElement = null;
+    let activeModal = null;
+
+    const focusableSelector = [
+      'a[href]',
+      'button:not([disabled])',
+      'input:not([disabled]):not([type="hidden"])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])'
+    ].join(',');
+
+    const focusFirst = (container) => {
+      const focusables = container ? container.querySelectorAll(focusableSelector) : [];
+      const first = focusables[0];
+      if (first && typeof first.focus === 'function') {
+        first.focus();
+      }
+    };
+
+    const syncDepartmentFilter = (select, companyId) => {
+      if (!select) return;
+      const normalized = String(companyId || '');
+      Array.from(select.options).forEach((option) => {
+        if (option.value === '') return;
+        const optionCompanyId = option.getAttribute('data-company-id') || '';
+        option.hidden = normalized !== '' && optionCompanyId !== normalized;
+      });
+      if (select.value && select.selectedOptions[0] && select.selectedOptions[0].hidden) {
+        select.value = '';
+      }
+    };
+
+    const setModalContent = (entity) => {
+      if (!crudBody) return;
+      if (entity === 'companies') {
+        const companyHeading = crudBody.querySelector('#crud-company-form-heading');
+        const companyAction = crudBody.querySelector('#crud-company-action');
+        const companyId = crudBody.querySelector('#crud-company-id');
+        const companySubmit = crudBody.querySelector('#crud-company-submit');
+        const resetCompany = crudBody.querySelector('[data-crud-reset-company]');
+        const companyForm = crudBody.querySelector('#crud-company-form');
+
+        const resetCompanyForm = () => {
+          if (companyHeading) companyHeading.textContent = 'Create company';
+          if (companyAction) companyAction.value = 'create';
+          if (companyId) companyId.value = '';
+          if (companySubmit) companySubmit.textContent = 'Create company';
+          if (companyForm) companyForm.reset();
+        };
+
+        const fillCompanyForm = (card) => {
+          if (!card) return;
+          const data = card.dataset || {};
+          if (companyHeading) companyHeading.textContent = 'Edit company';
+          if (companyAction) companyAction.value = 'update';
+          if (companyId) companyId.value = data.companyId || '';
+          if (companySubmit) companySubmit.textContent = 'Update company';
+          const fields = {
+            'crud-company-name': data.companyName || '',
+            'crud-company-type': data.companyType || 'other',
+            'crud-company-city': data.companyCity || '',
+            'crud-company-address': data.companyAddress || '',
+            'crud-company-zip-code': data.companyZipCode || '',
+            'crud-company-phone': data.companyPhone || '',
+            'crud-company-email': data.companyEmail || '',
+            'crud-company-logo-path': data.companyLogoPath || '',
+            'crud-company-signature-ip': data.companySignatureIp || '',
+          };
+          Object.entries(fields).forEach(([id, value]) => {
+            const input = crudBody.querySelector(`#${id}`);
+            if (input) input.value = value;
+          });
+        };
+
+        crudBody.querySelectorAll('[data-company-action="edit"]').forEach((button) => {
+          button.addEventListener('click', () => fillCompanyForm(button.closest('.company-card')));
+        });
+
+        if (resetCompany) resetCompany.addEventListener('click', resetCompanyForm);
+        resetCompanyForm();
+      }
+
+      if (entity === 'users') {
+        const userHeading = crudBody.querySelector('#crud-user-form-heading');
+        const userAction = crudBody.querySelector('#crud-user-action');
+        const userId = crudBody.querySelector('#crud-user-id');
+        const userSubmit = crudBody.querySelector('#crud-user-submit');
+        const userForm = crudBody.querySelector('#crud-user-form');
+        const userCompanyFilter = crudBody.querySelector('#crud-user-company-filter');
+        const userDepartment = crudBody.querySelector('#crud-user-department-id');
+        const resetUser = crudBody.querySelector('[data-crud-reset-user]');
+
+        const resetUserForm = () => {
+          if (userHeading) userHeading.textContent = 'Create user';
+          if (userAction) userAction.value = 'create';
+          if (userId) userId.value = '';
+          if (userSubmit) userSubmit.textContent = 'Create user';
+          if (userForm) userForm.reset();
+          syncDepartmentFilter(userDepartment, '');
+        };
+
+        const setCompanyFilterFromDepartment = (departmentId) => {
+          if (!userCompanyFilter || !userDepartment) return;
+          const selectedOption = userDepartment.querySelector(`option[value="${departmentId}"]`);
+          const companyId = selectedOption ? (selectedOption.getAttribute('data-company-id') || '') : '';
+          userCompanyFilter.value = companyId;
+          syncDepartmentFilter(userDepartment, companyId);
+          if (departmentId) userDepartment.value = String(departmentId);
+        };
+
+        const fillUserForm = (card) => {
+          if (!card) return;
+          const data = card.dataset || [];
+          if (userHeading) userHeading.textContent = 'Edit user';
+          if (userAction) userAction.value = 'update';
+          if (userId) userId.value = data.userId || '';
+          if (userSubmit) userSubmit.textContent = 'Update user';
+          const fields = {
+            'crud-user-first-name': data.userFirstName || '',
+            'crud-user-last-name': data.userLastName || '',
+            'crud-user-email': data.userEmail || '',
+            'crud-user-phone': data.userPhone || '',
+            'crud-user-role': data.userRole || 'employee',
+            'crud-user-status': data.userStatus || 'active',
+            'crud-user-password': '',
+          };
+          Object.entries(fields).forEach(([id, value]) => {
+            const input = crudBody.querySelector(`#${id}`);
+            if (input) input.value = value;
+          });
+          const departmentId = data.userDepartmentId || '';
+          setCompanyFilterFromDepartment(departmentId);
+          if (userDepartment && departmentId) userDepartment.value = String(departmentId);
+        };
+
+        if (userCompanyFilter && userDepartment) {
+          userCompanyFilter.addEventListener('change', () => {
+            syncDepartmentFilter(userDepartment, userCompanyFilter.value);
+          });
+        }
+
+        crudBody.querySelectorAll('[data-user-action="edit"]').forEach((button) => {
+          button.addEventListener('click', () => fillUserForm(button.closest('.company-card')));
+        });
+
+        if (resetUser) resetUser.addEventListener('click', resetUserForm);
+        resetUserForm();
+      }
+
+      if (entity === 'departments') {
+        const departmentHeading = crudBody.querySelector('#crud-department-form-heading');
+        const departmentAction = crudBody.querySelector('#crud-department-action');
+        const departmentId = crudBody.querySelector('#crud-department-id');
+        const departmentSubmit = crudBody.querySelector('#crud-department-submit');
+        const departmentForm = crudBody.querySelector('#crud-department-edit-form');
+        const departmentCompany = crudBody.querySelector('#crud-department-company-select');
+        const departmentHead = crudBody.querySelector('#crud-department-head-user-select');
+        const resetDepartment = crudBody.querySelector('[data-crud-reset-department]');
+
+        const filterDepartmentHeads = (companyId) => {
+          if (!departmentHead) return;
+          const normalized = String(companyId || '');
+          Array.from(departmentHead.options).forEach((option) => {
+            if (option.value === '') return;
+            const optionCompanyId = option.getAttribute('data-company-id') || '';
+            option.hidden = normalized !== '' && optionCompanyId !== normalized;
+          });
+          if (departmentHead.value && departmentHead.selectedOptions[0] && departmentHead.selectedOptions[0].hidden) {
+            departmentHead.value = '';
+          }
+        };
+
+        const resetDepartmentForm = () => {
+          if (departmentHeading) departmentHeading.textContent = 'Create department';
+          if (departmentAction) departmentAction.value = 'create';
+          if (departmentId) departmentId.value = '';
+          if (departmentSubmit) departmentSubmit.textContent = 'Create department';
+          if (departmentForm) departmentForm.reset();
+          filterDepartmentHeads('');
+        };
+
+        const fillDepartmentForm = (card) => {
+          if (!card) return;
+          const data = card.dataset || {};
+          if (departmentHeading) departmentHeading.textContent = 'Edit department';
+          if (departmentAction) departmentAction.value = 'update';
+          if (departmentId) departmentId.value = data.departmentId || '';
+          if (departmentSubmit) departmentSubmit.textContent = 'Update department';
+          if (departmentCompany) departmentCompany.value = data.departmentCompanyId || '';
+          filterDepartmentHeads(data.departmentCompanyId || '');
+          const fields = {
+            'crud-department-name-input': data.departmentName || '',
+            'crud-department-description-input': data.departmentDescription || '',
+            'crud-department-head-user-select': data.departmentHeadUserId || '',
+          };
+          Object.entries(fields).forEach(([id, value]) => {
+            const input = crudBody.querySelector(`#${id}`);
+            if (input) input.value = value;
+          });
+        };
+
+        if (departmentCompany) {
+          departmentCompany.addEventListener('change', () => {
+            filterDepartmentHeads(departmentCompany.value);
+          });
+        }
+
+        crudBody.querySelectorAll('[data-department-action="edit"]').forEach((button) => {
+          button.addEventListener('click', () => fillDepartmentForm(button.closest('.company-card')));
+        });
+
+        if (resetDepartment) resetDepartment.addEventListener('click', resetDepartmentForm);
+        resetDepartmentForm();
+      }
+    };
 
     const closeAll = () => {
       modals.forEach((modal) => {
@@ -30,6 +245,10 @@
         overlay.classList.remove('is-open');
       }
       document.body.classList.remove('modal-open');
+      activeModal = null;
+      if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+        lastFocusedElement.focus();
+      }
     };
 
     openButtons.forEach((button) => {
@@ -39,6 +258,7 @@
         const title = button.getAttribute('data-modal-title') || button.textContent.trim();
         const targetModal = document.getElementById(targetId);
         if (!targetModal) return;
+        lastFocusedElement = document.activeElement;
         closeAll();
         openButtons.forEach((item) => item.classList.remove('is-active'));
         button.classList.add('is-active');
@@ -47,21 +267,56 @@
           const templateId = entity ? `crud-template-${entity}` : 'crud-template-placeholder';
           const template = document.getElementById(templateId) || document.getElementById('crud-template-placeholder');
           if (crudTitle) crudTitle.textContent = title;
-          if (crudSubtitle) crudSubtitle.textContent = entity === 'companies' ? 'Super Admin only' : 'Common CRUD shell';
-          if (crudTag) crudTag.textContent = entity ? entity.charAt(0).toUpperCase() + entity.slice(1) : 'CRUD';
+          if (crudSubtitle) {
+            crudSubtitle.textContent = entity === 'companies'
+              ? 'Create, edit and manage companies and departments.'
+              : entity === 'users'
+                ? 'Create, edit and assign users by role and department.'
+                : entity === 'departments'
+                  ? 'Create, edit and assign departments by company and head.'
+                : 'Common CRUD shell';
+          }
           if (crudBody && template) crudBody.innerHTML = template.innerHTML;
+          setModalContent(entity);
         }
 
         targetModal.hidden = false;
         targetModal.classList.add('is-open');
         if (overlay) { overlay.hidden = false; overlay.classList.add('is-open'); }
         document.body.classList.add('modal-open');
+        activeModal = targetModal;
+        window.setTimeout(() => focusFirst(targetModal), 0);
       });
     });
 
     closeButtons.forEach((button) => button.addEventListener('click', closeAll));
     if (overlay) overlay.addEventListener('click', closeAll);
-    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeAll(); });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeAll();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !activeModal) {
+        return;
+      }
+
+      const focusables = activeModal.querySelectorAll(focusableSelector);
+      if (focusables.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
   })();
 
   // Actions sociétés / départements / utilisateurs

@@ -47,7 +47,7 @@ class UserModel
     public function allWithRelations(): array
     {
         $statement = $this->pdo->query(
-            'SELECT u.*, d.name AS department_name, c.name AS company_name
+            'SELECT u.*, d.company_id, d.name AS department_name, c.name AS company_name
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
              LEFT JOIN companies c ON c.id = d.company_id
@@ -121,7 +121,7 @@ class UserModel
     public function teamByDepartmentId(int $departmentId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.status
+            'SELECT u.id, u.department_id, u.first_name, u.last_name, u.email, u.role, u.status
              FROM users u
              WHERE u.department_id = :department_id
              ORDER BY u.last_name, u.first_name'
@@ -139,7 +139,7 @@ class UserModel
     public function companyUsersByCompanyId(int $companyId): array
     {
         $statement = $this->pdo->prepare(
-              'SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.status, d.company_id, d.name AS department_name
+                            'SELECT u.id, u.department_id, u.first_name, u.last_name, u.email, u.role, u.status, d.company_id, d.name AS department_name
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
                WHERE d.company_id = :company_id

@@ -37,6 +37,7 @@ if ($role === 'super_admin') {
             'buttons' => [
                 ['label' => 'Companies', 'target' => 'crud-modal', 'entity' => 'companies', 'title' => 'Companies', 'variant' => 'active'],
                 ['label' => 'Users', 'target' => 'crud-modal', 'entity' => 'users', 'title' => 'Users'],
+                ['label' => 'Departments', 'target' => 'crud-modal', 'entity' => 'departments', 'title' => 'Departments'],
                 ['label' => 'Documents', 'target' => 'crud-modal', 'entity' => 'documents', 'title' => 'Documents'],
                 ['label' => 'Requests', 'target' => 'crud-modal', 'entity' => 'requests', 'title' => 'Requests'],
                 ['label' => 'Notifications', 'target' => 'crud-modal', 'entity' => 'notifications', 'title' => 'Notifications'],
@@ -161,6 +162,9 @@ $moduleRows = [
     'company_departments' => [],
     'company_requests' => [],
     'company_users' => [],
+    'company_directory_users' => [],
+    'company_directory_departments' => [],
+    'departments' => [],
     'team' => [],
     'notifications' => [],
     'shifts' => [],
@@ -168,6 +172,10 @@ $moduleRows = [
     'attendances' => [],
     'documents' => [],
 ];
+
+$modalCompanies = [];
+$modalUsers = [];
+$modalDepartments = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dashboardAction = $_POST['dashboard_action'] ?? '';
@@ -230,6 +238,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if ($role === 'super_admin') {
     $moduleRows['company_directory'] = $companyModel->directoryWithAdminsAndDepartments();
+    $moduleRows['departments'] = $departmentModel->allWithCompany();
+    $modalCompanies = $companyModel->all();
+    $modalUsers = $userModel->allWithRelations();
+    $modalDepartments = $departmentModel->allWithCompany();
 }
 
 if ($role === 'employee') {
@@ -246,6 +258,21 @@ if ($role === 'admin' && $companyId !== null) {
     $moduleRows['company_users'] = $userModel->companyUsersByCompanyId($companyId);
     $moduleRows['company_departments'] = $departmentModel->byCompanyId($companyId);
     $moduleRows['company_requests'] = $userModel->companyRequestsByCompanyId($companyId);
+    $moduleRows['departments'] = $departmentModel->byCompanyId($companyId);
+    $modalCompanies = array_values(array_filter(
+        $companyModel->all(),
+        static fn (array $company): bool => (int) $company['id'] === $companyId
+    ));
+    $modalUsers = $userModel->companyUsersByCompanyId($companyId);
+    $modalDepartments = $departmentModel->byCompanyId($companyId);
 }
 
+if ($role === 'department_manager' && $departmentId !== null) {
+    $modalUsers = $userModel->teamByDepartmentId($departmentId);
+    $modalDepartments = $departmentModel->byCompanyId($companyId ?? 0);
+}
+
+$dashboardModalCompanies = $modalCompanies;
+$dashboardModalUsers = $modalUsers;
+$dashboardModalDepartments = $modalDepartments;
 $moduleRows['notifications'] = $userModel->userNotifications((int) $currentUser['id']);
