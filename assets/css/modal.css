@@ -107,6 +107,10 @@
     width: 100%;
 }
 
+.crud-form select[multiple] {
+    min-height: 160px;
+}
+
 .crud-form .span-2 {
     grid-column: span 2;
 }
@@ -224,12 +228,6 @@
     display: grid;
     gap: var(--spacing-sm);
 }
-}
-
-.crud-panel-list {
-    display: grid;
-    gap: var(--spacing-sm);
-}
 
 .crud-empty-state {
     padding: var(--spacing-md);
@@ -279,6 +277,10 @@
 /* Prevent background scroll when modal open */
 body.modal-open {
     overflow: hidden;
+}
+
+.is-hidden {
+    display: none !important;
 }
 
 @media (max-width: 760px) {

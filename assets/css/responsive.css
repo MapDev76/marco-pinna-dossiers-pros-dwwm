@@ -419,10 +419,6 @@
         flex-direction: column;
         align-items: flex-start;
     }
-
-    .crud-modal-tag {
-        min-height: 28px;
-    }
 }
 
 @media (max-width: 560px) {
@@ -431,21 +427,8 @@
         border-radius: 18px;
     }
 
-    .crud-modal-kicker {
-        font-size: 0.72rem;
-    }
-
-    .crud-modal-title {
-        font-size: 1.25rem;
-    }
-
     .crud-modal-subtitle {
         font-size: 0.85rem;
-    }
-
-    .crud-modal-tag {
-        width: 100%;
-        justify-content: flex-start;
     }
 
     .crud-panel {

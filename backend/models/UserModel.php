@@ -121,8 +121,9 @@ class UserModel
     public function teamByDepartmentId(int $departmentId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT u.id, u.department_id, u.first_name, u.last_name, u.email, u.role, u.status
+            'SELECT u.id, u.department_id, d.company_id, u.first_name, u.last_name, u.email, u.role, u.status
              FROM users u
+             LEFT JOIN departments d ON d.id = u.department_id
              WHERE u.department_id = :department_id
              ORDER BY u.last_name, u.first_name'
         );
@@ -179,7 +180,7 @@ class UserModel
     public function employeeRequests(int $userId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, type, title, status, created_at
+                        'SELECT id, recipient_id, document_id, type, title, message, status, created_at
              FROM requests
              WHERE user_id = :user_id
                AND type <> :notification_type
@@ -197,7 +198,7 @@ class UserModel
     public function companyRequestsByCompanyId(int $companyId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT r.id, r.type, r.title, r.status, r.created_at,
+            'SELECT r.id, r.recipient_id, r.document_id, r.type, r.title, r.message, r.status, r.created_at,
                     u.first_name, u.last_name, d.name AS department_name
              FROM requests r
              INNER JOIN users u ON u.id = r.user_id
@@ -218,7 +219,7 @@ class UserModel
     public function userNotifications(int $userId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, type, title, message, status, created_at
+                        'SELECT id, recipient_id, document_id, type, title, message, status, created_at
              FROM requests
              WHERE user_id = :user_id
                AND type = :notification_type

@@ -85,7 +85,8 @@ if ($route === 'home') {
     $rightIcons[] = [
         'type' => 'button',
         'title' => 'Documents',
-        'target' => 'modal-documents',
+        'target' => 'crud-modal',
+        'entity' => 'documents',
         'icon' => 'document.svg',
         'alt' => 'Documents',
     ];

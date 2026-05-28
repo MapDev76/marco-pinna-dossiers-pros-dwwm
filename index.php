@@ -40,7 +40,6 @@ require __DIR__ . '/app/layout/header.php';
 
 <?php if ($isDashboardRoute && isLoggedIn()): ?>
 <?php require __DIR__ . '/app/layout/sidebar.php'; ?>
-<?php require __DIR__ . '/app/layout/documents.php'; ?>
 <?php require __DIR__ . '/app/layout/settings.php'; ?>
 <?php require __DIR__ . '/app/layout/schedule.php'; ?>
 <?php endif; ?>

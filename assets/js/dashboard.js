@@ -53,6 +53,51 @@
 
     const setModalContent = (entity) => {
       if (!crudBody) return;
+      if (entity === 'documents') {
+        return;
+      }
+
+      if (entity === 'messages') {
+        const messageHeading = crudBody.querySelector('#crud-message-form-heading');
+        const messageKind = crudBody.querySelector('#crud-message-kind');
+        const requestType = crudBody.querySelector('#crud-message-request-type');
+        const messageTitle = crudBody.querySelector('#crud-message-title');
+        const messageBody = crudBody.querySelector('#crud-message-body');
+        const documentId = crudBody.querySelector('#crud-message-document-id');
+        const recipients = crudBody.querySelector('#crud-message-recipient-ids');
+        const messageSubmit = crudBody.querySelector('#crud-message-submit');
+        const resetMessage = crudBody.querySelector('[data-crud-reset-message]');
+
+        const syncKind = () => {
+          const isNotification = messageKind && messageKind.value === 'notification';
+          if (requestType) {
+            requestType.disabled = isNotification;
+            requestType.closest('label')?.classList.toggle('is-hidden', isNotification);
+          }
+          if (messageHeading) messageHeading.textContent = isNotification ? 'Create notification' : 'Create request';
+          if (messageSubmit) messageSubmit.textContent = isNotification ? 'Send notification' : 'Send request';
+        };
+
+        const resetMessageForm = () => {
+          if (messageKind) messageKind.value = 'request';
+          if (requestType) requestType.value = 'leave';
+          if (messageTitle) messageTitle.value = '';
+          if (messageBody) messageBody.value = '';
+          if (documentId) documentId.value = '';
+          if (recipients) Array.from(recipients.options).forEach((option) => { option.selected = false; });
+          syncKind();
+        };
+
+        if (messageKind) {
+          messageKind.addEventListener('change', syncKind);
+        }
+
+        if (resetMessage) resetMessage.addEventListener('click', resetMessageForm);
+        syncKind();
+        resetMessageForm();
+        return;
+      }
+
       if (entity === 'companies') {
         const companyHeading = crudBody.querySelector('#crud-company-form-heading');
         const companyAction = crudBody.querySelector('#crud-company-action');
@@ -274,6 +319,10 @@
                 ? 'Create, edit and assign users by role and department.'
                 : entity === 'departments'
                   ? 'Create, edit and assign departments by company and head.'
+                  : entity === 'messages'
+                    ? 'Create requests or notifications and send them to selected users.'
+                    : entity === 'documents'
+                      ? 'Browse documents available for attachments.'
                 : 'Common CRUD shell';
           }
           if (crudBody && template) crudBody.innerHTML = template.innerHTML;

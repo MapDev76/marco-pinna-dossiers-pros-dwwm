@@ -299,3 +299,113 @@ $modalCurrentRole = currentUser()['role'] ?? 'employee';
         </section>
     </div>
 </template>
+
+<template id="crud-template-documents">
+    <div class="crud-panel-grid crud-panel-grid-wide" data-crud-entity="documents">
+        <section class="crud-panel">
+            <h3>Documents overview</h3>
+            <p class="crud-modal-subtitle">Select a document below to attach it to a message.</p>
+            <div class="crud-empty-state">Document upload is handled in the documents library. This panel lists available files only.</div>
+        </section>
+
+        <section class="crud-panel">
+            <h3>Documents list</h3>
+            <div class="company-grid">
+                <?php if (empty($dashboardModalDocuments ?? [])): ?>
+                    <div class="crud-empty-state">No documents available.</div>
+                <?php endif; ?>
+                <?php foreach (($dashboardModalDocuments ?? []) as $document): ?>
+                    <article class="company-card company-card--stacked">
+                        <div class="company-card-head">
+                            <div class="company-card-title"><?php echo e($document['file_name'] ?? 'Document'); ?></div>
+                            <div class="company-card-meta"><?php echo e(($document['first_name'] ?? '') . ' ' . ($document['last_name'] ?? '')); ?></div>
+                        </div>
+                        <div class="company-card-actions company-card-actions--inline">
+                            <span class="company-card-chip"><?php echo e($document['document_type'] ?? 'other'); ?></span>
+                            <span class="company-card-chip"><?php echo e($document['status'] ?? 'pending'); ?></span>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    </div>
+</template>
+
+<template id="crud-template-messages">
+    <div class="crud-panel-grid crud-panel-grid-wide" data-crud-entity="messages">
+        <section class="crud-panel">
+            <h3 id="crud-message-form-heading">Create message</h3>
+            <form method="post" action="<?php echo appUrl('dashboard'); ?>" class="admin-form crud-form" id="crud-message-form">
+                <input type="hidden" name="dashboard_action" value="create_message">
+                <label>
+                    Message kind
+                    <select name="message_kind" id="crud-message-kind">
+                        <option value="request">Request</option>
+                        <option value="notification">Notification</option>
+                    </select>
+                </label>
+                <label>
+                    Request type
+                    <select name="request_type" id="crud-message-request-type">
+                        <option value="shift_coverage">Shift coverage</option>
+                        <option value="leave">Leave</option>
+                        <option value="permission">Permission</option>
+                        <option value="document_signature">Document signature</option>
+                    </select>
+                </label>
+                <label class="span-2">
+                    Title
+                    <input type="text" name="message_title" id="crud-message-title" required>
+                </label>
+                <label class="span-2">
+                    Message
+                    <textarea name="message_body" id="crud-message-body" rows="4" required></textarea>
+                </label>
+                <label>
+                    Attach document
+                    <select name="document_id" id="crud-message-document-id">
+                        <option value="">None</option>
+                        <?php foreach (($dashboardModalDocuments ?? []) as $document): ?>
+                            <option value="<?php echo (int) $document['id']; ?>"><?php echo e($document['file_name'] ?? 'Document'); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label class="span-2">
+                    Recipients
+                    <select name="recipient_ids[]" id="crud-message-recipient-ids" multiple size="6" required>
+                        <?php foreach (($dashboardModalUsers ?? []) as $user): ?>
+                            <option value="<?php echo (int) $user['id']; ?>">
+                                <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <div class="form-actions span-2">
+                    <button type="submit" id="crud-message-submit">Send message</button>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-crud-reset-message>Reset</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="crud-panel">
+            <h3>Messages list</h3>
+            <div class="company-grid">
+                <?php if (empty($dashboardModalMessages ?? [])): ?>
+                    <div class="crud-empty-state">No messages available.</div>
+                <?php endif; ?>
+                <?php foreach (($dashboardModalMessages ?? []) as $message): ?>
+                    <article class="company-card company-card--stacked">
+                        <div class="company-card-head">
+                            <div class="company-card-title"><?php echo e($message['title'] ?? 'Message'); ?></div>
+                            <div class="company-card-meta"><?php echo e($message['sender_name'] ?? ''); ?> <?php echo !empty($message['recipient_name']) ? '→ ' . e($message['recipient_name']) : ''; ?></div>
+                        </div>
+                        <div class="company-card-actions company-card-actions--inline">
+                            <span class="company-card-chip"><?php echo e($message['type'] ?? 'request'); ?></span>
+                            <span class="company-card-chip"><?php echo e($message['status'] ?? 'pending'); ?></span>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    </div>
+</template>
