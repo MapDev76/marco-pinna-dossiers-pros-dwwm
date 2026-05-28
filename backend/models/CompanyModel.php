@@ -2,8 +2,67 @@
 
 class CompanyModel
 {
+    private array $companyColumns = [];
+    private array $departmentColumns = [];
+
     public function __construct(private PDO $pdo)
     {
+        $this->companyColumns = $this->detectCompanyColumns();
+        $this->departmentColumns = $this->detectDepartmentColumns();
+    }
+
+    /**
+     * detectCompanyColumns
+     * Rileva le colonne effettivamente disponibili nella tabella companies.
+     */
+
+    private function detectCompanyColumns(): array
+    {
+        try {
+            $statement = $this->pdo->query('SHOW COLUMNS FROM companies');
+            $columns = $statement->fetchAll(PDO::FETCH_COLUMN);
+
+            return array_fill_keys($columns, true);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * hasCompanyColumn
+     * Verifica se una colonna è presente nello schema corrente.
+     */
+
+    private function hasCompanyColumn(string $column): bool
+    {
+        return isset($this->companyColumns[$column]);
+    }
+
+    /**
+     * detectDepartmentColumns
+     * Rileva le colonne effettivamente disponibili nella tabella departments.
+     */
+
+    private function detectDepartmentColumns(): array
+    {
+        try {
+            $statement = $this->pdo->query('SHOW COLUMNS FROM departments');
+            $columns = $statement->fetchAll(PDO::FETCH_COLUMN);
+
+            return array_fill_keys($columns, true);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * hasDepartmentColumn
+     * Vérifie si une colonne est présente dans le schéma courant.
+     */
+
+    private function hasDepartmentColumn(string $column): bool
+    {
+        return isset($this->departmentColumns[$column]);
     }
 
     /**
@@ -45,11 +104,28 @@ class CompanyModel
 
     public function create(array $data): int
     {
+        $columns = ['name', 'type', 'address', 'city', 'zip_code', 'phone', 'email'];
+
+        if ($this->hasCompanyColumn('logo_path')) {
+            $columns[] = 'logo_path';
+        }
+
+        if ($this->hasCompanyColumn('signature_ip')) {
+            $columns[] = 'signature_ip';
+        }
+
+        $placeholders = array_map(static fn (string $column): string => ':' . $column, $columns);
         $statement = $this->pdo->prepare(
-            'INSERT INTO companies (name, type, address, city, zip_code, phone, email, logo_path, signature_ip)
-             VALUES (:name, :type, :address, :city, :zip_code, :phone, :email, :logo_path, :signature_ip)'
+            'INSERT INTO companies (' . implode(', ', $columns) . ')
+             VALUES (' . implode(', ', $placeholders) . ')'
         );
-        $statement->execute($data);
+
+        $payload = array_intersect_key($data, array_fill_keys($columns, true));
+        foreach ($columns as $column) {
+            $payload[$column] = $payload[$column] ?? null;
+        }
+
+        $statement->execute($payload);
 
         return (int) $this->pdo->lastInsertId();
     }
@@ -62,21 +138,28 @@ class CompanyModel
 
     public function update(int $id, array $data): void
     {
+        $fields = ['name', 'type', 'address', 'city', 'zip_code', 'phone', 'email'];
+
+        if ($this->hasCompanyColumn('logo_path')) {
+            $fields[] = 'logo_path';
+        }
+
+        if ($this->hasCompanyColumn('signature_ip')) {
+            $fields[] = 'signature_ip';
+        }
+
+        $assignments = array_map(static fn (string $column): string => $column . ' = :' . $column, $fields);
         $statement = $this->pdo->prepare(
             'UPDATE companies
-             SET name = :name,
-                 type = :type,
-                 address = :address,
-                 city = :city,
-                 zip_code = :zip_code,
-                 phone = :phone,
-                 email = :email,
-                 logo_path = :logo_path,
-                 signature_ip = :signature_ip
+             SET ' . implode(",\n                 ", $assignments) . '
              WHERE id = :id'
         );
-        $data['id'] = $id;
-        $statement->execute($data);
+        $payload = array_intersect_key($data, array_fill_keys($fields, true));
+        foreach ($fields as $field) {
+            $payload[$field] = $payload[$field] ?? null;
+        }
+        $payload['id'] = $id;
+        $statement->execute($payload);
     }
 
     /**
@@ -109,19 +192,52 @@ class CompanyModel
 
     public function directoryWithAdminsAndDepartments(): array
     {
+        $selectParts = [
+            'c.id',
+            'c.name',
+            'c.city',
+            'COUNT(DISTINCT d.id) AS departments_count',
+            'COUNT(DISTINCT u_all.id) AS users_count',
+            'GROUP_CONCAT(DISTINCT CONCAT(u_admin.first_name, " ", u_admin.last_name) ORDER BY u_admin.last_name SEPARATOR "||") AS admins',
+            'GROUP_CONCAT(DISTINCT d.name ORDER BY d.name SEPARATOR "||") AS departments',
+        ];
+
+        if ($this->hasCompanyColumn('logo_path')) {
+            $selectParts[] = 'c.logo_path';
+        }
+
+        if ($this->hasCompanyColumn('signature_ip')) {
+            $selectParts[] = 'c.signature_ip';
+        }
+
+        $groupByParts = ['c.id', 'c.name', 'c.city'];
+
+        if ($this->hasCompanyColumn('logo_path')) {
+            $groupByParts[] = 'c.logo_path';
+        }
+
+        if ($this->hasCompanyColumn('signature_ip')) {
+            $groupByParts[] = 'c.signature_ip';
+        }
+
+        $joins = [
+            'LEFT JOIN departments d ON d.company_id = c.id',
+            'LEFT JOIN users u_all ON d.company_id = c.id',
+            'LEFT JOIN users u_admin ON u_admin.department_id = d.id AND u_admin.role IN ("super_admin", "admin")',
+        ];
+
+        if ($this->hasDepartmentColumn('head_user_id')) {
+            $selectParts[] = 'GROUP_CONCAT(DISTINCT CONCAT(u_head.first_name, " ", u_head.last_name) ORDER BY u_head.last_name SEPARATOR "||") AS heads';
+            $joins[] = 'LEFT JOIN users u_head ON u_head.id = d.head_user_id';
+        } else {
+            $selectParts[] = 'NULL AS heads';
+        }
+
         $statement = $this->pdo->query(
-            'SELECT c.id, c.name, c.city, c.logo_path, c.signature_ip,
-                    COUNT(DISTINCT d.id) AS departments_count,
-                    COUNT(DISTINCT u_all.id) AS users_count,
-                    GROUP_CONCAT(DISTINCT CONCAT(u_admin.first_name, " ", u_admin.last_name) ORDER BY u_admin.last_name SEPARATOR "||") AS admins,
-                    GROUP_CONCAT(DISTINCT d.name ORDER BY d.name SEPARATOR "||") AS departments,
-                    GROUP_CONCAT(DISTINCT CONCAT(u_head.first_name, " ", u_head.last_name) ORDER BY u_head.last_name SEPARATOR "||") AS heads
+            'SELECT ' . implode(', ', $selectParts) . '
              FROM companies c
-             LEFT JOIN departments d ON d.company_id = c.id
-             LEFT JOIN users u_all ON COALESCE(u_all.company_id, d.company_id) = c.id
-             LEFT JOIN users u_admin ON u_admin.department_id = d.id AND u_admin.role IN ("super_admin", "admin")
-             LEFT JOIN users u_head ON u_head.id = d.head_user_id
-               GROUP BY c.id, c.name, c.city, c.logo_path, c.signature_ip
+             ' . implode("\n             ", $joins) . '
+               GROUP BY ' . implode(', ', $groupByParts) . '
              ORDER BY c.name ASC'
         );
 

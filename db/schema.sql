@@ -42,7 +42,6 @@ CREATE TABLE departments (
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   department_id INT NULL,
-  company_id INT NULL,
   first_name VARCHAR(80) NOT NULL,
   last_name VARCHAR(80) NOT NULL,
   email VARCHAR(120) NOT NULL UNIQUE,
@@ -54,9 +53,6 @@ CREATE TABLE users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_users_department
     FOREIGN KEY (department_id) REFERENCES departments(id)
-    ON DELETE SET NULL,
-  CONSTRAINT fk_users_company
-    FOREIGN KEY (company_id) REFERENCES companies(id)
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -168,5 +164,3 @@ CREATE TABLE requests (
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO companies (name, type, address, city, zip_code, phone, email, signature_ip)
-VALUES ('Azienda Test', 'hotel', 'Via Esempio 123', 'Roma', '00100', '0612345678', 'info@aziendatest.it', NULL);

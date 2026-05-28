@@ -32,7 +32,7 @@ try {
                 $departmentId = null;
             } elseif ($userRole === 'admin') {
                 if ($departmentId === null || $departmentId === '') {
-                    $reception = $departmentModel->findByNameAndCompanyId('Reception', is_numeric($companyId) ? (int) $companyId : null);
+                    $reception = $departmentModel->findByNameAndCompanyId('Reception');
                     if ($reception) {
                         $departmentId = (int) $reception['id'];
                     }

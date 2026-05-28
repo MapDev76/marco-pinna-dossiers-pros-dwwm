@@ -7,11 +7,11 @@ VALUES ('Test Company', 'hotel', 'Example St 123', 'Rome', '00100', '0612345678'
 INSERT INTO departments (company_id, name, description)
 VALUES (1, 'Reception', 'Reception department');
 
-INSERT INTO users (department_id, company_id, first_name, last_name, email, phone, password, role, status)
+INSERT INTO users (department_id, first_name, last_name, email, phone, password, role, status)
 VALUES
-  (1, 1, 'Marco', 'Pinna', 'admin@testcompany.com', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin', 'active'),
-  (1, 1, 'Giovanni', 'Rossi', 'admin2@testcompany.com', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'active'),
-  (1, 1, 'Luca', 'Bianchi', 'employee@testcompany.com', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employee', 'active');
+  (1, 'Marco', 'Pinna', 'admin@testcompany.com', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin', 'active'),
+  (1, 'Giovanni', 'Rossi', 'admin2@testcompany.com', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'active'),
+  (1, 'Luca', 'Bianchi', 'employee@testcompany.com', NULL, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employee', 'active');
 
 INSERT INTO shifts (department_id, name, description, start_time, end_time)
 VALUES
