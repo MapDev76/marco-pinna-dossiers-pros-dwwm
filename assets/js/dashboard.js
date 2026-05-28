@@ -11,9 +11,14 @@
   // Gestion des modales
   (function setupModals(){
     const overlay = document.getElementById('dashboard-overlay');
-    const modals = document.querySelectorAll('.dashboard-modal');
-    const openButtons = document.querySelectorAll('.dashboard-sidebar-link[data-modal-target]');
+    const modals = document.querySelectorAll('.dashboard-modal, .crud-modal');
+    const openButtons = document.querySelectorAll('[data-modal-target]');
     const closeButtons = document.querySelectorAll('[data-modal-close]');
+    const crudModal = document.getElementById('crud-modal');
+    const crudTitle = document.getElementById('crud-modal-title');
+    const crudSubtitle = document.getElementById('crud-modal-subtitle');
+    const crudTag = document.getElementById('crud-modal-tag');
+    const crudBody = document.getElementById('crud-modal-body');
 
     const closeAll = () => {
       modals.forEach((modal) => {
@@ -29,11 +34,23 @@
     openButtons.forEach((button) => {
       button.addEventListener('click', () => {
         const targetId = button.getAttribute('data-modal-target');
+        const entity = button.getAttribute('data-modal-entity') || '';
+        const title = button.getAttribute('data-modal-title') || button.textContent.trim();
         const targetModal = document.getElementById(targetId);
         if (!targetModal) return;
         closeAll();
         openButtons.forEach((item) => item.classList.remove('is-active'));
         button.classList.add('is-active');
+
+        if (targetId === 'crud-modal' && crudModal) {
+          const templateId = entity ? `crud-template-${entity}` : 'crud-template-placeholder';
+          const template = document.getElementById(templateId) || document.getElementById('crud-template-placeholder');
+          if (crudTitle) crudTitle.textContent = title;
+          if (crudSubtitle) crudSubtitle.textContent = entity === 'companies' ? 'Super Admin only' : 'Common CRUD shell';
+          if (crudTag) crudTag.textContent = entity ? entity.charAt(0).toUpperCase() + entity.slice(1) : 'CRUD';
+          if (crudBody && template) crudBody.innerHTML = template.innerHTML;
+        }
+
         targetModal.hidden = false;
         targetModal.classList.add('is-open');
         if (overlay) { overlay.hidden = false; overlay.classList.add('is-open'); }

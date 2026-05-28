@@ -58,7 +58,7 @@
 
 .flash-backdrop.show {
     opacity: 1;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 .flash.show {
@@ -98,7 +98,6 @@
     background: transparent;
 }
 .flash-icon svg path { fill: none; }
-}
 .flash-body {
     flex: 1 1 auto;
     text-align: center;

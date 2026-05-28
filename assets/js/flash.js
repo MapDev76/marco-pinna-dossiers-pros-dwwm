@@ -3,15 +3,26 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!flashEl) return;
         const backdropId = flashEl.dataset.backdrop || (flashEl.id ? 'flash-backdrop-' + flashEl.id.replace(/^flash-/, '') : null);
         const backdrop = backdropId ? document.getElementById(backdropId) : null;
+        let autoCloseTimer = null;
         
         requestAnimationFrame(() => setTimeout(() => {
             if (backdrop) backdrop.classList.add('show');
             flashEl.classList.add('show');
         }, 10));
 
+        autoCloseTimer = setTimeout(() => {
+            if (closeBtn) {
+                closeBtn.click();
+            }
+        }, 2800);
+
         const closeBtn = flashEl.querySelector('.flash-close');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
+                if (autoCloseTimer) {
+                    clearTimeout(autoCloseTimer);
+                    autoCloseTimer = null;
+                }
                 flashEl.classList.remove('show');
                 if (backdrop) backdrop.classList.remove('show');
                 setTimeout(() => {

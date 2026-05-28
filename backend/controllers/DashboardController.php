@@ -35,11 +35,11 @@ if ($role === 'super_admin') {
             'title' => 'Administration',
             'icon' => '⚙',
             'buttons' => [
-                ['label' => 'Companies', 'target' => 'modal-super-directory', 'variant' => 'active'],
-                ['label' => 'Users', 'target' => 'modal-super-actions'],
-                ['label' => 'Documents', 'target' => 'modal-documents'],
-                ['label' => 'Requests', 'target' => 'modal-admin-requests'],
-                ['label' => 'Notifications', 'target' => 'modal-admin-notifications'],
+                ['label' => 'Companies', 'target' => 'crud-modal', 'entity' => 'companies', 'title' => 'Companies', 'variant' => 'active'],
+                ['label' => 'Users', 'target' => 'crud-modal', 'entity' => 'users', 'title' => 'Users'],
+                ['label' => 'Documents', 'target' => 'crud-modal', 'entity' => 'documents', 'title' => 'Documents'],
+                ['label' => 'Requests', 'target' => 'crud-modal', 'entity' => 'requests', 'title' => 'Requests'],
+                ['label' => 'Notifications', 'target' => 'crud-modal', 'entity' => 'notifications', 'title' => 'Notifications'],
             ],
         ],
     ];
@@ -49,33 +49,33 @@ if ($role === 'super_admin') {
             'title' => 'Management',
             'icon' => '⚙',
             'buttons' => [
-                ['label' => 'Users', 'target' => 'modal-admin-employees', 'variant' => 'active'],
-                ['label' => 'Companies', 'target' => 'modal-admin-departments'],
-                ['label' => 'Departments', 'target' => 'modal-admin-departments'],
+                ['label' => 'Users', 'target' => 'crud-modal', 'entity' => 'users', 'title' => 'Users', 'variant' => 'active'],
+                ['label' => 'Companies', 'target' => 'crud-modal', 'entity' => 'companies', 'title' => 'Companies'],
+                ['label' => 'Departments', 'target' => 'crud-modal', 'entity' => 'departments', 'title' => 'Departments'],
             ],
         ],
         [
             'title' => 'Departments',
             'icon' => '📁',
             'buttons' => [
-                ['label' => 'Reception', 'target' => 'modal-admin-departments', 'variant' => 'active'],
-                ['label' => 'Employees', 'target' => 'modal-admin-employees'],
-                ['label' => 'Requests', 'target' => 'modal-admin-requests'],
-                ['label' => 'Notifications', 'target' => 'modal-admin-notifications'],
+                ['label' => 'Reception', 'target' => 'crud-modal', 'entity' => 'departments', 'title' => 'Departments', 'variant' => 'active'],
+                ['label' => 'Employees', 'target' => 'crud-modal', 'entity' => 'users', 'title' => 'Users'],
+                ['label' => 'Requests', 'target' => 'crud-modal', 'entity' => 'requests', 'title' => 'Requests'],
+                ['label' => 'Notifications', 'target' => 'crud-modal', 'entity' => 'notifications', 'title' => 'Notifications'],
             ],
         ],
         [
             'title' => 'Requests',
             'icon' => '✉',
             'buttons' => [
-                ['label' => 'My requests', 'target' => 'modal-global-requests'],
+                ['label' => 'My requests', 'target' => 'crud-modal', 'entity' => 'requests', 'title' => 'Requests'],
             ],
         ],
         [
             'title' => 'Notifications',
             'icon' => '🔔',
             'buttons' => [
-                ['label' => 'My notifications', 'target' => 'modal-global-notifications'],
+                ['label' => 'My notifications', 'target' => 'crud-modal', 'entity' => 'notifications', 'title' => 'Notifications'],
             ],
         ],
     ];
@@ -85,28 +85,28 @@ if ($role === 'super_admin') {
             'title' => 'Management',
             'icon' => '⚙',
             'buttons' => [
-                ['label' => 'Team', 'target' => 'modal-manager-team', 'variant' => 'active'],
+                ['label' => 'Team', 'target' => 'crud-modal', 'entity' => 'team', 'title' => 'Team', 'variant' => 'active'],
             ],
         ],
         [
             'title' => 'Employees',
             'icon' => '👥',
             'buttons' => [
-                ['label' => 'Team', 'target' => 'modal-manager-team', 'variant' => 'active'],
+                ['label' => 'Team', 'target' => 'crud-modal', 'entity' => 'team', 'title' => 'Team', 'variant' => 'active'],
             ],
         ],
         [
             'title' => 'Requests',
             'icon' => '✉',
             'buttons' => [
-                ['label' => 'My requests', 'target' => 'modal-global-requests'],
+                ['label' => 'My requests', 'target' => 'crud-modal', 'entity' => 'requests', 'title' => 'Requests'],
             ],
         ],
         [
             'title' => 'Notifications',
             'icon' => '🔔',
             'buttons' => [
-                ['label' => 'My notifications', 'target' => 'modal-global-notifications'],
+                ['label' => 'My notifications', 'target' => 'crud-modal', 'entity' => 'notifications', 'title' => 'Notifications'],
             ],
         ],
     ];
@@ -116,22 +116,22 @@ if ($role === 'super_admin') {
             'title' => 'Management',
             'icon' => '⚙',
             'buttons' => [
-                ['label' => 'Requests', 'target' => 'modal-global-requests', 'variant' => 'active'],
-                ['label' => 'Notifications', 'target' => 'modal-global-notifications'],
+                ['label' => 'Requests', 'target' => 'crud-modal', 'entity' => 'requests', 'title' => 'Requests', 'variant' => 'active'],
+                ['label' => 'Notifications', 'target' => 'crud-modal', 'entity' => 'notifications', 'title' => 'Notifications'],
             ],
         ],
         [
             'title' => 'Requests',
             'icon' => '✉',
             'buttons' => [
-                ['label' => 'My requests', 'target' => 'modal-global-requests', 'variant' => 'active'],
+                ['label' => 'My requests', 'target' => 'crud-modal', 'entity' => 'requests', 'title' => 'Requests', 'variant' => 'active'],
             ],
         ],
         [
             'title' => 'Notifications',
             'icon' => '🔔',
             'buttons' => [
-                ['label' => 'My notifications', 'target' => 'modal-global-notifications', 'variant' => 'active'],
+                ['label' => 'My notifications', 'target' => 'crud-modal', 'entity' => 'notifications', 'title' => 'Notifications', 'variant' => 'active'],
             ],
         ],
     ];

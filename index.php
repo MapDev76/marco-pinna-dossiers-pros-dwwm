@@ -89,5 +89,21 @@ require $viewFile;
 ?>
 </main>
 
+<?php if ($isDashboardRoute && isLoggedIn()): ?>
+<?php require __DIR__ . '/app/layout/crud-modal.php'; ?>
+<?php endif; ?>
+
+<script src="<?php echo $basePath; ?>/assets/js/api.js"></script>
+<?php if ($isDashboardRoute && isLoggedIn()): ?>
+<script>
+        window.DashboardConfig = {
+                apiCompanies: '<?php echo appUrl('api-companies'); ?>',
+                apiDepartments: '<?php echo appUrl('api-departments'); ?>',
+                apiUsers: '<?php echo appUrl('api-users'); ?>'
+        };
+</script>
+<script src="<?php echo $basePath; ?>/assets/js/dashboard.js"></script>
+<?php endif; ?>
+
 </body>
 </html>

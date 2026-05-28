@@ -400,3 +400,60 @@
         font-size: 11px;
     }
 }
+
+@media (max-width: 900px) {
+    .crud-modal {
+        padding: 8px;
+    }
+
+    .crud-modal-card {
+        max-height: calc(100vh - 16px);
+        padding: var(--spacing-md);
+    }
+
+    .crud-panel-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .crud-modal-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .crud-modal-tag {
+        min-height: 28px;
+    }
+}
+
+@media (max-width: 560px) {
+    .crud-modal-card {
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .crud-modal-kicker {
+        font-size: 0.72rem;
+    }
+
+    .crud-modal-title {
+        font-size: 1.25rem;
+    }
+
+    .crud-modal-subtitle {
+        font-size: 0.85rem;
+    }
+
+    .crud-modal-tag {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .crud-panel {
+        padding: 12px;
+    }
+
+    .crud-modal .dashboard-modal-close {
+        top: 12px;
+        right: 12px;
+    }
+}

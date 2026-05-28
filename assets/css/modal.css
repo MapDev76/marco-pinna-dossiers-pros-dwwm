@@ -5,25 +5,168 @@
 .dashboard-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(11, 14, 18, 0.58);
-    z-index: 1200;
+    background: rgba(10, 12, 16, 0.74);
+    backdrop-filter: blur(6px);
+    z-index: 9990;
 }
 
-.dashboard-modal {
+.dashboard-modal,
+.crud-modal {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: min(900px, calc(100vw - 36px));
-    max-height: calc(100vh - 100px);
-    overflow: auto;
-    z-index: 1210;
-    padding: var(--spacing-lg);
-    border-radius: var(--border-radius-lg);
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    box-shadow: var(--box-shadow-xl);
+    width: min(1180px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow: hidden;
+    z-index: 10000;
+    padding: 0;
+    border-radius: 30px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
     text-align: left;
+}
+
+.crud-modal {
+    inset: 0;
+    top: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 12, 16, 0.74);
+    backdrop-filter: blur(6px);
+}
+
+.crud-modal-card {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+    padding: var(--spacing-lg);
+    border-radius: 30px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 248, 248, 0.98));
+    border-top: 1px solid rgba(255, 255, 255, 0.96);
+    border-left: 1px solid rgba(255, 255, 255, 0.94);
+    border-right: 0;
+    border-bottom: 0;
+    box-shadow:
+        0 38px 85px rgba(0, 0, 0, 0.28),
+        0 0 0 1px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    box-sizing: border-box;
+    position: relative;
+}
+
+.crud-modal-head {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    align-items: flex-start;
+    margin-bottom: var(--spacing-md);
+}
+
+
+.crud-modal-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: var(--border-radius-full);
+    background: rgba(185, 139, 18, 0.12);
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.crud-modal-body {
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.crud-panel {
+    padding: var(--spacing-md);
+    border-radius: 24px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--box-shadow-md);
+}
+
+.crud-panel h3,
+.crud-panel h4 {
+    margin-top: 0;
+}
+
+.crud-panel-grid {
+    display: grid;
+    grid-template-columns: minmax(320px, 420px) 1fr;
+    gap: var(--spacing-md);
+}
+
+/* Compact company card grid inside the modal */
+.company-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--spacing-sm);
+    align-items: start;
+}
+
+.company-card {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff, #fbfbfb);
+    border: 1px solid rgba(0,0,0,0.04);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+
+.company-card-head {
+    width: 100%;
+}
+
+.company-card-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* keep cards minimal: only header visible; actions may be added later */
+.company-card .company-card-actions {
+    display: none;
+}
+
+.crud-panel-list {
+    display: grid;
+    gap: var(--spacing-sm);
+}
+
+.crud-empty-state {
+    padding: var(--spacing-md);
+    border-radius: 20px;
+    border: 1px dashed var(--color-border);
+    color: var(--color-text-light);
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.crud-modal .dashboard-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    float: none;
+    background: #2e2e2e;
+    color: #fff;
+    z-index: 10002;
 }
 
 /* Modal specifici */
@@ -46,3 +189,10 @@
     color: var(--color-bg);
     background: var(--color-secondary);
 }
+
+.dashboard-overlay[hidden],
+.dashboard-modal[hidden],
+.crud-modal[hidden] {
+    display: none !important;
+}
+
