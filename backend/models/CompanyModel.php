@@ -244,6 +244,8 @@ class CompanyModel
         $rows = $statement->fetchAll();
 
         foreach ($rows as &$row) {
+            $row['logo_path'] = $row['logo_path'] ?? null;
+            $row['signature_ip'] = $row['signature_ip'] ?? null;
             $row['admins'] = empty($row['admins']) ? [] : array_values(array_filter(explode('||', (string) $row['admins'])));
             $row['departments'] = empty($row['departments']) ? [] : array_values(array_filter(explode('||', (string) $row['departments'])));
             $row['heads'] = empty($row['heads']) ? [] : array_values(array_filter(explode('||', (string) $row['heads'])));

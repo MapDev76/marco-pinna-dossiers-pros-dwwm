@@ -31,10 +31,10 @@ $basePath = $basePath ?? (function () {
             </div>
             <?php endif; ?>
             <?php else: ?>
-            <!-- Left: hotel / user summary -->
+            <!-- Partie gauche: résumé utilisateur -->
             <div class="admin-navbar-section admin-navbar-left">
                 <div class="brand-small">
-                    <!-- Hotel logo left -->
+                    <!-- Logo compact à gauche -->
                 </div>
                 <?php if ($currentUser !== null): ?>
                 <div class="hotel-meta">
@@ -48,33 +48,32 @@ $basePath = $basePath ?? (function () {
                 <?php endif; ?>
             </div>
 
-            <!-- Center: big title -->
+            <!-- Centre: titre principal -->
             <div class="admin-navbar-section admin-navbar-center">
                 <div class="admin-brand-large">
                     <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="StaffEase Pro" class="admin-brand-icon">
                     <div class="admin-brand-text">Dashboard <strong>Admin</strong></div>
-                    <div class="admin-brand-sub">Hotel Staff Management</div>
                 </div>
             </div>
 
-            <!-- Right: action icons -->
+            <!-- Droite: actions rapides -->
             <div class="admin-navbar-section admin-navbar-right">
                 <div class="icon-group" role="toolbar" aria-label="Actions rapides">
                     <?php if ($currentUser !== null): ?>
-                        <a href="<?php echo appUrl('logout'); ?>" class="icon-btn" title="Déconnexion">
+                        <a href="<?php echo appUrl('logout'); ?>" class="icon-btn" title="Logout">
                             <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="logout" class="nav-icon">
                         </a>
-                        <button type="button" class="icon-btn" title="Paramètres" data-modal-target="modal-settings">
+                        <button type="button" class="icon-btn" title="Settings" data-modal-target="modal-settings">
                             <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="settings" class="nav-icon">
                         </button>
                         <a href="#" class="icon-btn" title="Documents">
                             <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="documents" class="nav-icon">
                         </a>
-                        <a href="#" class="icon-btn" title="Imprimer">
+                        <a href="#" class="icon-btn" title="Print">
                             <img src="<?php echo $basePath; ?>/assets/icons/print-outline.svg" alt="print" class="nav-icon">
                         </a>
                     <?php else: ?>
-                        <a href="<?php echo appUrl('login'); ?>" class="icon-btn" title="Connexion">
+                        <a href="<?php echo appUrl('login'); ?>" class="icon-btn" title="Login">
                             <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="login" class="nav-icon">
                         </a>
                     <?php endif; ?>
