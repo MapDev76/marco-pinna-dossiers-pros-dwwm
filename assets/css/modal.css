@@ -45,9 +45,10 @@
 
 .crud-modal-card {
     width: 100%;
+    max-width: min(1180px, calc(100% - 24px));
     max-height: calc(100vh - 24px);
     overflow: auto;
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
     border-radius: 30px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 248, 248, 0.98));
     border-top: 1px solid rgba(255, 255, 255, 0.96);
@@ -141,7 +142,7 @@
     text-overflow: ellipsis;
 }
 
-/* keep cards minimal: only header visible; actions may be added later */
+/*   */
 .company-card .company-card-actions {
     display: none;
 }
@@ -169,7 +170,7 @@
     z-index: 10002;
 }
 
-/* Modal specifici */
+/* Modal specific */
 .dashboard-settings-modal,
 .dashboard-schedule-modal,
 .dashboard-documents-modal {
@@ -194,5 +195,21 @@
 .dashboard-modal[hidden],
 .crud-modal[hidden] {
     display: none !important;
+}
+
+/* Prevent background scroll when modal open */
+body.modal-open {
+    overflow: hidden;
+}
+
+@media (max-width: 760px) {
+    .crud-modal-card {
+        padding: var(--spacing-sm);
+        border-radius: 12px;
+        max-width: calc(100% - 24px);
+    }
+    .company-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
 }
 

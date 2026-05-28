@@ -6,7 +6,7 @@ if (!isset($dashboardSidebarSections) || !is_array($dashboardSidebarSections)) {
 
 $sidebarRoleLabel = $dashboardSidebarRoleLabel ?? 'User';
 ?>
-<aside class="app-sidebar" aria-label="Navigation latérale du dashboard">
+<aside class="app-sidebar" aria-label="Dashboard sidebar navigation">
     <div class="dashboard-sidebar-shell">
         <div class="dashboard-sidebar-brand">
             <!-- Brand/title intentionally empty to match design: no title above sidebar -->

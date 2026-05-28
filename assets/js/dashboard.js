@@ -29,6 +29,7 @@
         overlay.hidden = true;
         overlay.classList.remove('is-open');
       }
+      document.body.classList.remove('modal-open');
     };
 
     openButtons.forEach((button) => {
@@ -54,6 +55,7 @@
         targetModal.hidden = false;
         targetModal.classList.add('is-open');
         if (overlay) { overlay.hidden = false; overlay.classList.add('is-open'); }
+        document.body.classList.add('modal-open');
       });
     });
 

@@ -42,8 +42,8 @@ $calendarTemplates = [
 
 <div class="admin-shell dashboard-shell">
     <div class="admin-hero">
-        <?php if (($currentUser['role'] ?? '') === 'super_admin'): ?>
-            <h1><?php echo e($pageTitle ?? 'Tableau de bord'); ?></h1>
+            <?php if (($currentUser['role'] ?? '') === 'super_admin'): ?>
+            <h1><?php echo e($pageTitle ?? 'Dashboard'); ?></h1>
         <?php endif; ?>
         <!-- No welcome message or titles for non-super users per design -->
     </div>

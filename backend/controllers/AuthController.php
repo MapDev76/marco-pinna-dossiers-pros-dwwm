@@ -4,7 +4,7 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
 
 $userModel = new UserModel(getPDO());
-$pageTitle = 'Connexion StaffEase Pro';
+$pageTitle = 'StaffEase Pro - Login';
 $viewFile = __DIR__ . '/../../public/views/auth/login.php';
 $loginEmail = trim($_POST['email'] ?? '');
 $loginError = null;

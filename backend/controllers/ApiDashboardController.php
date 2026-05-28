@@ -8,7 +8,7 @@ require_once __DIR__ . '/../models/DepartmentModel.php';
 if (!isLoggedIn()) {
     jsonResponse([
         'success' => false,
-        'message' => 'Connexion requise.',
+        'message' => 'Login required.',
     ], 401);
 }
 

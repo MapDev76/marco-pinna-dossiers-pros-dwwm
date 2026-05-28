@@ -6,8 +6,16 @@ if (!isLoggedIn()) {
 <div class="dashboard-overlay" id="dashboard-overlay" hidden></div>
 <section class="crud-modal" id="crud-modal" hidden role="dialog" aria-modal="true" aria-labelledby="crud-modal-title">
     <div class="crud-modal-card">
-        <button type="button" class="dashboard-modal-close" data-modal-close>&times;</button>
+        <button type="button" class="dashboard-modal-close" data-modal-close aria-label="Close">&times;</button>
+
+        <div class="crud-modal-head">
+            <div>
+                <h2 id="crud-modal-title">CRUD</h2>
+                <p id="crud-modal-subtitle" class="crud-modal-subtitle"></p>
+            </div>
+            <div class="crud-modal-tag" id="crud-modal-tag">CRUD</div>
         </div>
+
         <div class="crud-modal-body" id="crud-modal-body">
             <div class="crud-empty-state">Select an item from the sidebar to load its CRUD template.</div>
         </div>

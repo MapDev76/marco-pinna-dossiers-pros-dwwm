@@ -14,7 +14,7 @@ if (($currentUser['role'] ?? null) !== 'employee') {
 }
 
 $pdo = getPDO();
-$pageTitle = 'Mon espace employé';
+$pageTitle = 'My Employee Space';
 $viewFile = __DIR__ . '/../../public/views/employee/space.php';
 $error = null;
 

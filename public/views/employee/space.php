@@ -1,4 +1,4 @@
-<!-- Espace employé : visualise les quarts, les présences et les demandes personnelles. -->
+<!-- Employee space: view your shifts, attendances and personal requests. -->
 <?php
 $shifts = $shifts ?? [];
 $requests = $requests ?? [];
