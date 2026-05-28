@@ -12,11 +12,12 @@ $headerLeft = '';
 if (!$isPublicPage && $currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
     $displayName = trim((string) (($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')));
+    $displayLabel = $displayName !== '' ? $displayName : 'StaffEase Pro';
 
     if ($role === 'super_admin') {
         $headerLeft = [
             'title' => 'StaffEase Pro',
-            'subtitle' => 'Super Admin',
+            'subtitle' => trim('Super Admin - ' . $displayLabel),
         ];
     } else {
         $companyName = 'StaffEase Pro';
@@ -42,7 +43,7 @@ if (!$isPublicPage && $currentUser !== null) {
         }
 
         $headerLeft = [
-            'title' => $displayName !== '' ? $displayName : 'StaffEase Pro',
+            'title' => $displayLabel,
             'subtitle' => trim($companyName . ' - ' . ucfirst((string) $role)),
         ];
     }
