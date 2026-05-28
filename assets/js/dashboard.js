@@ -83,7 +83,7 @@
             if (action === 'delete') {
               if (!confirm('Confirm deletion of this company?')) return;
               const j = await AppAPI.companies.delete(apiCompanies, companyId);
-              if (!j.ok) alert('Erreur: ' + (j.error || 'unknown')); else location.reload();
+              if (!j.ok) alert('Error: ' + (j.error || 'unknown')); else location.reload();
               return;
             }
 

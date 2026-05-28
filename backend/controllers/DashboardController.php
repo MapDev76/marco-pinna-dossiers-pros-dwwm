@@ -6,7 +6,7 @@ require_once __DIR__ . '/../models/CompanyModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 
 if (!isLoggedIn()) {
-    setFlash('error', 'Veuillez vous connecter pour continuer.');
+    setFlash('error', 'Please log in to continue.');
     redirectTo('login');
 }
 
@@ -21,12 +21,12 @@ $profile = $userModel->profileWithRelations((int) $currentUser['id']) ?? [];
 
 $roleLabels = [
     'super_admin' => 'Super Admin',
-    'admin' => 'Administrateur',
-    'department_manager' => 'Chef de département',
-    'employee' => 'Employé',
+    'admin' => 'Administrator',
+    'department_manager' => 'Department Manager',
+    'employee' => 'Employee',
 ];
 
-$dashboardSidebarRoleLabel = $roleLabels[$role] ?? 'Utilisateur';
+$dashboardSidebarRoleLabel = $roleLabels[$role] ?? 'User';
 
 $dashboardSidebarSections = [];
 if ($role === 'super_admin') {

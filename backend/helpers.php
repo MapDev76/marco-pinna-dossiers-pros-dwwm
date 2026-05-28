@@ -149,10 +149,10 @@ function isSuperAdmin(): bool
 }
 
 
-function requireRole(string $role, string $errorMessage = 'Accès réservé.'): void
+function requireRole(string $role, string $errorMessage = 'Access restricted.'): void
 {
     if (!isLoggedIn()) {
-        setFlash('error', 'Veuillez vous connecter pour continuer.');
+        setFlash('error', 'Please log in to continue.');
         redirectTo('login');
     }
 
@@ -164,5 +164,5 @@ function requireRole(string $role, string $errorMessage = 'Accès réservé.'): 
 
 function requireSuperAdmin(): void
 {
-    requireRole('super_admin', 'Accès réservé au Super Admin.');
+    requireRole('super_admin', 'Access restricted to Super Admin.');
 }

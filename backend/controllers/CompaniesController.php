@@ -4,7 +4,7 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
 if (!isLoggedIn()) {
-    setFlash('error', 'Veuillez vous connecter pour continuer.');
+    setFlash('error', 'Please log in to continue.');
     redirectTo('login');
 }
 
@@ -14,7 +14,7 @@ $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 
 if (!in_array($role, ['super_admin', 'admin'], true)) {
-    setFlash('error', 'Accès refusé.');
+    setFlash('error', 'Access denied.');
     redirectTo('dashboard');
 }
 
@@ -31,7 +31,7 @@ if ($role === 'admin') {
     $scopeCompanyId = (int) ($scopeStatement->fetchColumn() ?: 0) ?: null;
 }
 
-$pageTitle = 'Gestion des entreprises';
+$pageTitle = 'Companies Management';
 $viewFile = __DIR__ . '/../../public/views/admin/companies.php';
 $error = null;
 $editingCompany = null;
@@ -70,25 +70,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         if ($id > 0) {
             $companyModel->delete($id);
-            setFlash('success', 'Entreprise supprimée.');
+            setFlash('success', 'Company deleted.');
         }
         redirectTo('companies');
     }
 
     if ($payload['name'] === '') {
-        $error = 'Le nom de l’entreprise est obligatoire.';
+        $error = 'Company name is required.';
     } elseif (!in_array($payload['type'], ['hotel', 'hospital', 'clinic', 'elderly_center', 'restaurant', 'other'], true)) {
-        $error = 'Type d’entreprise invalide.';
+        $error = 'Invalid company type.';
     } else {
         if ($action === 'create') {
             $companyModel->create($payload);
-            setFlash('success', 'Entreprise créée.');
+            setFlash('success', 'Company created.');
             redirectTo('companies');
         }
 
         if ($action === 'update' && $id > 0) {
             $companyModel->update($id, $payload);
-            setFlash('success', 'Entreprise mise à jour.');
+            setFlash('success', 'Company updated.');
             redirectTo('companies');
         }
     }

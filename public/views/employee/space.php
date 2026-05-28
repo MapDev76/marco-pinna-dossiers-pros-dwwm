@@ -4,32 +4,32 @@ $shifts = $shifts ?? [];
 $requests = $requests ?? [];
 $attendances = $attendances ?? [];
 $requestTypeLabels = [
-    'shift_coverage' => 'Remplacement de quart',
-    'leave' => 'Congé',
-    'permission' => 'Autorisation',
-    'document_signature' => 'Signature de document',
+    'shift_coverage' => 'Shift coverage',
+    'leave' => 'Leave',
+    'permission' => 'Permission',
+    'document_signature' => 'Document signature',
     'notification' => 'Notification',
 ];
 $statusLabels = [
-    'assigned' => 'Attribué',
-    'completed' => 'Terminé',
-    'cancelled' => 'Annulé',
-    'in_progress' => 'En cours',
-    'present' => 'Présent',
+    'assigned' => 'Assigned',
+    'completed' => 'Completed',
+    'cancelled' => 'Cancelled',
+    'in_progress' => 'In progress',
+    'present' => 'Present',
     'absent' => 'Absent',
-    'late' => 'En retard',
-    'early_departure' => 'Départ anticipé',
-    'pending' => 'En attente',
-    'approved' => 'Approuvé',
-    'rejected' => 'Refusé',
-    'read' => 'Lu',
-    'unread' => 'Non lu',
+    'late' => 'Late',
+    'early_departure' => 'Early departure',
+    'pending' => 'Pending',
+    'approved' => 'Approved',
+    'rejected' => 'Rejected',
+    'read' => 'Read',
+    'unread' => 'Unread',
 ];
 ?>
 <div class="admin-shell">
     <div class="admin-hero">
-        <h1>Mon espace employé</h1>
-        <p>Retrouve ici tes quarts, la signature de présence et la création de demandes.</p>
+        <h1>My Employee Space</h1>
+        <p>View your shifts, record attendance and create requests.</p>
     </div>
 
     <?php if (!empty($error)): ?>
@@ -37,49 +37,49 @@ $statusLabels = [
     <?php endif; ?>
 
     <section class="admin-card">
-        <h2>Signer une présence</h2>
+        <h2>Record attendance</h2>
         <form method="post" class="admin-form admin-form-grid">
             <input type="hidden" name="action" value="sign_attendance">
             <label>
-                <span>Choisir un quart</span>
+                <span>Select a shift</span>
                 <select name="user_shift_id" required>
-                    <option value="">Sélectionner</option>
+                    <option value="">Select</option>
                     <?php foreach ($shifts as $shift): ?>
                         <option value="<?php echo (int) $shift['id']; ?>"><?php echo e($shift['work_date'] . ' - ' . $shift['shift_name'] . ' - ' . $shift['department_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
             <div class="form-actions span-2">
-                <button type="submit">Enregistrer la présence</button>
+                <button type="submit">Record attendance</button>
             </div>
         </form>
     </section>
 
     <section class="admin-card">
-        <h2>Créer une demande</h2>
+        <h2>Create a request</h2>
         <form method="post" class="admin-form admin-form-grid">
             <input type="hidden" name="action" value="create_request">
             <label>
                 <span>Type</span>
                 <select name="type" required>
-                    <option value="">Sélectionner</option>
-                    <option value="shift_coverage">Remplacement de quart</option>
-                    <option value="leave">Congé</option>
-                    <option value="permission">Autorisation</option>
-                    <option value="document_signature">Signature de document</option>
+                    <option value="">Select</option>
+                    <option value="shift_coverage">Shift coverage</option>
+                    <option value="leave">Leave</option>
+                    <option value="permission">Permission</option>
+                    <option value="document_signature">Document signature</option>
                     <option value="notification">Notification</option>
                 </select>
             </label>
             <label>
-                <span>Titre</span>
-                <input type="text" name="title" placeholder="Résumé de la demande">
+                <span>Title</span>
+                <input type="text" name="title" placeholder="Request summary">
             </label>
             <label class="span-2">
                 <span>Message</span>
                 <textarea name="message" rows="4" required></textarea>
             </label>
             <div class="form-actions span-2">
-                <button type="submit">Envoyer la demande</button>
+                <button type="submit">Submit request</button>
             </div>
         </form>
     </section>
@@ -91,14 +91,14 @@ $statusLabels = [
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Quart</th>
-                        <th>Département</th>
-                        <th>Statut</th>
+                        <th>Shift</th>
+                        <th>Department</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($shifts)): ?>
-                        <tr><td colspan="4">Aucun quart disponible.</td></tr>
+                        <tr><td colspan="4">No shifts available.</td></tr>
                     <?php endif; ?>
                     <?php foreach ($shifts as $shift): ?>
                         <tr>
@@ -114,7 +114,7 @@ $statusLabels = [
     </section>
 
     <section class="admin-card">
-        <h2>Mes présences</h2>
+        <h2>My attendances</h2>
         <div class="table-wrap">
             <table class="admin-table">
                 <thead>
@@ -128,7 +128,7 @@ $statusLabels = [
                 </thead>
                 <tbody>
                     <?php if (empty($attendances)): ?>
-                        <tr><td colspan="5">Aucune présence enregistrée.</td></tr>
+                        <tr><td colspan="5">No attendance recorded.</td></tr>
                     <?php endif; ?>
                     <?php foreach ($attendances as $attendance): ?>
                         <tr>
@@ -145,7 +145,7 @@ $statusLabels = [
     </section>
 
     <section class="admin-card">
-        <h2>Mes demandes</h2>
+        <h2>My requests</h2>
         <div class="table-wrap">
             <table class="admin-table">
                 <thead>
@@ -159,7 +159,7 @@ $statusLabels = [
                 </thead>
                 <tbody>
                     <?php if (empty($requests)): ?>
-                        <tr><td colspan="5">Aucune demande créée.</td></tr>
+                        <tr><td colspan="5">No requests created.</td></tr>
                     <?php endif; ?>
                     <?php foreach ($requests as $request): ?>
                         <tr>

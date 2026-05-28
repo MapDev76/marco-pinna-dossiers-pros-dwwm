@@ -6,7 +6,7 @@ require_once __DIR__ . '/../models/DepartmentModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
 if (!isLoggedIn()) {
-    setFlash('error', 'Veuillez vous connecter pour continuer.');
+    setFlash('error', 'Please log in to continue.');
     redirectTo('login');
 }
 
@@ -14,7 +14,7 @@ $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 
 if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
-    setFlash('error', 'Accès refusé.');
+    setFlash('error', 'Access denied.');
     redirectTo('dashboard');
 }
 
@@ -28,7 +28,7 @@ $scopeDepartmentId = isset($profile['department_id']) ? (int) $profile['departme
 $defaultReceptionDepartment = $departmentModel->findByNameAndCompanyId('Reception', $scopeCompanyId);
 $defaultReceptionDepartmentId = isset($defaultReceptionDepartment['id']) ? (int) $defaultReceptionDepartment['id'] : null;
 
-$pageTitle = 'Gestion des utilisateurs';
+$pageTitle = 'Users Management';
 $viewFile = __DIR__ . '/../../public/views/admin/users.php';
 $error = null;
 $editingUser = null;
@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         if ($id > 0) {
             $userModel->delete($id);
-            setFlash('success', 'Utilisateur supprimé.');
+            setFlash('success', 'User deleted.');
         }
         redirectTo('users');
     }

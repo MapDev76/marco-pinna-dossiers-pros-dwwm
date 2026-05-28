@@ -3,13 +3,13 @@
 require_once __DIR__ . '/../bootstrap.php';
 
 if (!isLoggedIn()) {
-    setFlash('error', 'Veuillez vous connecter pour continuer.');
+    setFlash('error', 'Please log in to continue.');
     redirectTo('login');
 }
 
 $currentUser = currentUser();
 if (($currentUser['role'] ?? null) !== 'employee') {
-    setFlash('error', 'Accès réservé aux employés.');
+    setFlash('error', 'Access restricted to employees.');
     redirectTo('dashboard');
 }
 
@@ -55,14 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'sign_attendance') {
         $userShiftId = (int) ($_POST['user_shift_id'] ?? 0);
         if ($userShiftId <= 0) {
-            $error = 'Veuillez choisir un quart valide.';
+            $error = 'Please select a valid shift.';
         } else {
             $shiftCheck = $pdo->prepare('SELECT id FROM user_shifts WHERE id = :id AND user_id = :user_id LIMIT 1');
             $shiftCheck->execute(['id' => $userShiftId, 'user_id' => $currentUser['id']]);
 
-            if (!$shiftCheck->fetchColumn()) {
-                $error = 'Quart non autorisé.';
-            } else {
+                if (!$shiftCheck->fetchColumn()) {
+                    $error = 'Unauthorized shift.';
+                } else {
                 $today = date('Y-m-d');
                 $attendanceCheck = $pdo->prepare('SELECT id FROM attendances WHERE user_id = :user_id AND user_shift_id = :user_shift_id AND work_date = :work_date LIMIT 1');
                 $attendanceCheck->execute([
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
 
-                setFlash('success', 'Présence enregistrée.');
+                setFlash('success', 'Attendance recorded.');
                 redirectTo('my-space');
             }
         }
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = trim((string) ($_POST['message'] ?? ''));
 
         if ($type === '' || $message === '') {
-            $error = 'Le type et le message sont obligatoires.';
+            $error = 'Type and message are required.';
         } else {
             $requestInsert = $pdo->prepare(
                 'INSERT INTO requests (user_id, type, title, message, status)
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'status' => 'pending',
             ]);
 
-            setFlash('success', 'Demande envoyée.');
+            setFlash('success', 'Request sent.');
             redirectTo('my-space');
         }
     }

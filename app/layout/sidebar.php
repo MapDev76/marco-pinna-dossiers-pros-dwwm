@@ -4,7 +4,7 @@ if (!isset($dashboardSidebarSections) || !is_array($dashboardSidebarSections)) {
     return;
 }
 
-$sidebarRoleLabel = $dashboardSidebarRoleLabel ?? 'Utilisateur';
+$sidebarRoleLabel = $dashboardSidebarRoleLabel ?? 'User';
 ?>
 <aside class="app-sidebar" aria-label="Navigation latérale du dashboard">
     <div class="dashboard-sidebar-shell">

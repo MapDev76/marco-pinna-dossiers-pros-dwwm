@@ -5,7 +5,7 @@ require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
 if (!isLoggedIn()) {
-    setFlash('error', 'Veuillez vous connecter pour continuer.');
+    setFlash('error', 'Please log in to continue.');
     redirectTo('login');
 }
 
@@ -17,7 +17,7 @@ $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 
 if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
-    setFlash('error', 'Accès refusé.');
+    setFlash('error', 'Access denied.');
     redirectTo('dashboard');
 }
 
@@ -27,7 +27,7 @@ $scopeDepartmentId = isset($profile['department_id']) ? (int) $profile['departme
 
 // Chaque rôle ne voit que sa zone: entreprise entière pour l'admin, département unique pour le chef de département.
 
-$pageTitle = 'Gestion des départements';
+$pageTitle = 'Departments Management';
 $viewFile = __DIR__ . '/../../public/views/admin/departments.php';
 $error = null;
 $editingDepartment = null;
@@ -63,25 +63,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         if ($id > 0) {
             $departmentModel->delete($id);
-            setFlash('success', 'Département supprimé.');
+            setFlash('success', 'Department deleted.');
         }
         redirectTo('departments');
     }
 
     if ($payload['name'] === '') {
-        $error = 'Le nom du département est obligatoire.';
+        $error = 'Department name is required.';
     } elseif ($payload['company_id'] <= 0) {
-        $error = 'Veuillez choisir une entreprise.';
+        $error = 'Please select a company.';
     } else {
         if ($action === 'create') {
             $departmentModel->create($payload);
-            setFlash('success', 'Département créé.');
+            setFlash('success', 'Department created.');
             redirectTo('departments');
         }
 
         if ($action === 'update' && $id > 0) {
             $departmentModel->update($id, $payload);
-            setFlash('success', 'Département mis à jour.');
+            setFlash('success', 'Department updated.');
             redirectTo('departments');
         }
     }
