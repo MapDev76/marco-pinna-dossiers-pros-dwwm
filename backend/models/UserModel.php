@@ -50,7 +50,7 @@ class UserModel
             'SELECT u.*, d.name AS department_name, c.name AS company_name
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
-             LEFT JOIN companies c ON c.id = COALESCE(u.company_id, d.company_id)
+             LEFT JOIN companies c ON c.id = d.company_id
              ORDER BY u.created_at DESC, u.id DESC'
         );
 
@@ -98,11 +98,11 @@ class UserModel
     {
         $statement = $this->pdo->prepare(
             'SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.department_id,
-                COALESCE(u.company_id, d.company_id) AS company_id,
+                d.company_id AS company_id,
                 d.name AS department_name, c.name AS company_name
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
-             LEFT JOIN companies c ON c.id = COALESCE(u.company_id, d.company_id)
+             LEFT JOIN companies c ON c.id = d.company_id
              WHERE u.id = :id
              LIMIT 1'
         );
@@ -139,10 +139,10 @@ class UserModel
     public function companyUsersByCompanyId(int $companyId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.status, u.company_id, d.name AS department_name
+              'SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.status, d.company_id, d.name AS department_name
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
-             WHERE COALESCE(u.company_id, d.company_id) = :company_id
+               WHERE d.company_id = :company_id
              ORDER BY u.last_name, u.first_name'
         );
         $statement->execute(['company_id' => $companyId]);
@@ -291,12 +291,11 @@ class UserModel
     public function create(array $data): int
     {
         $statement = $this->pdo->prepare(
-            'INSERT INTO users (department_id, company_id, first_name, last_name, email, phone, password, role, status)
-             VALUES (:department_id, :company_id, :first_name, :last_name, :email, :phone, :password, :role, :status)'
+            'INSERT INTO users (department_id, first_name, last_name, email, phone, password, role, status)
+             VALUES (:department_id, :first_name, :last_name, :email, :phone, :password, :role, :status)'
         );
         $statement->execute([
             'department_id' => $data['department_id'],
-            'company_id' => $data['company_id'],
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
             'email' => $data['email'],
@@ -314,7 +313,6 @@ class UserModel
         $hasPassword = array_key_exists('password', $data) && $data['password'] !== '';
         $sql = 'UPDATE users
                 SET department_id = :department_id,
-                    company_id = :company_id,
                     first_name = :first_name,
                     last_name = :last_name,
                     email = :email,
@@ -331,7 +329,6 @@ class UserModel
         $statement = $this->pdo->prepare($sql);
         $payload = [
             'department_id' => $data['department_id'],
-            'company_id' => $data['company_id'],
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
             'email' => $data['email'],

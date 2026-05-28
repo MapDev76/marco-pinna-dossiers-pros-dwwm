@@ -26,22 +26,16 @@ try {
 
         case 'create':
             $departmentId = $input['department_id'] ?? null;
-            $companyId = $input['company_id'] ?? null;
             $userRole = trim((string) ($input['role'] ?? 'employee'));
 
             if ($userRole === 'super_admin') {
                 $departmentId = null;
-                $companyId = null;
             } elseif ($userRole === 'admin') {
                 if ($departmentId === null || $departmentId === '') {
                     $reception = $departmentModel->findByNameAndCompanyId('Reception', is_numeric($companyId) ? (int) $companyId : null);
                     if ($reception) {
                         $departmentId = (int) $reception['id'];
-                        $companyId = (int) $reception['company_id'];
                     }
-                }
-                if ($companyId === null || $companyId === '') {
-                    jsonResponse(['ok' => false, 'error' => 'company_id is required for admin'], 400);
                 }
             } else {
                 if ($departmentId === null || $departmentId === '') {
@@ -51,16 +45,9 @@ try {
                 if (!$department) {
                     jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
                 }
-                $departmentCompanyId = isset($department['company_id']) ? (int) $department['company_id'] : null;
-                if ($companyId === null || $companyId === '') {
-                    $companyId = $departmentCompanyId;
-                } elseif ((int) $companyId !== $departmentCompanyId) {
-                    jsonResponse(['ok' => false, 'error' => 'company_id does not match the department company'], 400);
-                }
             }
             $data = [
                 'department_id' => $departmentId,
-                'company_id' => $companyId,
                 'first_name' => trim((string) ($input['first_name'] ?? '')),
                 'last_name' => trim((string) ($input['last_name'] ?? '')),
                 'email' => trim((string) ($input['email'] ?? '')),
@@ -81,22 +68,16 @@ try {
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             $departmentId = $input['department_id'] ?? null;
-            $companyId = $input['company_id'] ?? null;
             $userRole = trim((string) ($input['role'] ?? 'employee'));
 
             if ($userRole === 'super_admin') {
                 $departmentId = null;
-                $companyId = null;
             } elseif ($userRole === 'admin') {
                 if ($departmentId === null || $departmentId === '') {
-                    $reception = $departmentModel->findByNameAndCompanyId('Reception', is_numeric($companyId) ? (int) $companyId : null);
+                    $reception = $departmentModel->findByNameAndCompanyId('Reception');
                     if ($reception) {
                         $departmentId = (int) $reception['id'];
-                        $companyId = (int) $reception['company_id'];
                     }
-                }
-                if ($companyId === null || $companyId === '') {
-                    jsonResponse(['ok' => false, 'error' => 'company_id is required for admin'], 400);
                 }
             } else {
                 if ($departmentId === null || $departmentId === '') {
@@ -106,20 +87,9 @@ try {
                 if (!$department) {
                     jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
                 }
-                $departmentCompanyId = isset($department['company_id']) ? (int) $department['company_id'] : null;
-                if ($companyId === null || $companyId === '') {
-                    $companyId = $departmentCompanyId;
-                } elseif ((int) $companyId !== $departmentCompanyId) {
-                    jsonResponse(['ok' => false, 'error' => 'company_id does not match the department company'], 400);
-                }
-            }
-            if (($companyId === null || $companyId === '') && !empty($departmentId)) {
-                $department = $departmentModel->findById((int) $departmentId);
-                $companyId = $department['company_id'] ?? null;
             }
             $payload = [
                 'department_id' => $departmentId,
-                'company_id' => $companyId,
                 'first_name' => $input['first_name'] ?? '',
                 'last_name' => $input['last_name'] ?? '',
                 'email' => $input['email'] ?? '',

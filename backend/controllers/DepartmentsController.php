@@ -118,17 +118,15 @@ $companies = $companyModel->all();
 
 if ($role === 'admin' && $scopeCompanyId !== null) {
     $companies = array_values(array_filter($companies, static fn (array $company): bool => (int) $company['id'] === $scopeCompanyId));
-    $users = array_values(array_filter($users, static function (array $user) use ($pdo, $scopeCompanyId): bool {
-        $statement = $pdo->prepare(
-            'SELECT COALESCE(u.company_id, d.company_id) AS company_id
-             FROM users u
-             LEFT JOIN departments d ON d.id = u.department_id
-             WHERE u.id = :id
-             LIMIT 1'
-        );
-        $statement->execute(['id' => $user['id']]);
-        return (int) ($statement->fetchColumn() ?: 0) === $scopeCompanyId;
-    }));
+    $usersStatement = $pdo->prepare(
+        'SELECT u.id, u.first_name, u.last_name, u.email, u.role
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         WHERE d.company_id = :company_id
+         ORDER BY u.first_name, u.last_name'
+    );
+    $usersStatement->execute(['company_id' => $scopeCompanyId]);
+    $users = $usersStatement->fetchAll();
 } elseif ($role === 'department_manager' && $scopeCompanyId !== null && $scopeDepartmentId !== null) {
     $companies = array_values(array_filter($companies, static fn (array $company): bool => (int) $company['id'] === $scopeCompanyId));
     $users = array_values(array_filter($users, static fn (array $user): bool => (int) ($user['id'] ?? 0) > 0));

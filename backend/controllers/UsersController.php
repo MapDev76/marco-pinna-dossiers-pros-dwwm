@@ -52,27 +52,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $id = (int) ($_POST['id'] ?? 0);
     $departmentId = $_POST['department_id'] !== '' ? (int) $_POST['department_id'] : null;
-    $companyId = $_POST['company_id'] !== '' ? (int) $_POST['company_id'] : null;
     $userRole = trim((string) ($_POST['role'] ?? 'employee'));
 
     if ($role === 'super_admin') {
         if ($userRole === 'super_admin') {
             $departmentId = null;
-            $companyId = null;
         } elseif ($userRole === 'admin') {
             if ($departmentId === null) {
                 $departmentId = $defaultReceptionDepartmentId;
             }
-            if ($departmentId !== null) {
-                $department = $departmentModel->findById($departmentId);
-                $companyId = isset($department['company_id']) ? (int) $department['company_id'] : null;
-            }
         } elseif ($departmentId !== null) {
-            $department = $departmentModel->findById($departmentId);
-            $companyId = isset($department['company_id']) ? (int) $department['company_id'] : null;
         }
     } elseif ($role === 'admin') {
-        $companyId = $scopeCompanyId;
         if (!in_array($userRole, ['admin', 'department_manager', 'employee'], true)) {
             $userRole = 'employee';
         }
@@ -80,29 +71,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($departmentId === null) {
                 $departmentId = $defaultReceptionDepartmentId;
             }
-            if ($departmentId !== null) {
-                $department = $departmentModel->findById($departmentId);
-                if (isset($department['company_id']) && (int) $department['company_id'] !== $scopeCompanyId) {
-                    $error = 'The department must belong to your company.';
-                }
-                $companyId = $scopeCompanyId;
-            }
         } elseif ($departmentId !== null) {
             $department = $departmentModel->findById($departmentId);
             if (isset($department['company_id']) && (int) $department['company_id'] !== $scopeCompanyId) {
                 $error = 'The department must belong to your company.';
             }
-            $companyId = $scopeCompanyId;
         }
     } elseif ($role === 'department_manager') {
-        $companyId = $scopeCompanyId;
         $departmentId = $scopeDepartmentId;
         $userRole = 'employee';
     }
 
     $payload = [
         'department_id' => $departmentId,
-        'company_id' => $companyId,
         'first_name' => trim((string) ($_POST['first_name'] ?? '')),
         'last_name' => trim((string) ($_POST['last_name'] ?? '')),
         'email' => trim((string) ($_POST['email'] ?? '')),
@@ -129,10 +110,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Invalid role.';
         } elseif (!in_array($payload['status'], ['active', 'inactive'], true)) {
             $error = 'Invalid status.';
-        } elseif ($payload['role'] === 'super_admin' && ($payload['department_id'] !== null || $payload['company_id'] !== null)) {
-            $error = 'A Super Admin must not be linked to any department or company.';
-        } elseif ($payload['role'] === 'admin' && $payload['company_id'] === null) {
-            $error = 'An Admin must be linked to a company.';
+        } elseif ($payload['role'] === 'super_admin' && $payload['department_id'] !== null) {
+            $error = 'A Super Admin must not be linked to any department.';
+        } elseif ($payload['role'] === 'admin' && $payload['department_id'] === null) {
+            $error = 'An Admin must be linked to a department.';
         } elseif (in_array($payload['role'], ['department_manager', 'employee'], true) && $payload['department_id'] === null) {
             $error = 'A department manager or employee must be linked to a department.';
         } else {

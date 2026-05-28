@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!flashEl) return;
         const backdropId = flashEl.dataset.backdrop || (flashEl.id ? 'flash-backdrop-' + flashEl.id.replace(/^flash-/, '') : null);
         const backdrop = backdropId ? document.getElementById(backdropId) : null;
-        // Afficher après un bref délai pour l'animation
+        
         requestAnimationFrame(() => setTimeout(() => {
             if (backdrop) backdrop.classList.add('show');
             flashEl.classList.add('show');
