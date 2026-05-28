@@ -66,13 +66,6 @@ $calendarTemplates = [
                 </div>
 
                 <section class="admin-card company-directory-section">
-                    <div class="dashboard-calendar-headline">
-                        <div>
-                            <p>Companies</p>
-                            <h2>Company overview</h2>
-                        </div>
-                        <button type="button" class="admin-action-link" data-modal-target="modal-super-directory">Open CRUD</button>
-                    </div>
 
                     <div class="dashboard-company-grid">
                         <?php if (empty($moduleRows['company_directory'] ?? [])): ?>
@@ -106,12 +99,6 @@ $calendarTemplates = [
                 </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager'): ?>
                 <section class="admin-card dashboard-calendar-shell">
-                    <div class="dashboard-calendar-headline">
-                        <div>
-                            <p><?php echo $role === 'admin' ? 'Company planning' : 'Department planning'; ?></p>
-                        </div>
-                        <button type="button" class="admin-action-link" data-modal-target="modal-schedule">Schedule</button>
-                    </div>
 
                     <div class="dashboard-calendar">
                         <?php foreach ($weekDays as $index => $dayInfo): ?>
