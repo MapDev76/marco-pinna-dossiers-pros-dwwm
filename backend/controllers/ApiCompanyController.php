@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
+require_once __DIR__ . '/../models/DepartmentModel.php';
 
 if (!isLoggedIn() || !isSuperAdmin()) {
     jsonResponse(['error' => 'Unauthorized'], 403);
@@ -39,6 +40,17 @@ try {
             ];
 
             $id = $companyModel->create($data);
+            // Ensure a default 'Reception' department exists for this company.
+            $departmentModel = new DepartmentModel($pdo);
+            $existing = $departmentModel->findByNameAndCompanyId('Reception', (int) $id);
+            if (!$existing) {
+                $departmentModel->create([
+                    'company_id' => $id,
+                    'name' => 'Reception',
+                    'description' => 'Reception department',
+                    'head_user_id' => null,
+                ]);
+            }
             $company = $companyModel->findById($id);
             jsonResponse(['ok' => true, 'company' => $company]);
             break;
