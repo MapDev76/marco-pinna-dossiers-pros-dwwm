@@ -197,7 +197,10 @@ class CompanyModel
             'c.name',
             'c.city',
             'COUNT(DISTINCT d.id) AS departments_count',
-            'COUNT(DISTINCT u_all.id) AS users_count',
+                        '(SELECT COUNT(DISTINCT u_count.id)
+                            FROM users u_count
+                            INNER JOIN departments d_count ON d_count.id = u_count.department_id
+                            WHERE d_count.company_id = c.id) AS users_count',
             'GROUP_CONCAT(DISTINCT CONCAT(u_admin.first_name, " ", u_admin.last_name) ORDER BY u_admin.last_name SEPARATOR "||") AS admins',
             'GROUP_CONCAT(DISTINCT d.name ORDER BY d.name SEPARATOR "||") AS departments',
         ];
@@ -222,7 +225,6 @@ class CompanyModel
 
         $joins = [
             'LEFT JOIN departments d ON d.company_id = c.id',
-            'LEFT JOIN users u_all ON d.company_id = c.id',
             'LEFT JOIN users u_admin ON u_admin.department_id = d.id AND u_admin.role IN ("super_admin", "admin")',
         ];
 
