@@ -366,6 +366,20 @@
         first.focus();
       }
     });
+
+    const openModalFromQuery = () => {
+      const params = new URLSearchParams(window.location.search);
+      const modalEntity = params.get('modal');
+      if (!modalEntity) return;
+
+      const trigger = document.querySelector(`[data-modal-entity="${modalEntity}"]`);
+      if (trigger && typeof trigger.click === 'function') {
+        window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash}`);
+        trigger.click();
+      }
+    };
+
+    window.setTimeout(openModalFromQuery, 0);
   })();
 
   // Actions sociétés / départements / utilisateurs

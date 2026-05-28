@@ -28,20 +28,17 @@ $scopeDepartmentId = isset($profile['department_id']) ? (int) $profile['departme
 // Chaque rôle ne voit que sa zone: entreprise entière pour l'admin, département unique pour le chef de département.
 
 $pageTitle = 'Departments Management';
-$viewFile = __DIR__ . '/../../public/views/admin/departments.php';
-$error = null;
-$successMessage = null;
-$editingDepartment = null;
+
+function departmentsModalRedirect(): never
+{
+    redirectTo('dashboard', ['modal' => 'departments']);
+}
 $formData = [
     'company_id' => '',
     'name' => '',
     'description' => '',
     'head_user_id' => '',
 ];
-
-if (isset($_GET['action'], $_GET['id']) && $_GET['action'] === 'edit') {
-    $editingDepartment = $departmentModel->findById((int) $_GET['id']);
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -64,66 +61,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         if ($id > 0) {
             $departmentModel->delete($id);
-            $successMessage = 'Department deleted.';
         }
-    } elseif ($payload['name'] === '') {
-        $error = 'Department name is required.';
+        departmentsModalRedirect();
+    }
+
+    if ($payload['name'] === '') {
+        setFlash('error', 'Department name is required.');
+        departmentsModalRedirect();
     } elseif ($payload['company_id'] <= 0) {
-        $error = 'Please select a company.';
+        setFlash('error', 'Please select a company.');
+        departmentsModalRedirect();
     } else {
         if ($action === 'create') {
             $departmentModel->create($payload);
-            $successMessage = 'Department created.';
+            departmentsModalRedirect();
         }
 
         if ($action === 'update' && $id > 0) {
             $departmentModel->update($id, $payload);
-            $successMessage = 'Department updated.';
+            departmentsModalRedirect();
         }
+
+        departmentsModalRedirect();
     }
 }
 
-$departments = $departmentModel->allWithCompany();
-$users = $userModel->allForSelect();
-
-if ($role === 'admin' && $scopeCompanyId !== null) {
-    $departmentStatement = $pdo->prepare(
-        'SELECT d.*, c.name AS company_name
-         FROM departments d
-         LEFT JOIN companies c ON c.id = d.company_id
-         WHERE d.company_id = :company_id
-         ORDER BY d.created_at DESC, d.id DESC'
-    );
-    $departmentStatement->execute(['company_id' => $scopeCompanyId]);
-    $departments = $departmentStatement->fetchAll();
-}
-
-if ($role === 'department_manager' && $scopeDepartmentId !== null) {
-    $departmentStatement = $pdo->prepare(
-        'SELECT d.*, c.name AS company_name
-         FROM departments d
-         LEFT JOIN companies c ON c.id = d.company_id
-         WHERE d.id = :department_id
-         ORDER BY d.created_at DESC, d.id DESC'
-    );
-    $departmentStatement->execute(['department_id' => $scopeDepartmentId]);
-    $departments = $departmentStatement->fetchAll();
-}
-
-$companies = $companyModel->all();
-
-if ($role === 'admin' && $scopeCompanyId !== null) {
-    $companies = array_values(array_filter($companies, static fn (array $company): bool => (int) $company['id'] === $scopeCompanyId));
-    $usersStatement = $pdo->prepare(
-        'SELECT u.id, u.first_name, u.last_name, u.email, u.role
-         FROM users u
-         LEFT JOIN departments d ON d.id = u.department_id
-         WHERE d.company_id = :company_id
-         ORDER BY u.first_name, u.last_name'
-    );
-    $usersStatement->execute(['company_id' => $scopeCompanyId]);
-    $users = $usersStatement->fetchAll();
-} elseif ($role === 'department_manager' && $scopeCompanyId !== null && $scopeDepartmentId !== null) {
-    $companies = array_values(array_filter($companies, static fn (array $company): bool => (int) $company['id'] === $scopeCompanyId));
-    $users = array_values(array_filter($users, static fn (array $user): bool => (int) ($user['id'] ?? 0) > 0));
-}
+departmentsModalRedirect();

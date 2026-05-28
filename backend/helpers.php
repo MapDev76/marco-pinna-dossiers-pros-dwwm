@@ -111,7 +111,7 @@ function getFlash(string $key): ?string
 /**
  * currentUser / isLoggedIn / role helpers
  * Fournissent l'information sur l'utilisateur connecté et ses rôles.
- * Utilisés par les contrôleurs pour vérifier i permessi prima delle azioni.
+ * Utilisés par les contrôleurs pour vérifier l'état de connexion et les permissions.
  * Rôle: contrôle d'accès côté serveur (tous les contrôleurs backend).
  */
 

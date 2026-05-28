@@ -32,10 +32,11 @@ if ($role === 'admin') {
 }
 
 $pageTitle = 'Companies Management';
-$viewFile = __DIR__ . '/../../public/views/admin/companies.php';
-$error = null;
-$successMessage = null;
-$editingCompany = null;
+
+function companiesModalRedirect(): never
+{
+    redirectTo('dashboard', ['modal' => 'companies']);
+}
 $formData = [
     'name' => '',
     'type' => 'other',
@@ -47,10 +48,6 @@ $formData = [
     'logo_path' => '',
     'signature_ip' => '',
 ];
-
-if (isset($_GET['action'], $_GET['id']) && $_GET['action'] === 'edit') {
-    $editingCompany = $companyModel->findById((int) $_GET['id']);
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -71,29 +68,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         if ($id > 0) {
             $companyModel->delete($id);
-            $successMessage = 'Company deleted.';
         }
-    } elseif ($payload['name'] === '') {
-        $error = 'Company name is required.';
+        companiesModalRedirect();
+    }
+
+    if ($payload['name'] === '') {
+        setFlash('error', 'Company name is required.');
+        companiesModalRedirect();
     } elseif (!in_array($payload['type'], ['hotel', 'hospital', 'clinic', 'elderly_center', 'restaurant', 'other'], true)) {
-        $error = 'Invalid company type.';
+        setFlash('error', 'Invalid company type.');
+        companiesModalRedirect();
     } else {
         if ($action === 'create') {
             $companyModel->create($payload);
-            $successMessage = 'Company created.';
+            companiesModalRedirect();
         }
 
         if ($action === 'update' && $id > 0) {
             $companyModel->update($id, $payload);
-            $successMessage = 'Company updated.';
+            companiesModalRedirect();
         }
+
+        companiesModalRedirect();
     }
 }
 
-$companies = $companyModel->all();
-
-if ($role === 'admin' && $scopeCompanyId !== null) {
-    $companyStatement = $pdo->prepare('SELECT * FROM companies WHERE id = :id ORDER BY created_at DESC, id DESC');
-    $companyStatement->execute(['id' => $scopeCompanyId]);
-    $companies = $companyStatement->fetchAll();
-}
+companiesModalRedirect();

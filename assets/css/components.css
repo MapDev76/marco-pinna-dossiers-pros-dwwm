@@ -158,28 +158,6 @@ button.admin-action-link {
     text-decoration: none;
 }
 
-/* Formulaires en ligne */
-.inline-form {
-    display: inline;
-}
-
-.inline-form button {
-    background: var(--color-error-text);
-}
-
-/* Badges */
-.pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.3rem 0.65rem;
-    border-radius: var(--border-radius-full);
-    background: var(--color-badge-bg);
-    color: var(--color-badge-text);
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-bold);
-}
-
 /* =============================================
    PULSANTI NELLA TABELLA DEI DOCUMENTI
    ============================================= */
