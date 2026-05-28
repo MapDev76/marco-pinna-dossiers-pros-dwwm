@@ -31,6 +31,7 @@ $defaultReceptionDepartmentId = isset($defaultReceptionDepartment['id']) ? (int)
 $pageTitle = 'Users Management';
 $viewFile = __DIR__ . '/../../public/views/admin/users.php';
 $error = null;
+$successMessage = null;
 $editingUser = null;
 $formData = [
     'department_id' => '',
@@ -96,12 +97,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         if ($id > 0) {
             $userModel->delete($id);
-            setFlash('success', 'User deleted.');
+            $successMessage = 'User deleted.';
         }
-        redirectTo('users');
-    }
-
-    if ($error === null) {
+    } elseif ($error === null) {
         if ($payload['first_name'] === '' || $payload['last_name'] === '' || $payload['email'] === '') {
             $error = 'First name, last name, and email are required.';
         } elseif (!filter_var($payload['email'], FILTER_VALIDATE_EMAIL)) {
@@ -125,16 +123,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $payload['password'] = password_hash($password, PASSWORD_DEFAULT);
                     $userModel->create($payload);
-                    setFlash('success', 'User created.');
-                    redirectTo('users');
+                    $successMessage = 'User created.';
                 }
             } elseif ($action === 'update' && $id > 0) {
                 if ($password !== '') {
                     $payload['password'] = password_hash($password, PASSWORD_DEFAULT);
                 }
                 $userModel->update($id, $payload);
-                setFlash('success', 'User updated.');
-                redirectTo('users');
+                $successMessage = 'User updated.';
             }
         }
     }

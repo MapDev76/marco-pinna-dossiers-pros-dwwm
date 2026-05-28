@@ -34,6 +34,7 @@ if ($role === 'admin') {
 $pageTitle = 'Companies Management';
 $viewFile = __DIR__ . '/../../public/views/admin/companies.php';
 $error = null;
+$successMessage = null;
 $editingCompany = null;
 $formData = [
     'name' => '',
@@ -70,26 +71,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         if ($id > 0) {
             $companyModel->delete($id);
-            setFlash('success', 'Company deleted.');
+            $successMessage = 'Company deleted.';
         }
-        redirectTo('companies');
-    }
-
-    if ($payload['name'] === '') {
+    } elseif ($payload['name'] === '') {
         $error = 'Company name is required.';
     } elseif (!in_array($payload['type'], ['hotel', 'hospital', 'clinic', 'elderly_center', 'restaurant', 'other'], true)) {
         $error = 'Invalid company type.';
     } else {
         if ($action === 'create') {
             $companyModel->create($payload);
-            setFlash('success', 'Company created.');
-            redirectTo('companies');
+            $successMessage = 'Company created.';
         }
 
         if ($action === 'update' && $id > 0) {
             $companyModel->update($id, $payload);
-            setFlash('success', 'Company updated.');
-            redirectTo('companies');
+            $successMessage = 'Company updated.';
         }
     }
 }

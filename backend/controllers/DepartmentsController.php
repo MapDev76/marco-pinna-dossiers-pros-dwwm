@@ -30,6 +30,7 @@ $scopeDepartmentId = isset($profile['department_id']) ? (int) $profile['departme
 $pageTitle = 'Departments Management';
 $viewFile = __DIR__ . '/../../public/views/admin/departments.php';
 $error = null;
+$successMessage = null;
 $editingDepartment = null;
 $formData = [
     'company_id' => '',
@@ -63,26 +64,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         if ($id > 0) {
             $departmentModel->delete($id);
-            setFlash('success', 'Department deleted.');
+            $successMessage = 'Department deleted.';
         }
-        redirectTo('departments');
-    }
-
-    if ($payload['name'] === '') {
+    } elseif ($payload['name'] === '') {
         $error = 'Department name is required.';
     } elseif ($payload['company_id'] <= 0) {
         $error = 'Please select a company.';
     } else {
         if ($action === 'create') {
             $departmentModel->create($payload);
-            setFlash('success', 'Department created.');
-            redirectTo('departments');
+            $successMessage = 'Department created.';
         }
 
         if ($action === 'update' && $id > 0) {
             $departmentModel->update($id, $payload);
-            setFlash('success', 'Department updated.');
-            redirectTo('departments');
+            $successMessage = 'Department updated.';
         }
     }
 }

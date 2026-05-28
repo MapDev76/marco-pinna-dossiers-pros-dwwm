@@ -16,6 +16,10 @@ $users = $users ?? [];
         <div class="flash flash-error"><?php echo e($error); ?></div>
     <?php endif; ?>
 
+    <?php if (!empty($successMessage)): ?>
+        <div class="flash flash-success"><?php echo e($successMessage); ?></div>
+    <?php endif; ?>
+
     <section class="admin-card">
         <h2><?php echo $editing ? 'Edit department' : 'Create department'; ?></h2>
         <form method="post" class="admin-form admin-form-grid">
