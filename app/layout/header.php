@@ -1,85 +1,135 @@
 <?php
-// Bandeau partagé de l'application : logo, navigation rapide et icônes contextuelles.
+// Bandeau partagé de l'application : logo centré et actions contextuelles.
 $route = $route ?? ($_GET['route'] ?? 'home');
 $currentUser = currentUser();
-$roleLabels = [
-    'super_admin' => 'Super Admin',
-    'admin' => 'Admin',
-    'department_manager' => 'Chef de département',
-    'employee' => 'Employé',
-];
 $isPublicPage = in_array($route, ['home', 'login'], true);
 $basePath = $basePath ?? (function () {
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
 })();
+
+$headerLeft = '';
+if (!$isPublicPage && $currentUser !== null) {
+    $role = $currentUser['role'] ?? 'employee';
+    $displayName = trim((string) (($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')));
+
+    if ($role === 'super_admin') {
+        $headerLeft = [
+            'title' => 'StaffEase Pro',
+            'subtitle' => 'Super Admin',
+        ];
+    } else {
+        $companyName = 'StaffEase Pro';
+
+        if (!empty($currentUser['department_id'])) {
+            try {
+                $pdo = getPDO();
+                $statement = $pdo->prepare(
+                    'SELECT c.name AS company_name
+                     FROM departments d
+                     LEFT JOIN companies c ON c.id = d.company_id
+                     WHERE d.id = :department_id
+                     LIMIT 1'
+                );
+                $statement->execute(['department_id' => (int) $currentUser['department_id']]);
+                $row = $statement->fetch(PDO::FETCH_ASSOC);
+                if (!empty($row['company_name'])) {
+                    $companyName = (string) $row['company_name'];
+                }
+            } catch (Throwable $e) {
+                $companyName = 'StaffEase Pro';
+            }
+        }
+
+        $headerLeft = [
+            'title' => $displayName !== '' ? $displayName : 'StaffEase Pro',
+            'subtitle' => trim($companyName . ' - ' . ucfirst((string) $role)),
+        ];
+    }
+}
+
+$rightIcons = [];
+if ($route === 'home') {
+    $rightIcons[] = [
+        'type' => 'link',
+        'href' => appUrl('login'),
+        'title' => 'Login',
+        'icon' => 'log-in.svg',
+        'alt' => 'Login',
+    ];
+} elseif ($route === 'login') {
+    $rightIcons[] = [
+        'type' => 'link',
+        'href' => appUrl('home'),
+        'title' => 'Home',
+        'icon' => 'home.svg',
+        'alt' => 'Home',
+    ];
+} elseif ($currentUser !== null) {
+    $role = $currentUser['role'] ?? 'employee';
+    $rightIcons[] = [
+        'type' => 'link',
+        'href' => appUrl('home'),
+        'title' => 'Home',
+        'icon' => 'home.svg',
+        'alt' => 'Home',
+    ];
+    $rightIcons[] = [
+        'type' => 'button',
+        'title' => 'Settings',
+        'target' => 'modal-settings',
+        'icon' => 'setting.svg',
+        'alt' => 'Settings',
+    ];
+    $rightIcons[] = [
+        'type' => 'button',
+        'title' => 'Documents',
+        'target' => 'modal-documents',
+        'icon' => 'document.svg',
+        'alt' => 'Documents',
+    ];
+    $rightIcons[] = [
+        'type' => 'button',
+        'title' => 'Print',
+        'target' => 'modal-print',
+        'icon' => 'print-outline.svg',
+        'alt' => 'Print',
+    ];
+}
 ?>
-<header class="admin-header<?php echo $isPublicPage ? ' is-public' : ''; ?><?php echo $route === 'login' ? ' is-login' : ''; ?>">
-    <nav class="admin-navbar" aria-label="Navigation principale">
-        <div class="admin-navbar-inner">
-            <?php if ($isPublicPage): ?>
-            <div class="public-navbar-center">
-                <a href="<?php echo appUrl('home'); ?>" class="public-brand-link" aria-label="StaffEase Pro">
-                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="StaffEase Pro" class="public-brand-logo">
-                </a>
-            </div>
-            <?php if ($route === 'home'): ?>
-            <div class="public-navbar-right">
-                <a href="<?php echo appUrl('login'); ?>" class="icon-btn public-login-btn" title="Connexion">
-                    <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="login" class="nav-icon">
-                </a>
-            </div>
-            <?php endif; ?>
-            <?php else: ?>
-            <!-- Partie gauche: résumé utilisateur -->
-            <div class="admin-navbar-section admin-navbar-left">
-                <div class="brand-small">
-                    <!-- Logo compact à gauche -->
-                </div>
-                <?php if ($currentUser !== null): ?>
-                <div class="hotel-meta">
-                    <div class="hotel-name">StaffEase Pro</div>
-                    <div class="hotel-submeta">
-                        <span class="employee-name"><?php echo e(($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')); ?></span>
-                        <span class="employee-role"><?php echo e($roleLabels[$currentUser['role'] ?? 'employee'] ?? ucfirst((string) ($currentUser['role'] ?? 'employee'))); ?></span>
-                        <span class="employee-email"><?php echo e($currentUser['email'] ?? 'employee@example.com'); ?></span>
+<header class="site-header">
+    <nav class="site-navbar" aria-label="Primary navigation">
+        <div class="site-navbar-inner">
+            <div class="site-navbar-left">
+                <?php if (is_array($headerLeft)): ?>
+                    <div class="site-header-meta">
+                        <div class="site-header-title"><?php echo e($headerLeft['title']); ?></div>
+                        <div class="site-header-subtitle"><?php echo e($headerLeft['subtitle']); ?></div>
                     </div>
-                </div>
                 <?php endif; ?>
             </div>
 
-            <!-- Centre: titre principal -->
-            <div class="admin-navbar-section admin-navbar-center">
-                <div class="admin-brand-large">
-                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="StaffEase Pro" class="admin-brand-icon">
-                    <div class="admin-brand-text">Dashboard <strong>Admin</strong></div>
-                </div>
+            <div class="site-navbar-center">
+                <a href="<?php echo $isPublicPage ? appUrl('home') : appUrl('dashboard'); ?>" class="site-brand-link" aria-label="StaffEase Pro">
+                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="StaffEase Pro" class="site-brand-logo">
+                </a>
             </div>
 
-            <!-- Droite: actions rapides -->
-            <div class="admin-navbar-section admin-navbar-right">
-                <div class="icon-group" role="toolbar" aria-label="Actions rapides">
-                    <?php if ($currentUser !== null): ?>
-                        <a href="<?php echo appUrl('logout'); ?>" class="icon-btn" title="Logout">
-                            <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="logout" class="nav-icon">
-                        </a>
-                        <button type="button" class="icon-btn" title="Settings" data-modal-target="modal-settings">
-                            <img src="<?php echo $basePath; ?>/assets/icons/setting.svg" alt="settings" class="nav-icon">
-                        </button>
-                        <a href="#" class="icon-btn" title="Documents">
-                            <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="documents" class="nav-icon">
-                        </a>
-                        <a href="#" class="icon-btn" title="Print">
-                            <img src="<?php echo $basePath; ?>/assets/icons/print-outline.svg" alt="print" class="nav-icon">
-                        </a>
-                    <?php else: ?>
-                        <a href="<?php echo appUrl('login'); ?>" class="icon-btn" title="Login">
-                            <img src="<?php echo $basePath; ?>/assets/icons/log-in.svg" alt="login" class="nav-icon">
-                        </a>
-                    <?php endif; ?>
+            <div class="site-navbar-right">
+                <div class="site-icon-group" role="toolbar" aria-label="Quick actions">
+                    <?php foreach ($rightIcons as $iconItem): ?>
+                        <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
+                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>" data-modal-target="<?php echo e($iconItem['target']); ?>">
+                                <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
+                            </button>
+                        <?php else: ?>
+                            <a href="<?php echo e($iconItem['href']); ?>" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>">
+                                <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
+                            </a>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
                 </div>
             </div>
-            <?php endif; ?>
         </div>
     </nav>
 </header>
