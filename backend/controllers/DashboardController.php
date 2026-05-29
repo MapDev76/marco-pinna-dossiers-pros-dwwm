@@ -36,64 +36,6 @@ $roleLabels = [
 $dashboardSidebarRoleLabel = $roleLabels[$role] ?? 'User';
 
 $dashboardSidebarSections = [];
-if ($role === 'super_admin') {
-    $dashboardSidebarSections = [
-        [
-            'title' => 'Administration',
-            'icon' => '⚙',
-            'buttons' => [
-                ['label' => 'Companies', 'target' => 'crud-modal', 'entity' => 'companies', 'title' => 'Companies', 'variant' => 'active'],
-                ['label' => 'Users', 'target' => 'crud-modal', 'entity' => 'users', 'title' => 'Users'],
-                ['label' => 'Departments', 'target' => 'crud-modal', 'entity' => 'departments', 'title' => 'Departments'],
-                ['label' => 'Documents', 'target' => 'crud-modal', 'entity' => 'documents', 'title' => 'Documents'],
-                ['label' => 'Messages', 'target' => 'crud-modal', 'entity' => 'messages', 'title' => 'Messages'],
-            ],
-        ],
-    ];
-} elseif ($role === 'admin') {
-    $dashboardSidebarSections = [
-        [
-            'title' => 'Management',
-            'icon' => '⚙',
-            'buttons' => [
-                ['label' => 'Users', 'target' => 'crud-modal', 'entity' => 'users', 'title' => 'Users', 'variant' => 'active'],
-                ['label' => 'Companies', 'target' => 'crud-modal', 'entity' => 'companies', 'title' => 'Companies'],
-                ['label' => 'Documents', 'target' => 'crud-modal', 'entity' => 'documents', 'title' => 'Documents'],
-                ['label' => 'Messages', 'target' => 'crud-modal', 'entity' => 'messages', 'title' => 'Messages'],
-            ],
-        ],
-    ];
-} elseif ($role === 'department_manager') {
-    $dashboardSidebarSections = [
-        [
-            'title' => 'Management',
-            'icon' => '⚙',
-            'buttons' => [
-                ['label' => 'Team', 'target' => 'crud-modal', 'entity' => 'team', 'title' => 'Team', 'variant' => 'active'],
-                ['label' => 'Documents', 'target' => 'crud-modal', 'entity' => 'documents', 'title' => 'Documents'],
-                ['label' => 'Messages', 'target' => 'crud-modal', 'entity' => 'messages', 'title' => 'Messages'],
-            ],
-        ],
-        [
-            'title' => 'Employees',
-            'icon' => '👥',
-            'buttons' => [
-                ['label' => 'Team', 'target' => 'crud-modal', 'entity' => 'team', 'title' => 'Team', 'variant' => 'active'],
-            ],
-        ],
-    ];
-} else {
-    $dashboardSidebarSections = [
-        [
-            'title' => 'Management',
-            'icon' => '⚙',
-            'buttons' => [
-                ['label' => 'Documents', 'target' => 'crud-modal', 'entity' => 'documents', 'title' => 'Documents'],
-                ['label' => 'Messages', 'target' => 'crud-modal', 'entity' => 'messages', 'title' => 'Messages', 'variant' => 'active'],
-            ],
-        ],
-    ];
-}
 
 $companyId = isset($profile['company_id']) ? (int) $profile['company_id'] : null;
 $departmentId = isset($profile['department_id']) ? (int) $profile['department_id'] : null;

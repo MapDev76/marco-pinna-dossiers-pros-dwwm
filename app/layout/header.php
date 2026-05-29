@@ -80,15 +80,6 @@ if ($route === 'home') {
     ];
 } elseif ($currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
-    if (in_array($route, ['dashboard'], true)) {
-        $rightIcons[] = [
-            'type' => 'button',
-            'title' => 'Calendar navigator',
-            'icon' => 'menu.svg',
-            'alt' => 'Calendar navigator',
-            'toggle' => 'calendar-navigator',
-        ];
-    }
     $rightIcons[] = [
         'type' => 'link',
         'href' => appUrl('home'),
@@ -96,15 +87,13 @@ if ($route === 'home') {
         'icon' => 'home.svg',
         'alt' => 'Home',
     ];
-    if ($role !== 'super_admin') {
-        $rightIcons[] = [
-            'type' => 'button',
-            'title' => 'Settings',
-            'target' => 'modal-settings',
-            'icon' => 'setting.svg',
-            'alt' => 'Settings',
-        ];
-    }
+    $rightIcons[] = [
+        'type' => 'button',
+        'title' => 'Settings',
+        'target' => 'modal-settings',
+        'icon' => 'setting.svg',
+        'alt' => 'Settings',
+    ];
     $rightIcons[] = [
         'type' => 'button',
         'title' => 'Documents',

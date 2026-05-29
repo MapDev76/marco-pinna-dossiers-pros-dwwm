@@ -20,13 +20,26 @@
     var renderCalendar = options.renderCalendar;
     var updateChrome = options.updateChrome;
 
+    var closeNavigator = function () {
+      if (!navigatorPanel) return;
+      if (navigatorPanel.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
+      navigatorPanel.classList.remove('is-open');
+      navigatorPanel.setAttribute('aria-hidden', 'true');
+      if (typeof updateChrome === 'function') updateChrome();
+    };
+
     var toggleNavigator = function () {
       if (!navigatorPanel) return;
-      navigatorPanel.hidden = !navigatorPanel.hidden;
+      var willOpen = !navigatorPanel.classList.contains('is-open');
+      navigatorPanel.classList.toggle('is-open', willOpen);
+      navigatorPanel.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
       if (typeof updateChrome === 'function') updateChrome();
     };
 
     navigatorToggleButtons.forEach(function (button) {
+      if (button.classList.contains('dashboard-calendar-navigator-close')) return;
       button.addEventListener('click', function () { toggleNavigator(); });
     });
 
@@ -75,26 +88,27 @@
     if (navigatorCloseBtn && navigatorPanel) {
       navigatorCloseBtn.addEventListener('click', function (e) {
         e.stopPropagation();
-        navigatorPanel.hidden = true;
-        if (typeof updateChrome === 'function') updateChrome();
+        toggleNavigator();
       });
     }
 
     if (navigatorPanel) {
       navigatorPanel.addEventListener('click', function (e) {
-        if (e.target === navigatorPanel) {
-          navigatorPanel.hidden = true;
-          if (typeof updateChrome === 'function') updateChrome();
+        if (e.target.closest('.dashboard-calendar-navigator-close')) {
+          e.stopPropagation();
+          toggleNavigator();
+          return;
         }
       });
 
       document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && navigatorPanel && !navigatorPanel.hidden) {
-          navigatorPanel.hidden = true;
-          if (typeof updateChrome === 'function') updateChrome();
+        if (e.key === 'Escape' && navigatorPanel && navigatorPanel.classList.contains('is-open')) {
+          closeNavigator();
         }
       });
     }
+
+    closeNavigator();
   }
 
   window.DashboardNavigator = {

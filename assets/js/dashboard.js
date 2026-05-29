@@ -657,6 +657,36 @@
       return `${shortDateFormatter.format(range.start)} - ${shortDateFormatter.format(range.end)}`;
     };
 
+    const getVisibleDateKeys = () => {
+      const range = getVisibleRange();
+      const keys = [];
+      for (let cursor = new Date(range.start); cursor <= range.end; cursor = addDays(cursor, 1)) {
+        keys.push(dateKey(cursor));
+      }
+      return keys;
+    };
+
+    const getCalendarCounters = () => {
+      const activeDepartment = getActiveDepartment();
+      if (!activeDepartment) {
+        return { title: 'Calendar', totalShifts: 0, assignedShifts: 0, freeShifts: 0 };
+      }
+
+      const shifts = activeDepartment.shifts || [];
+      const visibleDateKeys = new Set(getVisibleDateKeys());
+      const departmentAssignments = events.filter((event) => Number(event.department_id) === Number(activeDepartment.id));
+      const assignedShifts = departmentAssignments.filter((event) => visibleDateKeys.has(event.work_date || '')).length;
+      const totalShifts = shifts.length * visibleDateKeys.size;
+      const freeShifts = Math.max(totalShifts - assignedShifts, 0);
+
+      return {
+        title: activeDepartment.name || 'Department',
+        totalShifts,
+        assignedShifts,
+        freeShifts,
+      };
+    };
+
     const updateChrome = () => {
       if (calendarShell) {
         calendarShell.dataset.calendarView = state.mode;
@@ -669,16 +699,17 @@
       });
 
       document.querySelectorAll('[data-calendar-navigator-toggle]').forEach((button) => {
-        button.setAttribute('aria-expanded', navigatorPanel && !navigatorPanel.hidden ? 'true' : 'false');
+        button.setAttribute('aria-expanded', navigatorPanel && navigatorPanel.classList.contains('is-open') ? 'true' : 'false');
       });
 
       if (calendarSection) {
-        const modeLabel = calendarSection.querySelector('[data-calendar-mode-label]');
-        const rangeLabel = calendarSection.querySelector('[data-calendar-range-label]');
-        const subtitle = calendarSection.querySelector('[data-calendar-subtitle]');
-        if (modeLabel) modeLabel.textContent = state.mode.charAt(0).toUpperCase() + state.mode.slice(1);
-        if (rangeLabel) rangeLabel.textContent = formatRangeLabel();
-        if (subtitle) subtitle.textContent = `${events.length} scheduled assignments`;
+        const title = calendarSection.querySelector('[data-calendar-title]');
+        const stats = calendarSection.querySelector('[data-calendar-stats]');
+        const counters = getCalendarCounters();
+        if (title) title.textContent = counters.title;
+        if (stats) {
+          stats.textContent = `${counters.totalShifts} shifts • ${counters.assignedShifts} assigned • ${counters.freeShifts} free for ${formatRangeLabel()}`;
+        }
       }
 
       const navigatorRange = document.querySelector('[data-calendar-range-display]');

@@ -84,9 +84,9 @@ $requestTypeLabels = [
                 </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager'): ?>
                 <section class="admin-card dashboard-calendar-shell">
-                    <div class="dashboard-calendar-navigator overlay" id="dashboard-calendar-navigator" hidden>
+                    <div class="dashboard-calendar-navigator overlay" id="dashboard-calendar-navigator" aria-hidden="true">
                         <div class="dashboard-calendar-navigator-top">
-                            <button type="button" class="dashboard-calendar-navigator-close" data-calendar-navigator-toggle aria-label="Close calendar navigator">⌃</button>
+                            <button type="button" class="dashboard-calendar-navigator-close" data-calendar-navigator-toggle aria-label="Toggle calendar navigator">⌃</button>
                             <input type="text" class="dashboard-calendar-navigator-range" value="<?php echo e(date('d/m/y')); ?> - <?php echo e(date('d/m/y')); ?>" readonly data-calendar-range-display>
                         </div>
                         <div class="dashboard-calendar-navigator-modes">
@@ -96,27 +96,16 @@ $requestTypeLabels = [
                         </div>
                         <div class="dashboard-calendar-navigator-actions">
                             <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="prev">‹</button>
-                            <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="today" aria-label="Go to today">to day</button>
+                            <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="today" aria-label="Go to today">today</button>
                             <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="next">›</button>
                         </div>
                     </div>
 
                     <div class="dashboard-calendar-headline">
                         <div>
-                            <h2 class="dashboard-calendar-title"><?php echo e($dashboardCalendarScopeLabel ?? 'Calendar'); ?></h2>
-                            <p data-calendar-subtitle><?php echo e(date('d M Y')); ?></p>
+                            <h2 class="dashboard-calendar-title" data-calendar-title><?php echo e($dashboardCalendarScopeLabel ?? 'Calendar'); ?></h2>
+                            <p class="dashboard-calendar-title-meta" data-calendar-stats><?php echo e(date('d M Y')); ?></p>
                         </div>
-                        <div class="dashboard-calendar-controls">
-                            <button type="button" class="dashboard-calendar-navigator-icon" data-calendar-navigator-toggle aria-controls="dashboard-calendar-navigator" aria-expanded="false" title="Apri navigatore calendario">📅</button>
-                        </div>
-                        <div class="dashboard-calendar-summary">
-                            <span class="dashboard-calendar-chip" data-calendar-mode-label><?php echo e(ucfirst((string) ($dashboardCalendarMode ?? 'week'))); ?></span>
-                            <span class="dashboard-calendar-chip" data-calendar-range-label><?php echo e(date('d M Y')); ?></span>
-                        </div>
-                    </div>
-
-                    <div class="dashboard-calendar-detail" data-calendar-detail>
-                        <div class="dashboard-calendar-detail-placeholder">Select a date to inspect its assignments.</div>
                     </div>
 
                     <div class="dashboard-calendar-frame">

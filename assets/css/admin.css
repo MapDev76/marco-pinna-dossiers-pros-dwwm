@@ -288,6 +288,36 @@
     color: var(--color-text);
 }
 
+.settings-field input[readonly] {
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.settings-field.span-2 {
+    grid-column: 1 / -1;
+}
+
+.settings-catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--spacing-sm);
+    width: 100%;
+}
+
+.settings-catalog-card {
+    display: grid;
+    gap: var(--spacing-sm);
+}
+
+.settings-catalog-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-xs);
+}
+
+.settings-catalog-fields .settings-field {
+    font-size: var(--font-size-sm);
+}
+
 .settings-field input,
 .schedule-field input {
     width: 100%;
