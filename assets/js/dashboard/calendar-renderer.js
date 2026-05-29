@@ -22,9 +22,21 @@
     var fullDateFormatter = options.fullDateFormatter;
     var monthLabelFormatter = options.monthLabelFormatter;
     var updateChrome = options.updateChrome;
+    var getActiveDepartment = options.getActiveDepartment;
+
+    var getVisibleEvents = function () {
+      var activeDepartment = typeof getActiveDepartment === 'function' ? getActiveDepartment() : null;
+      if (!activeDepartment || !activeDepartment.id) {
+        return events;
+      }
+
+      return events.filter(function (event) {
+        return Number(event.department_id || 0) === Number(activeDepartment.id);
+      });
+    };
 
     var eventsByDate = function () {
-      return events.reduce(function (map, event) {
+      return getVisibleEvents().reduce(function (map, event) {
         var key = event.work_date || '';
         if (!key) return map;
         if (!map.has(key)) map.set(key, []);
@@ -55,7 +67,7 @@
       var monthDate = new Date(state.focusDate.getFullYear(), monthIndex, 1, 12, 0, 0, 0);
       var monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1, 12, 0, 0, 0);
       var monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 12, 0, 0, 0);
-      var monthEvents = events.filter(function (event) {
+      var monthEvents = getVisibleEvents().filter(function (event) {
         var date = toLocalDate(event.work_date);
         return date >= monthStart && date <= monthEnd;
       });

@@ -7,26 +7,33 @@
 @media (max-width: 1100px) {
     /* Medium screens (tablets, small laptops) */
     .app-sidebar {
-        position: static;
-        margin: 84px 10px 0;
-        width: auto;
+        position: fixed;
+        top: 76px;
+        left: 8px;
+        width: 196px;
+        margin: 0;
+        transform: translateX(calc(-100% + 18px));
+    }
+
+    body.sidebar-expanded .app-sidebar {
+        transform: translateX(0);
     }
 
     .route-dashboard .dashboard-content {
-        position: relative;
-        top: auto;
-        left: auto;
-        right: auto;
-        bottom: auto;
-        width: calc(100% - 32px);
-        max-width: calc(100% - 32px);
+        position: fixed;
+        top: 76px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        width: auto;
+        max-width: none;
         transform: none;
         overflow: auto;
     }
 
     body.sidebar-expanded .route-dashboard .dashboard-content {
-        left: auto;
-        width: calc(100% - 32px);
+        left: 10px;
+        width: auto;
     }
 
     .dashboard-sidebar-shell {
@@ -129,6 +136,27 @@
         width: min(100%, 420px);
     }
 
+    .dashboard-calendar-shell {
+        height: auto;
+        min-height: 0;
+    }
+
+    .dashboard-calendar-frame {
+        min-height: 0;
+    }
+
+    .dashboard-calendar-grid[data-calendar-view="week"],
+    .dashboard-calendar-grid[data-calendar-view="fortnight"],
+    .dashboard-calendar-grid[data-calendar-view="month"],
+    .dashboard-calendar-grid[data-calendar-view="year"] {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .calendar-day-card,
+    .calendar-year-card {
+        min-height: 180px;
+    }
+
     .dashboard-sidebar-shell {
         padding: 0.7rem 0.5rem;
     }
@@ -214,22 +242,64 @@
     }
 
     .app-sidebar {
-        margin: 74px 6px 0;
+        top: 68px;
+        left: 6px;
+        width: 178px;
+        margin: 0;
+        transform: translateX(calc(-100% + 18px));
     }
 
     .route-dashboard .dashboard-content {
-        width: calc(100% - 12px);
-        max-width: calc(100% - 12px);
+        top: 68px;
+        left: 6px;
+        right: 6px;
+        bottom: 8px;
+        width: auto;
+        max-width: none;
     }
 
     body.sidebar-expanded .route-dashboard .dashboard-content {
-        width: calc(100% - 12px);
+        left: 6px;
+        width: auto;
     }
 
     .content:has(.home-page),
     .content:has(.login-form) {
         top: auto;
         transform: none;
+    }
+
+    .dashboard-calendar-shell {
+        gap: var(--spacing-sm);
+    }
+
+    .dashboard-calendar-frame {
+        overflow: visible;
+        padding-right: 0;
+    }
+
+    .dashboard-calendar-grid[data-calendar-view="week"],
+    .dashboard-calendar-grid[data-calendar-view="fortnight"],
+    .dashboard-calendar-grid[data-calendar-view="month"],
+    .dashboard-calendar-grid[data-calendar-view="year"],
+    .dashboard-calendar-grid[data-calendar-view="day"] {
+        grid-template-columns: 1fr;
+    }
+
+    .calendar-day-card,
+    .calendar-year-card {
+        min-height: 128px;
+        padding: 0.6rem;
+    }
+
+    .calendar-day-events,
+    .calendar-year-events {
+        gap: 0.35rem;
+    }
+
+    .dashboard-calendar-navigator.overlay {
+        top: 72px;
+        max-width: calc(100vw - 12px);
     }
 }
 

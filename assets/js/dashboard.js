@@ -733,6 +733,7 @@
         fullDateFormatter,
         monthLabelFormatter,
         updateChrome,
+        getActiveDepartment,
       })
       : null;
 
