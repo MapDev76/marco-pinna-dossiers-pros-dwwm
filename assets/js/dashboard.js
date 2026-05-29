@@ -685,162 +685,30 @@
       if (navigatorRange) navigatorRange.value = formatNavigatorRange();
     };
 
-    const renderAssignmentCard = (event, compact = false) => {
-      const assignee = event.user_name || 'Unassigned';
-      const departmentName = event.department_name || 'Department';
-      return `
-        <article class="calendar-event${compact ? ' is-compact' : ''}" data-assignment-id="${event.assignment_id || ''}" draggable="true">
-          <span class="calendar-event-time">${formatEventTime(event)}</span>
-          <span class="calendar-event-title">${event.shift_name || 'Shift'}</span>
-          <span class="calendar-event-meta">${departmentName} • ${assignee}${event.status ? ` • ${event.status}` : ''}</span>
-        </article>
-      `;
-    };
-
-    const renderDayCard = (date, options = {}) => {
-      const key = dateKey(date);
-      const dayEvents = (eventsByDate().get(key) || []).slice().sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')));
-      const isCurrentDay = key === dateKey(calendarToday);
-      const isSelected = key === dateKey(state.selectedDate);
-      const isMuted = options.muted || false;
-      const dayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date).toUpperCase();
-      return `
-        <article class="calendar-day-card${isCurrentDay ? ' is-current' : ''}${isSelected ? ' is-selected' : ''}${isMuted ? ' is-muted' : ''}" data-calendar-date="${key}" data-date-key="${key}">
-          <header class="calendar-day-head">
-            <span class="calendar-day-weekday">${dayLabel}</span>
-            <span class="calendar-day-number">${date.getDate()}</span>
-          </header>
-          <div class="calendar-day-events">
-            ${dayEvents.length ? dayEvents.map((event) => renderAssignmentCard(event, true)).join('') : '<div class="calendar-empty">Drop a user here to assign a shift</div>'}
-          </div>
-        </article>
-      `;
-    };
-
-    const renderYearCard = (monthIndex) => {
-      const monthDate = new Date(state.focusDate.getFullYear(), monthIndex, 1, 12, 0, 0, 0);
-      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1, 12, 0, 0, 0);
-      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 12, 0, 0, 0);
-      const monthEvents = events.filter((event) => {
-        const date = toLocalDate(event.work_date);
-        return date >= monthStart && date <= monthEnd;
-      });
-      const topEvents = monthEvents.slice(0, 2);
-      return `
-        <article class="calendar-year-card${monthIndex === calendarToday.getMonth() ? ' is-current' : ''}" data-calendar-date="${monthDate.getFullYear()}-${pad(monthIndex + 1)}-01">
-          <header class="calendar-year-head">
-            <span class="calendar-year-label">${monthNames[monthIndex]}</span>
-            <span class="calendar-year-number">${monthEvents.length}</span>
-          </header>
-          <div class="calendar-year-events">
-            ${topEvents.length ? topEvents.map((event) => `
-              <div class="calendar-year-summary">
-                <span class="calendar-year-summary-title">${event.work_date}</span>
-                <span class="calendar-year-summary-meta">${event.shift_name || 'Shift'}${event.user_name ? ` • ${event.user_name}` : ''}</span>
-              </div>
-            `).join('') : '<div class="calendar-empty">No assignments</div>'}
-          </div>
-        </article>
-      `;
-    };
-
-    const renderDetail = () => {
-      if (!calendarDetail) return;
-      const key = dateKey(state.selectedDate);
-      const selectedEvents = (eventsByDate().get(key) || []).slice().sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')));
-      calendarDetail.innerHTML = `
-        <div class="dashboard-calendar-detail-title">
-          <span>${fullDateFormatter.format(state.selectedDate)}</span>
-          <span>${selectedEvents.length} shifts</span>
-        </div>
-        <div class="dashboard-calendar-detail-meta">
-          <span class="dashboard-calendar-detail-chip">${monthLabelFormatter.format(state.selectedDate)}</span>
-          <span class="dashboard-calendar-detail-chip">${dateKey(state.selectedDate)}</span>
-        </div>
-        <div class="calendar-day-events">
-          ${selectedEvents.length ? selectedEvents.map((event) => renderAssignmentCard(event)).join('') : '<div class="dashboard-calendar-detail-empty">No assignments for this date.</div>'}
-        </div>
-      `;
-    };
+    const calendarRenderer = (window.DashboardCalendarRenderer && typeof window.DashboardCalendarRenderer.create === 'function')
+      ? window.DashboardCalendarRenderer.create({
+        state,
+        events,
+        calendarToday,
+        calendarShell,
+        calendarDetail,
+        monthNames,
+        addDays,
+        dateKey,
+        startOfWeek,
+        toLocalDate,
+        pad,
+        formatEventTime,
+        fullDateFormatter,
+        monthLabelFormatter,
+        updateChrome,
+      })
+      : null;
 
     const renderCalendar = () => {
-      if (!calendarShell) return;
-      updateChrome();
-      renderDetail();
-
-      if (state.mode === 'year') {
-        calendarShell.innerHTML = monthNames.map((_, index) => renderYearCard(index)).join('');
-        return;
+      if (calendarRenderer && typeof calendarRenderer.renderCalendar === 'function') {
+        calendarRenderer.renderCalendar();
       }
-
-      const cells = [];
-      if (state.mode === 'day') {
-        cells.push(renderDayCard(state.selectedDate));
-      } else if (state.mode === 'week') {
-        const start = startOfWeek(state.focusDate);
-        for (let index = 0; index < 7; index += 1) {
-          cells.push(renderDayCard(addDays(start, index)));
-        }
-      } else if (state.mode === 'fortnight') {
-        const start = startOfWeek(state.focusDate);
-        for (let index = 0; index < 15; index += 1) {
-          cells.push(renderDayCard(addDays(start, index)));
-        }
-      } else {
-        const firstDay = startOfWeek(new Date(state.focusDate.getFullYear(), state.focusDate.getMonth(), 1, 12, 0, 0, 0));
-        const endDay = addDays(startOfWeek(new Date(state.focusDate.getFullYear(), state.focusDate.getMonth() + 1, 0, 12, 0, 0, 0)), 6);
-        for (let cursor = new Date(firstDay); cursor <= endDay; cursor = addDays(cursor, 1)) {
-          cells.push(renderDayCard(cursor, { muted: cursor.getMonth() !== state.focusDate.getMonth() }));
-        }
-      }
-      calendarShell.innerHTML = cells.join('');
-    };
-
-    const openSidebar = () => {
-      document.body.classList.add('sidebar-expanded');
-    };
-
-    const closeSidebar = () => {
-      document.body.classList.remove('sidebar-expanded');
-    };
-
-    const bindHoverSidebar = () => {
-      if (!sidebar) return;
-      let closeTimer = null;
-      const cancelClose = () => {
-        if (closeTimer) {
-          window.clearTimeout(closeTimer);
-          closeTimer = null;
-        }
-      };
-      const scheduleClose = () => {
-        cancelClose();
-        closeTimer = window.setTimeout(() => {
-          if (!sidebar.matches(':hover') && !sidebarHandle.matches(':hover')) {
-            closeSidebar();
-          }
-        }, 180);
-      };
-
-      // Open only when hovering the slim handle; hovering the sidebar keeps it open.
-      if (sidebarHandle) {
-        sidebarHandle.addEventListener('mouseenter', () => {
-          cancelClose();
-          openSidebar();
-        });
-        sidebarHandle.addEventListener('mouseleave', scheduleClose);
-        sidebarHandle.addEventListener('focusin', () => { cancelClose(); openSidebar(); });
-      }
-
-      // Sidebar itself should not open on hover, but should cancel scheduled close while hovered.
-      sidebar.addEventListener('mouseenter', cancelClose);
-      sidebar.addEventListener('mouseleave', scheduleClose);
-    };
-
-    const toggleNavigator = () => {
-      if (!navigatorPanel) return;
-      navigatorPanel.hidden = !navigatorPanel.hidden;
-      updateChrome();
     };
 
     const syncPlannerSelection = () => {
@@ -965,157 +833,32 @@
       renderCalendar();
     };
 
-    if (sidebar && sidebarHandle) {
-      bindHoverSidebar();
-      closeSidebar();
-    }
-
-    // Bind management toggle buttons (collapsible list of management actions)
-    document.querySelectorAll('.management-toggle').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const list = btn.nextElementSibling;
-        if (!list) return;
-        const willOpen = list.hidden === true;
-        list.hidden = !willOpen;
-        btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-        btn.classList.toggle('is-active', willOpen);
-
-        // If this is the departments list, ensure opening unhides all entries
-        if (willOpen) {
-          const deptButtons = list.querySelectorAll('.dashboard-sidebar-department-button');
-          if (deptButtons && deptButtons.length) {
-            deptButtons.forEach((b) => { b.hidden = false; });
-          }
-        }
-      });
-    });
-
-    // Delegated handler for department buttons (attach to document to survive re-renders)
-    (function bindDepartmentDelegation(){
-      document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.dashboard-sidebar-department-button');
-        if (!btn) return;
-        const deptList = btn.closest('.dashboard-sidebar-department-list') || btn.closest('.dashboard-management-list');
-        if (!deptList) return;
-        // run after other handlers to avoid being overridden
-        setTimeout(() => {
-          const buttons = Array.from(deptList.querySelectorAll('.dashboard-sidebar-department-button'));
-          const visible = buttons.filter(b => !b.hidden);
-          if (visible.length === 1 && visible[0] === btn) {
-            buttons.forEach(b => { b.hidden = false; b.classList.remove('is-active'); });
-            return;
-          }
-          buttons.forEach(b => { if (b === btn) { b.hidden = false; b.classList.add('is-active'); } else { b.hidden = true; b.classList.remove('is-active'); } });
-          const deptId = btn.getAttribute('data-planner-department-id');
-          if (deptId) setActiveDepartment(deptId);
-        }, 0);
-      });
-    })();
-
-    navigatorToggleButtons.forEach((button) => {
-      button.addEventListener('click', () => toggleNavigator());
-    });
-
-    document.querySelectorAll('#dashboard-calendar-navigator [data-calendar-mode]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const mode = button.getAttribute('data-calendar-mode');
-        if (!mode) return;
-        state.mode = mode;
-        if (mode === 'day') {
-          state.selectedDate = new Date(calendarToday);
-          state.focusDate = new Date(calendarToday);
-        }
-        renderCalendar();
-      });
-    });
-
-    document.querySelectorAll('#dashboard-calendar-navigator [data-calendar-nav]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const action = button.getAttribute('data-calendar-nav');
-        if (action === 'prev') {
-          if (state.mode === 'year') state.focusDate = new Date(state.focusDate.getFullYear() - 1, 0, 1, 12, 0, 0, 0);
-          else if (state.mode === 'month') state.focusDate = new Date(state.focusDate.getFullYear(), state.focusDate.getMonth() - 1, 1, 12, 0, 0, 0);
-          else if (state.mode === 'fortnight') state.focusDate = addDays(state.focusDate, -14);
-          else if (state.mode === 'week') state.focusDate = addDays(state.focusDate, -7);
-          else state.focusDate = addDays(state.focusDate, -1);
-        }
-        if (action === 'next') {
-          if (state.mode === 'year') state.focusDate = new Date(state.focusDate.getFullYear() + 1, 0, 1, 12, 0, 0, 0);
-          else if (state.mode === 'month') state.focusDate = new Date(state.focusDate.getFullYear(), state.focusDate.getMonth() + 1, 1, 12, 0, 0, 0);
-          else if (state.mode === 'fortnight') state.focusDate = addDays(state.focusDate, 14);
-          else if (state.mode === 'week') state.focusDate = addDays(state.focusDate, 7);
-          else state.focusDate = addDays(state.focusDate, 1);
-        }
-        if (action === 'today') {
-          // Jump back to today's date
-          const today = toLocalDate(calendarShell ? (calendarShell.getAttribute('data-calendar-today')) : plannerData.today);
-          state.focusDate = new Date(today);
-          state.selectedDate = new Date(today);
-          state.calendarExpanded = false;
-          document.body.classList.remove('calendar-expanded');
-        }
-        renderCalendar();
-      });
-    });
-
-    // Ensure the navigator close button explicitly hides the panel
-    const navigatorCloseBtn = document.querySelector('.dashboard-calendar-navigator-close');
-    if (navigatorCloseBtn && navigatorPanel) {
-      navigatorCloseBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        navigatorPanel.hidden = true;
-        updateChrome();
+    if (window.DashboardSidebar && typeof window.DashboardSidebar.init === 'function') {
+      window.DashboardSidebar.init({
+        sidebar,
+        sidebarHandle,
+        plannerDepartmentButtons,
+        setActiveDepartment,
       });
     }
 
-    // Close navigator when clicking the overlay/background or pressing Escape
-    if (navigatorPanel) {
-      navigatorPanel.addEventListener('click', (e) => {
-        if (e.target === navigatorPanel) {
-          navigatorPanel.hidden = true;
-          updateChrome();
-        }
-      });
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && navigatorPanel && !navigatorPanel.hidden) {
-          navigatorPanel.hidden = true;
-          updateChrome();
-        }
+    if (window.DashboardNavigator && typeof window.DashboardNavigator.init === 'function') {
+      window.DashboardNavigator.init({
+        navigatorPanel,
+        navigatorToggleButtons,
+        calendarToday,
+        state,
+        calendarShell,
+        plannerData,
+        toLocalDate,
+        addDays,
+        renderCalendar,
+        updateChrome,
       });
     }
-
-    plannerDepartmentButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        setActiveDepartment(button.getAttribute('data-planner-department-id'));
-      });
-    });
 
     // Departments now use the same structure as Management (management-toggle + dashboard-management-list)
     const departmentCurrent = document.querySelector('.dashboard-department-current');
-
-    document.querySelectorAll('.dashboard-sidebar-department-button').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const list = btn.closest('.dashboard-sidebar-department-list') || btn.closest('.dashboard-management-list');
-        const deptButtons = list ? Array.from(list.querySelectorAll('.dashboard-sidebar-department-button')) : [];
-
-        // If only one visible (the current), clicking it reopens the full list
-        const visible = deptButtons.filter((b) => !b.hidden);
-        if (visible.length === 1 && visible[0] === btn) {
-          deptButtons.forEach((b) => { b.hidden = false; b.classList.remove('is-active'); });
-          return;
-        }
-
-        // Hide all others, keep clicked visible and mark active
-        deptButtons.forEach((b) => {
-          if (b === btn) { b.hidden = false; b.classList.add('is-active'); }
-          else { b.hidden = true; b.classList.remove('is-active'); }
-        });
-
-        // Set active department in state and re-render planner
-        const deptId = btn.getAttribute('data-planner-department-id');
-        if (deptId) setActiveDepartment(deptId);
-      });
-    });
 
     // Initialize current department display if one is active
     (function initCurrentDepartmentDisplay(){
@@ -1138,81 +881,24 @@
       }
     })();
 
-    if (calendarShell) {
-      calendarShell.addEventListener('click', (event) => {
-        const dateCard = event.target.closest('[data-calendar-date]');
-        if (dateCard) {
-          const dateValue = dateCard.getAttribute('data-calendar-date');
-          if (dateValue) openDate(toLocalDate(dateValue));
-          return;
-        }
-
-        const assignmentCard = event.target.closest('[data-assignment-id]');
-        if (assignmentCard) {
-          const assignmentId = Number(assignmentCard.getAttribute('data-assignment-id'));
-          const assignment = events.find((item) => Number(item.assignment_id) === assignmentId);
-          if (assignment?.work_date) {
-            openDate(toLocalDate(assignment.work_date));
-          }
-        }
+    if (window.DashboardCalendar && typeof window.DashboardCalendar.init === 'function') {
+      window.DashboardCalendar.init({
+        calendarShell,
+        events,
+        toLocalDate,
+        openDate,
       });
+    }
 
-      calendarShell.addEventListener('dragstart', (event) => {
-        const userChip = event.target.closest('[data-user-id]');
-        if (userChip) {
-          state.draggingUserId = userChip.getAttribute('data-user-id');
-          state.draggingAssignmentId = null;
-          event.dataTransfer?.setData('text/plain', JSON.stringify({ type: 'user', userId: state.draggingUserId }));
-          return;
-        }
-
-        const assignmentCard = event.target.closest('[data-assignment-id]');
-        if (assignmentCard) {
-          state.draggingAssignmentId = assignmentCard.getAttribute('data-assignment-id');
-          state.draggingUserId = null;
-          event.dataTransfer?.setData('text/plain', JSON.stringify({ type: 'assignment', assignmentId: state.draggingAssignmentId }));
-        }
-      });
-
-      calendarShell.addEventListener('dragover', (event) => {
-        if (event.target.closest('[data-calendar-date]')) {
-          event.preventDefault();
-        }
-      });
-
-      calendarShell.addEventListener('drop', async (event) => {
-        const dateCard = event.target.closest('[data-calendar-date]');
-        if (!dateCard) return;
-        event.preventDefault();
-        const workDate = dateCard.getAttribute('data-calendar-date');
-        if (!workDate) return;
-
-        try {
-          const data = safeParseJson(event.dataTransfer?.getData('application/json') || event.dataTransfer?.getData('text/plain') || '{}', {});
-          if (data.type === 'assignment' && data.assignmentId) {
-            const assignment = events.find((item) => Number(item.assignment_id) === Number(data.assignmentId));
-            if (!assignment) return;
-            await moveShift({ assignment_id: assignment.assignment_id, work_date: workDate });
-            return;
-          }
-
-          const activeShift = getActiveShift();
-          if (!activeShift) {
-            alert('Select a shift first.');
-            return;
-          }
-
-          const userId = data.userId || state.draggingUserId;
-          if (!userId) return;
-          await assignShift({
-            user_id: Number(userId),
-            shift_id: Number(activeShift.id),
-            work_date: workDate,
-            status: 'assigned',
-          });
-        } catch (error) {
-          alert(error.message || 'Unable to update assignment.');
-        }
+    if (window.DashboardDnd && typeof window.DashboardDnd.init === 'function') {
+      window.DashboardDnd.init({
+        calendarShell,
+        state,
+        events,
+        getActiveShift,
+        assignShift,
+        moveShift,
+        safeParseJson,
       });
     }
 

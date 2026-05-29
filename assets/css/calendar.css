@@ -12,7 +12,7 @@
     max-width: none;
     max-height: none;
     transform: none;
-    overflow: hidden;
+    overflow: auto;
     padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
     text-align: left;
 }
@@ -493,7 +493,7 @@ body.sidebar-expanded .app-sidebar {
     min-height: 0;
     overflow: auto;
     overflow-y: auto;
-    max-height: calc(100vh - 220px);
+    max-height: none;
     padding-right: 6px;
 }
 
