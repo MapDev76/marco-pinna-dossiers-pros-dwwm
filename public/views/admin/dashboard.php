@@ -96,7 +96,7 @@ $requestTypeLabels = [
                         </div>
                         <div class="dashboard-calendar-navigator-actions">
                             <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="prev">‹</button>
-                            <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="expand" aria-label="Toggle expanded view">⛶</button>
+                            <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="today" aria-label="Go to today">to day</button>
                             <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="next">›</button>
                         </div>
                     </div>

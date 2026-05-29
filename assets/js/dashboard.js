@@ -979,8 +979,38 @@
         list.hidden = !willOpen;
         btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
         btn.classList.toggle('is-active', willOpen);
+
+        // If this is the departments list, ensure opening unhides all entries
+        if (willOpen) {
+          const deptButtons = list.querySelectorAll('.dashboard-sidebar-department-button');
+          if (deptButtons && deptButtons.length) {
+            deptButtons.forEach((b) => { b.hidden = false; });
+          }
+        }
       });
     });
+
+    // Delegated handler for department buttons (attach to document to survive re-renders)
+    (function bindDepartmentDelegation(){
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.dashboard-sidebar-department-button');
+        if (!btn) return;
+        const deptList = btn.closest('.dashboard-sidebar-department-list') || btn.closest('.dashboard-management-list');
+        if (!deptList) return;
+        // run after other handlers to avoid being overridden
+        setTimeout(() => {
+          const buttons = Array.from(deptList.querySelectorAll('.dashboard-sidebar-department-button'));
+          const visible = buttons.filter(b => !b.hidden);
+          if (visible.length === 1 && visible[0] === btn) {
+            buttons.forEach(b => { b.hidden = false; b.classList.remove('is-active'); });
+            return;
+          }
+          buttons.forEach(b => { if (b === btn) { b.hidden = false; b.classList.add('is-active'); } else { b.hidden = true; b.classList.remove('is-active'); } });
+          const deptId = btn.getAttribute('data-planner-department-id');
+          if (deptId) setActiveDepartment(deptId);
+        }, 0);
+      });
+    })();
 
     navigatorToggleButtons.forEach((button) => {
       button.addEventListener('click', () => toggleNavigator());
@@ -1003,32 +1033,110 @@
       button.addEventListener('click', () => {
         const action = button.getAttribute('data-calendar-nav');
         if (action === 'prev') {
-          if (state.mode === 'year') state.focusDate = addYears(state.focusDate, -1);
-          else if (state.mode === 'month') state.focusDate = addMonths(state.focusDate, -1);
+          if (state.mode === 'year') state.focusDate = new Date(state.focusDate.getFullYear() - 1, 0, 1, 12, 0, 0, 0);
+          else if (state.mode === 'month') state.focusDate = new Date(state.focusDate.getFullYear(), state.focusDate.getMonth() - 1, 1, 12, 0, 0, 0);
           else if (state.mode === 'fortnight') state.focusDate = addDays(state.focusDate, -14);
           else if (state.mode === 'week') state.focusDate = addDays(state.focusDate, -7);
           else state.focusDate = addDays(state.focusDate, -1);
         }
         if (action === 'next') {
-          if (state.mode === 'year') state.focusDate = addYears(state.focusDate, 1);
-          else if (state.mode === 'month') state.focusDate = addMonths(state.focusDate, 1);
+          if (state.mode === 'year') state.focusDate = new Date(state.focusDate.getFullYear() + 1, 0, 1, 12, 0, 0, 0);
+          else if (state.mode === 'month') state.focusDate = new Date(state.focusDate.getFullYear(), state.focusDate.getMonth() + 1, 1, 12, 0, 0, 0);
           else if (state.mode === 'fortnight') state.focusDate = addDays(state.focusDate, 14);
           else if (state.mode === 'week') state.focusDate = addDays(state.focusDate, 7);
           else state.focusDate = addDays(state.focusDate, 1);
         }
-        if (action === 'expand') {
-          state.calendarExpanded = !state.calendarExpanded;
-          document.body.classList.toggle('calendar-expanded', state.calendarExpanded);
+        if (action === 'today') {
+          // Jump back to today's date
+          const today = toLocalDate(calendarShell ? (calendarShell.getAttribute('data-calendar-today')) : plannerData.today);
+          state.focusDate = new Date(today);
+          state.selectedDate = new Date(today);
+          state.calendarExpanded = false;
+          document.body.classList.remove('calendar-expanded');
         }
         renderCalendar();
       });
     });
+
+    // Ensure the navigator close button explicitly hides the panel
+    const navigatorCloseBtn = document.querySelector('.dashboard-calendar-navigator-close');
+    if (navigatorCloseBtn && navigatorPanel) {
+      navigatorCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigatorPanel.hidden = true;
+        updateChrome();
+      });
+    }
+
+    // Close navigator when clicking the overlay/background or pressing Escape
+    if (navigatorPanel) {
+      navigatorPanel.addEventListener('click', (e) => {
+        if (e.target === navigatorPanel) {
+          navigatorPanel.hidden = true;
+          updateChrome();
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && navigatorPanel && !navigatorPanel.hidden) {
+          navigatorPanel.hidden = true;
+          updateChrome();
+        }
+      });
+    }
 
     plannerDepartmentButtons.forEach((button) => {
       button.addEventListener('click', () => {
         setActiveDepartment(button.getAttribute('data-planner-department-id'));
       });
     });
+
+    // Departments now use the same structure as Management (management-toggle + dashboard-management-list)
+    const departmentCurrent = document.querySelector('.dashboard-department-current');
+
+    document.querySelectorAll('.dashboard-sidebar-department-button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const list = btn.closest('.dashboard-sidebar-department-list') || btn.closest('.dashboard-management-list');
+        const deptButtons = list ? Array.from(list.querySelectorAll('.dashboard-sidebar-department-button')) : [];
+
+        // If only one visible (the current), clicking it reopens the full list
+        const visible = deptButtons.filter((b) => !b.hidden);
+        if (visible.length === 1 && visible[0] === btn) {
+          deptButtons.forEach((b) => { b.hidden = false; b.classList.remove('is-active'); });
+          return;
+        }
+
+        // Hide all others, keep clicked visible and mark active
+        deptButtons.forEach((b) => {
+          if (b === btn) { b.hidden = false; b.classList.add('is-active'); }
+          else { b.hidden = true; b.classList.remove('is-active'); }
+        });
+
+        // Set active department in state and re-render planner
+        const deptId = btn.getAttribute('data-planner-department-id');
+        if (deptId) setActiveDepartment(deptId);
+      });
+    });
+
+    // Initialize current department display if one is active
+    (function initCurrentDepartmentDisplay(){
+      const active = document.querySelector('.dashboard-sidebar-department-button.is-active');
+      if (active && departmentCurrent) {
+        departmentCurrent.innerHTML = '';
+        const name = active.getAttribute('data-planner-department-name') || active.textContent.trim();
+        const btnEl = document.createElement('button');
+        btnEl.type = 'button';
+        btnEl.className = 'dashboard-department-current-btn dashboard-sidebar-link';
+        btnEl.textContent = name;
+        btnEl.addEventListener('click', () => {
+          // open the list for selecting another
+          const list = document.querySelector('.dashboard-management-list');
+          if (list) list.hidden = false;
+          departmentCurrent.hidden = true;
+        });
+        departmentCurrent.appendChild(btnEl);
+        departmentCurrent.hidden = false;
+      }
+    })();
 
     if (calendarShell) {
       calendarShell.addEventListener('click', (event) => {

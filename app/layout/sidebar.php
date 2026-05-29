@@ -51,16 +51,20 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
         <?php if (in_array($sidebarRole, ['admin', 'department_manager'], true)): ?>
             <section class="dashboard-sidebar-group dashboard-sidebar-departments-panel">
                 <p class="dashboard-sidebar-group-title"><span>📁</span> Departments</p>
-                <div class="dashboard-sidebar-department-list">
-                    <?php foreach (($dashboardPlannerData['departments'] ?? []) as $department): ?>
-                        <button type="button"
-                            class="dashboard-sidebar-department-button <?php echo ((int) ($dashboardPlannerData['active_department_id'] ?? 0) === (int) $department['id']) ? 'is-active' : ''; ?>"
-                            data-planner-department-id="<?php echo (int) $department['id']; ?>"
-                            data-planner-department-name="<?php echo e($department['name'] ?? ''); ?>"
-                            data-planner-department-description="<?php echo e($department['description'] ?? ''); ?>">
-                            <?php echo e($department['name'] ?? 'Department'); ?>
-                        </button>
-                    <?php endforeach; ?>
+                <div>
+                    <button type="button" class="dashboard-sidebar-link management-toggle" aria-expanded="false">Departments</button>
+                    <div class="dashboard-management-list dashboard-sidebar-department-list" hidden>
+                        <?php foreach (($dashboardPlannerData['departments'] ?? []) as $department): ?>
+                            <button type="button"
+                                class="dashboard-sidebar-department-button <?php echo ((int) ($dashboardPlannerData['active_department_id'] ?? 0) === (int) $department['id']) ? 'is-active' : ''; ?>"
+                                data-planner-department-id="<?php echo (int) $department['id']; ?>"
+                                data-planner-department-name="<?php echo e($department['name'] ?? ''); ?>"
+                                data-planner-department-description="<?php echo e($department['description'] ?? ''); ?>">
+                                <?php echo e($department['name'] ?? 'Department'); ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="dashboard-department-current" hidden></div>
                 </div>
                 <div class="dashboard-sidebar-planner-detail" data-sidebar-planner-detail>
                     <?php
