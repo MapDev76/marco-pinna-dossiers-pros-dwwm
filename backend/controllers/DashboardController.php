@@ -121,9 +121,71 @@ $dashboardCalendarToday = date('Y-m-d');
 $dashboardCalendarMode = in_array($role, ['admin', 'department_manager'], true) ? 'week' : 'month';
 $dashboardCalendarScopeLabel = '';
 $dashboardCalendarEvents = [];
+$dashboardPlannerData = [
+    'departments' => [],
+    'users' => [],
+    'shifts' => [],
+    'active_department_id' => null,
+    'active_shift_id' => null,
+    'today' => $dashboardCalendarToday,
+    'mode' => $dashboardCalendarMode,
+    'assignments' => [],
+];
 
 if ($role === 'admin' && $companyId !== null) {
     $dashboardCalendarScopeLabel = trim((string) (($profile['company_name'] ?? 'Company') . ' calendar'));
+    $departmentRows = $departmentModel->byCompanyId($companyId);
+    $userRows = $userModel->companyUsersByCompanyId($companyId);
+    $departmentIds = array_values(array_map(static fn (array $department): int => (int) $department['id'], $departmentRows));
+    $shiftRows = [];
+    if (!empty($departmentIds)) {
+        $placeholders = implode(', ', array_fill(0, count($departmentIds), '?'));
+        $shiftStatement = $pdo->prepare(
+            'SELECT id, department_id, name, start_time, end_time
+             FROM shifts
+             WHERE department_id IN (' . $placeholders . ')
+             ORDER BY department_id ASC, start_time ASC, id ASC'
+        );
+        $shiftStatement->execute($departmentIds);
+        $shiftRows = $shiftStatement->fetchAll();
+    }
+
+    $groupedUsers = [];
+    foreach ($userRows as $userRow) {
+        $deptKey = (int) ($userRow['department_id'] ?? 0);
+        if (!isset($groupedUsers[$deptKey])) {
+            $groupedUsers[$deptKey] = [];
+        }
+        $groupedUsers[$deptKey][] = $userRow;
+    }
+
+    $groupedShifts = [];
+    foreach ($shiftRows as $shiftRow) {
+        $deptKey = (int) ($shiftRow['department_id'] ?? 0);
+        if (!isset($groupedShifts[$deptKey])) {
+            $groupedShifts[$deptKey] = [];
+        }
+        $groupedShifts[$deptKey][] = $shiftRow;
+    }
+
+    foreach ($departmentRows as $departmentRow) {
+        $deptId = (int) $departmentRow['id'];
+        $dashboardPlannerData['departments'][] = [
+            'id' => $deptId,
+            'company_id' => (int) ($departmentRow['company_id'] ?? $companyId),
+            'name' => $departmentRow['name'] ?? '',
+            'description' => $departmentRow['description'] ?? '',
+            'head_user_id' => (int) ($departmentRow['head_user_id'] ?? 0),
+            'head_user_name' => $departmentRow['head_user_name'] ?? '',
+            'users' => $groupedUsers[$deptId] ?? [],
+            'shifts' => $groupedShifts[$deptId] ?? [],
+        ];
+    }
+
+    $dashboardPlannerData['users'] = $userRows;
+    $dashboardPlannerData['shifts'] = $shiftRows;
+    $dashboardPlannerData['active_department_id'] = $departmentRows[0]['id'] ?? null;
+    $dashboardPlannerData['active_shift_id'] = $shiftRows[0]['id'] ?? null;
     $calendarStatement = $pdo->prepare(
         'SELECT us.id AS assignment_id,
                 us.work_date,
@@ -146,10 +208,44 @@ if ($role === 'admin' && $companyId !== null) {
     );
     $calendarStatement->execute(['company_id' => $companyId]);
     $dashboardCalendarEvents = $calendarStatement->fetchAll();
+    $dashboardPlannerData['assignments'] = $dashboardCalendarEvents;
 }
 
 if ($role === 'department_manager' && $departmentId !== null) {
     $dashboardCalendarScopeLabel = trim((string) (($profile['department_name'] ?? 'Department') . ' calendar'));
+    $departmentRows = $departmentModel->byCompanyId($companyId ?? 0);
+    $teamRows = $userModel->teamByDepartmentId($departmentId);
+    $shiftStatement = $pdo->prepare(
+        'SELECT id, department_id, name, start_time, end_time
+         FROM shifts
+         WHERE department_id = :department_id
+         ORDER BY start_time ASC, id ASC'
+    );
+    $shiftStatement->execute(['department_id' => $departmentId]);
+    $shiftRows = $shiftStatement->fetchAll();
+    $teamGrouped = [$departmentId => $teamRows];
+    $shiftGrouped = [$departmentId => $shiftRows];
+    $dashboardPlannerData['departments'] = array_map(
+        static function (array $departmentRow) use ($teamGrouped, $shiftGrouped): array {
+            $deptId = (int) $departmentRow['id'];
+
+            return [
+                'id' => $deptId,
+                'company_id' => (int) ($departmentRow['company_id'] ?? 0),
+                'name' => $departmentRow['name'] ?? '',
+                'description' => $departmentRow['description'] ?? '',
+                'head_user_id' => (int) ($departmentRow['head_user_id'] ?? 0),
+                'head_user_name' => $departmentRow['head_user_name'] ?? '',
+                'users' => $teamGrouped[$deptId] ?? [],
+                'shifts' => $shiftGrouped[$deptId] ?? [],
+            ];
+        },
+        $departmentRows
+    );
+    $dashboardPlannerData['users'] = $teamRows;
+    $dashboardPlannerData['shifts'] = $shiftRows;
+    $dashboardPlannerData['active_department_id'] = $departmentId;
+    $dashboardPlannerData['active_shift_id'] = $shiftRows[0]['id'] ?? null;
     $calendarStatement = $pdo->prepare(
         'SELECT us.id AS assignment_id,
                 us.work_date,
@@ -172,6 +268,7 @@ if ($role === 'department_manager' && $departmentId !== null) {
     );
     $calendarStatement->execute(['department_id' => $departmentId]);
     $dashboardCalendarEvents = $calendarStatement->fetchAll();
+    $dashboardPlannerData['assignments'] = $dashboardCalendarEvents;
 }
 
 $stats = [

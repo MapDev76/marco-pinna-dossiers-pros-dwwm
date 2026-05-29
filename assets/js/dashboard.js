@@ -503,18 +503,23 @@
 
   /**
    * setupSidebarAndCalendar()
-   * Toggle the dashboard sidebar and render a real date-driven calendar using
-   * the shift assignments provided by the backend.
+   * Wire the hover sidebar, the calendar navigator, the planner view, and
+   * drag-and-drop shift assignments.
    */
   (function setupSidebarAndCalendar(){
-    const sidebarToggleButtons = document.querySelectorAll('[data-sidebar-toggle]');
+    const sidebar = document.getElementById('dashboard-sidebar');
+    const sidebarHandle = document.querySelector('[data-sidebar-hover-handle]');
+    const navigatorToggleButtons = document.querySelectorAll('[data-calendar-navigator-toggle]');
+    const navigatorPanel = document.getElementById('dashboard-calendar-navigator');
     const calendarShell = document.querySelector('[data-dashboard-calendar-shell]');
     const calendarSection = calendarShell ? calendarShell.closest('.dashboard-calendar-shell') : null;
-    const modeButtons = document.querySelectorAll('[data-calendar-mode]');
-    const navButtons = document.querySelectorAll('[data-calendar-nav]');
-    const stateKey = 'staffease-dashboard-sidebar-collapsed';
+    const calendarDetail = document.querySelector('[data-calendar-detail]');
+    const plannerDetail = document.querySelector('[data-sidebar-planner-detail]');
+    const plannerDepartmentButtons = document.querySelectorAll('[data-planner-department-id]');
+    const plannerData = window.DashboardPlannerData || {};
+    const apiDashboard = (window.DashboardConfig || {}).apiDashboard;
 
-    if (!sidebarToggleButtons.length && !calendarShell) {
+    if (!sidebar && !calendarShell && !navigatorPanel) {
       return;
     }
 
@@ -556,75 +561,115 @@
       start.setDate(start.getDate() + offset);
       return start;
     };
-    const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1, 12, 0, 0, 0);
-    const endOfMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0, 12, 0, 0, 0);
-    const startOfYear = (date) => new Date(date.getFullYear(), 0, 1, 12, 0, 0, 0);
     const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date(2024, index, 1)));
     const weekdayNames = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(2024, 0, 1 + index)));
     const fullDateFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+    const shortDateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
     const monthYearFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
+    const monthLabelFormatter = new Intl.DateTimeFormat('en-US', { month: 'long' });
 
-    const rawEvents = calendarShell ? safeParseJson(calendarShell.getAttribute('data-calendar-events') || '[]', []) : [];
-    const events = Array.isArray(rawEvents) ? rawEvents : [];
-    const eventsByDate = events.reduce((map, event) => {
-      const key = event.work_date || '';
+    const rawAssignments = Array.isArray(plannerData.assignments) ? plannerData.assignments : [];
+    const departments = Array.isArray(plannerData.departments) ? plannerData.departments : [];
+    const calendarToday = toLocalDate(plannerData.today || (calendarShell ? calendarShell.getAttribute('data-calendar-today') : ''));
+    const events = rawAssignments.map((item) => ({ ...item }));
+    let nextAssignmentId = events.reduce((max, item) => Math.max(max, Number(item.assignment_id || 0)), 0) + 1;
+
+    const state = {
+      mode: ['day', 'week', 'fortnight', 'month', 'year'].includes(plannerData.mode) ? plannerData.mode : 'week',
+      focusDate: calendarToday,
+      selectedDate: calendarToday,
+      activeDepartmentId: Number(plannerData.active_department_id || departments[0]?.id || 0),
+      activeShiftId: Number(plannerData.active_shift_id || 0),
+      calendarExpanded: false,
+      draggingUserId: null,
+      draggingAssignmentId: null,
+    };
+
+    const eventDateKey = (event) => event.work_date || '';
+    const eventsByDate = () => events.reduce((map, event) => {
+      const key = eventDateKey(event);
       if (!key) return map;
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
+      if (!map.has(key)) map.set(key, []);
       map.get(key).push(event);
       return map;
     }, new Map());
 
-    const calendarToday = toLocalDate(calendarShell ? calendarShell.getAttribute('data-calendar-today') : '');
-    const initialMode = calendarShell ? (calendarShell.getAttribute('data-calendar-mode') || 'week') : 'week';
-    const state = {
-      mode: ['day', 'week', 'fortnight', 'month', 'year'].includes(initialMode) ? initialMode : 'week',
-      focusDate: calendarToday,
+    const getDepartmentById = (departmentId) => departments.find((department) => Number(department.id) === Number(departmentId)) || departments[0] || null;
+    const getActiveDepartment = () => getDepartmentById(state.activeDepartmentId);
+    const getActiveShifts = () => (getActiveDepartment()?.shifts || []);
+    const getActiveUsers = () => (getActiveDepartment()?.users || []);
+    const getActiveShift = () => getActiveShifts().find((shift) => Number(shift.id) === Number(state.activeShiftId)) || getActiveShifts()[0] || null;
+
+    const setActiveDepartment = (departmentId) => {
+      const department = getDepartmentById(departmentId);
+      if (!department) return;
+      state.activeDepartmentId = Number(department.id);
+      const firstShift = (department.shifts || [])[0] || null;
+      state.activeShiftId = firstShift ? Number(firstShift.id) : 0;
+      renderSidebarPlanner();
+      renderCalendar();
     };
 
-    const getModeStep = (mode) => {
-      if (mode === 'day') return 1;
-      if (mode === 'week') return 7;
-      if (mode === 'fortnight') return 14;
-      return mode === 'year' ? 12 : 1;
+    const setActiveShift = (shiftId) => {
+      state.activeShiftId = Number(shiftId);
+      renderSidebarPlanner();
     };
 
-    const formatEventTime = (event) => {
-      const start = typeof event.start_time === 'string' ? event.start_time.slice(0, 5) : '--:--';
-      const end = typeof event.end_time === 'string' ? event.end_time.slice(0, 5) : '--:--';
+    const formatShiftTime = (shift) => {
+      const start = typeof shift.start_time === 'string' ? shift.start_time.slice(0, 5) : '--:--';
+      const end = typeof shift.end_time === 'string' ? shift.end_time.slice(0, 5) : '--:--';
       return `${start} - ${end}`;
     };
 
+    const formatEventTime = (event) => formatShiftTime(event);
+
     const formatRangeLabel = () => {
-      if (state.mode === 'year') {
-        return String(state.focusDate.getFullYear());
-      }
-
-      if (state.mode === 'month') {
-        return monthYearFormatter.format(state.focusDate);
-      }
-
-      if (state.mode === 'day') {
-        return fullDateFormatter.format(state.focusDate);
-      }
-
-      const start = startOfWeek(state.focusDate);
-      const days = state.mode === 'fortnight' ? 13 : 6;
-      const end = addDays(start, days);
+      if (state.mode === 'year') return String(state.focusDate.getFullYear());
+      if (state.mode === 'month') return monthYearFormatter.format(state.focusDate);
+      if (state.mode === 'day') return fullDateFormatter.format(state.focusDate);
+      const start = state.mode === 'fortnight' ? state.focusDate : startOfWeek(state.focusDate);
+      const end = state.mode === 'fortnight' ? addDays(start, 14) : addDays(start, 6);
       return `${shortDateFormatter.format(start)} - ${shortDateFormatter.format(end)}`;
     };
 
-    const updateControls = () => {
+    const getVisibleRange = () => {
+      if (state.mode === 'year') {
+        return { start: new Date(state.focusDate.getFullYear(), 0, 1, 12, 0, 0, 0), end: new Date(state.focusDate.getFullYear(), 11, 31, 12, 0, 0, 0) };
+      }
+      if (state.mode === 'month') {
+        const first = startOfWeek(new Date(state.focusDate.getFullYear(), state.focusDate.getMonth(), 1, 12, 0, 0, 0));
+        const last = addDays(startOfWeek(new Date(state.focusDate.getFullYear(), state.focusDate.getMonth() + 1, 0, 12, 0, 0, 0)), 6);
+        return { start: first, end: last };
+      }
+      if (state.mode === 'fortnight') {
+        const start = startOfWeek(state.focusDate);
+        return { start, end: addDays(start, 14) };
+      }
+      if (state.mode === 'day') {
+        return { start: state.selectedDate, end: state.selectedDate };
+      }
+      const start = startOfWeek(state.focusDate);
+      return { start, end: addDays(start, 6) };
+    };
+
+    const formatNavigatorRange = () => {
+      const range = getVisibleRange();
+      return `${shortDateFormatter.format(range.start)} - ${shortDateFormatter.format(range.end)}`;
+    };
+
+    const updateChrome = () => {
       if (calendarShell) {
         calendarShell.dataset.calendarView = state.mode;
       }
 
-      modeButtons.forEach((button) => {
+      document.querySelectorAll('[data-calendar-mode]').forEach((button) => {
         const isActive = button.getAttribute('data-calendar-mode') === state.mode;
         button.classList.toggle('is-active', isActive);
         button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+
+      document.querySelectorAll('[data-calendar-navigator-toggle]').forEach((button) => {
+        button.setAttribute('aria-expanded', navigatorPanel && !navigatorPanel.hidden ? 'true' : 'false');
       });
 
       if (calendarSection) {
@@ -635,31 +680,38 @@
         if (rangeLabel) rangeLabel.textContent = formatRangeLabel();
         if (subtitle) subtitle.textContent = `${events.length} scheduled assignments`;
       }
+
+      const navigatorRange = document.querySelector('[data-calendar-range-display]');
+      if (navigatorRange) navigatorRange.value = formatNavigatorRange();
     };
 
-    const renderEvent = (event) => `
-      <article class="calendar-event">
-        <span class="calendar-event-time">${formatEventTime(event)}</span>
-        <span class="calendar-event-title">${event.shift_name || 'Shift'}</span>
-        <span class="calendar-event-meta">${event.department_name || ''}${event.user_name ? ` • ${event.user_name}` : ''}${event.status ? ` • ${event.status}` : ''}</span>
-      </article>
-    `;
+    const renderAssignmentCard = (event, compact = false) => {
+      const assignee = event.user_name || 'Unassigned';
+      const departmentName = event.department_name || 'Department';
+      return `
+        <article class="calendar-event${compact ? ' is-compact' : ''}" data-assignment-id="${event.assignment_id || ''}" draggable="true">
+          <span class="calendar-event-time">${formatEventTime(event)}</span>
+          <span class="calendar-event-title">${event.shift_name || 'Shift'}</span>
+          <span class="calendar-event-meta">${departmentName} • ${assignee}${event.status ? ` • ${event.status}` : ''}</span>
+        </article>
+      `;
+    };
 
     const renderDayCard = (date, options = {}) => {
       const key = dateKey(date);
-      const dayEvents = eventsByDate.get(key) || [];
+      const dayEvents = (eventsByDate().get(key) || []).slice().sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')));
       const isCurrentDay = key === dateKey(calendarToday);
+      const isSelected = key === dateKey(state.selectedDate);
       const isMuted = options.muted || false;
       const dayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date).toUpperCase();
-      const numberLabel = String(date.getDate());
       return `
-        <article class="calendar-day-card${isCurrentDay ? ' is-current' : ''}${isMuted ? ' is-muted' : ''}">
+        <article class="calendar-day-card${isCurrentDay ? ' is-current' : ''}${isSelected ? ' is-selected' : ''}${isMuted ? ' is-muted' : ''}" data-calendar-date="${key}" data-date-key="${key}">
           <header class="calendar-day-head">
             <span class="calendar-day-weekday">${dayLabel}</span>
-            <span class="calendar-day-number">${numberLabel}</span>
+            <span class="calendar-day-number">${date.getDate()}</span>
           </header>
           <div class="calendar-day-events">
-            ${dayEvents.length ? dayEvents.map(renderEvent).join('') : '<div class="calendar-empty">No assignments</div>'}
+            ${dayEvents.length ? dayEvents.map((event) => renderAssignmentCard(event, true)).join('') : '<div class="calendar-empty">Drop a user here to assign a shift</div>'}
           </div>
         </article>
       `;
@@ -667,17 +719,15 @@
 
     const renderYearCard = (monthIndex) => {
       const monthDate = new Date(state.focusDate.getFullYear(), monthIndex, 1, 12, 0, 0, 0);
-      const monthStart = startOfMonth(monthDate);
-      const monthEnd = endOfMonth(monthDate);
+      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1, 12, 0, 0, 0);
+      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 12, 0, 0, 0);
       const monthEvents = events.filter((event) => {
         const date = toLocalDate(event.work_date);
         return date >= monthStart && date <= monthEnd;
       });
-      const topEvents = monthEvents.slice(0, 3);
-      const isCurrentMonth = monthIndex === calendarToday.getMonth() && state.focusDate.getFullYear() === calendarToday.getFullYear();
-
+      const topEvents = monthEvents.slice(0, 2);
       return `
-        <article class="calendar-year-card${isCurrentMonth ? ' is-current' : ''}">
+        <article class="calendar-year-card${monthIndex === calendarToday.getMonth() ? ' is-current' : ''}" data-calendar-date="${monthDate.getFullYear()}-${pad(monthIndex + 1)}-01">
           <header class="calendar-year-head">
             <span class="calendar-year-label">${monthNames[monthIndex]}</span>
             <span class="calendar-year-number">${monthEvents.length}</span>
@@ -686,7 +736,7 @@
             ${topEvents.length ? topEvents.map((event) => `
               <div class="calendar-year-summary">
                 <span class="calendar-year-summary-title">${event.work_date}</span>
-                <span class="calendar-year-summary-meta">${event.shift_name || 'Shift'}${event.department_name ? ` • ${event.department_name}` : ''}</span>
+                <span class="calendar-year-summary-meta">${event.shift_name || 'Shift'}${event.user_name ? ` • ${event.user_name}` : ''}</span>
               </div>
             `).join('') : '<div class="calendar-empty">No assignments</div>'}
           </div>
@@ -694,106 +744,355 @@
       `;
     };
 
+    const renderDetail = () => {
+      if (!calendarDetail) return;
+      const key = dateKey(state.selectedDate);
+      const selectedEvents = (eventsByDate().get(key) || []).slice().sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')));
+      calendarDetail.innerHTML = `
+        <div class="dashboard-calendar-detail-title">
+          <span>${fullDateFormatter.format(state.selectedDate)}</span>
+          <span>${selectedEvents.length} shifts</span>
+        </div>
+        <div class="dashboard-calendar-detail-meta">
+          <span class="dashboard-calendar-detail-chip">${monthLabelFormatter.format(state.selectedDate)}</span>
+          <span class="dashboard-calendar-detail-chip">${dateKey(state.selectedDate)}</span>
+        </div>
+        <div class="calendar-day-events">
+          ${selectedEvents.length ? selectedEvents.map((event) => renderAssignmentCard(event)).join('') : '<div class="dashboard-calendar-detail-empty">No assignments for this date.</div>'}
+        </div>
+      `;
+    };
+
     const renderCalendar = () => {
       if (!calendarShell) return;
-      updateControls();
+      updateChrome();
+      renderDetail();
 
       if (state.mode === 'year') {
         calendarShell.innerHTML = monthNames.map((_, index) => renderYearCard(index)).join('');
         return;
       }
 
-      if (state.mode === 'month') {
-        const firstDay = startOfWeek(startOfMonth(state.focusDate));
-        const lastDay = addDays(startOfWeek(endOfMonth(state.focusDate)), 6);
-        const cells = [];
-        for (let cursor = new Date(firstDay); cursor <= lastDay; cursor = addDays(cursor, 1)) {
+      const cells = [];
+      if (state.mode === 'day') {
+        cells.push(renderDayCard(state.selectedDate));
+      } else if (state.mode === 'week') {
+        const start = startOfWeek(state.focusDate);
+        for (let index = 0; index < 7; index += 1) {
+          cells.push(renderDayCard(addDays(start, index)));
+        }
+      } else if (state.mode === 'fortnight') {
+        const start = startOfWeek(state.focusDate);
+        for (let index = 0; index < 15; index += 1) {
+          cells.push(renderDayCard(addDays(start, index)));
+        }
+      } else {
+        const firstDay = startOfWeek(new Date(state.focusDate.getFullYear(), state.focusDate.getMonth(), 1, 12, 0, 0, 0));
+        const endDay = addDays(startOfWeek(new Date(state.focusDate.getFullYear(), state.focusDate.getMonth() + 1, 0, 12, 0, 0, 0)), 6);
+        for (let cursor = new Date(firstDay); cursor <= endDay; cursor = addDays(cursor, 1)) {
           cells.push(renderDayCard(cursor, { muted: cursor.getMonth() !== state.focusDate.getMonth() }));
         }
-        calendarShell.innerHTML = cells.join('');
-        return;
-      }
-
-      const totalDays = state.mode === 'fortnight' ? 14 : state.mode === 'week' ? 7 : 1;
-      const startDate = state.mode === 'day' ? state.focusDate : startOfWeek(state.focusDate);
-      const cells = [];
-      for (let offset = 0; offset < totalDays; offset += 1) {
-        cells.push(renderDayCard(addDays(startDate, offset)));
       }
       calendarShell.innerHTML = cells.join('');
     };
 
-    const moveFocus = (direction) => {
-      if (state.mode === 'year') {
-        state.focusDate = addYears(state.focusDate, direction);
-      } else if (state.mode === 'month') {
-        state.focusDate = addMonths(state.focusDate, direction);
+    const openSidebar = () => {
+      document.body.classList.add('sidebar-expanded');
+    };
+
+    const closeSidebar = () => {
+      document.body.classList.remove('sidebar-expanded');
+    };
+
+    const bindHoverSidebar = () => {
+      if (!sidebar) return;
+      let closeTimer = null;
+      const cancelClose = () => {
+        if (closeTimer) {
+          window.clearTimeout(closeTimer);
+          closeTimer = null;
+        }
+      };
+      const scheduleClose = () => {
+        cancelClose();
+        closeTimer = window.setTimeout(() => {
+          if (!sidebar.matches(':hover')) {
+            closeSidebar();
+          }
+        }, 80);
+      };
+
+      [sidebar, sidebarHandle].forEach((element) => {
+        if (!element) return;
+        element.addEventListener('mouseenter', () => {
+          cancelClose();
+          openSidebar();
+        });
+        element.addEventListener('mouseleave', scheduleClose);
+        element.addEventListener('focusin', openSidebar);
+      });
+    };
+
+    const toggleNavigator = () => {
+      if (!navigatorPanel) return;
+      navigatorPanel.hidden = !navigatorPanel.hidden;
+      updateChrome();
+    };
+
+    const syncPlannerSelection = () => {
+      plannerDepartmentButtons.forEach((button) => {
+        const isActive = Number(button.getAttribute('data-planner-department-id')) === Number(state.activeDepartmentId);
+        button.classList.toggle('is-active', isActive);
+      });
+    };
+
+    const renderSidebarPlanner = () => {
+      syncPlannerSelection();
+      if (!plannerDetail) return;
+      const activeDepartment = getActiveDepartment();
+      if (!activeDepartment) {
+        plannerDetail.innerHTML = '<div class="dashboard-sidebar-planner-placeholder">No departments available.</div>';
+        return;
+      }
+
+      const users = activeDepartment.users || [];
+      const shifts = activeDepartment.shifts || [];
+      plannerDetail.innerHTML = `
+        <div class="dashboard-sidebar-planner-title">
+          <span>${activeDepartment.name || 'Department'}</span>
+          <span>${users.length} staff</span>
+        </div>
+        <div class="dashboard-sidebar-planner-description">${activeDepartment.description || 'Assigned team and shift list.'}</div>
+        <div>
+          <div class="dashboard-sidebar-group-title"><span>👤</span> Employees</div>
+          <div class="dashboard-sidebar-chip-group">
+            ${users.length ? users.map((user) => `
+              <button type="button" class="dashboard-sidebar-user-chip" draggable="true" data-user-id="${user.id}" data-user-name="${(user.first_name || '') + ' ' + (user.last_name || '')}" title="Drag to calendar">
+                ${user.first_name || ''} ${user.last_name || ''}
+              </button>
+            `).join('') : '<div class="dashboard-sidebar-planner-placeholder">No employees in this department.</div>'}
+          </div>
+        </div>
+        <div>
+          <div class="dashboard-sidebar-group-title"><span>⏱</span> Shifts</div>
+          <div class="dashboard-sidebar-chip-group">
+            ${shifts.length ? shifts.map((shift) => `
+              <button type="button" class="dashboard-sidebar-shift-chip ${Number(shift.id) === Number(state.activeShiftId) ? 'is-active' : ''}" data-shift-id="${shift.id}">
+                ${shift.name || 'Shift'} ${formatShiftTime(shift)}
+              </button>
+            `).join('') : '<div class="dashboard-sidebar-planner-placeholder">No shifts configured.</div>'}
+          </div>
+        </div>
+      `;
+
+      plannerDetail.querySelectorAll('[data-user-id]').forEach((button) => {
+        button.addEventListener('dragstart', (event) => {
+          state.draggingUserId = button.getAttribute('data-user-id');
+          state.draggingAssignmentId = null;
+          event.dataTransfer?.setData('text/plain', JSON.stringify({ type: 'user', userId: state.draggingUserId }));
+          event.dataTransfer?.setData('application/json', JSON.stringify({ type: 'user', userId: state.draggingUserId }));
+        });
+      });
+
+      plannerDetail.querySelectorAll('[data-shift-id]').forEach((button) => {
+        button.addEventListener('click', () => setActiveShift(button.getAttribute('data-shift-id')));
+      });
+    };
+
+    const upsertAssignment = (assignment) => {
+      const normalized = {
+        assignment_id: Number(assignment.assignment_id || assignment.id || nextAssignmentId),
+        work_date: assignment.work_date,
+        status: assignment.status || 'assigned',
+        notes: assignment.notes || null,
+        shift_id: Number(assignment.shift_id || 0),
+        shift_name: assignment.shift_name || '',
+        start_time: assignment.start_time || null,
+        end_time: assignment.end_time || null,
+        department_id: Number(assignment.department_id || 0),
+        department_name: assignment.department_name || '',
+        user_id: Number(assignment.user_id || 0),
+        user_name: assignment.user_name || '',
+      };
+      const index = events.findIndex((item) => Number(item.assignment_id) === Number(normalized.assignment_id));
+      if (index >= 0) {
+        events[index] = normalized;
       } else {
-        state.focusDate = addDays(state.focusDate, direction * getModeStep(state.mode));
+        events.push(normalized);
+      }
+      nextAssignmentId += 1;
+    };
+
+    const assignShift = async (payload) => {
+      if (!apiDashboard || !window.AppAPI) return;
+      const response = await AppAPI.postJSON(apiDashboard, {
+        action: 'assign_shift',
+        ...payload,
+      });
+      if (!response || response.ok === false || response.success === false) {
+        throw new Error(response?.error || response?.message || 'Unable to save assignment');
+      }
+      if (response.assignment) {
+        upsertAssignment(response.assignment);
       }
       renderCalendar();
     };
 
-    sidebarToggleButtons.forEach((button) => {
-      const applySidebarState = () => {
-        const collapsed = document.body.classList.contains('sidebar-collapsed');
-        button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      };
-
-      button.addEventListener('click', () => {
-        const collapsed = !document.body.classList.contains('sidebar-collapsed');
-        document.body.classList.toggle('sidebar-collapsed', collapsed);
-        try {
-          window.localStorage.setItem(stateKey, collapsed ? '1' : '0');
-        } catch (error) {
-          // Ignore storage failures.
-        }
-        applySidebarState();
+    const moveShift = async (payload) => {
+      if (!apiDashboard || !window.AppAPI) return;
+      const response = await AppAPI.postJSON(apiDashboard, {
+        action: 'move_shift',
+        ...payload,
       });
-
-      applySidebarState();
-    });
-
-    try {
-      if (window.localStorage.getItem(stateKey) === '1') {
-        document.body.classList.add('sidebar-collapsed');
+      if (!response || response.ok === false || response.success === false) {
+        throw new Error(response?.error || response?.message || 'Unable to move assignment');
       }
-    } catch (error) {
-      // Ignore storage failures.
+      if (response.assignment) {
+        upsertAssignment(response.assignment);
+      }
+      renderCalendar();
+    };
+
+    const openDate = (date) => {
+      state.selectedDate = new Date(date);
+      if (state.mode === 'day') {
+        state.focusDate = new Date(date);
+      }
+      renderCalendar();
+    };
+
+    if (sidebar && sidebarHandle) {
+      bindHoverSidebar();
+      closeSidebar();
     }
 
-    sidebarToggleButtons.forEach((button) => {
-      button.setAttribute('aria-expanded', document.body.classList.contains('sidebar-collapsed') ? 'false' : 'true');
+    navigatorToggleButtons.forEach((button) => {
+      button.addEventListener('click', () => toggleNavigator());
     });
 
-    modeButtons.forEach((button) => {
+    document.querySelectorAll('#dashboard-calendar-navigator [data-calendar-mode]').forEach((button) => {
       button.addEventListener('click', () => {
         const mode = button.getAttribute('data-calendar-mode');
         if (!mode) return;
         state.mode = mode;
-        if (mode === 'year') {
-          state.focusDate = startOfYear(state.focusDate);
+        if (mode === 'day') {
+          state.selectedDate = new Date(calendarToday);
+          state.focusDate = new Date(calendarToday);
         }
         renderCalendar();
       });
     });
 
-    navButtons.forEach((button) => {
+    document.querySelectorAll('#dashboard-calendar-navigator [data-calendar-nav]').forEach((button) => {
       button.addEventListener('click', () => {
         const action = button.getAttribute('data-calendar-nav');
-        if (action === 'today') {
-          state.focusDate = new Date(calendarToday);
-        } else if (action === 'prev') {
-          moveFocus(-1);
-          return;
-        } else if (action === 'next') {
-          moveFocus(1);
-          return;
+        if (action === 'prev') {
+          if (state.mode === 'year') state.focusDate = addYears(state.focusDate, -1);
+          else if (state.mode === 'month') state.focusDate = addMonths(state.focusDate, -1);
+          else if (state.mode === 'fortnight') state.focusDate = addDays(state.focusDate, -14);
+          else if (state.mode === 'week') state.focusDate = addDays(state.focusDate, -7);
+          else state.focusDate = addDays(state.focusDate, -1);
+        }
+        if (action === 'next') {
+          if (state.mode === 'year') state.focusDate = addYears(state.focusDate, 1);
+          else if (state.mode === 'month') state.focusDate = addMonths(state.focusDate, 1);
+          else if (state.mode === 'fortnight') state.focusDate = addDays(state.focusDate, 14);
+          else if (state.mode === 'week') state.focusDate = addDays(state.focusDate, 7);
+          else state.focusDate = addDays(state.focusDate, 1);
+        }
+        if (action === 'expand') {
+          state.calendarExpanded = !state.calendarExpanded;
+          document.body.classList.toggle('calendar-expanded', state.calendarExpanded);
         }
         renderCalendar();
       });
     });
 
+    plannerDepartmentButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setActiveDepartment(button.getAttribute('data-planner-department-id'));
+      });
+    });
+
+    if (calendarShell) {
+      calendarShell.addEventListener('click', (event) => {
+        const dateCard = event.target.closest('[data-calendar-date]');
+        if (dateCard) {
+          const dateValue = dateCard.getAttribute('data-calendar-date');
+          if (dateValue) openDate(toLocalDate(dateValue));
+          return;
+        }
+
+        const assignmentCard = event.target.closest('[data-assignment-id]');
+        if (assignmentCard) {
+          const assignmentId = Number(assignmentCard.getAttribute('data-assignment-id'));
+          const assignment = events.find((item) => Number(item.assignment_id) === assignmentId);
+          if (assignment?.work_date) {
+            openDate(toLocalDate(assignment.work_date));
+          }
+        }
+      });
+
+      calendarShell.addEventListener('dragstart', (event) => {
+        const userChip = event.target.closest('[data-user-id]');
+        if (userChip) {
+          state.draggingUserId = userChip.getAttribute('data-user-id');
+          state.draggingAssignmentId = null;
+          event.dataTransfer?.setData('text/plain', JSON.stringify({ type: 'user', userId: state.draggingUserId }));
+          return;
+        }
+
+        const assignmentCard = event.target.closest('[data-assignment-id]');
+        if (assignmentCard) {
+          state.draggingAssignmentId = assignmentCard.getAttribute('data-assignment-id');
+          state.draggingUserId = null;
+          event.dataTransfer?.setData('text/plain', JSON.stringify({ type: 'assignment', assignmentId: state.draggingAssignmentId }));
+        }
+      });
+
+      calendarShell.addEventListener('dragover', (event) => {
+        if (event.target.closest('[data-calendar-date]')) {
+          event.preventDefault();
+        }
+      });
+
+      calendarShell.addEventListener('drop', async (event) => {
+        const dateCard = event.target.closest('[data-calendar-date]');
+        if (!dateCard) return;
+        event.preventDefault();
+        const workDate = dateCard.getAttribute('data-calendar-date');
+        if (!workDate) return;
+
+        try {
+          const data = safeParseJson(event.dataTransfer?.getData('application/json') || event.dataTransfer?.getData('text/plain') || '{}', {});
+          if (data.type === 'assignment' && data.assignmentId) {
+            const assignment = events.find((item) => Number(item.assignment_id) === Number(data.assignmentId));
+            if (!assignment) return;
+            await moveShift({ assignment_id: assignment.assignment_id, work_date: workDate });
+            return;
+          }
+
+          const activeShift = getActiveShift();
+          if (!activeShift) {
+            alert('Select a shift first.');
+            return;
+          }
+
+          const userId = data.userId || state.draggingUserId;
+          if (!userId) return;
+          await assignShift({
+            user_id: Number(userId),
+            shift_id: Number(activeShift.id),
+            work_date: workDate,
+            status: 'assigned',
+          });
+        } catch (error) {
+          alert(error.message || 'Unable to update assignment.');
+        }
+      });
+    }
+
+    renderSidebarPlanner();
     renderCalendar();
   })();
 })();

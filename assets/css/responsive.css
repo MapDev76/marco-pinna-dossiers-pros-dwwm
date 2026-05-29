@@ -24,6 +24,11 @@
         overflow: auto;
     }
 
+    body.sidebar-expanded .route-dashboard .dashboard-content {
+        left: auto;
+        width: calc(100% - 32px);
+    }
+
     .dashboard-sidebar-shell {
         width: 100%;
         min-height: auto;
@@ -120,6 +125,10 @@
         align-items: flex-start;
     }
 
+    .dashboard-calendar-navigator {
+        width: min(100%, 420px);
+    }
+
     .dashboard-sidebar-shell {
         padding: 0.7rem 0.5rem;
     }
@@ -211,6 +220,10 @@
     .route-dashboard .dashboard-content {
         width: calc(100% - 12px);
         max-width: calc(100% - 12px);
+    }
+
+    body.sidebar-expanded .route-dashboard .dashboard-content {
+        width: calc(100% - 12px);
     }
 
     .content:has(.home-page),

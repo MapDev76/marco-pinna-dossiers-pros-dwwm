@@ -84,6 +84,23 @@ $requestTypeLabels = [
                 </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager'): ?>
                 <section class="admin-card dashboard-calendar-shell">
+                    <div class="dashboard-calendar-navigator" id="dashboard-calendar-navigator" hidden>
+                        <div class="dashboard-calendar-navigator-top">
+                            <button type="button" class="dashboard-calendar-navigator-close" data-calendar-navigator-toggle aria-label="Close calendar navigator">⌃</button>
+                            <input type="text" class="dashboard-calendar-navigator-range" value="<?php echo e(date('d/m/y')); ?> - <?php echo e(date('d/m/y')); ?>" readonly data-calendar-range-display>
+                        </div>
+                        <div class="dashboard-calendar-navigator-modes">
+                            <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="week">7 days</button>
+                            <button type="button" class="dashboard-calendar-navigator-pill is-active" data-calendar-mode="fortnight">15 days</button>
+                            <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="month">1 month</button>
+                        </div>
+                        <div class="dashboard-calendar-navigator-actions">
+                            <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="prev">‹</button>
+                            <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="expand" aria-label="Toggle expanded view">⛶</button>
+                            <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="next">›</button>
+                        </div>
+                    </div>
+
                     <div class="dashboard-calendar-headline">
                         <div>
                             <h2><?php echo e($dashboardCalendarScopeLabel ?? 'Calendar'); ?></h2>
@@ -93,6 +110,10 @@ $requestTypeLabels = [
                             <span class="dashboard-calendar-chip" data-calendar-mode-label><?php echo e(ucfirst((string) ($dashboardCalendarMode ?? 'week'))); ?></span>
                             <span class="dashboard-calendar-chip" data-calendar-range-label><?php echo e(date('d M Y')); ?></span>
                         </div>
+                    </div>
+
+                    <div class="dashboard-calendar-detail" data-calendar-detail>
+                        <div class="dashboard-calendar-detail-placeholder">Select a date to inspect its assignments.</div>
                     </div>
 
                     <div class="dashboard-calendar-frame">

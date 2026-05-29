@@ -16,6 +16,9 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
 ?>
 <aside id="dashboard-sidebar" class="app-sidebar" aria-label="Dashboard sidebar navigation">
     <div class="dashboard-sidebar-shell">
+        <button type="button" class="dashboard-sidebar-handle" data-sidebar-hover-handle aria-label="Open sidebar">
+            <span aria-hidden="true">›</span>
+        </button>
         <div class="dashboard-sidebar-brand">
             <!-- Brand/title intentionally empty to match design: no title above sidebar -->
         </div>
@@ -32,19 +35,21 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
         <?php endforeach; ?>
 
         <?php if (in_array($sidebarRole, ['admin', 'department_manager'], true)): ?>
-            <section class="dashboard-sidebar-group dashboard-sidebar-calendar-panel">
-                <p class="dashboard-sidebar-group-title"><span>🗓</span> Calendar</p>
-                <div class="dashboard-sidebar-control-grid">
-                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-nav="prev">Prev</button>
-                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-nav="today">Today</button>
-                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-nav="next">Next</button>
+            <section class="dashboard-sidebar-group dashboard-sidebar-departments-panel">
+                <p class="dashboard-sidebar-group-title"><span>📁</span> Departments</p>
+                <div class="dashboard-sidebar-department-list">
+                    <?php foreach (($dashboardPlannerData['departments'] ?? []) as $department): ?>
+                        <button type="button"
+                            class="dashboard-sidebar-department-button <?php echo ((int) ($dashboardPlannerData['active_department_id'] ?? 0) === (int) $department['id']) ? 'is-active' : ''; ?>"
+                            data-planner-department-id="<?php echo (int) $department['id']; ?>"
+                            data-planner-department-name="<?php echo e($department['name'] ?? ''); ?>"
+                            data-planner-department-description="<?php echo e($department['description'] ?? ''); ?>">
+                            <?php echo e($department['name'] ?? 'Department'); ?>
+                        </button>
+                    <?php endforeach; ?>
                 </div>
-                <div class="dashboard-sidebar-control-grid dashboard-sidebar-control-grid--modes">
-                    <button type="button" class="dashboard-sidebar-control-button is-active" data-calendar-mode="day">Day</button>
-                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-mode="week">Week</button>
-                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-mode="fortnight">Fortnight</button>
-                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-mode="month">Month</button>
-                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-mode="year">Year</button>
+                <div class="dashboard-sidebar-planner-detail" data-sidebar-planner-detail>
+                    <div class="dashboard-sidebar-planner-placeholder">Select a department to show employees and shifts.</div>
                 </div>
             </section>
         <?php endif; ?>

@@ -83,10 +83,10 @@ if ($route === 'home') {
     if (in_array($route, ['dashboard'], true)) {
         $rightIcons[] = [
             'type' => 'button',
-            'title' => 'Toggle sidebar',
+            'title' => 'Calendar navigator',
             'icon' => 'menu.svg',
-            'alt' => 'Toggle sidebar',
-            'toggle' => 'sidebar',
+            'alt' => 'Calendar navigator',
+            'toggle' => 'calendar-navigator',
         ];
     }
     $rightIcons[] = [
@@ -151,7 +151,7 @@ if ($route === 'home') {
                 <div class="site-icon-group" role="toolbar" aria-label="Quick actions">
                     <?php foreach ($rightIcons as $iconItem): ?>
                         <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
-                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>"<?php if (!empty($iconItem['toggle'])): ?> data-sidebar-toggle="true" aria-controls="dashboard-sidebar" aria-expanded="true"<?php else: ?> data-modal-target="<?php echo e($iconItem['target']); ?>"<?php endif; ?>>
+                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>"<?php if (($iconItem['toggle'] ?? '') === 'calendar-navigator'): ?> data-calendar-navigator-toggle="true" aria-controls="dashboard-calendar-navigator" aria-expanded="false"<?php else: ?> data-modal-target="<?php echo e($iconItem['target']); ?>"<?php endif; ?>>
                                 <?php if (!empty($iconItem['toggle'])): ?>
                                     <svg class="site-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
                                         <path d="M4 6h16" />

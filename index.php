@@ -98,8 +98,10 @@ require $viewFile;
         window.DashboardConfig = {
                 apiCompanies: '<?php echo appUrl('api-companies'); ?>',
                 apiDepartments: '<?php echo appUrl('api-departments'); ?>',
-                apiUsers: '<?php echo appUrl('api-users'); ?>'
+                apiUsers: '<?php echo appUrl('api-users'); ?>',
+                apiDashboard: '<?php echo appUrl('api-dashboard'); ?>'
         };
+        window.DashboardPlannerData = <?php echo json_encode($dashboardPlannerData ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard.js"></script>
 <?php endif; ?>
