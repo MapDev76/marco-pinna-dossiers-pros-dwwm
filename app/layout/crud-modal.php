@@ -323,6 +323,11 @@ $modalCurrentRole = currentUser()['role'] ?? 'employee';
                         <div class="company-card-actions company-card-actions--inline">
                             <span class="company-card-chip"><?php echo e($document['document_type'] ?? 'other'); ?></span>
                             <span class="company-card-chip"><?php echo e($document['status'] ?? 'pending'); ?></span>
+                            <?php if (!empty($document['file_path'])): ?>
+                                <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $document['id']]); ?>" title="Download document">
+                                    <span aria-hidden="true">⬇</span>
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </article>
                 <?php endforeach; ?>

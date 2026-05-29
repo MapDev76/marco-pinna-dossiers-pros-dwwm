@@ -75,13 +75,15 @@ if ($route === 'home') {
         'icon' => 'home.svg',
         'alt' => 'Home',
     ];
-    $rightIcons[] = [
-        'type' => 'button',
-        'title' => 'Settings',
-        'target' => 'modal-settings',
-        'icon' => 'setting.svg',
-        'alt' => 'Settings',
-    ];
+    if ($role !== 'super_admin') {
+        $rightIcons[] = [
+            'type' => 'button',
+            'title' => 'Settings',
+            'target' => 'modal-settings',
+            'icon' => 'setting.svg',
+            'alt' => 'Settings',
+        ];
+    }
     $rightIcons[] = [
         'type' => 'button',
         'title' => 'Documents',

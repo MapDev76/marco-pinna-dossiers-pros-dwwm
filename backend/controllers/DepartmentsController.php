@@ -33,6 +33,8 @@ function departmentsModalRedirect(): never
 {
     redirectTo('dashboard', ['modal' => 'departments']);
 }
+
+$error = null;
 $formData = [
     'company_id' => '',
     'name' => '',
@@ -66,22 +68,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($payload['name'] === '') {
-        setFlash('error', 'Department name is required.');
+        $error = 'Department name is required.';
         departmentsModalRedirect();
     } elseif ($payload['company_id'] <= 0) {
-        setFlash('error', 'Please select a company.');
+        $error = 'Please select a company.';
         departmentsModalRedirect();
     } else {
+        $pdo->beginTransaction();
+
         if ($action === 'create') {
-            $departmentModel->create($payload);
-            departmentsModalRedirect();
-        }
-
-        if ($action === 'update' && $id > 0) {
+            $departmentId = $departmentModel->create($payload);
+        } elseif ($action === 'update' && $id > 0) {
             $departmentModel->update($id, $payload);
+            $departmentId = $id;
+        } else {
+            $pdo->rollBack();
             departmentsModalRedirect();
         }
 
+        if (!empty($payload['head_user_id'])) {
+            $currentHead = $userModel->findById((int) $payload['head_user_id']);
+            if ($currentHead) {
+                $userModel->update((int) $payload['head_user_id'], [
+                    'department_id' => $departmentId,
+                    'first_name' => $currentHead['first_name'],
+                    'last_name' => $currentHead['last_name'],
+                    'email' => $currentHead['email'],
+                    'phone' => $currentHead['phone'] ?? null,
+                    'role' => 'department_manager',
+                    'status' => $currentHead['status'] ?? 'active',
+                    'password' => '',
+                ]);
+            }
+        }
+
+        $pdo->commit();
         departmentsModalRedirect();
     }
 }

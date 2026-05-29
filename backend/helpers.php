@@ -125,6 +125,32 @@ function currentUser(): ?array
     return $_SESSION['auth_user'] ?? null;
 }
 
+function currentUserCompanyId(?array $user = null): ?int
+{
+    $user = $user ?? currentUser();
+
+    if ($user === null || empty($user['department_id'])) {
+        return null;
+    }
+
+    try {
+        $pdo = getPDO();
+        $statement = $pdo->prepare(
+            'SELECT company_id
+             FROM departments
+             WHERE id = :department_id
+             LIMIT 1'
+        );
+        $statement->execute(['department_id' => (int) $user['department_id']]);
+
+        $companyId = $statement->fetchColumn();
+
+        return $companyId !== false ? (int) $companyId : null;
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
 function isLoggedIn(): bool
 {
     return currentUser() !== null;
