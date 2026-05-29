@@ -1,5 +1,17 @@
 <?php
-// Bandeau partagé de l'application : logo centré et actions contextuelles.
+/**
+ * Shared header bar for the application.
+ *
+ * Purpose: render the top navigation, brand/logo and contextual quick actions
+ * (home, settings, documents, print). The header adapts based on the current
+ * route and the logged-in user's role.
+ *
+ * Available variables:
+ * - `$route` (string) : current route name, falls back to GET['route'] or 'home'
+ * - `currentUser()` provides the authenticated user array when available
+ *
+ * Notes: keep UI strings in English for the exam presentation.
+ */
 $route = $route ?? ($_GET['route'] ?? 'home');
 $currentUser = currentUser();
 $isPublicPage = in_array($route, ['home', 'login'], true);

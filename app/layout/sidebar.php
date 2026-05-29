@@ -1,5 +1,11 @@
 <?php
-// Sidebar dédiée au dashboard, séparée du conteneur central principal.
+/**
+ * Dashboard sidebar component.
+ *
+ * Renders the left navigation for dashboard actions. The variable
+ * `$dashboardSidebarSections` must be an array of sections with `title` and
+ * `buttons` entries. Each button may include `target`, `entity`, and `title`.
+ */
 if (!isset($dashboardSidebarSections) || !is_array($dashboardSidebarSections)) {
     return;
 }

@@ -1,4 +1,19 @@
 <?php
+/**
+ * Shared CRUD modal shell and embedded templates.
+ *
+ * This file includes a single modal card (`#crud-modal`) used as a shell for
+ * multiple entity templates. Each `<template id="crud-template-...">`
+ * contains the form and listing for an entity (companies, users, departments,
+ * documents, messages). The dashboard JavaScript copies the selected template
+ * into `#crud-modal-body` and wires interactive behavior.
+ *
+ * Required runtime data provided by the dashboard controller:
+ * - `$dashboardModalCompanies` : array of companies for selects/lists
+ * - `$dashboardModalDepartments` : array of departments
+ * - `$dashboardModalUsers` : array of users
+ * - `$dashboardModalDocuments` : array of documents
+ */
 if (!isLoggedIn()) {
     return;
 }

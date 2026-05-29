@@ -1,4 +1,10 @@
 <?php
+/**
+ * Interactive schedule modal (demo content).
+ *
+ * This panel is shown in the dashboard as `#modal-schedule`. It contains a
+ * simplified schedule editor used for demonstration and exam presentation.
+ */
 if (!isLoggedIn()) {
     return;
 }

@@ -1,14 +1,29 @@
-/* Comportements de l'interface du tableau de bord : modales et actions sociétés.
-  Attend window.DashboardConfig = { apiCompanies, apiDepartments, apiUsers }
-  ainsi que window.AppAPI.
-*/
+/*
+ * Dashboard UI behaviors: modal shell, form wiring and company/user/department actions.
+ * This module expects the following globals to be present before execution:
+ * - `window.DashboardConfig` with `{ apiCompanies, apiDepartments, apiUsers }`
+ * - `window.AppAPI` that implements the AJAX helpers used by buttons.
+ *
+ * The file contains two main self-invoking sections:
+ * 1) Modal lifecycle and template wiring (`setupModals`) — mounts CRUD templates
+ *    into the shared modal shell and manages focus/keyboard accessibility.
+ * 2) Company actions (`setupCompanyActions`) — lightweight event handlers that
+ *    call `AppAPI` to perform create/delete/manage operations on companies,
+ *    departments and users.
+ */
 (function(){
   const config = window.DashboardConfig || {};
   const apiCompanies = config.apiCompanies;
   const apiDepartments = config.apiDepartments;
   const apiUsers = config.apiUsers;
 
-  // Gestion des modales
+  /**
+   * setupModals
+   * Initialize modal behavior for the dashboard: open/close logic, overlay,
+   * focus trapping and template-based content injection for the shared CRUD
+   * modal. Templates are defined in `app/layout/crud-modal.php` and are
+   * injected into the element with id `crud-modal-body`.
+   */
   (function setupModals(){
     const overlay = document.getElementById('dashboard-overlay');
     const modals = document.querySelectorAll('.dashboard-modal, .crud-modal');
@@ -30,6 +45,10 @@
       '[tabindex]:not([tabindex="-1"])'
     ].join(',');
 
+    /**
+     * focusFirst(container)
+     * Move keyboard focus to the first tabbable element inside `container`.
+     */
     const focusFirst = (container) => {
       const focusables = container ? container.querySelectorAll(focusableSelector) : [];
       const first = focusables[0];
@@ -38,6 +57,12 @@
       }
     };
 
+    /**
+     * syncDepartmentFilter(select, companyId)
+     * Hide department options that don't belong to the provided companyId.
+     * Used when the UI exposes both a company select and a department select
+     * so the department list is contextually filtered.
+     */
     const syncDepartmentFilter = (select, companyId) => {
       if (!select) return;
       const normalized = String(companyId || '');
@@ -51,6 +76,13 @@
       }
     };
 
+    /**
+     * setModalContent(entity)
+     * Given an entity name (companies|users|departments|documents|messages),
+     * initialize the form fields and wire local UI handlers for that template's
+     * controls. Templates are copied from the `<template>` nodes included in
+     * `app/layout/crud-modal.php`.
+     */
     const setModalContent = (entity) => {
       if (!crudBody) return;
       if (entity === 'documents') {
@@ -280,6 +312,10 @@
       }
     };
 
+    /**
+     * closeAll()
+     * Close any open dashboard modal and restore page state and focus.
+     */
     const closeAll = () => {
       modals.forEach((modal) => {
         modal.hidden = true;
@@ -367,6 +403,12 @@
       }
     });
 
+    /**
+     * openModalFromQuery()
+     * If the URL contains `?modal=<entity>`, attempt to open the corresponding
+     * modal by triggering the matching sidebar/button element. This supports
+     * deep linking to modal content for demos or bookmarking.
+     */
     const openModalFromQuery = () => {
       const params = new URLSearchParams(window.location.search);
       const modalEntity = params.get('modal');
@@ -382,7 +424,13 @@
     window.setTimeout(openModalFromQuery, 0);
   })();
 
-  // Actions sociétés / départements / utilisateurs
+  /**
+   * setupCompanyActions
+   * Attach lightweight event handlers to directory/company cards. Actions
+   * call `AppAPI` methods that perform API requests and then react to the
+   * returned JSON (showing alerts or reloading when necessary). This code
+   * intentionally keeps interactions simple and synchronous for the demo.
+   */
   (function setupCompanyActions(){
     if (!window.AppAPI) return;
     document.querySelectorAll('.dashboard-directory-card').forEach(card => {

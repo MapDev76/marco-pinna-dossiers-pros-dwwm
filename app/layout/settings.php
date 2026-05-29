@@ -1,4 +1,10 @@
 <?php
+/**
+ * Settings modal used to showcase configuration sections (read-only demo).
+ *
+ * The modal `#modal-settings` is a presentation view for schedules, roles and
+ * department configuration. It reads `currentUser()` for contextual labels.
+ */
 if (!isLoggedIn()) {
     return;
 }

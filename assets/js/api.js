@@ -1,4 +1,14 @@
-/* Central API helpers for fetch and uploads */
+/*
+ * Central API helpers used by the frontend to call server endpoints.
+ *
+ * Exposes a global `AppAPI` object with convenience methods for JSON
+ * POSTs and form uploads. The object is intentionally small and synchronous
+ * in shape (returns Promises) to keep demo code straightforward.
+ *
+ * Usage examples:
+ *  - `AppAPI.postJSON('/api/endpoint', { action: 'list' })`
+ *  - `AppAPI.uploadForm(document.getElementById('upload-form'))`
+ */
 (function(window){
   const AppAPI = {
     endpoints: {},
