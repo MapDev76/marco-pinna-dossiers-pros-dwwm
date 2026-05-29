@@ -58,17 +58,8 @@ if ($role === 'super_admin') {
             'buttons' => [
                 ['label' => 'Users', 'target' => 'crud-modal', 'entity' => 'users', 'title' => 'Users', 'variant' => 'active'],
                 ['label' => 'Companies', 'target' => 'crud-modal', 'entity' => 'companies', 'title' => 'Companies'],
-                ['label' => 'Departments', 'target' => 'crud-modal', 'entity' => 'departments', 'title' => 'Departments'],
                 ['label' => 'Documents', 'target' => 'crud-modal', 'entity' => 'documents', 'title' => 'Documents'],
                 ['label' => 'Messages', 'target' => 'crud-modal', 'entity' => 'messages', 'title' => 'Messages'],
-            ],
-        ],
-        [
-            'title' => 'Departments',
-            'icon' => '📁',
-            'buttons' => [
-                ['label' => 'Reception', 'target' => 'crud-modal', 'entity' => 'departments', 'title' => 'Departments', 'variant' => 'active'],
-                ['label' => 'Employees', 'target' => 'crud-modal', 'entity' => 'users', 'title' => 'Users'],
             ],
         ],
     ];

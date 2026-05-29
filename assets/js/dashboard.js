@@ -816,21 +816,25 @@
       const scheduleClose = () => {
         cancelClose();
         closeTimer = window.setTimeout(() => {
-          if (!sidebar.matches(':hover')) {
+          if (!sidebar.matches(':hover') && !sidebarHandle.matches(':hover')) {
             closeSidebar();
           }
-        }, 80);
+        }, 180);
       };
 
-      [sidebar, sidebarHandle].forEach((element) => {
-        if (!element) return;
-        element.addEventListener('mouseenter', () => {
+      // Open only when hovering the slim handle; hovering the sidebar keeps it open.
+      if (sidebarHandle) {
+        sidebarHandle.addEventListener('mouseenter', () => {
           cancelClose();
           openSidebar();
         });
-        element.addEventListener('mouseleave', scheduleClose);
-        element.addEventListener('focusin', openSidebar);
-      });
+        sidebarHandle.addEventListener('mouseleave', scheduleClose);
+        sidebarHandle.addEventListener('focusin', () => { cancelClose(); openSidebar(); });
+      }
+
+      // Sidebar itself should not open on hover, but should cancel scheduled close while hovered.
+      sidebar.addEventListener('mouseenter', cancelClose);
+      sidebar.addEventListener('mouseleave', scheduleClose);
     };
 
     const toggleNavigator = () => {
@@ -965,6 +969,18 @@
       bindHoverSidebar();
       closeSidebar();
     }
+
+    // Bind management toggle buttons (collapsible list of management actions)
+    document.querySelectorAll('.management-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const list = btn.nextElementSibling;
+        if (!list) return;
+        const willOpen = list.hidden === true;
+        list.hidden = !willOpen;
+        btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        btn.classList.toggle('is-active', willOpen);
+      });
+    });
 
     navigatorToggleButtons.forEach((button) => {
       button.addEventListener('click', () => toggleNavigator());

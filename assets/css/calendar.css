@@ -28,7 +28,7 @@ body.sidebar-expanded .route-dashboard .dashboard-content {
     left: 10px;
     z-index: 950;
     width: 196px;
-    transform: translateX(calc(-100% + 24px));
+    transform: translateX(calc(-100% + 18px));
     transition: transform 180ms ease;
 }
 
@@ -42,7 +42,8 @@ body.sidebar-expanded .app-sidebar {
 .dashboard-sidebar-shell {
     position: relative;
     width: 196px;
-    min-height: calc(100vh - 165px);
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
     margin: 0 auto;
     padding: 0.58rem 0.58rem 0.85rem 1rem;
     border-radius: var(--border-radius-lg);
@@ -54,28 +55,32 @@ body.sidebar-expanded .app-sidebar {
 
 .dashboard-sidebar-handle {
     position: absolute;
-    top: 16px;
-    left: 0;
-    width: 24px;
-    height: 56px;
-    border: 1px solid rgba(157, 121, 16, 0.24);
-    border-left: 0;
+    top: 18px;
+    right: 0;
+    width: 18px;
+    height: 42px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-right: 0;
     border-radius: 0 var(--border-radius-full) var(--border-radius-full) 0;
-    background: linear-gradient(180deg, #fff4d0 0%, #e0b32a 100%);
-    color: var(--color-text);
+    background: rgba(0,0,0,0.04);
+    color: rgba(31,31,31,0.9);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.08);
+    box-shadow: none;
+    transition: background 120ms ease, transform 120ms ease;
 }
 
 .dashboard-sidebar-handle span {
     display: block;
-    font-size: 1.35rem;
+    font-size: 1.05rem;
     line-height: 1;
     transform: translateX(1px);
+    opacity: 0.9;
 }
+
+.dashboard-sidebar-handle:hover { background: rgba(0,0,0,0.06); transform: translateX(-1px); }
 
 .dashboard-sidebar-brand {
     padding: 0 0.15rem 0.65rem;
@@ -300,19 +305,23 @@ body.sidebar-expanded .app-sidebar {
     gap: var(--spacing-md);
 }
 
-.dashboard-calendar-navigator {
-    position: sticky;
-    top: 0;
-    z-index: 6;
-    align-self: center;
+.dashboard-calendar-title { font-size: 1.05rem; margin: 0; }
+
+.dashboard-calendar-controls { display:flex; align-items:center; gap:0.5rem; }
+
+.dashboard-calendar-navigator.overlay {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 30;
     display: grid;
     gap: 0.55rem;
-    width: min(430px, 100%);
-    margin: 0 auto 0.35rem;
-    padding: 0.7rem;
-    border-radius: 26px;
+    width: min(420px, 92%);
+    margin: 0;
+    padding: 0.6rem;
+    border-radius: 14px;
     background: linear-gradient(180deg, #2f2f2f 0%, #1d1d1d 100%);
-    box-shadow: 0 14px 24px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32);
 }
 
 .dashboard-calendar-navigator-top,
@@ -349,9 +358,23 @@ body.sidebar-expanded .app-sidebar {
 .dashboard-calendar-navigator-close {
     width: 30px;
     height: 30px;
-    background: transparent;
+    background: rgba(255,255,255,0.06);
     color: #fff;
     font-size: 1rem;
+    position: absolute;
+    top: -14px;
+    right: 10px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dashboard-calendar-navigator-icon {
+    background: transparent;
+    border: 0;
+    font-size: 1.15rem;
+    cursor: pointer;
 }
 
 .dashboard-calendar-navigator-pill {

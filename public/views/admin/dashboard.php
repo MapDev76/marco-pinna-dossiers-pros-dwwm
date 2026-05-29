@@ -84,7 +84,7 @@ $requestTypeLabels = [
                 </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager'): ?>
                 <section class="admin-card dashboard-calendar-shell">
-                    <div class="dashboard-calendar-navigator" id="dashboard-calendar-navigator" hidden>
+                    <div class="dashboard-calendar-navigator overlay" id="dashboard-calendar-navigator" hidden>
                         <div class="dashboard-calendar-navigator-top">
                             <button type="button" class="dashboard-calendar-navigator-close" data-calendar-navigator-toggle aria-label="Close calendar navigator">⌃</button>
                             <input type="text" class="dashboard-calendar-navigator-range" value="<?php echo e(date('d/m/y')); ?> - <?php echo e(date('d/m/y')); ?>" readonly data-calendar-range-display>
@@ -103,8 +103,11 @@ $requestTypeLabels = [
 
                     <div class="dashboard-calendar-headline">
                         <div>
-                            <h2><?php echo e($dashboardCalendarScopeLabel ?? 'Calendar'); ?></h2>
+                            <h2 class="dashboard-calendar-title"><?php echo e($dashboardCalendarScopeLabel ?? 'Calendar'); ?></h2>
                             <p data-calendar-subtitle><?php echo e(date('d M Y')); ?></p>
+                        </div>
+                        <div class="dashboard-calendar-controls">
+                            <button type="button" class="dashboard-calendar-navigator-icon" data-calendar-navigator-toggle aria-controls="dashboard-calendar-navigator" aria-expanded="false" title="Apri navigatore calendario">📅</button>
                         </div>
                         <div class="dashboard-calendar-summary">
                             <span class="dashboard-calendar-chip" data-calendar-mode-label><?php echo e(ucfirst((string) ($dashboardCalendarMode ?? 'week'))); ?></span>
