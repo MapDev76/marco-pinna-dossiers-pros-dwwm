@@ -80,6 +80,15 @@ if ($route === 'home') {
     ];
 } elseif ($currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
+    if (in_array($route, ['dashboard'], true)) {
+        $rightIcons[] = [
+            'type' => 'button',
+            'title' => 'Toggle sidebar',
+            'icon' => 'menu.svg',
+            'alt' => 'Toggle sidebar',
+            'toggle' => 'sidebar',
+        ];
+    }
     $rightIcons[] = [
         'type' => 'link',
         'href' => appUrl('home'),
@@ -111,6 +120,13 @@ if ($route === 'home') {
         'icon' => 'print-outline.svg',
         'alt' => 'Print',
     ];
+    $rightIcons[] = [
+        'type' => 'link',
+        'href' => appUrl('logout'),
+        'title' => 'Logout',
+        'icon' => 'logout.svg',
+        'alt' => 'Logout',
+    ];
 }
 ?>
 <header class="site-header">
@@ -135,8 +151,16 @@ if ($route === 'home') {
                 <div class="site-icon-group" role="toolbar" aria-label="Quick actions">
                     <?php foreach ($rightIcons as $iconItem): ?>
                         <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
-                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>" data-modal-target="<?php echo e($iconItem['target']); ?>">
-                                <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
+                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>"<?php if (!empty($iconItem['toggle'])): ?> data-sidebar-toggle="true" aria-controls="dashboard-sidebar" aria-expanded="true"<?php else: ?> data-modal-target="<?php echo e($iconItem['target']); ?>"<?php endif; ?>>
+                                <?php if (!empty($iconItem['toggle'])): ?>
+                                    <svg class="site-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
+                                        <path d="M4 6h16" />
+                                        <path d="M4 12h16" />
+                                        <path d="M4 18h16" />
+                                    </svg>
+                                <?php else: ?>
+                                    <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
+                                <?php endif; ?>
                             </button>
                         <?php else: ?>
                             <a href="<?php echo e($iconItem['href']); ?>" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>">

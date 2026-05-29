@@ -18,6 +18,7 @@ $viewFile = $viewFile ?? $targetFile;
 $flashSuccess = getFlash('success');
 $flashError = getFlash('error');
 $isDashboardRoute = $route === 'dashboard';
+$isCompactDashboard = $isDashboardRoute && isLoggedIn() && in_array((currentUser()['role'] ?? ''), ['admin', 'department_manager'], true);
 $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time());
 ?>
 <!DOCTYPE html>
@@ -44,7 +45,7 @@ require __DIR__ . '/app/layout/header.php';
 <?php require __DIR__ . '/app/layout/schedule.php'; ?>
 <?php endif; ?>
 
-<main class="content<?php echo $isDashboardRoute ? ' content-dashboard' : ''; ?>">
+<main class="<?php echo $isCompactDashboard ? 'dashboard-content' : 'content' . ($isDashboardRoute ? ' content-dashboard' : ''); ?>">
 <?php if ($flashSuccess !== null): ?>
                 <div id="flash-backdrop-success" class="flash-backdrop"></div>
                 <div id="flash-success" class="flash flash-success" role="alert" aria-live="assertive">

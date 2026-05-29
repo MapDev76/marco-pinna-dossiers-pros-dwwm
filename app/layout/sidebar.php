@@ -11,8 +11,10 @@ if (!isset($dashboardSidebarSections) || !is_array($dashboardSidebarSections)) {
 }
 
 $sidebarRoleLabel = $dashboardSidebarRoleLabel ?? 'User';
+$currentSidebarUser = currentUser();
+$sidebarRole = $currentSidebarUser['role'] ?? 'employee';
 ?>
-<aside class="app-sidebar" aria-label="Dashboard sidebar navigation">
+<aside id="dashboard-sidebar" class="app-sidebar" aria-label="Dashboard sidebar navigation">
     <div class="dashboard-sidebar-shell">
         <div class="dashboard-sidebar-brand">
             <!-- Brand/title intentionally empty to match design: no title above sidebar -->
@@ -28,5 +30,23 @@ $sidebarRoleLabel = $dashboardSidebarRoleLabel ?? 'User';
                 <?php endforeach; ?>
             </section>
         <?php endforeach; ?>
+
+        <?php if (in_array($sidebarRole, ['admin', 'department_manager'], true)): ?>
+            <section class="dashboard-sidebar-group dashboard-sidebar-calendar-panel">
+                <p class="dashboard-sidebar-group-title"><span>🗓</span> Calendar</p>
+                <div class="dashboard-sidebar-control-grid">
+                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-nav="prev">Prev</button>
+                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-nav="today">Today</button>
+                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-nav="next">Next</button>
+                </div>
+                <div class="dashboard-sidebar-control-grid dashboard-sidebar-control-grid--modes">
+                    <button type="button" class="dashboard-sidebar-control-button is-active" data-calendar-mode="day">Day</button>
+                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-mode="week">Week</button>
+                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-mode="fortnight">Fortnight</button>
+                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-mode="month">Month</button>
+                    <button type="button" class="dashboard-sidebar-control-button" data-calendar-mode="year">Year</button>
+                </div>
+            </section>
+        <?php endif; ?>
     </div>
 </aside>

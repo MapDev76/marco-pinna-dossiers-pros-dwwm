@@ -23,21 +23,6 @@ $requestTypeLabels = [
     'admin_note' => 'Admin note',
 ];
 
-$weekDays = [
-    ['label' => 'MONDAY', 'day' => 'XX'],
-    ['label' => 'TUESDAY', 'day' => '24'],
-    ['label' => 'WEDNESDAY', 'day' => '25'],
-    ['label' => 'THURSDAY', 'day' => '26'],
-    ['label' => 'FRIDAY', 'day' => '27'],
-    ['label' => 'SATURDAY', 'day' => '28', 'highlight' => true],
-    ['label' => 'SUNDAY', 'day' => '29'],
-];
-
-$calendarTemplates = [
-    ['time' => '06:00 - 14:00', 'title' => 'Reception', 'meta' => 'Assigned to department'],
-    ['time' => '14:00 - 22:00', 'title' => 'Housekeeping', 'meta' => 'Day shift'],
-    ['time' => '22:00 - 06:00', 'title' => 'Night auditor', 'meta' => 'Night shift'],
-];
 ?>
 
 <div class="admin-shell dashboard-shell">
@@ -99,29 +84,25 @@ $calendarTemplates = [
                 </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager'): ?>
                 <section class="admin-card dashboard-calendar-shell">
+                    <div class="dashboard-calendar-headline">
+                        <div>
+                            <h2><?php echo e($dashboardCalendarScopeLabel ?? 'Calendar'); ?></h2>
+                            <p data-calendar-subtitle><?php echo e(date('d M Y')); ?></p>
+                        </div>
+                        <div class="dashboard-calendar-summary">
+                            <span class="dashboard-calendar-chip" data-calendar-mode-label><?php echo e(ucfirst((string) ($dashboardCalendarMode ?? 'week'))); ?></span>
+                            <span class="dashboard-calendar-chip" data-calendar-range-label><?php echo e(date('d M Y')); ?></span>
+                        </div>
+                    </div>
 
-                    <div class="dashboard-calendar">
-                        <?php foreach ($weekDays as $index => $dayInfo): ?>
-                            <article class="dashboard-calendar-column <?php echo !empty($dayInfo['highlight']) ? 'is-highlight' : ''; ?>">
-                                <header class="dashboard-calendar-head">
-                                    <span class="dashboard-calendar-weekday"><?php echo e($dayInfo['label']); ?></span>
-                                    <span class="dashboard-calendar-day"><?php echo e($dayInfo['day']); ?></span>
-                                </header>
-                                <div class="dashboard-calendar-body">
-                                    <?php foreach ($calendarTemplates as $template): ?>
-                                        <button type="button" class="dashboard-calendar-card" data-modal-target="modal-schedule">
-                                            <span class="dashboard-calendar-time"><?php echo e($template['time']); ?></span>
-                                            <span class="dashboard-calendar-title"><?php echo e($template['title']); ?></span>
-                                            <span class="dashboard-calendar-meta"><?php echo e($template['meta']); ?></span>
-                                        </button>
-                                    <?php endforeach; ?>
-
-                                    <button type="button" class="dashboard-calendar-card is-add" data-modal-target="modal-schedule">
-                                        + Add
-                                    </button>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
+                    <div class="dashboard-calendar-frame">
+                        <div
+                            class="dashboard-calendar-grid"
+                            data-dashboard-calendar-shell
+                            data-calendar-mode="<?php echo e($dashboardCalendarMode ?? 'week'); ?>"
+                            data-calendar-today="<?php echo e($dashboardCalendarToday ?? date('Y-m-d')); ?>"
+                            data-calendar-events="<?php echo e(json_encode($dashboardCalendarEvents ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?>"
+                        ></div>
                     </div>
                 </section>
             <?php else: ?>

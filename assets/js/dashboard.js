@@ -500,4 +500,300 @@
       });
     });
   })();
+
+  /**
+   * setupSidebarAndCalendar()
+   * Toggle the dashboard sidebar and render a real date-driven calendar using
+   * the shift assignments provided by the backend.
+   */
+  (function setupSidebarAndCalendar(){
+    const sidebarToggleButtons = document.querySelectorAll('[data-sidebar-toggle]');
+    const calendarShell = document.querySelector('[data-dashboard-calendar-shell]');
+    const calendarSection = calendarShell ? calendarShell.closest('.dashboard-calendar-shell') : null;
+    const modeButtons = document.querySelectorAll('[data-calendar-mode]');
+    const navButtons = document.querySelectorAll('[data-calendar-nav]');
+    const stateKey = 'staffease-dashboard-sidebar-collapsed';
+
+    if (!sidebarToggleButtons.length && !calendarShell) {
+      return;
+    }
+
+    const safeParseJson = (value, fallback) => {
+      try {
+        return JSON.parse(value);
+      } catch (error) {
+        return fallback;
+      }
+    };
+
+    const toLocalDate = (value) => {
+      if (!value) return new Date();
+      const candidate = new Date(`${value}T12:00:00`);
+      return Number.isNaN(candidate.getTime()) ? new Date() : candidate;
+    };
+
+    const pad = (value) => String(value).padStart(2, '0');
+    const dateKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const addDays = (date, amount) => {
+      const next = new Date(date);
+      next.setDate(next.getDate() + amount);
+      return next;
+    };
+    const addMonths = (date, amount) => {
+      const next = new Date(date);
+      next.setMonth(next.getMonth() + amount);
+      return next;
+    };
+    const addYears = (date, amount) => {
+      const next = new Date(date);
+      next.setFullYear(next.getFullYear() + amount);
+      return next;
+    };
+    const startOfWeek = (date) => {
+      const start = new Date(date);
+      const day = start.getDay();
+      const offset = day === 0 ? -6 : 1 - day;
+      start.setDate(start.getDate() + offset);
+      return start;
+    };
+    const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1, 12, 0, 0, 0);
+    const endOfMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0, 12, 0, 0, 0);
+    const startOfYear = (date) => new Date(date.getFullYear(), 0, 1, 12, 0, 0, 0);
+    const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date(2024, index, 1)));
+    const weekdayNames = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(2024, 0, 1 + index)));
+    const fullDateFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const shortDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+    const monthYearFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
+
+    const rawEvents = calendarShell ? safeParseJson(calendarShell.getAttribute('data-calendar-events') || '[]', []) : [];
+    const events = Array.isArray(rawEvents) ? rawEvents : [];
+    const eventsByDate = events.reduce((map, event) => {
+      const key = event.work_date || '';
+      if (!key) return map;
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key).push(event);
+      return map;
+    }, new Map());
+
+    const calendarToday = toLocalDate(calendarShell ? calendarShell.getAttribute('data-calendar-today') : '');
+    const initialMode = calendarShell ? (calendarShell.getAttribute('data-calendar-mode') || 'week') : 'week';
+    const state = {
+      mode: ['day', 'week', 'fortnight', 'month', 'year'].includes(initialMode) ? initialMode : 'week',
+      focusDate: calendarToday,
+    };
+
+    const getModeStep = (mode) => {
+      if (mode === 'day') return 1;
+      if (mode === 'week') return 7;
+      if (mode === 'fortnight') return 14;
+      return mode === 'year' ? 12 : 1;
+    };
+
+    const formatEventTime = (event) => {
+      const start = typeof event.start_time === 'string' ? event.start_time.slice(0, 5) : '--:--';
+      const end = typeof event.end_time === 'string' ? event.end_time.slice(0, 5) : '--:--';
+      return `${start} - ${end}`;
+    };
+
+    const formatRangeLabel = () => {
+      if (state.mode === 'year') {
+        return String(state.focusDate.getFullYear());
+      }
+
+      if (state.mode === 'month') {
+        return monthYearFormatter.format(state.focusDate);
+      }
+
+      if (state.mode === 'day') {
+        return fullDateFormatter.format(state.focusDate);
+      }
+
+      const start = startOfWeek(state.focusDate);
+      const days = state.mode === 'fortnight' ? 13 : 6;
+      const end = addDays(start, days);
+      return `${shortDateFormatter.format(start)} - ${shortDateFormatter.format(end)}`;
+    };
+
+    const updateControls = () => {
+      if (calendarShell) {
+        calendarShell.dataset.calendarView = state.mode;
+      }
+
+      modeButtons.forEach((button) => {
+        const isActive = button.getAttribute('data-calendar-mode') === state.mode;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+
+      if (calendarSection) {
+        const modeLabel = calendarSection.querySelector('[data-calendar-mode-label]');
+        const rangeLabel = calendarSection.querySelector('[data-calendar-range-label]');
+        const subtitle = calendarSection.querySelector('[data-calendar-subtitle]');
+        if (modeLabel) modeLabel.textContent = state.mode.charAt(0).toUpperCase() + state.mode.slice(1);
+        if (rangeLabel) rangeLabel.textContent = formatRangeLabel();
+        if (subtitle) subtitle.textContent = `${events.length} scheduled assignments`;
+      }
+    };
+
+    const renderEvent = (event) => `
+      <article class="calendar-event">
+        <span class="calendar-event-time">${formatEventTime(event)}</span>
+        <span class="calendar-event-title">${event.shift_name || 'Shift'}</span>
+        <span class="calendar-event-meta">${event.department_name || ''}${event.user_name ? ` • ${event.user_name}` : ''}${event.status ? ` • ${event.status}` : ''}</span>
+      </article>
+    `;
+
+    const renderDayCard = (date, options = {}) => {
+      const key = dateKey(date);
+      const dayEvents = eventsByDate.get(key) || [];
+      const isCurrentDay = key === dateKey(calendarToday);
+      const isMuted = options.muted || false;
+      const dayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date).toUpperCase();
+      const numberLabel = String(date.getDate());
+      return `
+        <article class="calendar-day-card${isCurrentDay ? ' is-current' : ''}${isMuted ? ' is-muted' : ''}">
+          <header class="calendar-day-head">
+            <span class="calendar-day-weekday">${dayLabel}</span>
+            <span class="calendar-day-number">${numberLabel}</span>
+          </header>
+          <div class="calendar-day-events">
+            ${dayEvents.length ? dayEvents.map(renderEvent).join('') : '<div class="calendar-empty">No assignments</div>'}
+          </div>
+        </article>
+      `;
+    };
+
+    const renderYearCard = (monthIndex) => {
+      const monthDate = new Date(state.focusDate.getFullYear(), monthIndex, 1, 12, 0, 0, 0);
+      const monthStart = startOfMonth(monthDate);
+      const monthEnd = endOfMonth(monthDate);
+      const monthEvents = events.filter((event) => {
+        const date = toLocalDate(event.work_date);
+        return date >= monthStart && date <= monthEnd;
+      });
+      const topEvents = monthEvents.slice(0, 3);
+      const isCurrentMonth = monthIndex === calendarToday.getMonth() && state.focusDate.getFullYear() === calendarToday.getFullYear();
+
+      return `
+        <article class="calendar-year-card${isCurrentMonth ? ' is-current' : ''}">
+          <header class="calendar-year-head">
+            <span class="calendar-year-label">${monthNames[monthIndex]}</span>
+            <span class="calendar-year-number">${monthEvents.length}</span>
+          </header>
+          <div class="calendar-year-events">
+            ${topEvents.length ? topEvents.map((event) => `
+              <div class="calendar-year-summary">
+                <span class="calendar-year-summary-title">${event.work_date}</span>
+                <span class="calendar-year-summary-meta">${event.shift_name || 'Shift'}${event.department_name ? ` • ${event.department_name}` : ''}</span>
+              </div>
+            `).join('') : '<div class="calendar-empty">No assignments</div>'}
+          </div>
+        </article>
+      `;
+    };
+
+    const renderCalendar = () => {
+      if (!calendarShell) return;
+      updateControls();
+
+      if (state.mode === 'year') {
+        calendarShell.innerHTML = monthNames.map((_, index) => renderYearCard(index)).join('');
+        return;
+      }
+
+      if (state.mode === 'month') {
+        const firstDay = startOfWeek(startOfMonth(state.focusDate));
+        const lastDay = addDays(startOfWeek(endOfMonth(state.focusDate)), 6);
+        const cells = [];
+        for (let cursor = new Date(firstDay); cursor <= lastDay; cursor = addDays(cursor, 1)) {
+          cells.push(renderDayCard(cursor, { muted: cursor.getMonth() !== state.focusDate.getMonth() }));
+        }
+        calendarShell.innerHTML = cells.join('');
+        return;
+      }
+
+      const totalDays = state.mode === 'fortnight' ? 14 : state.mode === 'week' ? 7 : 1;
+      const startDate = state.mode === 'day' ? state.focusDate : startOfWeek(state.focusDate);
+      const cells = [];
+      for (let offset = 0; offset < totalDays; offset += 1) {
+        cells.push(renderDayCard(addDays(startDate, offset)));
+      }
+      calendarShell.innerHTML = cells.join('');
+    };
+
+    const moveFocus = (direction) => {
+      if (state.mode === 'year') {
+        state.focusDate = addYears(state.focusDate, direction);
+      } else if (state.mode === 'month') {
+        state.focusDate = addMonths(state.focusDate, direction);
+      } else {
+        state.focusDate = addDays(state.focusDate, direction * getModeStep(state.mode));
+      }
+      renderCalendar();
+    };
+
+    sidebarToggleButtons.forEach((button) => {
+      const applySidebarState = () => {
+        const collapsed = document.body.classList.contains('sidebar-collapsed');
+        button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      };
+
+      button.addEventListener('click', () => {
+        const collapsed = !document.body.classList.contains('sidebar-collapsed');
+        document.body.classList.toggle('sidebar-collapsed', collapsed);
+        try {
+          window.localStorage.setItem(stateKey, collapsed ? '1' : '0');
+        } catch (error) {
+          // Ignore storage failures.
+        }
+        applySidebarState();
+      });
+
+      applySidebarState();
+    });
+
+    try {
+      if (window.localStorage.getItem(stateKey) === '1') {
+        document.body.classList.add('sidebar-collapsed');
+      }
+    } catch (error) {
+      // Ignore storage failures.
+    }
+
+    sidebarToggleButtons.forEach((button) => {
+      button.setAttribute('aria-expanded', document.body.classList.contains('sidebar-collapsed') ? 'false' : 'true');
+    });
+
+    modeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const mode = button.getAttribute('data-calendar-mode');
+        if (!mode) return;
+        state.mode = mode;
+        if (mode === 'year') {
+          state.focusDate = startOfYear(state.focusDate);
+        }
+        renderCalendar();
+      });
+    });
+
+    navButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.getAttribute('data-calendar-nav');
+        if (action === 'today') {
+          state.focusDate = new Date(calendarToday);
+        } else if (action === 'prev') {
+          moveFocus(-1);
+          return;
+        } else if (action === 'next') {
+          moveFocus(1);
+          return;
+        }
+        renderCalendar();
+      });
+    });
+
+    renderCalendar();
+  })();
 })();

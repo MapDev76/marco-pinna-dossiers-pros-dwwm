@@ -12,7 +12,7 @@
         width: auto;
     }
 
-    .route-dashboard .content.content-dashboard {
+    .route-dashboard .dashboard-content {
         position: relative;
         top: auto;
         left: auto;
@@ -128,7 +128,7 @@
 @media (max-width: 760px) {
     /* Small screens (mobile) */
     .content,
-    .route-dashboard .content.content-dashboard {
+    .route-dashboard .dashboard-content {
         max-height: none;
         overflow: auto;
         -webkit-overflow-scrolling: touch;
@@ -208,7 +208,7 @@
         margin: 74px 6px 0;
     }
 
-    .route-dashboard .content.content-dashboard {
+    .route-dashboard .dashboard-content {
         width: calc(100% - 12px);
         max-width: calc(100% - 12px);
     }

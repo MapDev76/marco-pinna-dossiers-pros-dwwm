@@ -69,7 +69,6 @@ if ($role === 'super_admin') {
             'buttons' => [
                 ['label' => 'Reception', 'target' => 'crud-modal', 'entity' => 'departments', 'title' => 'Departments', 'variant' => 'active'],
                 ['label' => 'Employees', 'target' => 'crud-modal', 'entity' => 'users', 'title' => 'Users'],
-                ['label' => 'Messages', 'target' => 'crud-modal', 'entity' => 'messages', 'title' => 'Messages'],
             ],
         ],
     ];
@@ -117,6 +116,63 @@ $pageTitle = match ($role) {
 };
 
 $viewFile = __DIR__ . '/../../public/views/admin/dashboard.php';
+
+$dashboardCalendarToday = date('Y-m-d');
+$dashboardCalendarMode = in_array($role, ['admin', 'department_manager'], true) ? 'week' : 'month';
+$dashboardCalendarScopeLabel = '';
+$dashboardCalendarEvents = [];
+
+if ($role === 'admin' && $companyId !== null) {
+    $dashboardCalendarScopeLabel = trim((string) (($profile['company_name'] ?? 'Company') . ' calendar'));
+    $calendarStatement = $pdo->prepare(
+        'SELECT us.id AS assignment_id,
+                us.work_date,
+                us.status,
+                us.notes,
+                s.id AS shift_id,
+                s.name AS shift_name,
+                s.start_time,
+                s.end_time,
+                d.id AS department_id,
+                d.name AS department_name,
+                u.id AS user_id,
+                CONCAT(u.first_name, " ", u.last_name) AS user_name
+         FROM user_shifts us
+         INNER JOIN shifts s ON s.id = us.shift_id
+         INNER JOIN departments d ON d.id = s.department_id
+         LEFT JOIN users u ON u.id = us.user_id
+         WHERE d.company_id = :company_id
+         ORDER BY us.work_date ASC, s.start_time ASC, us.id ASC'
+    );
+    $calendarStatement->execute(['company_id' => $companyId]);
+    $dashboardCalendarEvents = $calendarStatement->fetchAll();
+}
+
+if ($role === 'department_manager' && $departmentId !== null) {
+    $dashboardCalendarScopeLabel = trim((string) (($profile['department_name'] ?? 'Department') . ' calendar'));
+    $calendarStatement = $pdo->prepare(
+        'SELECT us.id AS assignment_id,
+                us.work_date,
+                us.status,
+                us.notes,
+                s.id AS shift_id,
+                s.name AS shift_name,
+                s.start_time,
+                s.end_time,
+                d.id AS department_id,
+                d.name AS department_name,
+                u.id AS user_id,
+                CONCAT(u.first_name, " ", u.last_name) AS user_name
+         FROM user_shifts us
+         INNER JOIN shifts s ON s.id = us.shift_id
+         INNER JOIN departments d ON d.id = s.department_id
+         LEFT JOIN users u ON u.id = us.user_id
+         WHERE d.id = :department_id
+         ORDER BY us.work_date ASC, s.start_time ASC, us.id ASC'
+    );
+    $calendarStatement->execute(['department_id' => $departmentId]);
+    $dashboardCalendarEvents = $calendarStatement->fetchAll();
+}
 
 $stats = [
     'users' => $userModel->count(),
@@ -257,11 +313,14 @@ if ($role === 'admin' && $companyId !== null) {
          LEFT JOIN users ru ON ru.id = r.recipient_id
          LEFT JOIN documents doc ON doc.id = r.document_id
          LEFT JOIN departments dep ON dep.id = u.department_id
-         WHERE dep.company_id = :company_id
-            OR EXISTS (SELECT 1 FROM users rx LEFT JOIN departments dx ON dx.id = rx.department_id WHERE rx.id = r.recipient_id AND dx.company_id = :company_id)
+         WHERE dep.company_id = :company_id_sender
+            OR EXISTS (SELECT 1 FROM users rx LEFT JOIN departments dx ON dx.id = rx.department_id WHERE rx.id = r.recipient_id AND dx.company_id = :company_id_recipient)
          ORDER BY r.created_at DESC, r.id DESC'
     );
-    $modalMessages->execute(['company_id' => $companyId]);
+    $modalMessages->execute([
+        'company_id_sender' => $companyId,
+        'company_id_recipient' => $companyId,
+    ]);
     $modalMessages = $modalMessages->fetchAll();
 }
 
@@ -288,11 +347,14 @@ if ($role === 'department_manager' && $departmentId !== null) {
          INNER JOIN users u ON u.id = r.user_id
          LEFT JOIN users ru ON ru.id = r.recipient_id
          LEFT JOIN documents doc ON doc.id = r.document_id
-         WHERE u.department_id = :department_id
-            OR EXISTS (SELECT 1 FROM users rx WHERE rx.id = r.recipient_id AND rx.department_id = :department_id)
+         WHERE u.department_id = :department_id_sender
+            OR EXISTS (SELECT 1 FROM users rx WHERE rx.id = r.recipient_id AND rx.department_id = :department_id_recipient)
          ORDER BY r.created_at DESC, r.id DESC'
     );
-    $modalMessages->execute(['department_id' => $departmentId]);
+    $modalMessages->execute([
+        'department_id_sender' => $departmentId,
+        'department_id_recipient' => $departmentId,
+    ]);
     $modalMessages = $modalMessages->fetchAll();
 }
 
