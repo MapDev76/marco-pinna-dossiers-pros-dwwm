@@ -2,6 +2,8 @@
 
 /**
  * Handles user persistence and role-aware queries for the dashboard and APIs.
+ * Provides methods to find, list, create, update and delete users, plus helper
+ * queries for profile, team membership, requests and notifications.
  */
 class UserModel
 {
@@ -11,8 +13,7 @@ class UserModel
 
     /**
      * findByEmail
-     * Retourne l'utilisateur correspondant à l'email (utilisé par AuthController).
-     * Rôle: login / authentication.
+     * Return a user row matching the provided email or null. Used for login.
      */
 
     public function findByEmail(string $email): ?array
@@ -28,7 +29,7 @@ class UserModel
 
     /**
      * findById
-     * Retourne un utilisateur par id (utilisé par plusieurs APIs).
+     * Return a user row by id or null when not found.
      */
 
     public function findById(int $id): ?array
@@ -44,7 +45,7 @@ class UserModel
 
     /**
      * allWithRelations
-     * Retourne tous les utilisateurs avec leurs relations department/company (utilisé pour l'admin).
+     * Return all users with joined department and company information.
      */
 
     public function allWithRelations(): array
@@ -62,7 +63,7 @@ class UserModel
 
     /**
      * allForSelect
-     * Liste minimale d'utilisateurs pour select inputs.
+     * Minimal user list suitable for select inputs (id, name, email, role).
      */
 
     public function allForSelect(): array
@@ -76,7 +77,7 @@ class UserModel
 
     /**
      * countByCompanyId
-     * Nombre d'utilisateurs per company (utilisé pour stats).
+     * Return the number of users belonging to a company (via departments).
      */
 
     public function countByCompanyId(int $companyId): int
@@ -94,7 +95,7 @@ class UserModel
 
     /**
      * profileWithRelations
-     * Retourne le profil de l'utilisateur avec department et company (utilisé pour dashboard).
+     * Return a user's profile augmented with department and company names.
      */
 
     public function profileWithRelations(int $id): ?array
@@ -118,7 +119,7 @@ class UserModel
 
     /**
      * teamByDepartmentId
-     * Liste des membres d'un département (utilisé par Department Manager / Super Admin).
+     * Return members of a department for team views (department manager / admin).
      */
 
     public function teamByDepartmentId(int $departmentId): array
@@ -137,7 +138,7 @@ class UserModel
 
     /**
      * companyUsersByCompanyId
-     * Retourne les utilisateurs appartenant à une entreprise (via departments).
+     * Return users that belong to a given company, resolved via departments.
      */
 
     public function companyUsersByCompanyId(int $companyId): array
@@ -156,7 +157,7 @@ class UserModel
 
     /**
      * employeeShifts
-     * Retourne i turni assegnati a un dipendente.
+     * Return the shifts assigned to an employee (limited result set for dashboard).
      */
 
     public function employeeShifts(int $userId): array
@@ -177,7 +178,7 @@ class UserModel
 
     /**
      * employeeRequests / companyRequestsByCompanyId / userNotifications
-     * Fonctions per recuperare richieste e notifiche per utente o company.
+     * Functions to retrieve requests and notifications for a user or company.
      */
 
     public function employeeRequests(int $userId): array

@@ -2,6 +2,8 @@
 
 /**
  * Handles department persistence and read queries used by the dashboard and APIs.
+ * Provides methods to create, update, delete and list departments, and adapts
+ * to optional schema columns (e.g. `head_user_id`).
  */
 class DepartmentModel
 {
@@ -14,6 +16,7 @@ class DepartmentModel
 
     /**
      * Detects the columns currently available in the departments table.
+     * Returns an associative map of column => true for quick checks.
      */
 
     private function detectDepartmentColumns(): array
@@ -39,8 +42,8 @@ class DepartmentModel
 
     /**
      * allWithCompany
-     * Retourne la liste des départements avec le nom de l'entreprise associée.
-     * Rôle: consultation pour Super Admin et admin.
+     * Return departments joined with their company name and optional head user
+     * name when `head_user_id` exists in the schema.
      */
 
     public function allWithCompany(): array
@@ -67,7 +70,7 @@ class DepartmentModel
 
     /**
      * allForSelect
-     * Retourne id, company_id et nom pour utiliser dans des listes déroulantes.
+     * Return an array of id/company_id/name suitable for select inputs.
      */
 
     public function allForSelect(): array
@@ -79,7 +82,7 @@ class DepartmentModel
 
     /**
      * findById
-     * Recherche un département par son id.
+     * Return a department row by id or null when missing.
      */
 
     public function findById(int $id): ?array
@@ -93,7 +96,7 @@ class DepartmentModel
 
     /**
      * findByNameAndCompanyId
-     * Retourne le premier département correspondant à un nom donné pour une entreprise.
+     * Find the first department matching `name` and optional `company_id`.
      */
 
     public function findByNameAndCompanyId(string $name, ?int $companyId = null): ?array
@@ -118,8 +121,8 @@ class DepartmentModel
 
     /**
      * create
-     * Crée un département pour une entreprise donnée.
-     * Rôle: CRUD accessible par Super Admin et admin.
+     * Insert a department and return the new id. Includes `head_user_id` if
+     * the column is available in the schema.
      */
 
     public function create(array $data): int
@@ -148,7 +151,7 @@ class DepartmentModel
 
     /**
      * update
-     * Met à jour un département (company_id, name, description).
+     * Update department fields; includes `head_user_id` when supported.
      */
 
     public function update(int $id, array $data): void
@@ -175,7 +178,7 @@ class DepartmentModel
 
     /**
      * delete
-     * Supprime un département par id.
+     * Delete a department by id.
      */
 
     public function delete(int $id): void
@@ -186,7 +189,7 @@ class DepartmentModel
 
     /**
      * count
-     * Retourne le nombre total de départements.
+     * Return total departments count.
      */
 
     public function count(): int
@@ -196,7 +199,7 @@ class DepartmentModel
 
     /**
      * countByCompanyId
-     * Nombre de départements pour une entreprise.
+     * Return the number of departments for a given company id.
      */
 
     public function countByCompanyId(int $companyId): int
@@ -209,7 +212,8 @@ class DepartmentModel
 
     /**
      * byCompanyId
-     * Liste des départements d'une entreprise spécifique.
+     * Return departments for a specific company id, including optional head
+     * user name when the schema supports it.
      */
 
     public function byCompanyId(int $companyId): array

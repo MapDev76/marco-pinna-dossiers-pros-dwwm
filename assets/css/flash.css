@@ -97,7 +97,10 @@
     display: block;
     background: transparent;
 }
-.flash-icon svg path { fill: none; }
+.flash-icon svg path { fill: currentColor; }
+.flash-icon img { width: 28px; height: 28px; display: block; object-fit: contain; }
+.flash-success .flash-icon { color: var(--color-primary); }
+.flash-error .flash-icon { color: var(--color-error-text); }
 .flash-body {
     flex: 1 1 auto;
     text-align: center;

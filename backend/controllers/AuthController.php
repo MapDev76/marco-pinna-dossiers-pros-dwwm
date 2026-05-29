@@ -1,5 +1,10 @@
 <?php
-
+/**
+ * Authentication controller: login and logout handling.
+ *
+ * Presents the login view and processes POSTed credentials. Successful login
+ * initializes the session `auth_user` payload used across the app.
+ */
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
 

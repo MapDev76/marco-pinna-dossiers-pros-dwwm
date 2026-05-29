@@ -1,5 +1,11 @@
 <?php
-
+/**
+ * Employee space controller.
+ *
+ * Displays the personal area for users with the `employee` role. Handles
+ * attendance signing and personal requests. Protects the page behind login
+ * and role checks.
+ */
 require_once __DIR__ . '/../bootstrap.php';
 
 if (!isLoggedIn()) {

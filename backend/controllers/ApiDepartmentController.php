@@ -1,4 +1,11 @@
 <?php
+/**
+ * API endpoint for department operations (list/create/update/delete).
+ *
+ * This controller is intended for Super Admin authenticated calls and returns
+ * JSON responses. It expects an `action` parameter and optional payload data
+ * in JSON or form-encoded POST bodies.
+ */
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 

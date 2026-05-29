@@ -5,14 +5,18 @@ require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 
+/**
+ * API dashboard endpoint returning JSON useful for AJAX/REST clients.
+ *
+ * Requires an authenticated session. Returns user/profile and role based
+ * stats tailored to the current user's permissions.
+ */
 if (!isLoggedIn()) {
     jsonResponse([
         'success' => false,
         'message' => 'Login required.',
     ], 401);
 }
-
-// Cet endpoint JSON expose uniquement les données utiles aux clients REST ou AJAX.
 $pdo = getPDO();
 $userModel = new UserModel($pdo);
 $companyModel = new CompanyModel($pdo);

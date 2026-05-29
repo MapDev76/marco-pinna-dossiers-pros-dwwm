@@ -1,5 +1,13 @@
 <?php
-
+/**
+ * Serve protected document downloads.
+ *
+ * Validates the current session and authorizes downloads for super admins,
+ * company admins (for their company), department managers (their department),
+ * or the owner of the document. The controller resolves candidate filesystem
+ * paths from the stored document path and streams the file with proper
+ * headers.
+ */
 if (!isLoggedIn()) {
     setFlash('error', 'Please log in to continue.');
     redirectTo('login');

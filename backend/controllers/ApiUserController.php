@@ -1,4 +1,11 @@
 <?php
+/**
+ * API endpoint for user-related AJAX operations used by the dashboard.
+ *
+ * Expects authenticated requests from a Super Admin. Accepts JSON POSTs or
+ * form-encoded requests with an `action` parameter (list_by_company, create,
+ * update, delete, assign_head). Responses are JSON objects.
+ */
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';

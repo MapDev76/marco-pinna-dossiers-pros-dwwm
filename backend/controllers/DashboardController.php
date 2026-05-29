@@ -1,5 +1,12 @@
 <?php
-
+/**
+ * Dashboard controller
+ *
+ * Prepares data for the shared dashboard UI and for the modal CRUD templates.
+ * The controller enforces authentication and role-based scoping and populates
+ * `$dashboardSidebarSections` and the `$dashboardModal*` arrays consumed by
+ * `app/layout/*` templates.
+ */
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';

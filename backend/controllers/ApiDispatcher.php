@@ -1,5 +1,10 @@
 <?php
-// Point d'entrée unique pour les endpoints API. Délègue aux contrôleurs API existants.
+/**
+ * API dispatcher (front controller for API routes).
+ *
+ * Maps `?route=api-...` to the corresponding small API controller file under
+ * `backend/controllers`. Controllers are responsible for auth and JSON output.
+ */
 require_once __DIR__ . '/../bootstrap.php';
 
 $route = $_GET['route'] ?? '';

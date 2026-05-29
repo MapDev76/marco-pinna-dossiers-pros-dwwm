@@ -1,4 +1,11 @@
 <?php
+/**
+ * API endpoint for company operations used by the dashboard.
+ *
+ * Only accessible to authenticated Super Admin users. Supports JSON or
+ * form-encoded requests with `action` keys such as list, create, update,
+ * delete and set_signature_ip. Returns JSON responses.
+ */
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
