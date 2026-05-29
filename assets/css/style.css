@@ -1,8 +1,8 @@
 /* =============================================
-   STYLE.CSS - FICHIER PRINCIPAL
+   STYLE.CSS - MAIN FILE
    =============================================
-   Ce fichier importe tous les autres fichiers CSS
-   pour une meilleure organisation et maintenance.
+   This file imports all other CSS files
+   for better organization and maintenance.
    ============================================= */
 
 @import url('variables.css');

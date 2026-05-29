@@ -1,9 +1,8 @@
 <?php
 
 /**
- * Fichier de fonctions utilitaires
- * Contient des fonctions globales pour la gestion des sessions, des URL, des redirections, des messages flash et de l'authentification.
- * Ces fonctions sont utilisées dans les contrôleurs et les vues pour simplifier le code et éviter les répétitions.
+ * Shared helper functions used by controllers and views.
+ * They centralize URL building, redirects, flash messages, auth checks, and HTML escaping.
  */
 
 function startAppSession(): void
@@ -14,8 +13,7 @@ function startAppSession(): void
 }
 
 /**
- * Fonctions de gestion des URL et des redirections
- * Permettent de construire des URL basées sur la route et les paramètres.
+ * Builds application URLs from a route name and optional query parameters.
  */
 function appBasePath(): string
 {
@@ -29,10 +27,7 @@ function appBasePath(): string
 }
 
 /**
- * appUrl
- * Retourne l'URL complète pour une route donnée.
- * Utilisé par les vues et contrôleurs pour construire des liens.
- * Rôle: utilisé par toutes les vues et contrôleurs (global).
+ * Returns a full application URL for the given route and query string.
  */
 
 function appUrl(string $route, array $params = []): string
@@ -50,15 +45,7 @@ function redirectTo(string $route, array $params = []): never
 }
 
 /**
- * e
- * Échappe une valeur pour affichage HTML (prévention XSS).
- * Utilisé par les vues quand elles affichent des données utilisateur.
- * Rôle: sécurité côté affichage (toutes les vues).
- */
-
-/**
- * Fonction d'échappement pour la sécurité
- * Permet d'échapper les données avant de les afficher dans les vues pour éviter les attaques XSS.
+ * Escapes a value for safe HTML output.
  */
 
 function e(mixed $value): string
@@ -67,8 +54,7 @@ function e(mixed $value): string
 }
 
 /**
- * Fonction de réponse JSON
- * Permet de retourner une réponse JSON avec un code de statut HTTP approprié.
+ * Sends a JSON response and stops execution.
  */
 
 function jsonResponse(array $payload, int $statusCode = 200): never
@@ -80,15 +66,7 @@ function jsonResponse(array $payload, int $statusCode = 200): never
 }
 
 /**
- * setFlash / getFlash
- * Stocke et récupère des messages flash dans la session.
- * Utilisé par les contrôleurs pour informer l'utilisateur après redirection.
- * Rôle: notifications temporanee per l'utente.
- */
-
-/**
- * Fonctions de gestion des messages flash
- * Permettent de stocker des messages temporaires dans la session pour les afficher après une redirection.
+ * Stores and retrieves one-time flash messages from the session.
  */
 
 function setFlash(string $key, string $message): void
@@ -109,15 +87,7 @@ function getFlash(string $key): ?string
 }
 
 /**
- * currentUser / isLoggedIn / role helpers
- * Fournissent l'information sur l'utilisateur connecté et ses rôles.
- * Utilisés par les contrôleurs pour vérifier l'état de connexion et les permissions.
- * Rôle: contrôle d'accès côté serveur (tous les contrôleurs backend).
- */
-
-/**
- * Fonctions d'authentification et de gestion des utilisateurs
- * Permettent de vérifier l'état de connexion et les rôles des utilisateurs.
+ * Authentication helpers used to inspect the current session user and roles.
  */
 
 function currentUser(): ?array
@@ -151,6 +121,9 @@ function currentUserCompanyId(?array $user = null): ?int
     }
 }
 
+/**
+ * Checks whether the current user is logged in.
+ */
 function isLoggedIn(): bool
 {
     return currentUser() !== null;
@@ -162,6 +135,9 @@ function isLoggedIn(): bool
  * Redirige vers la page de connexion ou le tableau de bord si les conditions ne sont pas remplies.
  */
 
+/**
+ * Checks whether the current user has the requested role.
+ */
 function hasRole(string $role): bool
 {
     $user = currentUser();
@@ -169,12 +145,18 @@ function hasRole(string $role): bool
     return $user !== null && ($user['role'] ?? null) === $role;
 }
 
+/**
+ * Shortcut for checking the super admin role.
+ */
 function isSuperAdmin(): bool
 {
     return hasRole('super_admin');
 }
 
 
+/**
+ * Ensures the current user has the requested role or stops the request.
+ */
 function requireRole(string $role, string $errorMessage = 'Access restricted.'): void
 {
     if (!isLoggedIn()) {
@@ -188,6 +170,9 @@ function requireRole(string $role, string $errorMessage = 'Access restricted.'):
     }
 }
 
+/**
+ * Ensures the current user is a super admin or stops the request.
+ */
 function requireSuperAdmin(): void
 {
     requireRole('super_admin', 'Access restricted to Super Admin.');

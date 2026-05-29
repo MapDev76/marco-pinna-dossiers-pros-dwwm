@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Handles department persistence and read queries used by the dashboard and APIs.
+ */
 class DepartmentModel
 {
     private array $departmentColumns = [];
@@ -10,8 +13,7 @@ class DepartmentModel
     }
 
     /**
-     * detectDepartmentColumns
-     * Rileva le colonne effettivamente disponibili nella tabella departments.
+     * Detects the columns currently available in the departments table.
      */
 
     private function detectDepartmentColumns(): array
@@ -27,8 +29,7 @@ class DepartmentModel
     }
 
     /**
-     * hasDepartmentColumn
-     * Vérifie si une colonne est présente dans le schéma courant.
+     * Checks whether a column exists in the current departments schema.
      */
 
     private function hasDepartmentColumn(string $column): bool

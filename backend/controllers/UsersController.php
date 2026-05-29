@@ -5,6 +5,7 @@ require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
+// This controller only handles modal-based CRUD submissions and returns the user to the users modal.
 if (!isLoggedIn()) {
     setFlash('error', 'Please log in to continue.');
     redirectTo('login');
@@ -30,6 +31,9 @@ $defaultReceptionDepartmentId = isset($defaultReceptionDepartment['id']) ? (int)
 
 $pageTitle = 'Users Management';
 
+/**
+ * Redirects back to the dashboard users modal after a CRUD action.
+ */
 function usersModalRedirect(): never
 {
     redirectTo('dashboard', ['modal' => 'users']);

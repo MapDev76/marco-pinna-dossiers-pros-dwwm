@@ -1,22 +1,30 @@
 <?php
 
-// Charge la configuration de connexion à la base de données.
+/**
+ * Loads the database configuration array from the application config file.
+ */
 function getConfig(): array
 {
     return require __DIR__ . '/../config/database.php';
 }
 
-// Retourne une instance PDO unique, partagée pendant la requête en cours.
+/**
+ * Returns a shared PDO instance for the current request.
+ * The static cache avoids opening multiple connections in the same request.
+ */
 function getPDO(): PDO
 {
     static $pdo = null;
-// Si une instance existe déjà, la retourner.
+
+    // Reuse the existing connection when possible.
     if ($pdo instanceof PDO) {
         return $pdo;
     }
-// Sinon, créer une nouvelle instance PDO avec la configuration et la retourner.
+
+    // Otherwise build a new PDO connection from the configuration values.
     $config = getConfig();
-//Data Source Name (DSN) : chaîne de connexion formatée pour PDO.
+
+    // Build the Data Source Name (DSN) used by PDO.
     $dsn = sprintf(
         '%s:host=%s;port=%d;dbname=%s;charset=%s',
         $config['driver'],
@@ -25,14 +33,14 @@ function getPDO(): PDO
         $config['database'],
         $config['charset']
     );
-//
+
     $options = [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, // Lancer des exceptions en cas d'erreur de base de données.
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, // Retourner les résultats sous forme de tableaux associatifs par défaut.
-        PDO::ATTR_EMULATE_PREPARES => false, // Utiliser les requêtes préparées natives du pilote pour une meilleure sécurité et performance.
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
     ];
 
-    $pdo = new PDO($dsn, $config['username'], $config['password'], $options); // Créer une nouvelle instance PDO avec les paramètres de connexion et les options spécifiées.
+    $pdo = new PDO($dsn, $config['username'], $config['password'], $options);
 
     return $pdo;
 }

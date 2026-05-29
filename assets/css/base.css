@@ -41,26 +41,26 @@ p {
     color: var(--color-text);
 }
 
-/* Suppression des styles par défaut des listes */
+/* Remove the default list styles */
 ul, ol {
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
-/* Styles des liens */
+/* Link styles */
 a {
     text-decoration: none;
     color: inherit;
 }
 
-/* Styles des boutons */
+/* Button styles */
 button {
     cursor: pointer;
     font-family: inherit;
 }
 
-/* Styles des images */
+/* Image styles */
 img {
     max-width: 100%;
     height: auto;

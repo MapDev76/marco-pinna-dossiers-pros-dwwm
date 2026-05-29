@@ -1,12 +1,12 @@
 /* =============================================
-   COMPOSANTS RÉUTILISABLES
+    REUSABLE COMPONENTS
    =============================================
-   Styles pour les composants réutilisables comme les cartes,
-   boutons, formulaires, etc.
+    Styles for reusable components such as cards,
+    buttons, forms, and more.
    ============================================= */
 
 /* =============================================
-   CARTES (CARD)
+    CARDS
    ============================================= */
 .admin-card {
     width: 100%;
@@ -26,7 +26,7 @@
 }
 
 /* =============================================
-   BOUTONS
+    BUTTONS
    ============================================= */
 .admin-action-link {
     display: inline-flex;
@@ -58,7 +58,7 @@ button.admin-action-link {
 }
 
 /* =============================================
-   FORMULAIRES
+    FORMS
    ============================================= */
 .admin-form {
     display: grid;
@@ -94,7 +94,7 @@ button.admin-action-link {
     resize: vertical;
 }
 
-/* Actions des formulaires */
+/* Form actions */
 .form-actions {
     display: flex;
     gap: var(--spacing-sm);
@@ -112,7 +112,7 @@ button.admin-action-link {
     cursor: pointer;
 }
 
-/* Éléments sur 2 colonnes */
+/* Two-column elements */
 .span-2 {
     grid-column: span 2;
 }
@@ -144,7 +144,7 @@ button.admin-action-link {
     color: var(--color-text-light);
 }
 
-/* Actions dans les tableaux */
+/* Table actions */
 .table-actions {
     display: flex;
     gap: var(--spacing-xs);
@@ -159,8 +159,8 @@ button.admin-action-link {
 }
 
 /* =============================================
-   PULSANTI NELLA TABELLA DEI DOCUMENTI
-   ============================================= */
+    BUTTONS IN THE DOCUMENTS TABLE
+    ============================================= */
 .admin-table td .admin-action-link {
     display: inline-block;
     margin-right: var(--spacing-xs);
@@ -173,7 +173,9 @@ button.admin-action-link {
     margin-right: var(--spacing-sm);
 }
 
-/* Celle della tabella */
+/* Empty placeholder comment */
+
+
 .admin-table td {
     padding: var(--spacing-sm) var(--spacing-md);
     vertical-align: middle;

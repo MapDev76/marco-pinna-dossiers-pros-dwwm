@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
+// This controller handles modal-based CRUD submissions for companies.
 if (!isLoggedIn()) {
     setFlash('error', 'Please log in to continue.');
     redirectTo('login');
@@ -33,6 +34,9 @@ if ($role === 'admin') {
 
 $pageTitle = 'Companies Management';
 
+/**
+ * Redirects back to the dashboard companies modal after a CRUD action.
+ */
 function companiesModalRedirect(): never
 {
     redirectTo('dashboard', ['modal' => 'companies']);

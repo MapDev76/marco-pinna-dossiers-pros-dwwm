@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Handles user persistence and role-aware queries for the dashboard and APIs.
+ */
 class UserModel
 {
     public function __construct(private PDO $pdo)

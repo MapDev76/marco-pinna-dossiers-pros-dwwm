@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Handles flash banners with a fade-in effect and automatic dismissal.
     function initFlash(flashEl) {
         if (!flashEl) return;
         const backdropId = flashEl.dataset.backdrop || (flashEl.id ? 'flash-backdrop-' + flashEl.id.replace(/^flash-/, '') : null);

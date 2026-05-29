@@ -4,6 +4,7 @@ require_once __DIR__ . '/../models/DepartmentModel.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 
+// This controller keeps department CRUD inside the modal flow and updates the head user role when needed.
 if (!isLoggedIn()) {
     setFlash('error', 'Please log in to continue.');
     redirectTo('login');
@@ -25,10 +26,13 @@ $profile = $userModel->profileWithRelations((int) $currentUser['id']) ?? [];
 $scopeCompanyId = isset($profile['company_id']) ? (int) $profile['company_id'] : null;
 $scopeDepartmentId = isset($profile['department_id']) ? (int) $profile['department_id'] : null;
 
-// Chaque rôle ne voit que sa zone: entreprise entière pour l'admin, département unique pour le chef de département.
+// Each role only sees its own scope: the full company for admins and a single department for department managers.
 
 $pageTitle = 'Departments Management';
 
+/**
+ * Redirects back to the dashboard departments modal after a CRUD action.
+ */
 function departmentsModalRedirect(): never
 {
     redirectTo('dashboard', ['modal' => 'departments']);

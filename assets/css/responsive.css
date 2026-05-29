@@ -1,11 +1,11 @@
 /* =============================================
    RESPONSIVE DESIGN
    =============================================
-   Adaptation de l'interface pour les différentes tailles d'écran.
+    Interface adjustments for different screen sizes.
    ============================================= */
 
 @media (max-width: 1100px) {
-    /* Écrans moyens (tablettes, petits écrans) */
+    /* Medium screens (tablets, small laptops) */
     .app-sidebar {
         position: static;
         margin: 84px 10px 0;
@@ -126,7 +126,7 @@
 }
 
 @media (max-width: 760px) {
-    /* Écrans petits (mobile) */
+    /* Small screens (mobile) */
     .content,
     .route-dashboard .content.content-dashboard {
         max-height: none;
@@ -221,7 +221,7 @@
 }
 
 @media (max-width: 480px) {
-    /* Écrans très petits (mobile) */
+    /* Very small screens (mobile) */
     .topnav-inner {
         height: 60px;
         padding: 0 8px;
@@ -421,6 +421,7 @@
     }
 }
 
+ 
 @media (max-width: 560px) {
     .crud-modal-card {
         padding: 14px;
@@ -438,5 +439,32 @@
     .crud-modal .dashboard-modal-close {
         top: 12px;
         right: 12px;
+    }
+}
+
+
+
+@media (max-width: 760px) {
+    .crud-modal-card {
+        padding: var(--spacing-sm);
+        border-radius: 12px;
+        max-width: calc(100% - 24px);
+    }
+    .company-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    .crud-form,
+    .crud-panel-grid,
+    .crud-panel-grid-wide {
+        grid-template-columns: 1fr;
+    }
+
+    .crud-form .span-2 {
+        grid-column: auto;
+    }
+
+    .company-card-actions--inline {
+        justify-content: flex-start;
     }
 }

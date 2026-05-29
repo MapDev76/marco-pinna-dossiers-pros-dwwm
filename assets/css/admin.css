@@ -1,8 +1,8 @@
 /* =============================================
-   PAGES ADMIN
+    ADMIN PAGES
    =============================================
-   Styles pour les pages d'administration:
-   tableaux, formulaires, cartes, etc.
+    Styles for the administration pages:
+    tables, forms, cards, and more.
    ============================================= */
 
 .admin-shell {
@@ -21,7 +21,7 @@
     margin-bottom: var(--spacing-xs);
 }
 
-/* Grille pour les cartes admin */
+/* Grid for admin cards */
 .admin-grid {
     width: 100%;
     display: grid;
@@ -29,7 +29,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* Cartes admin */
+/* Admin cards */
 .admin-card {
     width: 100%;
     padding: var(--spacing-md);
@@ -41,7 +41,7 @@
     text-align: left;
 }
 
-/* Statistiques admin */
+/* Admin statistics */
 .admin-stat {
     display: flex;
     flex-direction: column;
@@ -60,7 +60,7 @@
     color: var(--color-text-light);
 }
 
-/* Actions admin */
+/* Admin actions */
 .admin-actions {
     display: flex;
     gap: var(--spacing-sm);
@@ -85,7 +85,7 @@
 }
 
 /* =============================================
-   FORMULAIRES ADMIN
+    ADMIN FORMS
    ============================================= */
 .admin-form {
     display: grid;
@@ -122,7 +122,7 @@
 }
 
 /* =============================================
-   TABLEAUX ADMIN
+    ADMIN TABLES
    ============================================= */
 .table-wrap {
     width: 100%;
@@ -149,7 +149,7 @@
 }
 
 /* =============================================
-   PARAMÈTRES (IMPOSTAZIONI)
+    SETTINGS 
    ============================================= */
 .settings-summary {
     display: grid;
@@ -177,7 +177,7 @@
 }
 
 /* =============================================
-   SCHEDULE (CALENDARIO)
+    SCHEDULE 
    ============================================= */
 .settings-tabs,
 .schedule-toolbar {
@@ -307,7 +307,7 @@
 }
 
 /* =============================================
-   RÉPERTOIRE (DIRETTOIO)
+    DIRECTORY
    ============================================= */
 .dashboard-directory-grid {
     display: grid;
@@ -398,7 +398,7 @@
     margin: 0 0 var(--spacing-sm);
 }
 
-/* Formulaire de note */
+/* Note form */
 .dashboard-note-form {
     margin-top: var(--spacing-md);
     padding-top: var(--spacing-md);

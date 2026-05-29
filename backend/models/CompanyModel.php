@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Handles company persistence and directory queries used by the dashboard and APIs.
+ */
 class CompanyModel
 {
     private array $companyColumns = [];
@@ -12,8 +15,7 @@ class CompanyModel
     }
 
     /**
-     * detectCompanyColumns
-     * Rileva le colonne effettivamente disponibili nella tabella companies.
+     * Detects the columns currently available in the companies table.
      */
 
     private function detectCompanyColumns(): array
@@ -29,8 +31,7 @@ class CompanyModel
     }
 
     /**
-     * hasCompanyColumn
-     * Verifica se una colonna è presente nello schema corrente.
+     * Checks whether a column exists in the current companies schema.
      */
 
     private function hasCompanyColumn(string $column): bool
@@ -39,8 +40,7 @@ class CompanyModel
     }
 
     /**
-     * detectDepartmentColumns
-     * Rileva le colonne effettivamente disponibili nella tabella departments.
+     * Detects the columns currently available in the departments table.
      */
 
     private function detectDepartmentColumns(): array
@@ -56,8 +56,7 @@ class CompanyModel
     }
 
     /**
-     * hasDepartmentColumn
-     * Vérifie si une colonne est présente dans le schéma courant.
+     * Checks whether a column exists in the current departments schema.
      */
 
     private function hasDepartmentColumn(string $column): bool

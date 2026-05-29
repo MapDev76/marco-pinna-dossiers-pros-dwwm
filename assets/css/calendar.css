@@ -1,5 +1,5 @@
 /* =============================================
-   SIDEBAR E CALENDARIO
+   CONTENT
    ============================================= */
 
 .route-dashboard .content.content-dashboard {
@@ -102,7 +102,7 @@
         color 0.16s ease;
 }
 
-/* Varianti dei link della sidebar */
+/* Sidebar link variants */
 .dashboard-sidebar-link:hover {
     color: var(--color-bg);
     background: linear-gradient(120deg, var(--color-primary) 0%, #d2aa2d 100%);
@@ -130,7 +130,7 @@
 }
 
 /* =============================================
-   CALENDARIO
+   CALENDAR 
    ============================================= */
 .dashboard-calendar-shell {
     display: grid;
@@ -247,7 +247,8 @@
     color: var(--color-text-light);
 }
 
-/* Righe delle informazioni (Start, End, Icon) */
+/* Calendar fields (Start, End, Icon) */
+
 .schedule-row {
     display: flex;
     justify-content: space-between;

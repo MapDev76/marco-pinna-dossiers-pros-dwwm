@@ -41,7 +41,7 @@
         inset -1px -1px 0 rgba(0, 0, 0, 0.04);
 }
 
-/* Éléments de navigation */
+/* Navigation elements */
 .nav-left,
 .nav-right {
     min-width: 180px;
@@ -61,7 +61,7 @@
     align-items: center;
 }
 
-/* Informations utilisateur */
+/* User information */
 .header-user-info {
     display: flex;
     flex-direction: column;
@@ -166,7 +166,7 @@ body {
     margin-right: auto;
 }
 
-/* Styles spécifiques pour la page de login */
+/* Specific styles for the login page */
 .content:has(.login-form) {
     width: min(560px, calc(100vw - 40px));
     padding: 1.35rem var(--spacing-md) 1.55rem;
@@ -242,7 +242,7 @@ body {
 
  
  
-/* Styles for editable feature boxes on home */
+/* Styles for editable feature boxes on the home page */
 .editable-features { margin-top: 1rem; }
 .editable-grid {
     display: grid;
@@ -270,5 +270,5 @@ body {
 
 
 
-/* Ensure main content is visible and readable on small/medium screens */
+/* Ensure the main content stays visible and readable on small and medium screens */
 

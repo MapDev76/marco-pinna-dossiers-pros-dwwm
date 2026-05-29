@@ -247,14 +247,14 @@
     z-index: 10002;
 }
 
-/* Modal specific */
+/* Modal-specific styles */
 .dashboard-settings-modal,
 .dashboard-schedule-modal,
 .dashboard-documents-modal {
     width: min(1180px, calc(100vw - 36px));
 }
 
-/* Bouton pour fermer la modal */
+/* Button used to close the modal */
 .dashboard-modal-close {
     float: right;
     width: 34px;
@@ -283,28 +283,5 @@ body.modal-open {
     display: none !important;
 }
 
-@media (max-width: 760px) {
-    .crud-modal-card {
-        padding: var(--spacing-sm);
-        border-radius: 12px;
-        max-width: calc(100% - 24px);
-    }
-    .company-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    }
 
-    .crud-form,
-    .crud-panel-grid,
-    .crud-panel-grid-wide {
-        grid-template-columns: 1fr;
-    }
-
-    .crud-form .span-2 {
-        grid-column: auto;
-    }
-
-    .company-card-actions--inline {
-        justify-content: flex-start;
-    }
-}
 
