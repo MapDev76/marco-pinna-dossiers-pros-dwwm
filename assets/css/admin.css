@@ -315,6 +315,11 @@
     background: linear-gradient(180deg, #fff8dd 0%, #fffdf4 100%);
 }
 
+.settings-card.is-selected {
+    border-color: rgba(47, 111, 237, 0.55);
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12), var(--box-shadow-sm);
+}
+
 .settings-card-head,
 .schedule-card-head {
     display: flex;
@@ -331,7 +336,8 @@
     color: var(--color-text);
 }
 
-.settings-card input {
+.settings-card input,
+.settings-card select {
     min-height: 38px;
 }
 
@@ -339,6 +345,20 @@
     display: grid;
     gap: var(--spacing-sm);
 }
+
+/* Actions area inside settings cards */
+.settings-card-actions {
+    margin-top: 0.5rem;
+}
+.settings-shift-delete {
+    background: #ffe6e6;
+    border: 1px solid #ffb3b3;
+    color: #8b1b1b;
+    padding: 0.35rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.settings-shift-delete:hover { background: #ffd6d6; }
 
 .settings-catalog-fields {
     display: grid;
@@ -419,7 +439,9 @@
 }
 
 .settings-field input,
-.schedule-field input {
+.settings-field select,
+.schedule-field input,
+.schedule-field select {
     width: 100%;
     min-height: 44px;
     padding: 0.65rem 0.8rem;
@@ -434,6 +456,12 @@
     background: rgba(240, 240, 240, 0.5);
     cursor: not-allowed;
     border-color: var(--color-border-light);
+}
+
+.settings-field select,
+.schedule-field select {
+    appearance: none;
+    background: rgba(255, 255, 255, 0.96);
 }
 
 /* =============================================

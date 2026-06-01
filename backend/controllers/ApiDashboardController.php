@@ -56,12 +56,10 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
         jsonResponse(['success' => false, 'error' => 'Missing required fields'], 400);
     }
 
+    $shiftSelect = 's.id, s.department_id, s.icon, s.color, d.company_id, d.name AS department_name';
+
     $shiftCheck = $pdo->prepare(
-        'SELECT s.id, s.department_id, s.icon, s.color, d.company_id, d.name AS department_name
-         FROM shifts s
-         INNER JOIN departments d ON d.id = s.department_id
-         WHERE s.id = :shift_id
-         LIMIT 1'
+        'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.id = :shift_id LIMIT 1'
     );
     $shiftCheck->execute(['shift_id' => $shiftId]);
     $shift = $shiftCheck->fetch(PDO::FETCH_ASSOC);
@@ -137,17 +135,25 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
         ]);
     }
 
+    $assignmentSelect = [
+        'us.id AS assignment_id',
+        'us.work_date',
+        'us.status',
+        'us.notes',
+        's.id AS shift_id',
+        's.name AS shift_name',
+        's.icon AS shift_icon',
+        's.color AS shift_color',
+        's.start_time',
+        's.end_time',
+        'd.id AS department_id',
+        'd.name AS department_name',
+        'u.id AS user_id',
+        'CONCAT(u.first_name, " ", u.last_name) AS user_name',
+    ];
+
     $assignmentLookup = $pdo->prepare(
-        'SELECT us.id AS assignment_id, us.work_date, us.status, us.notes,
-                s.id AS shift_id, s.name AS shift_name, s.icon AS shift_icon, s.color AS shift_color, s.start_time, s.end_time,
-                d.id AS department_id, d.name AS department_name,
-                u.id AS user_id, CONCAT(u.first_name, " ", u.last_name) AS user_name
-         FROM user_shifts us
-         INNER JOIN shifts s ON s.id = us.shift_id
-         INNER JOIN departments d ON d.id = s.department_id
-         LEFT JOIN users u ON u.id = us.user_id
-         WHERE us.id = :id
-         LIMIT 1'
+        'SELECT ' . implode(', ', $assignmentSelect) . ' FROM user_shifts us INNER JOIN shifts s ON s.id = us.shift_id INNER JOIN departments d ON d.id = s.department_id LEFT JOIN users u ON u.id = us.user_id WHERE us.id = :id LIMIT 1'
     );
     $assignmentLookup->execute(['id' => $assignmentId]);
     $assignment = $assignmentLookup->fetch(PDO::FETCH_ASSOC);

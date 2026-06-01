@@ -377,6 +377,17 @@ body.sidebar-expanded .app-sidebar {
 .dashboard-calendar-navigator-action {
     border: 0;
     border-radius: var(--border-radius-full);
+
+/* Shift badge shown inside calendar event */
+.calendar-event-badge {
+    display: inline-block;
+    width: 1.6rem;
+    height: 1.6rem;
+    line-height: 1.6rem;
+    text-align: center;
+    font-size: 1rem;
+    margin-right: 0.35rem;
+}
     font: inherit;
     font-weight: var(--font-weight-bold);
     cursor: pointer;

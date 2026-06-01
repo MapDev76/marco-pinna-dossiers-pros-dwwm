@@ -268,6 +268,49 @@ foreach ($assignments as $assignment) {
                     </div>
                 </div>
 
+                <article class="settings-card settings-catalog-card settings-shift-create-card is-highlight" data-shift-create-card>
+                    <div class="settings-card-head">
+                        <span class="settings-badge">New shift</span>
+                        <span class="settings-color">Create and assign</span>
+                    </div>
+                    <div class="settings-catalog-fields">
+                        <label class="settings-field">
+                            Department
+                            <select data-field="department_id">
+                                <?php foreach ($departments as $department): ?>
+                                    <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo (int) ($department['id'] ?? 0) === (int) ($planner['active_department_id'] ?? 0) ? 'selected' : ''; ?>>
+                                        <?php echo e($department['name'] ?? 'Department'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label class="settings-field">
+                            Name
+                            <input data-field="name" type="text" value="" placeholder="Morning shift">
+                        </label>
+                        <label class="settings-field">
+                            Icon
+                            <input data-field="icon" type="text" value="🕒" placeholder="🕒">
+                        </label>
+                        <label class="settings-field">
+                            Color
+                            <input data-field="color" type="text" value="#2f6fed" placeholder="#2f6fed">
+                        </label>
+                        <label class="settings-field">
+                            Start
+                            <input data-field="start_time" type="time" value="09:00">
+                        </label>
+                        <label class="settings-field">
+                            End
+                            <input data-field="end_time" type="time" value="17:00">
+                        </label>
+                    </div>
+                    <div class="settings-card-actions">
+                        <button type="button" class="admin-action-link settings-shift-create">Create shift</button>
+                        <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-reset">Reset</button>
+                    </div>
+                </article>
+
                 <div class="settings-catalog-grid">
                     <?php if (empty($shifts)): ?>
                         <div class="crud-empty-state">No shifts available.</div>
@@ -301,6 +344,9 @@ foreach ($assignments as $assignment) {
                                             End
                                             <input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>">
                                         </label>
+                                    </div>
+                                    <div class="settings-card-actions">
+                                        <button type="button" class="admin-action-link settings-shift-delete" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">Delete</button>
                                     </div>
                                 </article>
                         <?php endforeach; ?>
