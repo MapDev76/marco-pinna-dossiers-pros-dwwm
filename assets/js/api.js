@@ -40,6 +40,13 @@
       delete(url, id){ return AppAPI.postJSON(url, { action: 'delete', id }); },
       create(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'create' }, payload)); }
     }
+    ,
+    shifts: {
+      list(url, departmentId){ return AppAPI.postJSON(url, { action: 'list', department_id: departmentId }); },
+      create(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'create' }, payload)); },
+      update(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'update' }, payload)); },
+      delete(url, id){ return AppAPI.postJSON(url, { action: 'delete', id }); }
+    }
   };
   window.AppAPI = AppAPI;
 })(window);

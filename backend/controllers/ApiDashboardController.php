@@ -57,7 +57,7 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
     }
 
     $shiftCheck = $pdo->prepare(
-        'SELECT s.id, s.department_id, d.company_id, d.name AS department_name
+        'SELECT s.id, s.department_id, s.icon, s.color, d.company_id, d.name AS department_name
          FROM shifts s
          INNER JOIN departments d ON d.id = s.department_id
          WHERE s.id = :shift_id
@@ -139,7 +139,7 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
 
     $assignmentLookup = $pdo->prepare(
         'SELECT us.id AS assignment_id, us.work_date, us.status, us.notes,
-                s.id AS shift_id, s.name AS shift_name, s.start_time, s.end_time,
+                s.id AS shift_id, s.name AS shift_name, s.icon AS shift_icon, s.color AS shift_color, s.start_time, s.end_time,
                 d.id AS department_id, d.name AS department_name,
                 u.id AS user_id, CONCAT(u.first_name, " ", u.last_name) AS user_name
          FROM user_shifts us

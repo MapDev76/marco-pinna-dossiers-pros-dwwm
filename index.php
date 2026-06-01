@@ -99,7 +99,8 @@ require $viewFile;
                 apiCompanies: '<?php echo appUrl('api-companies'); ?>',
                 apiDepartments: '<?php echo appUrl('api-departments'); ?>',
                 apiUsers: '<?php echo appUrl('api-users'); ?>',
-                apiDashboard: '<?php echo appUrl('api-dashboard'); ?>'
+                apiDashboard: '<?php echo appUrl('api-dashboard'); ?>',
+                apiShifts: '<?php echo appUrl('api-shifts'); ?>'
         };
         window.DashboardPlannerData = <?php echo json_encode($dashboardPlannerData ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
@@ -109,6 +110,7 @@ require $viewFile;
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/calendar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/dnd.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/dnd.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard.js'); ?>"></script>
+<script src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
 <?php endif; ?>
 
 </body>

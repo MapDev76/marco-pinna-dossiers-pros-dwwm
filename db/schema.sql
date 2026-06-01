@@ -66,6 +66,8 @@ CREATE TABLE shifts (
   id INT AUTO_INCREMENT PRIMARY KEY,
   department_id INT NOT NULL,
   name VARCHAR(120) NOT NULL,
+  icon VARCHAR(32) NULL,
+  color VARCHAR(16) NULL,
   description TEXT,
   start_time TIME NOT NULL,
   end_time TIME NOT NULL,
@@ -75,6 +77,10 @@ CREATE TABLE shifts (
     FOREIGN KEY (department_id) REFERENCES departments(id)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- For existing databases, run:
+-- ALTER TABLE shifts ADD COLUMN icon VARCHAR(32) NULL AFTER name;
+-- ALTER TABLE shifts ADD COLUMN color VARCHAR(16) NULL AFTER icon;
 
 CREATE TABLE user_shifts (
   id INT AUTO_INCREMENT PRIMARY KEY,

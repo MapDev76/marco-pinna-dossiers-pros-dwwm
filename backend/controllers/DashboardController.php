@@ -74,7 +74,7 @@ if ($role === 'admin' && $companyId !== null) {
     if (!empty($departmentIds)) {
         $placeholders = implode(', ', array_fill(0, count($departmentIds), '?'));
         $shiftStatement = $pdo->prepare(
-            'SELECT id, department_id, name, start_time, end_time
+            'SELECT id, department_id, name, icon, color, start_time, end_time
              FROM shifts
              WHERE department_id IN (' . $placeholders . ')
              ORDER BY department_id ASC, start_time ASC, id ASC'
@@ -149,7 +149,7 @@ if ($role === 'department_manager' && $departmentId !== null) {
     $departmentRows = $departmentModel->byCompanyId($companyId ?? 0);
     $teamRows = $userModel->teamByDepartmentId($departmentId);
     $shiftStatement = $pdo->prepare(
-        'SELECT id, department_id, name, start_time, end_time
+        'SELECT id, department_id, name, icon, color, start_time, end_time
          FROM shifts
          WHERE department_id = :department_id
          ORDER BY start_time ASC, id ASC'
@@ -186,6 +186,8 @@ if ($role === 'department_manager' && $departmentId !== null) {
                 us.notes,
                 s.id AS shift_id,
                 s.name AS shift_name,
+                s.icon AS shift_icon,
+                s.color AS shift_color,
                 s.start_time,
                 s.end_time,
                 d.id AS department_id,

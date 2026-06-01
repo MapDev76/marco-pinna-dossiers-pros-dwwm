@@ -13,6 +13,7 @@ $map = [
     'api-companies' => __DIR__ . '/ApiCompanyController.php',
     'api-departments' => __DIR__ . '/ApiDepartmentController.php',
     'api-users' => __DIR__ . '/ApiUserController.php',
+    'api-shifts' => __DIR__ . '/ApiShiftController.php',
     'api-dashboard' => __DIR__ . '/ApiDashboardController.php',
 ];
 

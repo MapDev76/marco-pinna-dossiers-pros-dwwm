@@ -273,26 +273,36 @@ foreach ($assignments as $assignment) {
                         <div class="crud-empty-state">No shifts available.</div>
                     <?php else: ?>
                         <?php foreach (array_slice($shifts, 0, 8) as $shift): ?>
-                            <article class="settings-card settings-catalog-card">
-                                <div class="settings-card-head">
-                                    <span class="settings-badge"><?php echo e($shift['name'] ?? 'Shift'); ?></span>
-                                    <span class="settings-color"><?php echo e(($shift['start_time'] ?? '--:--') . ' - ' . ($shift['end_time'] ?? '--:--')); ?></span>
-                                </div>
-                                <div class="settings-catalog-fields">
-                                    <label class="settings-field">
-                                        Department
-                                        <input type="text" value="<?php echo e($shift['department_name'] ?? ''); ?>">
-                                    </label>
-                                    <label class="settings-field">
-                                        Start
-                                        <input type="text" value="<?php echo e($shift['start_time'] ?? '--:--'); ?>">
-                                    </label>
-                                    <label class="settings-field">
-                                        End
-                                        <input type="text" value="<?php echo e($shift['end_time'] ?? '--:--'); ?>">
-                                    </label>
-                                </div>
-                            </article>
+                                <article class="settings-card settings-catalog-card" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">
+                                    <div class="settings-card-head">
+                                        <label class="settings-badge-input">
+                                            <input data-field="name" type="text" value="<?php echo e($shift['name'] ?? 'Shift'); ?>">
+                                        </label>
+                                        <span class="settings-color"><?php echo e(($shift['start_time'] ?? '--:--') . ' - ' . ($shift['end_time'] ?? '--:--')); ?></span>
+                                    </div>
+                                    <div class="settings-catalog-fields">
+                                        <label class="settings-field">
+                                            Icon
+                                            <input data-field="icon" type="text" value="<?php echo e($shift['icon'] ?? '🕒'); ?>" placeholder="🕒">
+                                        </label>
+                                        <label class="settings-field">
+                                            Color
+                                            <input data-field="color" type="text" value="<?php echo e($shift['color'] ?? '#2f6fed'); ?>" placeholder="#2f6fed">
+                                        </label>
+                                        <label class="settings-field">
+                                            Department
+                                            <input data-field="department_name" type="text" value="<?php echo e($shift['department_name'] ?? ''); ?>" readonly>
+                                        </label>
+                                        <label class="settings-field">
+                                            Start
+                                            <input data-field="start_time" type="time" value="<?php echo e($shift['start_time'] ?? ''); ?>">
+                                        </label>
+                                        <label class="settings-field">
+                                            End
+                                            <input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>">
+                                        </label>
+                                    </div>
+                                </article>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
@@ -300,6 +310,7 @@ foreach ($assignments as $assignment) {
         </div>
 
         <div class="admin-actions settings-actions">
+            <button type="button" class="admin-action-link admin-action-link--save">Save changes</button>
             <button type="button" class="admin-action-link">Create</button>
             <button type="button" class="admin-action-link">Edit</button>
             <button type="button" class="admin-action-link">Delete</button>
