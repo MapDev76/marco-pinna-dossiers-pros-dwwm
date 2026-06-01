@@ -40,7 +40,9 @@ require __DIR__ . '/app/layout/header.php';
 ?>
 
 <?php if ($isDashboardRoute && isLoggedIn()): ?>
+<?php if ((currentUser()['role'] ?? '') !== 'super_admin'): ?>
 <?php require __DIR__ . '/app/layout/sidebar.php'; ?>
+<?php endif; ?>
 <?php require __DIR__ . '/app/layout/settings.php'; ?>
 <?php require __DIR__ . '/app/layout/schedule.php'; ?>
 <?php endif; ?>
@@ -113,6 +115,8 @@ require $viewFile;
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/departments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/departments.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
+<script src="<?php echo $basePath; ?>/assets/js/dashboard/assignments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/assignments.js'); ?>"></script>
+<script src="<?php echo $basePath; ?>/assets/js/dashboard/roles.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/roles.js'); ?>"></script>
 <?php endif; ?>
 
 </body>

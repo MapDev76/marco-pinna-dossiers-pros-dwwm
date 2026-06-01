@@ -124,6 +124,23 @@
         grid-template-columns: 1fr;
     }
 
+    .settings-list-cols,
+    .settings-list-cols-user,
+    .settings-list-cols-user-create,
+    .settings-list-cols-user-edit,
+    .settings-list-cols-dept,
+    .settings-list-cols-dept-edit,
+    .settings-list-cols-dept-create,
+    .settings-list-cols-shift,
+    .settings-list-cols-shift-create,
+    .settings-list-cols-shift-edit,
+    .settings-list-cols-assignment,
+    .settings-list-cols-assignment-edit,
+    .settings-list-cols-role,
+    .settings-list-cols-role-edit {
+        grid-template-columns: 1fr;
+    }
+
     .settings-tabs {
         overflow-x: auto;
         padding-bottom: 0.4rem;
@@ -288,6 +305,23 @@
     .settings-summary--compact,
     .settings-catalog-grid--wide,
     .settings-catalog-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-list-cols,
+    .settings-list-cols-user,
+    .settings-list-cols-user-create,
+    .settings-list-cols-user-edit,
+    .settings-list-cols-dept,
+    .settings-list-cols-dept-edit,
+    .settings-list-cols-dept-create,
+    .settings-list-cols-shift,
+    .settings-list-cols-shift-create,
+    .settings-list-cols-shift-edit,
+    .settings-list-cols-assignment,
+    .settings-list-cols-assignment-edit,
+    .settings-list-cols-role,
+    .settings-list-cols-role-edit {
         grid-template-columns: 1fr;
     }
 

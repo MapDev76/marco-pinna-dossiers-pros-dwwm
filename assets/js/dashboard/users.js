@@ -1,8 +1,7 @@
 (() => {
-  const q = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
   const apiUrl = window.DashboardConfig?.apiUsers;
 
-  function getCreateCard() { return document.querySelector('[data-user-create-card]'); }
+  function getCreateCard() { return document.querySelector('[data-user-create-row]'); }
   function resetCreateUserForm() {
     const card = getCreateCard(); if (!card) return;
     ['first_name','last_name','email','role','department_id','password'].forEach((f) => {
@@ -32,7 +31,29 @@
     } catch (e) { console.error(e); alert('Error creating user'); }
   }
 
-  function getUserCard(el) { return el.closest && el.closest('.settings-catalog-card[data-user-id]'); }
+  function getUserCard(el) { return el.closest && el.closest('[data-user-id]'); }
+
+  function getUserDrawer(card) {
+    return card ? card.querySelector('.settings-edit-drawer') : null;
+  }
+
+  function closeAllDrawers() {
+    document.querySelectorAll('[data-user-id] .settings-edit-drawer').forEach((drawer) => {
+      drawer.hidden = true;
+    });
+  }
+
+  function openDrawer(card) {
+    if (!card) return;
+    closeAllDrawers();
+    const drawer = getUserDrawer(card);
+    if (drawer) drawer.hidden = false;
+  }
+
+  function closeDrawer(card) {
+    const drawer = getUserDrawer(card);
+    if (drawer) drawer.hidden = true;
+  }
 
   async function saveUser(card) {
     if (!card) return;
@@ -44,13 +65,13 @@
       email: card.querySelector('[data-field="email"]')?.value || '',
       role: card.querySelector('[data-field="role"]')?.value || 'employee',
       department_id: card.querySelector('[data-field="department_id"]')?.value || null,
+      status: card.querySelector('[data-field="status"]')?.value || 'active',
     };
     const pwd = card.querySelector('[data-field="password"]')?.value || '';
     if (pwd) payload.password = pwd;
     try {
       const res = await AppAPI.users.update(apiUrl, payload);
       if (res?.ok) {
-        alert('Saved');
         location.reload();
       } else alert('Save failed: ' + (res?.error || 'unknown'));
     } catch (e) { console.error(e); alert('Error saving user'); }
@@ -71,6 +92,10 @@
     if (createBtn) { ev.preventDefault(); createUser(); return; }
     const resetBtn = ev.target.closest && ev.target.closest('.settings-user-reset');
     if (resetBtn) { ev.preventDefault(); resetCreateUserForm(); return; }
+    const editBtn = ev.target.closest && ev.target.closest('.settings-user-edit');
+    if (editBtn) { ev.preventDefault(); const card = getUserCard(editBtn); openDrawer(card); return; }
+    const cancelBtn = ev.target.closest && ev.target.closest('.settings-user-cancel');
+    if (cancelBtn) { ev.preventDefault(); const card = getUserCard(cancelBtn); closeDrawer(card); return; }
     const saveBtn = ev.target.closest && ev.target.closest('.settings-user-save');
     if (saveBtn) { ev.preventDefault(); const card = getUserCard(saveBtn); saveUser(card); return; }
     const delBtn = ev.target.closest && ev.target.closest('.settings-user-delete');

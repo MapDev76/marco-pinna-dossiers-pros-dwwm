@@ -181,6 +181,11 @@
     color: var(--color-primary);
 }
 
+.settings-company-switcher {
+    margin-top: var(--spacing-sm);
+    max-width: 340px;
+}
+
 /* =============================================
     SCHEDULE 
    ============================================= */
@@ -306,6 +311,119 @@
 
 .settings-list-item strong {
     font-size: 0.92rem;
+}
+
+.settings-list-wrap {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.settings-list-item-wrap {
+    border: 1px solid var(--color-border-light);
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.settings-list-row {
+    padding: 0.7rem 0.8rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.settings-list-item-wrap > .settings-list-row:last-child {
+    border-bottom: 0;
+}
+
+.settings-list-header {
+    background: rgba(157, 121, 16, 0.08);
+    border: 1px solid rgba(157, 121, 16, 0.16);
+    border-radius: 12px;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-light);
+}
+
+.settings-list-cols {
+    display: grid;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.settings-list-cols-user {
+    grid-template-columns: minmax(180px, 1.3fr) minmax(220px, 1.6fr) minmax(140px, 1fr) minmax(160px, 1.2fr) minmax(90px, 0.7fr) minmax(170px, 1fr);
+}
+
+.settings-list-cols-user-create,
+.settings-list-cols-user-edit {
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+}
+
+.settings-list-cols-dept {
+    grid-template-columns: minmax(180px, 1.3fr) minmax(160px, 1.1fr) minmax(170px, 1.2fr) minmax(80px, 0.5fr) minmax(80px, 0.5fr) minmax(170px, 1fr);
+}
+
+.settings-list-cols-dept-edit,
+.settings-list-cols-dept-create {
+    grid-template-columns: repeat(3, minmax(160px, 1fr)) minmax(200px, 1fr);
+}
+
+.settings-list-cols-shift {
+    grid-template-columns: minmax(170px, 1.2fr) minmax(170px, 1.2fr) minmax(160px, 1.2fr) minmax(90px, 0.6fr) minmax(120px, 0.9fr) minmax(170px, 1fr);
+}
+
+.settings-list-cols-shift-create,
+.settings-list-cols-shift-edit {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+}
+
+.settings-list-cols-assignment {
+    grid-template-columns: minmax(130px, 0.9fr) minmax(170px, 1.2fr) minmax(160px, 1.2fr) minmax(170px, 1.2fr) minmax(120px, 0.8fr) minmax(130px, 0.8fr);
+}
+
+.settings-list-cols-assignment-edit {
+    grid-template-columns: repeat(3, minmax(160px, 1fr)) minmax(170px, 1fr);
+}
+
+.settings-list-cols-role {
+    grid-template-columns: minmax(170px, 1.2fr) minmax(230px, 1.5fr) minmax(150px, 1fr) minmax(160px, 1.1fr) minmax(100px, 0.7fr) minmax(130px, 0.8fr);
+}
+
+.settings-list-cols-role-edit {
+    grid-template-columns: repeat(3, minmax(170px, 1fr)) minmax(170px, 1fr);
+}
+
+.settings-inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.settings-action-icon {
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.settings-action-icon-danger {
+    color: #8b1b1b;
+    background: #ffe6e6;
+    border: 1px solid #ffb3b3;
+}
+
+.settings-create-row {
+    padding: 0.8rem;
+    border: 1px solid rgba(157, 121, 16, 0.2);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fff8dd 0%, #fffdf4 100%);
+}
+
+.settings-edit-drawer {
+    padding: 0.8rem;
+    background: rgba(247, 248, 251, 0.9);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .settings-card,

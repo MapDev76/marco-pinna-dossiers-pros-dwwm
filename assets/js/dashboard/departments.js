@@ -3,7 +3,33 @@
   if (!apiUrl || !window.AppAPI) return;
 
   function getCreateCard() {
-    return document.querySelector('[data-dept-create-card]');
+    return document.querySelector('[data-dept-create-row]');
+  }
+
+  function getDepartmentCard(el) {
+    return el.closest && el.closest('[data-department-id]');
+  }
+
+  function getDepartmentDrawer(card) {
+    return card ? card.querySelector('.settings-edit-drawer') : null;
+  }
+
+  function closeAllDepartmentDrawers() {
+    document.querySelectorAll('[data-department-id] .settings-edit-drawer').forEach((drawer) => {
+      drawer.hidden = true;
+    });
+  }
+
+  function openDepartmentDrawer(card) {
+    if (!card) return;
+    closeAllDepartmentDrawers();
+    const drawer = getDepartmentDrawer(card);
+    if (drawer) drawer.hidden = false;
+  }
+
+  function closeDepartmentDrawer(card) {
+    const drawer = getDepartmentDrawer(card);
+    if (drawer) drawer.hidden = true;
   }
 
   function resetCreateDepartmentForm() {
@@ -117,14 +143,28 @@
     const saveBtn = ev.target.closest && ev.target.closest('.settings-dept-save');
     if (saveBtn) {
       ev.preventDefault();
-      saveDepartment(saveBtn.closest('[data-department-id]'));
+      saveDepartment(getDepartmentCard(saveBtn));
+      return;
+    }
+
+    const editBtn = ev.target.closest && ev.target.closest('.settings-dept-edit');
+    if (editBtn) {
+      ev.preventDefault();
+      openDepartmentDrawer(getDepartmentCard(editBtn));
+      return;
+    }
+
+    const cancelBtn = ev.target.closest && ev.target.closest('.settings-dept-cancel');
+    if (cancelBtn) {
+      ev.preventDefault();
+      closeDepartmentDrawer(getDepartmentCard(cancelBtn));
       return;
     }
 
     const deleteBtn = ev.target.closest && ev.target.closest('.settings-dept-delete');
     if (deleteBtn) {
       ev.preventDefault();
-      deleteDepartment(deleteBtn.closest('[data-department-id]'));
+      deleteDepartment(getDepartmentCard(deleteBtn));
     }
   });
 

@@ -415,8 +415,10 @@
       const modalEntity = params.get('modal');
       if (!modalEntity) return;
 
-      const trigger = document.querySelector(`[data-modal-entity="${modalEntity}"]`);
+      const trigger = document.querySelector(`[data-modal-entity="${modalEntity}"]`) ||
+        (modalEntity === 'settings' ? document.querySelector('[data-modal-target="modal-settings"]') : null);
       if (trigger && typeof trigger.click === 'function') {
+        window.__dashboardRequestedSettingsTab = params.get('settings_tab') || '';
         window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash}`);
         trigger.click();
       }
@@ -428,6 +430,8 @@
 
       const tabButtons = Array.from(settingsModal.querySelectorAll('[data-settings-tab]'));
       const panels = Array.from(settingsModal.querySelectorAll('[data-settings-panel]'));
+      const tabInput = settingsModal.querySelector('[data-settings-tab-input]');
+      const companySelect = settingsModal.querySelector('[data-settings-company-select]');
       if (tabButtons.length === 0 || panels.length === 0) return;
 
       const activateTab = (tabName) => {
@@ -442,6 +446,10 @@
           panel.classList.toggle('is-active', isActive);
           panel.hidden = !isActive;
         });
+
+        if (tabInput) {
+          tabInput.value = tabName || '';
+        }
       };
 
       const resetTabs = () => {
@@ -460,11 +468,26 @@
         button.addEventListener('click', () => activateTab(button.getAttribute('data-settings-tab')));
       });
 
+      if (companySelect) {
+        companySelect.addEventListener('change', () => {
+          const activeTab = settingsModal.querySelector('[data-settings-tab].is-active')?.getAttribute('data-settings-tab') || '';
+          if (tabInput) tabInput.value = activeTab;
+          companySelect.form?.submit();
+        });
+      }
+
       // Start with all panels closed; open only when a tab is clicked.
       resetTabs();
 
       // Each time settings modal opens, keep all panels closed until a tab click.
-      settingsModal.addEventListener('modal:open', resetTabs);
+      settingsModal.addEventListener('modal:open', () => {
+        resetTabs();
+        const requestedTab = window.__dashboardRequestedSettingsTab || '';
+        if (requestedTab && panels.some((panel) => panel.getAttribute('data-settings-panel') === requestedTab)) {
+          activateTab(requestedTab);
+        }
+        window.__dashboardRequestedSettingsTab = '';
+      });
     };
 
     window.setTimeout(openModalFromQuery, 0);

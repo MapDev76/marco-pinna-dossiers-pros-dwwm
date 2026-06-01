@@ -9,7 +9,12 @@
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 
-if (!isLoggedIn() || !isSuperAdmin()) {
+$profile = currentUser();
+$role = $profile['role'] ?? null;
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!isLoggedIn() || (!$isSuperAdmin && !$isAdmin)) {
     jsonResponse(['error' => 'Unauthorized'], 403);
 }
 
@@ -23,14 +28,18 @@ $action = $input['action'] ?? ($_GET['action'] ?? 'list');
 try {
     switch ($action) {
         case 'list':
-            $companyId = (int) ($input['company_id'] ?? ($_GET['company_id'] ?? 0));
+            $companyId = $isAdmin
+                ? (int) ($profile['company_id'] ?? 0)
+                : (int) ($input['company_id'] ?? ($_GET['company_id'] ?? 0));
             if ($companyId <= 0) jsonResponse(['ok' => false, 'error' => 'company_id required'], 400);
             $rows = $deptModel->byCompanyId($companyId);
             jsonResponse(['ok' => true, 'departments' => $rows]);
             break;
 
         case 'create':
-            $companyId = (int) ($input['company_id'] ?? 0);
+            $companyId = $isAdmin
+                ? (int) ($profile['company_id'] ?? 0)
+                : (int) ($input['company_id'] ?? 0);
             $name = trim((string) ($input['name'] ?? ''));
             if ($companyId <= 0 || $name === '') jsonResponse(['ok' => false, 'error' => 'company_id and name required'], 400);
             $id = $deptModel->create([
@@ -48,8 +57,14 @@ try {
         case 'update':
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
+            if ($isAdmin) {
+                $target = $deptModel->findById($id);
+                if (!$target || (int) ($target['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
+                    jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+                }
+            }
             $deptModel->update($id, [
-                'company_id' => $input['company_id'],
+                'company_id' => $isAdmin ? (int) ($profile['company_id'] ?? 0) : $input['company_id'],
                 'name' => $input['name'],
                 'icon' => $input['icon'] ?? null,
                 'color' => $input['color'] ?? null,
@@ -62,6 +77,12 @@ try {
         case 'delete':
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
+            if ($isAdmin) {
+                $target = $deptModel->findById($id);
+                if (!$target || (int) ($target['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
+                    jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+                }
+            }
             $deptModel->delete($id);
             jsonResponse(['ok' => true]);
             break;
