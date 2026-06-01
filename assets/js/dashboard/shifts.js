@@ -1,6 +1,11 @@
 (() => {
   const q = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
 
+  function isShiftsPanelActive() {
+    const panel = document.querySelector('.settings-panel[data-settings-panel="shifts"]');
+    return !!panel && !panel.hidden;
+  }
+
   function getCreateCard() {
     return document.querySelector('[data-shift-create-card]');
   }
@@ -120,6 +125,8 @@
     }
 
   document.addEventListener('click', (ev) => {
+    if (!isShiftsPanelActive() && !ev.target.closest('.settings-shift-delete')) return;
+
     const saveBtn = ev.target.closest && ev.target.closest('.settings-actions .admin-action-link--save');
     if (saveBtn) { ev.preventDefault(); saveShifts(); return; }
 
@@ -169,6 +176,7 @@
   });
   
   document.addEventListener('click', async (ev) => {
+    if (!isShiftsPanelActive()) return;
     const del = ev.target.closest && ev.target.closest('.settings-shift-delete');
     if (!del) return;
     ev.preventDefault();

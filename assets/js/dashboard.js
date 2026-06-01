@@ -374,20 +374,6 @@
       });
     });
 
-    // Settings tab switching inside the settings modal
-    const settingsTabs = document.querySelectorAll('.settings-tab');
-    const settingsPanels = document.querySelectorAll('.settings-panel');
-    settingsTabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-        const key = tab.getAttribute('data-settings-tab');
-        settingsTabs.forEach(t => t.classList.toggle('is-active', t === tab));
-        settingsPanels.forEach((p) => {
-          if (p.getAttribute('data-settings-panel') === key) p.hidden = false;
-          else p.hidden = true;
-        });
-      });
-    });
-
     closeButtons.forEach((button) => button.addEventListener('click', closeAll));
     if (overlay) overlay.addEventListener('click', closeAll);
     document.addEventListener('keydown', (event) => {
@@ -460,7 +446,12 @@
         button.addEventListener('click', () => activateTab(button.getAttribute('data-settings-tab')));
       });
 
-      activateTab(tabButtons[0].getAttribute('data-settings-tab'));
+      // Start with all panels closed; open only when a tab is clicked.
+      tabButtons.forEach((button) => {
+        button.classList.remove('is-active');
+        button.setAttribute('aria-selected', 'false');
+      });
+      panels.forEach((panel) => { panel.hidden = true; });
     };
 
     window.setTimeout(openModalFromQuery, 0);

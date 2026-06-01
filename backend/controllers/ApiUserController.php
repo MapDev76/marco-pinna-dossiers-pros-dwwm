@@ -11,11 +11,14 @@ require_once __DIR__ . '/../models/UserModel.php';
 
 require_once __DIR__ . '/../models/DepartmentModel.php';
 
-if (!isLoggedIn() || (!isSuperAdmin() && !isAdmin())) {
+$profile = currentUser();
+$currentRole = $profile['role'] ?? null;
+$isSuperAdmin = $currentRole === 'super_admin';
+$isAdmin = $currentRole === 'admin';
+
+if (!isLoggedIn() || (!$isSuperAdmin && !$isAdmin)) {
     jsonResponse(['error' => 'Unauthorized'], 403);
 }
-
-$profile = currentUser();
 
 $pdo = getPDO();
 $userModel = new UserModel($pdo);
@@ -28,7 +31,7 @@ $action = $input['action'] ?? ($_GET['action'] ?? 'list');
 try {
     switch ($action) {
         case 'list_by_company':
-            if (isAdmin()) {
+            if ($isAdmin) {
                 $companyId = (int) ($profile['company_id'] ?? 0);
             } else {
                 $companyId = (int) ($input['company_id'] ?? ($_GET['company_id'] ?? 0));
@@ -36,7 +39,7 @@ try {
             if ($companyId <= 0) jsonResponse(['ok' => false, 'error' => 'company_id is required'], 400);
             $rows = $userModel->companyUsersByCompanyId($companyId);
             // Admins must not see super_admin accounts
-            if (isAdmin()) {
+            if ($isAdmin) {
                 $rows = array_values(array_filter($rows, static fn($u) => ($u['role'] ?? '') !== 'super_admin'));
             }
             jsonResponse(['ok' => true, 'users' => $rows]);
@@ -47,7 +50,7 @@ try {
             $userRole = trim((string) ($input['role'] ?? 'employee'));
 
             if ($userRole === 'super_admin') {
-                if (isAdmin()) jsonResponse(['ok' => false, 'error' => 'Forbidden role'], 403);
+                if ($isAdmin) jsonResponse(['ok' => false, 'error' => 'Forbidden role'], 403);
                 $departmentId = null;
             } elseif ($userRole === 'admin') {
                 if ($departmentId === null || $departmentId === '') {
@@ -75,7 +78,7 @@ try {
                 'role' => $userRole,
                 'status' => $input['status'] ?? 'active',
             ];
-            if (isAdmin() && !empty($departmentId)) {
+            if ($isAdmin && !empty($departmentId)) {
                 $dept = $departmentModel->findById((int) $departmentId);
                 if (!$dept || (int) ($dept['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
@@ -96,7 +99,7 @@ try {
             $userRole = trim((string) ($input['role'] ?? 'employee'));
 
             if ($userRole === 'super_admin') {
-                if (isAdmin()) jsonResponse(['ok' => false, 'error' => 'Forbidden role'], 403);
+                if ($isAdmin) jsonResponse(['ok' => false, 'error' => 'Forbidden role'], 403);
                 $departmentId = null;
             } elseif ($userRole === 'admin') {
                 if ($departmentId === null || $departmentId === '') {
@@ -116,7 +119,7 @@ try {
             }
             // Prevent admins from updating super_admin accounts
             $targetUser = $userModel->findById($id);
-            if ($targetUser && ($targetUser['role'] ?? '') === 'super_admin' && isAdmin()) {
+            if ($targetUser && ($targetUser['role'] ?? '') === 'super_admin' && $isAdmin) {
                 jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
             }
 
@@ -132,7 +135,7 @@ try {
             if (!empty($input['password'])) {
                 $payload['password'] = password_hash($input['password'], PASSWORD_DEFAULT);
             }
-            if (isAdmin() && !empty($departmentId)) {
+            if ($isAdmin && !empty($departmentId)) {
                 $dept = $departmentModel->findById((int) $departmentId);
                 if (!$dept || (int) ($dept['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
@@ -146,11 +149,11 @@ try {
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             $targetUser = $userModel->findById($id);
-            if ($targetUser && ($targetUser['role'] ?? '') === 'super_admin' && isAdmin()) {
+            if ($targetUser && ($targetUser['role'] ?? '') === 'super_admin' && $isAdmin) {
                 jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
             }
             // Admins may only delete users within their company
-            if (isAdmin()) {
+            if ($isAdmin) {
                 $dept = $departmentModel->findById((int) ($targetUser['department_id'] ?? 0));
                 if (!$dept || (int) ($dept['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);

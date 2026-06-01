@@ -33,7 +33,8 @@
     departments: {
       list(url, companyId){ return AppAPI.postJSON(url, { action: 'list', company_id: companyId }); },
       delete(url, id){ return AppAPI.postJSON(url, { action: 'delete', id }); },
-      create(url, companyId, name){ return AppAPI.postJSON(url, { action: 'create', company_id: companyId, name }); }
+      create(url, companyId, name){ return AppAPI.postJSON(url, { action: 'create', company_id: companyId, name }); },
+      update(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'update' }, payload)); }
     },
     users: {
       listByCompany(url, companyId){ return AppAPI.postJSON(url, { action: 'list_by_company', company_id: companyId }); },

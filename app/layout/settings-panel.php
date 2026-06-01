@@ -90,7 +90,7 @@ if (($currentRole ?? '') === 'admin') {
         </div>
 
         <div class="settings-tabs" role="tablist" aria-label="Management rubrics">
-            <button type="button" class="settings-tab is-active" data-settings-tab="users">Users</button>
+            <button type="button" class="settings-tab" data-settings-tab="users">Users</button>
             <button type="button" class="settings-tab" data-settings-tab="departments">Departments</button>
             <button type="button" class="settings-tab" data-settings-tab="assignments">Assignments</button>
             <button type="button" class="settings-tab" data-settings-tab="roles">Roles</button>
@@ -182,7 +182,7 @@ if (($currentRole ?? '') === 'admin') {
                         </div>
                     </article>
 
-                    <?php if (empty($departments)): ?>
+                    <?php if (empty($visibleDepartments)): ?>
                         <div class="crud-empty-state">No departments available.</div>
                     <?php else: ?>
                         <?php foreach ($visibleDepartments as $department): ?>
@@ -207,7 +207,7 @@ if (($currentRole ?? '') === 'admin') {
                 </div>
             </section>
 
-            <section class="crud-panel settings-panel" data-settings-panel="users">
+            <section class="crud-panel settings-panel" data-settings-panel="users" hidden>
                 <div class="settings-panel-head">
                     <div>
                         <h3>Users</h3>
@@ -238,7 +238,7 @@ if (($currentRole ?? '') === 'admin') {
                             <label class="settings-field">Department
                                 <select data-field="department_id">
                                     <option value="">-- none --</option>
-                                    <?php foreach ($departments as $department): ?>
+                                    <?php foreach ($visibleDepartments as $department): ?>
                                         <option value="<?php echo (int) ($department['id'] ?? 0); ?>"><?php echo e($department['name'] ?? 'Department'); ?></option>
                                     <?php endforeach; ?>
                                 </select>
@@ -275,7 +275,7 @@ if (($currentRole ?? '') === 'admin') {
                                     <label class="settings-field">Department
                                         <select data-field="department_id">
                                             <option value="">-- none --</option>
-                                            <?php foreach ($departments as $department): ?>
+                                            <?php foreach ($visibleDepartments as $department): ?>
                                                 <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo ((int) ($user['department_id'] ?? 0) === (int) ($department['id'] ?? 0)) ? 'selected' : ''; ?>><?php echo e($department['name'] ?? 'Department'); ?></option>
                                             <?php endforeach; ?>
                                         </select>
@@ -349,7 +349,7 @@ if (($currentRole ?? '') === 'admin') {
                         <label class="settings-field">
                             Department
                             <select data-field="department_id">
-                                <?php foreach ($departments as $department): ?>
+                                <?php foreach ($visibleDepartments as $department): ?>
                                     <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo (int) ($department['id'] ?? 0) === (int) ($planner['active_department_id'] ?? 0) ? 'selected' : ''; ?>>
                                         <?php echo e($department['name'] ?? 'Department'); ?>
                                     </option>
@@ -428,10 +428,7 @@ if (($currentRole ?? '') === 'admin') {
         </div>
 
         <div class="admin-actions settings-actions">
-            <button type="button" class="admin-action-link admin-action-link--save">Save changes</button>
-            <button type="button" class="admin-action-link">Create</button>
-            <button type="button" class="admin-action-link">Edit</button>
-            <button type="button" class="admin-action-link">Delete</button>
+            <button type="button" class="admin-action-link" data-modal-close>Close</button>
         </div>
     </div>
 </section>
