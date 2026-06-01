@@ -75,7 +75,15 @@ class DepartmentModel
 
     public function allForSelect(): array
     {
-        $statement = $this->pdo->query('SELECT id, company_id, name FROM departments ORDER BY name ASC');
+        $select = ['id', 'company_id', 'name'];
+        if ($this->hasDepartmentColumn('icon')) {
+            $select[] = 'icon';
+        }
+        if ($this->hasDepartmentColumn('color')) {
+            $select[] = 'color';
+        }
+
+        $statement = $this->pdo->query('SELECT ' . implode(', ', $select) . ' FROM departments ORDER BY name ASC');
 
         return $statement->fetchAll();
     }
@@ -129,6 +137,14 @@ class DepartmentModel
     {
         $columns = ['company_id', 'name', 'description'];
 
+        if ($this->hasDepartmentColumn('icon')) {
+            $columns[] = 'icon';
+        }
+
+        if ($this->hasDepartmentColumn('color')) {
+            $columns[] = 'color';
+        }
+
         if ($this->hasDepartmentColumn('head_user_id')) {
             $columns[] = 'head_user_id';
         }
@@ -157,6 +173,14 @@ class DepartmentModel
     public function update(int $id, array $data): void
     {
         $fields = ['company_id', 'name', 'description'];
+
+        if ($this->hasDepartmentColumn('icon')) {
+            $fields[] = 'icon';
+        }
+
+        if ($this->hasDepartmentColumn('color')) {
+            $fields[] = 'color';
+        }
 
         if ($this->hasDepartmentColumn('head_user_id')) {
             $fields[] = 'head_user_id';

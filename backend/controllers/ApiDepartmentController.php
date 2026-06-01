@@ -36,6 +36,8 @@ try {
             $id = $deptModel->create([
                 'company_id' => $companyId,
                 'name' => $name,
+                'icon' => $input['icon'] ?? null,
+                'color' => $input['color'] ?? null,
                 'description' => $input['description'] ?? null,
                 'head_user_id' => $input['head_user_id'] ?? null,
             ]);
@@ -49,6 +51,8 @@ try {
             $deptModel->update($id, [
                 'company_id' => $input['company_id'],
                 'name' => $input['name'],
+                'icon' => $input['icon'] ?? null,
+                'color' => $input['color'] ?? null,
                 'description' => $input['description'] ?? null,
                 'head_user_id' => $input['head_user_id'] ?? null,
             ]);

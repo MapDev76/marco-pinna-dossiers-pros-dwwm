@@ -42,6 +42,8 @@ $error = null;
 $formData = [
     'company_id' => '',
     'name' => '',
+    'icon' => '',
+    'color' => '',
     'description' => '',
     'head_user_id' => '',
 ];
@@ -53,6 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $payload = [
         'company_id' => $companyId,
         'name' => trim((string) ($_POST['name'] ?? '')),
+        'icon' => trim((string) ($_POST['icon'] ?? '')),
+        'color' => trim((string) ($_POST['color'] ?? '')),
         'description' => trim((string) ($_POST['description'] ?? '')),
         'head_user_id' => ($_POST['head_user_id'] ?? '') !== '' ? (int) $_POST['head_user_id'] : null,
     ];

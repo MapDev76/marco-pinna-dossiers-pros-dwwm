@@ -54,6 +54,8 @@ try {
                 $departmentModel->create([
                     'company_id' => $id,
                     'name' => 'Reception',
+                    'icon' => '🏨',
+                    'color' => '#b98b12',
                     'description' => 'Reception department',
                     'head_user_id' => null,
                 ]);

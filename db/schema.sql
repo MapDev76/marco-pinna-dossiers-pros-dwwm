@@ -27,6 +27,8 @@ CREATE TABLE departments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   company_id INT NOT NULL,
   name VARCHAR(120) NOT NULL,
+  icon VARCHAR(32) NULL,
+  color VARCHAR(16) NULL,
   description TEXT,
   head_user_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -38,6 +40,10 @@ CREATE TABLE departments (
     FOREIGN KEY (head_user_id) REFERENCES users(id)
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- For existing databases, add the new columns with:
+-- ALTER TABLE departments ADD COLUMN icon VARCHAR(32) NULL AFTER name;
+-- ALTER TABLE departments ADD COLUMN color VARCHAR(16) NULL AFTER icon;
 
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
