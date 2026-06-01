@@ -112,7 +112,8 @@
   async function deleteUser(card) {
     if (!card) return;
     const id = parseInt(card.dataset.userId || '0', 10); if (!id) return;
-    if (!confirm('Delete this user?')) return;
+    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this user?','Confirm deletion') : confirm('Delete this user?');
+    if (!canDelete) return;
     try {
       const res = await AppAPI.users.delete(apiUrl, id);
       if (res?.ok) {

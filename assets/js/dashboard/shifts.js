@@ -201,7 +201,8 @@
     if (!row) return;
     const id = parseInt(row.dataset.shiftId || '0', 10) || 0;
     if (!id) return;
-    if (!confirm('Delete this shift?')) return;
+    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this shift?','Confirm deletion') : confirm('Delete this shift?');
+    if (!canDelete) return;
     try {
       const res = await AppAPI.shifts.delete(window.DashboardConfig.apiShifts, id);
       if (res?.ok) {

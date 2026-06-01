@@ -199,7 +199,8 @@
     const id = parseInt(card.dataset.departmentId || '0', 10) || 0;
     const companyId = parseInt(card.dataset.companyId || '0', 10) || 0;
     if (!id) return;
-    if (!confirm('Delete this department?')) return;
+    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this department?','Confirm deletion') : confirm('Delete this department?');
+    if (!canDelete) return;
 
     try {
       const res = await AppAPI.postJSON(apiUrl, { action: 'delete', id, company_id: companyId });

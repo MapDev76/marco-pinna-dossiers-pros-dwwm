@@ -112,3 +112,39 @@
 .flash-success .flash-icon svg path { fill: var(--color-primary); }
 .flash-error .flash-icon svg .triangle { fill: var(--color-error-text) !important; }
 .flash-error .flash-icon svg .exclam { fill: var(--color-bg) !important; }
+
+.flash-confirm {
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-primary-dark);
+    color: var(--color-text);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    border-radius: 12px;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.flash-actions {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.55rem;
+}
+
+.flash-action-btn {
+    border: 0;
+    border-radius: 10px;
+    padding: 0.48rem 0.8rem;
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+}
+
+.flash-action-btn-cancel {
+    background: #ececec;
+    color: var(--color-text);
+}
+
+.flash-action-btn-confirm {
+    background: var(--color-secondary);
+    color: var(--color-bg);
+}

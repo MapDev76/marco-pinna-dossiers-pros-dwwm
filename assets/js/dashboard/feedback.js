@@ -71,6 +71,78 @@
     setTimeout(() => closeFlash(flash, backdrop), 2800);
   }
 
+  function confirmAction(message, title = 'Confirm action') {
+    removeExistingFlash();
+
+    return new Promise((resolve) => {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'flash-backdrop js-dashboard-flash show';
+
+      const flash = document.createElement('div');
+      flash.className = 'flash flash-confirm js-dashboard-flash show';
+      flash.setAttribute('role', 'alertdialog');
+      flash.setAttribute('aria-live', 'assertive');
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'flash-close';
+      closeBtn.setAttribute('aria-label', 'Close dialog');
+      closeBtn.type = 'button';
+      closeBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+
+      const icon = document.createElement('span');
+      icon.className = 'flash-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '❔';
+
+      const body = document.createElement('div');
+      body.className = 'flash-body';
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'flash-title';
+      titleEl.textContent = title;
+
+      const messageEl = document.createElement('p');
+      messageEl.textContent = message || 'Are you sure?';
+
+      const actions = document.createElement('div');
+      actions.className = 'flash-actions';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'flash-action-btn flash-action-btn-cancel';
+      cancelBtn.textContent = 'Cancel';
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.className = 'flash-action-btn flash-action-btn-confirm';
+      confirmBtn.textContent = 'Confirm';
+
+      const finish = (ok) => {
+        closeFlash(flash, backdrop);
+        resolve(!!ok);
+      };
+
+      cancelBtn.addEventListener('click', () => finish(false));
+      confirmBtn.addEventListener('click', () => finish(true));
+      closeBtn.addEventListener('click', () => finish(false));
+      backdrop.addEventListener('click', () => finish(false));
+
+      actions.appendChild(cancelBtn);
+      actions.appendChild(confirmBtn);
+      body.appendChild(titleEl);
+      body.appendChild(messageEl);
+      body.appendChild(actions);
+
+      flash.appendChild(closeBtn);
+      flash.appendChild(icon);
+      flash.appendChild(body);
+
+      document.body.appendChild(backdrop);
+      document.body.appendChild(flash);
+      confirmBtn.focus();
+    });
+  }
+
   function getActiveSettingsTab() {
     const activeTab = document.querySelector('.settings-tab.is-active');
     return activeTab ? activeTab.getAttribute('data-settings-tab') : 'users';
@@ -135,5 +207,6 @@
     reloadSettingsTab,
     reloadSettingsTabWithSuccess: (tab, title, message) => reloadSettingsTabWithFlash(tab, 'success', title, message),
     reloadSettingsTabWithError: (tab, title, message) => reloadSettingsTabWithFlash(tab, 'error', title, message),
+    confirm: (message, title) => confirmAction(message, title),
   };
 })();
