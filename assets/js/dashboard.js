@@ -367,6 +367,7 @@
 
         targetModal.hidden = false;
         targetModal.classList.add('is-open');
+        targetModal.dispatchEvent(new CustomEvent('modal:open'));
         if (overlay) { overlay.hidden = false; overlay.classList.add('is-open'); }
         document.body.classList.add('modal-open');
         activeModal = targetModal;
@@ -438,7 +439,20 @@
 
         panels.forEach((panel) => {
           const isActive = panel.getAttribute('data-settings-panel') === tabName;
+          panel.classList.toggle('is-active', isActive);
           panel.hidden = !isActive;
+        });
+      };
+
+      const resetTabs = () => {
+        tabButtons.forEach((button) => {
+          button.classList.remove('is-active');
+          button.setAttribute('aria-selected', 'false');
+        });
+
+        panels.forEach((panel) => {
+          panel.classList.remove('is-active');
+          panel.hidden = true;
         });
       };
 
@@ -447,11 +461,10 @@
       });
 
       // Start with all panels closed; open only when a tab is clicked.
-      tabButtons.forEach((button) => {
-        button.classList.remove('is-active');
-        button.setAttribute('aria-selected', 'false');
-      });
-      panels.forEach((panel) => { panel.hidden = true; });
+      resetTabs();
+
+      // Each time settings modal opens, keep all panels closed until a tab click.
+      settingsModal.addEventListener('modal:open', resetTabs);
     };
 
     window.setTimeout(openModalFromQuery, 0);

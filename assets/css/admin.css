@@ -246,8 +246,16 @@
 }
 
 .settings-panel {
-    display: grid;
+    display: none;
     gap: var(--spacing-md);
+}
+
+.settings-panel[hidden] {
+    display: none !important;
+}
+
+.settings-panel.is-active {
+    display: grid !important;
 }
 
 .settings-panel-head {

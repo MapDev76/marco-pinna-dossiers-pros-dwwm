@@ -427,8 +427,5 @@ if (($currentRole ?? '') === 'admin') {
             </section>
         </div>
 
-        <div class="admin-actions settings-actions">
-            <button type="button" class="admin-action-link" data-modal-close>Close</button>
-        </div>
     </div>
 </section>
