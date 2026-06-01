@@ -158,6 +158,11 @@
     margin: var(--spacing-md) 0;
 }
 
+.settings-summary--compact {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0;
+}
+
 .settings-summary-card {
     padding: var(--spacing-md);
     border-radius: var(--border-radius-lg);
@@ -187,6 +192,13 @@
     margin: var(--spacing-md) 0;
 }
 
+.settings-tabs {
+    padding: 0.35rem;
+    border-radius: var(--border-radius-lg);
+    background: rgba(255, 248, 221, 0.88);
+    border: 1px solid rgba(157, 121, 16, 0.16);
+}
+
 .settings-tab,
 .schedule-pill {
     border: 1px solid var(--color-border-light);
@@ -211,12 +223,81 @@
     border-color: var(--color-secondary);
 }
 
+.settings-tab {
+    min-height: 38px;
+    padding: 0.5rem 1rem;
+}
+
+.settings-tab.is-active {
+    box-shadow: 0 6px 14px rgba(157, 121, 16, 0.18);
+}
+
 .settings-board,
 .schedule-board {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--spacing-md);
     margin: var(--spacing-md) 0;
+}
+
+.settings-modal-body {
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.settings-panel {
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.settings-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.settings-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.settings-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0.15rem 0.7rem;
+    border-radius: var(--border-radius-full);
+    background: rgba(157, 121, 16, 0.12);
+    border: 1px solid rgba(157, 121, 16, 0.16);
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+}
+
+.settings-catalog-grid--wide {
+    grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+}
+
+.settings-list {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.settings-list-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.settings-list-item strong {
+    font-size: 0.92rem;
 }
 
 .settings-card,
@@ -248,6 +329,25 @@
     margin: 0;
     line-height: 1.45;
     color: var(--color-text);
+}
+
+.settings-card input {
+    min-height: 38px;
+}
+
+.settings-catalog-card {
+    display: grid;
+    gap: var(--spacing-sm);
+}
+
+.settings-catalog-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-xs);
+}
+
+.settings-field input {
+    background: rgba(255, 255, 255, 0.82);
 }
 
 .settings-badge,

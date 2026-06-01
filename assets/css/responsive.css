@@ -118,6 +118,22 @@
         grid-template-columns: 1fr;
     }
 
+    .settings-summary--compact,
+    .settings-catalog-grid--wide,
+    .settings-catalog-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-tabs {
+        overflow-x: auto;
+        padding-bottom: 0.4rem;
+        flex-wrap: nowrap;
+    }
+
+    .settings-tab {
+        flex: 0 0 auto;
+    }
+
     .settings-summary {
         grid-template-columns: 1fr;
     }
@@ -267,6 +283,22 @@
     .content:has(.login-form) {
         top: auto;
         transform: none;
+    }
+
+    .settings-summary--compact,
+    .settings-catalog-grid--wide,
+    .settings-catalog-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .settings-tabs::-webkit-scrollbar {
+        display: none;
     }
 
     .dashboard-calendar-shell {

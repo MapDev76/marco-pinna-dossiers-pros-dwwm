@@ -421,7 +421,36 @@
       }
     };
 
+    const setupSettingsTabs = () => {
+      const settingsModal = document.getElementById('modal-settings');
+      if (!settingsModal) return;
+
+      const tabButtons = Array.from(settingsModal.querySelectorAll('[data-settings-tab]'));
+      const panels = Array.from(settingsModal.querySelectorAll('[data-settings-panel]'));
+      if (tabButtons.length === 0 || panels.length === 0) return;
+
+      const activateTab = (tabName) => {
+        tabButtons.forEach((button) => {
+          const isActive = button.getAttribute('data-settings-tab') === tabName;
+          button.classList.toggle('is-active', isActive);
+          button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        panels.forEach((panel) => {
+          const isActive = panel.getAttribute('data-settings-panel') === tabName;
+          panel.hidden = !isActive;
+        });
+      };
+
+      tabButtons.forEach((button) => {
+        button.addEventListener('click', () => activateTab(button.getAttribute('data-settings-tab')));
+      });
+
+      activateTab(tabButtons[0].getAttribute('data-settings-tab'));
+    };
+
     window.setTimeout(openModalFromQuery, 0);
+    setupSettingsTabs();
   })();
 
   /**
