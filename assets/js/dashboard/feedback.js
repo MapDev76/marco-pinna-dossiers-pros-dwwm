@@ -76,12 +76,22 @@
     return activeTab ? activeTab.getAttribute('data-settings-tab') : 'users';
   }
 
+  function getSelectedSettingsCompanyId() {
+    const select = document.querySelector('[data-settings-company-select]');
+    const value = (select && typeof select.value === 'string') ? select.value.trim() : '';
+    return value !== '' ? value : null;
+  }
+
   function reloadSettingsTab(tab) {
     const nextTab = tab || getActiveSettingsTab();
     const url = new URL(window.location.href);
     url.searchParams.set('route', 'dashboard');
     url.searchParams.set('modal', 'settings');
     url.searchParams.set('settings_tab', nextTab || 'users');
+    const selectedCompanyId = getSelectedSettingsCompanyId();
+    if (selectedCompanyId) {
+      url.searchParams.set('settings_company_id', selectedCompanyId);
+    }
     window.location.assign(url.toString());
   }
 

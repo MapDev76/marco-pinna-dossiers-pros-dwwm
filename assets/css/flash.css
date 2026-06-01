@@ -17,7 +17,7 @@
     top: 50%;
     transform: translate(-50%, -50%) scale(0.96);
     opacity: 0;
-    z-index: 9999;
+    z-index: 30050;
     transition: transform 220ms cubic-bezier(.2,.9,.3,1), opacity 180ms ease;
 }
 
@@ -50,15 +50,15 @@
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.35);
-    z-index: 9998;
+    z-index: 30040;
     opacity: 0;
     transition: opacity 180ms ease;
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 .flash-backdrop.show {
     opacity: 1;
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 .flash.show {

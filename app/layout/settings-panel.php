@@ -165,8 +165,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
             <?php if ($currentRole !== 'department_manager'): ?>
                 <button type="button" class="settings-tab" data-settings-tab="departments">Departments</button>
             <?php endif; ?>
-            <button type="button" class="settings-tab" data-settings-tab="assignments">Assignments</button>
             <button type="button" class="settings-tab" data-settings-tab="shifts">Shifts</button>
+            <button type="button" class="settings-tab" data-settings-tab="assignments">Assignments</button>
         </div>
 
         <div class="crud-modal-body settings-modal-body">

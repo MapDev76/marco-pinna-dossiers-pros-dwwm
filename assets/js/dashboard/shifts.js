@@ -117,8 +117,8 @@
     }
     const defaults = {
       'input[data-field="name"]': '',
-      'input[data-field="icon"]': row.querySelector('input[data-field="icon"]')?.defaultValue || DEFAULT_ICON,
-      'input[data-field="color"]': row.querySelector('input[data-field="color"]')?.defaultValue || DEFAULT_COLOR,
+      'input[data-field="icon"]': row.querySelector('input[data-field="icon"]')?.defaultValue || getDefaultIcon(),
+      'input[data-field="color"]': row.querySelector('input[data-field="color"]')?.defaultValue || getDefaultColor(),
       'input[data-field="start_time"]': '09:00',
       'input[data-field="end_time"]': '17:00',
     };
