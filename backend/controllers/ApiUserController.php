@@ -175,18 +175,26 @@ try {
             }
             // Admins may only delete users within their company
             if ($isAdmin) {
-                if ($effectiveAdminCompanyId <= 0) {
+                $adminScopeCompanyId = $effectiveAdminCompanyId;
+                if ($adminScopeCompanyId <= 0) {
+                    $adminScopeCompanyId = (int) ($targetUser['company_id'] ?? 0);
+                }
+                if ($adminScopeCompanyId <= 0) {
+                    $targetDept = $departmentModel->findById((int) ($targetUser['department_id'] ?? 0));
+                    $adminScopeCompanyId = (int) ($targetDept['company_id'] ?? 0);
+                }
+                if ($adminScopeCompanyId <= 0) {
                     jsonResponse(['ok' => false, 'error' => 'company_id is required'], 400);
                 }
 
                 $isInCompanyScope = false;
                 $dept = $departmentModel->findById((int) ($targetUser['department_id'] ?? 0));
-                if ($dept && (int) ($dept['company_id'] ?? 0) === $effectiveAdminCompanyId) {
+                if ($dept && (int) ($dept['company_id'] ?? 0) === $adminScopeCompanyId) {
                     $isInCompanyScope = true;
                 }
 
                 if (!$isInCompanyScope) {
-                    $companyUsers = $userModel->companyUsersByCompanyId($effectiveAdminCompanyId);
+                    $companyUsers = $userModel->companyUsersByCompanyId($adminScopeCompanyId);
                     foreach ($companyUsers as $companyUser) {
                         if ((int) ($companyUser['id'] ?? 0) === $id) {
                             $isInCompanyScope = true;
