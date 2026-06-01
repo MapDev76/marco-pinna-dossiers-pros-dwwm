@@ -245,6 +245,18 @@ class DepartmentModel
         $selectParts = ['d.id', 'd.company_id', 'd.name', 'd.description'];
         $joins = [];
 
+        if ($this->hasDepartmentColumn('icon')) {
+            $selectParts[] = 'd.icon';
+        } else {
+            $selectParts[] = 'NULL AS icon';
+        }
+
+        if ($this->hasDepartmentColumn('color')) {
+            $selectParts[] = 'd.color';
+        } else {
+            $selectParts[] = 'NULL AS color';
+        }
+
         if ($this->hasDepartmentColumn('head_user_id')) {
             $selectParts[] = 'd.head_user_id';
             $selectParts[] = 'CONCAT(u.first_name, " ", u.last_name) AS head_user_name';

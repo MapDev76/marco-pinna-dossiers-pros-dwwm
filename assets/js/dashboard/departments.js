@@ -100,6 +100,10 @@
       const input = card.querySelector(selector);
       if (input) input.value = value;
     });
+
+    const headSelect = card.querySelector('select[data-field="head_user_id"]');
+    if (headSelect) headSelect.value = '';
+
     syncChoiceState(card);
   }
 
@@ -108,6 +112,8 @@
     const name = card.querySelector('input[data-field="name"]')?.value.trim() || '';
     const icon = card.querySelector('input[data-field="icon"]')?.value.trim() || getDefaultIcon();
     const color = card.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
+    const headUserIdRaw = card.querySelector('select[data-field="head_user_id"]')?.value || '';
+    const headUserId = parseInt(headUserIdRaw, 10) || 0;
     const companyId = parseInt(card.querySelector('select[data-field="company_id"]')?.value || '0', 10) || 0;
 
     if (!name) return alert('Enter department name.');
@@ -120,6 +126,7 @@
         name,
         icon,
         color,
+        head_user_id: headUserId > 0 ? headUserId : null,
       });
       if (!res?.ok) {
         alert('Create failed: ' + (res?.error || 'unknown'));
@@ -142,11 +149,13 @@
     const name = card.querySelector('input[data-field="name"]')?.value.trim() || '';
     const icon = card.querySelector('input[data-field="icon"]')?.value.trim() || getDefaultIcon();
     const color = card.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
+    const headUserIdRaw = card.querySelector('select[data-field="head_user_id"]')?.value || '';
+    const headUserId = parseInt(headUserIdRaw, 10) || 0;
 
     if (!name) return alert('Enter department name.');
 
     try {
-      const res = await AppAPI.departments.update(apiUrl, { id, company_id: companyId, name, icon, color });
+      const res = await AppAPI.departments.update(apiUrl, { id, company_id: companyId, name, icon, color, head_user_id: headUserId > 0 ? headUserId : null });
       if (res?.ok) {
         location.reload();
       } else {

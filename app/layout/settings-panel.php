@@ -292,6 +292,16 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                                 </div>
                             </div>
                         </label>
+                        <label class="settings-field">Head of department
+                            <select data-field="head_user_id">
+                                <option value="">-- unassigned --</option>
+                                <?php foreach ($visibleUsers as $userOption): ?>
+                                    <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>">
+                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? 'User')); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
                         <label class="settings-field">Company
                             <select data-field="company_id">
                                 <?php foreach ($departmentCompanyOptions as $c): ?>
@@ -372,6 +382,16 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                                                     </div>
                                                 </div>
                                             </div>
+                                        </label>
+                                        <label class="settings-field">Head of department
+                                            <select data-field="head_user_id">
+                                                <option value="">-- unassigned --</option>
+                                                <?php foreach ($visibleUsers as $userOption): ?>
+                                                    <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>" <?php echo ((int) ($department['head_user_id'] ?? 0) === (int) ($userOption['id'] ?? 0)) ? 'selected' : ''; ?>>
+                                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? 'User')); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
                                         </label>
                                         <div class="settings-inline-actions">
                                             <button type="button" class="admin-action-link settings-dept-save" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>">Save</button>
