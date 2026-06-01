@@ -38,7 +38,8 @@
     users: {
       listByCompany(url, companyId){ return AppAPI.postJSON(url, { action: 'list_by_company', company_id: companyId }); },
       delete(url, id){ return AppAPI.postJSON(url, { action: 'delete', id }); },
-      create(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'create' }, payload)); }
+      create(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'create' }, payload)); },
+      update(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'update' }, payload)); }
     }
     ,
     shifts: {
