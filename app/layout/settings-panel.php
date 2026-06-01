@@ -39,6 +39,46 @@ $roleCatalog = [
     ['key' => 'department_manager', 'label' => 'Department Manager', 'color' => '#2f6fed', 'icon' => '👔'],
     ['key' => 'employee', 'label' => 'Employee', 'color' => '#5b6472', 'icon' => '👤'],
 ];
+$companyTypeRaw = (string) ($plannerCompany['type'] ?? ($currentUser['company_type'] ?? ''));
+if ($companyTypeRaw === '' && $scopeCompanyId > 0 && !empty($scopeCompanies)) {
+    foreach ($scopeCompanies as $companyOption) {
+        if ((int) ($companyOption['id'] ?? 0) === $scopeCompanyId) {
+            $companyTypeRaw = (string) ($companyOption['type'] ?? '');
+            break;
+        }
+    }
+}
+$companyTypeNormalized = strtolower(trim($companyTypeRaw));
+$companyDomain = 'generic';
+if (
+    str_contains($companyTypeNormalized, 'hospital')
+    || str_contains($companyTypeNormalized, 'clinic')
+    || str_contains($companyTypeNormalized, 'medical')
+    || str_contains($companyTypeNormalized, 'health')
+) {
+    $companyDomain = 'healthcare';
+} elseif (
+    str_contains($companyTypeNormalized, 'hotel')
+    || str_contains($companyTypeNormalized, 'resort')
+    || str_contains($companyTypeNormalized, 'hospitality')
+) {
+    $companyDomain = 'hospitality';
+}
+
+$departmentIconCatalogMap = [
+    'hospitality' => ['🛎️', '🧹', '🍽️', '🍸', '🚗', '🏊', '🧖', '🛏️', '🧳', '🎟️'],
+    'healthcare' => ['🏥', '🩺', '💉', '🧪', '🩻', '🧬', '🚑', '💊', '🫀', '🧫'],
+    'generic' => ['🏷️', '🧑‍💼', '🔧', '📦', '📁', '🛠️', '💼', '🧭', '📌', '🧾'],
+];
+$shiftIconCatalogMap = [
+    'hospitality' => ['🌅', '☀️', '🌇', '🌙', '🛎️', '🍽️', '🧹', '🚗'],
+    'healthcare' => ['🩺', '💉', '🚑', '🏥', '🌙', '☀️', '🧪', '💊'],
+    'generic' => ['🕒', '☀️', '🌙', '🛠️', '📦', '👥', '🧭', '⚙️'],
+];
+
+$departmentIconCatalog = $departmentIconCatalogMap[$companyDomain] ?? $departmentIconCatalogMap['generic'];
+$shiftIconCatalog = $shiftIconCatalogMap[$companyDomain] ?? $shiftIconCatalogMap['generic'];
+$pickerColorCatalog = ['#b98b12', '#2f6fed', '#0f766e', '#c2410c', '#be123c', '#4f46e5', '#15803d', '#7c3aed', '#0891b2', '#374151'];
 $activeDepartment = null;
 if (!empty($departments)) {
     foreach ($departments as $department) {
@@ -67,6 +107,12 @@ foreach ($assignments as $assignment) {
 $visibleDepartments = $departments;
 if (($currentRole ?? '') === 'admin') {
     $visibleDepartments = array_values(array_filter($departments, static fn($d) => (int) ($d['company_id'] ?? 0) === $scopeCompanyId));
+}
+$departmentCompanyOptions = $scopeCompanies;
+if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
+    $departmentCompanyOptions = [
+        ['id' => $scopeCompanyId, 'name' => $scopeCompanyName ?: 'Company'],
+    ];
 }
 ?>
 <section class="dashboard-modal dashboard-settings-modal" id="modal-settings" hidden>
@@ -204,7 +250,6 @@ if (($currentRole ?? '') === 'admin') {
                         <p class="crud-modal-subtitle">List view with inline edit drawer for each department.</p>
                     </div>
                     <div class="settings-pill-row">
-                        <span class="settings-pill">Catalog</span>
                         <span class="settings-pill"><?php echo count($visibleDepartments); ?> items</span>
                     </div>
                 </div>
@@ -213,11 +258,43 @@ if (($currentRole ?? '') === 'admin') {
                     <div class="settings-list-cols settings-list-cols-dept">
                         <strong>New department</strong>
                         <label class="settings-field">Name<input data-field="name" type="text" value=""></label>
-                        <label class="settings-field">Icon<input data-field="icon" type="text" value="🏷️"></label>
-                        <label class="settings-field">Color<input data-field="color" type="text" value="#b98b12"></label>
+                        <label class="settings-field">Icon
+                            <div class="settings-picker-stack">
+                                <div class="settings-picker-row">
+                                    <input data-field="icon" type="text" value="<?php echo e($departmentIconCatalog[0] ?? '🏷️'); ?>" readonly>
+                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                </div>
+                                <div class="settings-picker-popover" data-picker-popover="icon" hidden>
+                                    <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
+                                        <?php foreach ($departmentIconCatalog as $icon): ?>
+                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                                <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                            </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                        <label class="settings-field">Color
+                            <div class="settings-picker-stack">
+                                <div class="settings-picker-row">
+                                    <input data-field="color" type="text" value="#b98b12" readonly>
+                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                </div>
+                                <div class="settings-picker-popover" data-picker-popover="color" hidden>
+                                    <div class="settings-choice-grid" data-choice-field="color">
+                                        <?php foreach ($pickerColorCatalog as $color): ?>
+                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
+                                                <span class="settings-color-swatch" aria-hidden="true"></span>
+                                            </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
                         <label class="settings-field">Company
                             <select data-field="company_id">
-                                <?php foreach ($scopeCompanies as $c): ?>
+                                <?php foreach ($departmentCompanyOptions as $c): ?>
                                     <?php if ($currentRole !== 'super_admin' && (int) ($c['id'] ?? 0) !== $scopeCompanyId) continue; ?>
                                     <option value="<?php echo (int) ($c['id'] ?? 0); ?>" <?php echo ((int) ($c['id'] ?? 0) === $scopeCompanyId) ? 'selected' : ''; ?>><?php echo e($c['name'] ?? 'Company'); ?></option>
                                 <?php endforeach; ?>
@@ -244,9 +321,12 @@ if (($currentRole ?? '') === 'admin') {
                         <div class="crud-empty-state">No departments available.</div>
                     <?php else: ?>
                         <?php foreach ($visibleDepartments as $department): ?>
-                            <article class="settings-list-item-wrap" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>">
+                            <article class="settings-list-item-wrap" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>" data-company-id="<?php echo (int) ($department['company_id'] ?? $scopeCompanyId); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-dept">
-                                    <strong><?php echo e($department['name'] ?? 'Department'); ?></strong>
+                                    <strong class="settings-dept-title">
+                                        <span class="settings-dept-title-icon" style="color: <?php echo e($department['color'] ?? '#b98b12'); ?>;"><?php echo e($department['icon'] ?? '🏷️'); ?></span>
+                                        <span><?php echo e($department['name'] ?? 'Department'); ?></span>
+                                    </strong>
                                     <span><?php echo e($department['company_name'] ?? $scopeCompanyName); ?></span>
                                     <span><?php echo e($department['head_user_name'] ?: 'Unassigned'); ?></span>
                                     <span><?php echo count($department['users'] ?? []); ?></span>
@@ -259,8 +339,40 @@ if (($currentRole ?? '') === 'admin') {
                                 <div class="settings-edit-drawer" hidden>
                                     <div class="settings-list-cols settings-list-cols-dept-edit">
                                         <label class="settings-field">Name<input data-field="name" type="text" value="<?php echo e($department['name'] ?? 'Department'); ?>"></label>
-                                        <label class="settings-field">Icon<input data-field="icon" type="text" value="<?php echo e($department['icon'] ?? '🏷️'); ?>" placeholder="🏷️"></label>
-                                        <label class="settings-field">Color<input data-field="color" type="text" value="<?php echo e($department['color'] ?? '#b98b12'); ?>" placeholder="#b98b12"></label>
+                                        <label class="settings-field">Icon
+                                            <div class="settings-picker-stack">
+                                                <div class="settings-picker-row">
+                                                    <input data-field="icon" type="text" value="<?php echo e($department['icon'] ?? ($departmentIconCatalog[0] ?? '🏷️')); ?>" readonly>
+                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                                </div>
+                                                <div class="settings-picker-popover" data-picker-popover="icon" hidden>
+                                                    <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
+                                                        <?php foreach ($departmentIconCatalog as $icon): ?>
+                                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                                                <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                                            </button>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        <label class="settings-field">Color
+                                            <div class="settings-picker-stack">
+                                                <div class="settings-picker-row">
+                                                    <input data-field="color" type="text" value="<?php echo e($department['color'] ?? '#b98b12'); ?>" readonly>
+                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                                </div>
+                                                <div class="settings-picker-popover" data-picker-popover="color" hidden>
+                                                    <div class="settings-choice-grid" data-choice-field="color">
+                                                        <?php foreach ($pickerColorCatalog as $color): ?>
+                                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
+                                                                <span class="settings-color-swatch" aria-hidden="true"></span>
+                                                            </button>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
                                         <div class="settings-inline-actions">
                                             <button type="button" class="admin-action-link settings-dept-save" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>">Save</button>
                                             <button type="button" class="admin-action-link admin-action-link-secondary settings-dept-cancel">Cancel</button>
@@ -483,8 +595,40 @@ if (($currentRole ?? '') === 'admin') {
                             </select>
                         </label>
                         <label class="settings-field">Name<input data-field="name" type="text" value="" placeholder="Morning shift"></label>
-                        <label class="settings-field">Icon<input data-field="icon" type="text" value="🕒" placeholder="🕒"></label>
-                        <label class="settings-field">Color<input data-field="color" type="text" value="#2f6fed" placeholder="#2f6fed"></label>
+                        <label class="settings-field">Icon
+                            <div class="settings-picker-stack">
+                                <div class="settings-picker-row">
+                                    <input data-field="icon" type="text" value="<?php echo e($shiftIconCatalog[0] ?? '🕒'); ?>" readonly>
+                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                </div>
+                                <div class="settings-picker-popover" data-picker-popover="icon" hidden>
+                                    <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
+                                        <?php foreach ($shiftIconCatalog as $icon): ?>
+                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                                <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                            </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                        <label class="settings-field">Color
+                            <div class="settings-picker-stack">
+                                <div class="settings-picker-row">
+                                    <input data-field="color" type="text" value="#2f6fed" readonly>
+                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                </div>
+                                <div class="settings-picker-popover" data-picker-popover="color" hidden>
+                                    <div class="settings-choice-grid" data-choice-field="color">
+                                        <?php foreach ($pickerColorCatalog as $color): ?>
+                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
+                                                <span class="settings-color-swatch" aria-hidden="true"></span>
+                                            </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
                         <label class="settings-field">Start<input data-field="start_time" type="time" value="09:00"></label>
                         <label class="settings-field">End<input data-field="end_time" type="time" value="17:00"></label>
                         <div class="settings-inline-actions">
@@ -523,8 +667,40 @@ if (($currentRole ?? '') === 'admin') {
                                 <div class="settings-edit-drawer" hidden>
                                     <div class="settings-list-cols settings-list-cols-shift-edit">
                                         <label class="settings-field">Name<input data-field="name" type="text" value="<?php echo e($shift['name'] ?? 'Shift'); ?>"></label>
-                                        <label class="settings-field">Icon<input data-field="icon" type="text" value="<?php echo e($shift['icon'] ?? '🕒'); ?>" placeholder="🕒"></label>
-                                        <label class="settings-field">Color<input data-field="color" type="text" value="<?php echo e($shift['color'] ?? '#2f6fed'); ?>" placeholder="#2f6fed"></label>
+                                        <label class="settings-field">Icon
+                                            <div class="settings-picker-stack">
+                                                <div class="settings-picker-row">
+                                                    <input data-field="icon" type="text" value="<?php echo e($shift['icon'] ?? ($shiftIconCatalog[0] ?? '🕒')); ?>" readonly>
+                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                                </div>
+                                                <div class="settings-picker-popover" data-picker-popover="icon" hidden>
+                                                    <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
+                                                        <?php foreach ($shiftIconCatalog as $icon): ?>
+                                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                                                <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                                            </button>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        <label class="settings-field">Color
+                                            <div class="settings-picker-stack">
+                                                <div class="settings-picker-row">
+                                                    <input data-field="color" type="text" value="<?php echo e($shift['color'] ?? '#2f6fed'); ?>" readonly>
+                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                                </div>
+                                                <div class="settings-picker-popover" data-picker-popover="color" hidden>
+                                                    <div class="settings-choice-grid" data-choice-field="color">
+                                                        <?php foreach ($pickerColorCatalog as $color): ?>
+                                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
+                                                                <span class="settings-color-swatch" aria-hidden="true"></span>
+                                                            </button>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
                                         <label class="settings-field">Start<input data-field="start_time" type="time" value="<?php echo e($shift['start_time'] ?? ''); ?>"></label>
                                         <label class="settings-field">End<input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>"></label>
                                         <div class="settings-inline-actions">

@@ -25,11 +25,15 @@ $raw = file_get_contents('php://input');
 $input = json_decode($raw, true) ?: $_POST;
 $action = $input['action'] ?? ($_GET['action'] ?? 'list');
 
+$requestedCompanyId = (int) ($input['company_id'] ?? ($_GET['company_id'] ?? 0));
+$profileCompanyId = (int) ($profile['company_id'] ?? 0);
+$effectiveAdminCompanyId = $profileCompanyId > 0 ? $profileCompanyId : $requestedCompanyId;
+
 try {
     switch ($action) {
         case 'list':
             $companyId = $isAdmin
-                ? (int) ($profile['company_id'] ?? 0)
+                ? $effectiveAdminCompanyId
                 : (int) ($input['company_id'] ?? ($_GET['company_id'] ?? 0));
             if ($companyId <= 0) jsonResponse(['ok' => false, 'error' => 'company_id required'], 400);
             $rows = $deptModel->byCompanyId($companyId);
@@ -38,7 +42,7 @@ try {
 
         case 'create':
             $companyId = $isAdmin
-                ? (int) ($profile['company_id'] ?? 0)
+                ? $effectiveAdminCompanyId
                 : (int) ($input['company_id'] ?? 0);
             $name = trim((string) ($input['name'] ?? ''));
             if ($companyId <= 0 || $name === '') jsonResponse(['ok' => false, 'error' => 'company_id and name required'], 400);
@@ -58,13 +62,16 @@ try {
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             if ($isAdmin) {
+                if ($effectiveAdminCompanyId <= 0) {
+                    jsonResponse(['ok' => false, 'error' => 'company_id required'], 400);
+                }
                 $target = $deptModel->findById($id);
-                if (!$target || (int) ($target['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
+                if (!$target || ($effectiveAdminCompanyId > 0 && (int) ($target['company_id'] ?? 0) !== $effectiveAdminCompanyId)) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
                 }
             }
             $deptModel->update($id, [
-                'company_id' => $isAdmin ? (int) ($profile['company_id'] ?? 0) : $input['company_id'],
+                'company_id' => $isAdmin ? ($effectiveAdminCompanyId > 0 ? $effectiveAdminCompanyId : ((int) ($input['company_id'] ?? 0))) : $input['company_id'],
                 'name' => $input['name'],
                 'icon' => $input['icon'] ?? null,
                 'color' => $input['color'] ?? null,
@@ -78,8 +85,11 @@ try {
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             if ($isAdmin) {
+                if ($effectiveAdminCompanyId <= 0) {
+                    jsonResponse(['ok' => false, 'error' => 'company_id required'], 400);
+                }
                 $target = $deptModel->findById($id);
-                if (!$target || (int) ($target['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
+                if (!$target || ($effectiveAdminCompanyId > 0 && (int) ($target['company_id'] ?? 0) !== $effectiveAdminCompanyId)) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
                 }
             }

@@ -7,8 +7,28 @@
  */
 class UserModel
 {
+    private array $userColumns = [];
+
     public function __construct(private PDO $pdo)
     {
+        $this->userColumns = $this->detectUserColumns();
+    }
+
+    private function detectUserColumns(): array
+    {
+        try {
+            $statement = $this->pdo->query('SHOW COLUMNS FROM users');
+            $columns = $statement->fetchAll(PDO::FETCH_COLUMN);
+
+            return array_fill_keys($columns, true);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    private function hasUserColumn(string $column): bool
+    {
+        return isset($this->userColumns[$column]);
     }
 
     /**
@@ -50,11 +70,15 @@ class UserModel
 
     public function allWithRelations(): array
     {
+        $companySelect = $this->hasUserColumn('company_id')
+            ? 'COALESCE(u.company_id, d.company_id) AS company_id'
+            : 'd.company_id AS company_id';
+
         $statement = $this->pdo->query(
-            'SELECT u.*, d.company_id, d.name AS department_name, c.name AS company_name
+            'SELECT u.*, ' . $companySelect . ', d.name AS department_name, c.name AS company_name
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
-             LEFT JOIN companies c ON c.id = d.company_id
+             LEFT JOIN companies c ON c.id = ' . ($this->hasUserColumn('company_id') ? 'COALESCE(u.company_id, d.company_id)' : 'd.company_id') . '
              ORDER BY u.created_at DESC, u.id DESC'
         );
 
@@ -82,11 +106,15 @@ class UserModel
 
     public function countByCompanyId(int $companyId): int
     {
+        $where = $this->hasUserColumn('company_id')
+            ? '(COALESCE(u.company_id, d.company_id) = :company_id)'
+            : '(d.company_id = :company_id)';
+
         $statement = $this->pdo->prepare(
             'SELECT COUNT(*)
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
-             WHERE d.company_id = :company_id'
+             WHERE ' . $where
         );
         $statement->execute(['company_id' => $companyId]);
 
@@ -100,13 +128,15 @@ class UserModel
 
     public function profileWithRelations(int $id): ?array
     {
+        $companyIdExpr = $this->hasUserColumn('company_id') ? 'COALESCE(u.company_id, d.company_id)' : 'd.company_id';
+
         $statement = $this->pdo->prepare(
             'SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.department_id,
-                d.company_id AS company_id,
-                d.name AS department_name, c.name AS company_name
+                ' . $companyIdExpr . ' AS company_id,
+                d.name AS department_name, c.name AS company_name, c.type AS company_type
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
-             LEFT JOIN companies c ON c.id = d.company_id
+             LEFT JOIN companies c ON c.id = ' . $companyIdExpr . '
              WHERE u.id = :id
              LIMIT 1'
         );
@@ -124,8 +154,12 @@ class UserModel
 
     public function teamByDepartmentId(int $departmentId): array
     {
+        $companySelect = $this->hasUserColumn('company_id')
+            ? 'COALESCE(u.company_id, d.company_id) AS company_id'
+            : 'd.company_id AS company_id';
+
         $statement = $this->pdo->prepare(
-            'SELECT u.id, u.department_id, d.company_id, u.first_name, u.last_name, u.email, u.role, u.status
+            'SELECT u.id, u.department_id, ' . $companySelect . ', u.first_name, u.last_name, u.email, u.role, u.status
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
              WHERE u.department_id = :department_id
@@ -143,16 +177,53 @@ class UserModel
 
     public function companyUsersByCompanyId(int $companyId): array
     {
+        if ($this->hasUserColumn('company_id')) {
+            $statement = $this->pdo->prepare(
+                'SELECT u.id, u.department_id, u.first_name, u.last_name, u.email, u.role, u.status,
+                        COALESCE(u.company_id, d.company_id) AS company_id,
+                        d.name AS department_name
+                 FROM users u
+                 LEFT JOIN departments d ON d.id = u.department_id
+                 WHERE COALESCE(u.company_id, d.company_id) = :company_id
+                 ORDER BY u.last_name, u.first_name'
+            );
+            $statement->execute(['company_id' => $companyId]);
+
+            return $statement->fetchAll();
+        }
+
         $statement = $this->pdo->prepare(
-                            'SELECT u.id, u.department_id, u.first_name, u.last_name, u.email, u.role, u.status, d.company_id, d.name AS department_name
+            'SELECT u.id, u.department_id, u.first_name, u.last_name, u.email, u.role, u.status,
+                    d.company_id,
+                    d.name AS department_name
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
-               WHERE d.company_id = :company_id
+             WHERE d.company_id = :company_id
              ORDER BY u.last_name, u.first_name'
         );
         $statement->execute(['company_id' => $companyId]);
+        $rows = $statement->fetchAll();
 
-        return $statement->fetchAll();
+        // Fallback for legacy schemas: when all departments are deleted, keep users visible.
+        if (!empty($rows)) {
+            return $rows;
+        }
+
+        $orphanStatement = $this->pdo->prepare(
+            'SELECT u.id, u.department_id, u.first_name, u.last_name, u.email, u.role, u.status,
+                    :company_id AS company_id,
+                    NULL AS department_name
+             FROM users u
+             WHERE u.department_id IS NULL
+               AND u.role <> :super_admin_role
+             ORDER BY u.last_name, u.first_name'
+        );
+        $orphanStatement->execute([
+            'company_id' => $companyId,
+            'super_admin_role' => 'super_admin',
+        ]);
+
+        return $orphanStatement->fetchAll();
     }
 
     /**
@@ -295,20 +366,23 @@ class UserModel
 
     public function create(array $data): int
     {
+        $columns = ['department_id', 'first_name', 'last_name', 'email', 'phone', 'password', 'role', 'status'];
+        if ($this->hasUserColumn('company_id')) {
+            $columns[] = 'company_id';
+        }
+        $placeholders = array_map(static fn(string $column): string => ':' . $column, $columns);
+
         $statement = $this->pdo->prepare(
-            'INSERT INTO users (department_id, first_name, last_name, email, phone, password, role, status)
-             VALUES (:department_id, :first_name, :last_name, :email, :phone, :password, :role, :status)'
+            'INSERT INTO users (' . implode(', ', $columns) . ')
+             VALUES (' . implode(', ', $placeholders) . ')'
         );
-        $statement->execute([
-            'department_id' => $data['department_id'],
-            'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'],
-            'password' => $data['password'],
-            'role' => $data['role'],
-            'status' => $data['status'],
-        ]);
+
+        $payload = array_intersect_key($data, array_fill_keys($columns, true));
+        foreach ($columns as $column) {
+            $payload[$column] = $payload[$column] ?? null;
+        }
+
+        $statement->execute($payload);
 
         return (int) $this->pdo->lastInsertId();
     }
@@ -324,6 +398,10 @@ class UserModel
                     phone = :phone,
                     role = :role,
                     status = :status';
+
+        if ($this->hasUserColumn('company_id')) {
+            $sql .= ', company_id = :company_id';
+        }
 
         if ($hasPassword) {
             $sql .= ', password = :password';
@@ -342,6 +420,10 @@ class UserModel
             'status' => $data['status'],
             'id' => $id,
         ];
+
+        if ($this->hasUserColumn('company_id')) {
+            $payload['company_id'] = $data['company_id'] ?? null;
+        }
 
         if ($hasPassword) {
             $payload['password'] = $data['password'];

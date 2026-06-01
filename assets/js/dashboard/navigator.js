@@ -93,6 +93,13 @@
     }
 
     if (navigatorPanel) {
+      // Prevent accidental auto-close if any legacy mouseleave handlers are still bound.
+      ['mouseleave', 'mouseout', 'pointerleave'].forEach(function (eventName) {
+        navigatorPanel.addEventListener(eventName, function (event) {
+          event.stopPropagation();
+        }, true);
+      });
+
       navigatorPanel.addEventListener('click', function (e) {
         if (e.target.closest('.dashboard-calendar-navigator-close')) {
           e.stopPropagation();

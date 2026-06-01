@@ -1,4 +1,16 @@
 (() => {
+  function getDefaultIcon() {
+    const row = getCreateRow();
+    const input = row ? row.querySelector('input[data-field="icon"]') : null;
+    return (input?.defaultValue || input?.value || '🕒').trim();
+  }
+
+  function getDefaultColor() {
+    const row = getCreateRow();
+    const input = row ? row.querySelector('input[data-field="color"]') : null;
+    return (input?.defaultValue || input?.value || '#2f6fed').trim();
+  }
+
   function isShiftsPanelActive() {
     const panel = document.querySelector('.settings-panel[data-settings-panel="shifts"]');
     return !!panel && !panel.hidden;
@@ -34,6 +46,50 @@
     if (drawer) drawer.hidden = true;
   }
 
+  function closeAllPickers(exceptPopover = null) {
+    document.querySelectorAll('[data-shift-create-row] [data-picker-popover], [data-shift-id] [data-picker-popover]').forEach((popover) => {
+      const shouldKeepOpen = exceptPopover && popover === exceptPopover;
+      popover.hidden = !shouldKeepOpen;
+      const stack = popover.closest('.settings-picker-stack');
+      const toggle = stack ? stack.querySelector('[data-picker-toggle]') : null;
+      if (toggle) toggle.setAttribute('aria-expanded', shouldKeepOpen ? 'true' : 'false');
+    });
+  }
+
+  function syncChoiceState(scope) {
+    if (!scope) return;
+    scope.querySelectorAll('[data-choice-field]').forEach((group) => {
+      const field = group.getAttribute('data-choice-field');
+      const input = scope.querySelector(`input[data-field="${field}"]`);
+      const currentValue = (input?.value || '').trim();
+      group.querySelectorAll('[data-choice-value]').forEach((btn) => {
+        const isSelected = btn.getAttribute('data-choice-value') === currentValue;
+        btn.classList.toggle('is-selected', isSelected);
+        btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+      });
+    });
+  }
+
+  function setChoiceValue(scope, field, value) {
+    if (!scope || !field) return;
+    const input = scope.querySelector(`input[data-field="${field}"]`);
+    if (!input) return;
+    input.value = value;
+    syncChoiceState(scope);
+    closeAllPickers();
+  }
+
+  function togglePicker(scope, field) {
+    if (!scope || !field) return;
+    const popover = scope.querySelector(`[data-picker-popover="${field}"]`);
+    const toggle = scope.querySelector(`[data-picker-toggle="${field}"]`);
+    if (!popover || !toggle) return;
+    const willOpen = popover.hidden;
+    closeAllPickers(willOpen ? popover : null);
+    popover.hidden = !willOpen;
+    toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  }
+
   function resetCreateShiftForm() {
     const row = getCreateRow();
     if (!row) return;
@@ -44,8 +100,8 @@
     }
     const defaults = {
       'input[data-field="name"]': '',
-      'input[data-field="icon"]': '🕒',
-      'input[data-field="color"]': '#2f6fed',
+      'input[data-field="icon"]': row.querySelector('input[data-field="icon"]')?.defaultValue || DEFAULT_ICON,
+      'input[data-field="color"]': row.querySelector('input[data-field="color"]')?.defaultValue || DEFAULT_COLOR,
       'input[data-field="start_time"]': '09:00',
       'input[data-field="end_time"]': '17:00',
     };
@@ -53,6 +109,7 @@
       const input = row.querySelector(selector);
       if (input) input.value = value;
     });
+    syncChoiceState(row);
   }
 
   async function createShift() {
@@ -60,8 +117,8 @@
     if (!row) return;
     const departmentId = parseInt(row.querySelector('select[data-field="department_id"]')?.value || '0', 10) || 0;
     const name = row.querySelector('input[data-field="name"]')?.value.trim() || '';
-    const icon = row.querySelector('input[data-field="icon"]')?.value.trim() || '🕒';
-    const color = row.querySelector('input[data-field="color"]')?.value.trim() || '#2f6fed';
+    const icon = row.querySelector('input[data-field="icon"]')?.value.trim() || getDefaultIcon();
+    const color = row.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
     const start_time = row.querySelector('input[data-field="start_time"]')?.value || '';
     const end_time = row.querySelector('input[data-field="end_time"]')?.value || '';
 
@@ -95,8 +152,8 @@
     const payload = {
       id,
       name: row.querySelector('input[data-field="name"]')?.value || '',
-      icon: row.querySelector('input[data-field="icon"]')?.value || null,
-      color: row.querySelector('input[data-field="color"]')?.value || null,
+      icon: row.querySelector('input[data-field="icon"]')?.value || getDefaultIcon(),
+      color: row.querySelector('input[data-field="color"]')?.value || getDefaultColor(),
       start_time: row.querySelector('input[data-field="start_time"]')?.value || '',
       end_time: row.querySelector('input[data-field="end_time"]')?.value || '',
     };
@@ -133,6 +190,28 @@
 
   document.addEventListener('click', (ev) => {
     if (!isShiftsPanelActive()) return;
+
+    const pickerToggle = ev.target.closest && ev.target.closest('[data-picker-toggle]');
+    if (pickerToggle) {
+      ev.preventDefault();
+      const scope = pickerToggle.closest('[data-shift-id], [data-shift-create-row]');
+      const field = pickerToggle.getAttribute('data-picker-toggle');
+      togglePicker(scope, field);
+      return;
+    }
+
+    const choiceBtn = ev.target.closest && ev.target.closest('[data-choice-field] [data-choice-value]');
+    if (choiceBtn) {
+      ev.preventDefault();
+      const group = choiceBtn.closest('[data-choice-field]');
+      const scope = choiceBtn.closest('[data-shift-id], [data-shift-create-row]');
+      const field = group?.getAttribute('data-choice-field');
+      const value = choiceBtn.getAttribute('data-choice-value') || '';
+      if (scope && field && value) {
+        setChoiceValue(scope, field, value);
+      }
+      return;
+    }
 
     const createBtn = ev.target.closest && ev.target.closest('.settings-shift-create');
     if (createBtn) {
@@ -173,7 +252,16 @@
     if (deleteBtn) {
       ev.preventDefault();
       deleteShift(getShiftRow(deleteBtn));
+      return;
     }
+
+    if (!ev.target.closest('.settings-picker-stack')) {
+      closeAllPickers();
+    }
+  });
+
+  document.querySelectorAll('[data-shift-create-row], [data-shift-id]').forEach((scope) => {
+    syncChoiceState(scope);
   });
 
   resetCreateShiftForm();

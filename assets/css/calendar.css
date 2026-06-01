@@ -42,9 +42,17 @@ body.sidebar-expanded .app-sidebar {
 .dashboard-sidebar-shell {
     position: relative;
     width: 196px;
+    overflow: visible;
+    margin: 0 auto;
+    padding: 0;
+    border-radius: var(--border-radius-lg);
+    box-sizing: border-box;
+}
+
+.dashboard-sidebar-scroll {
     max-height: calc(100vh - 120px);
     overflow-y: auto;
-    margin: 0 auto;
+    overflow-x: hidden;
     padding: 0.58rem 0.58rem 0.85rem 1rem;
     border-radius: var(--border-radius-lg);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(248, 248, 248, 0.98) 100%);
@@ -54,41 +62,48 @@ body.sidebar-expanded .app-sidebar {
 }
 
 /* Place scrollbar on the left side of the sidebar so it stays hidden when sidebar is closed */
-.dashboard-sidebar-shell {
+.dashboard-sidebar-scroll {
     direction: rtl;
 }
-.dashboard-sidebar-shell > * {
+.dashboard-sidebar-scroll > * {
     direction: ltr;
 }
 
 .dashboard-sidebar-handle {
     position: absolute;
-    top: 18px;
-    right: 0;
-    width: 18px;
-    height: 42px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    top: 50%;
+    right: -24px;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 56px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
     border-right: 0;
     border-radius: 0 var(--border-radius-full) var(--border-radius-full) 0;
-    background: rgba(0,0,0,0.04);
-    color: rgba(31,31,31,0.9);
+    background: rgba(58, 58, 58, 0.96);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: none;
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.32);
     transition: background 120ms ease, transform 120ms ease;
+    z-index: 12050;
 }
 
 .dashboard-sidebar-handle span {
     display: block;
-    font-size: 1.05rem;
+    font-size: 1.12rem;
     line-height: 1;
     transform: translateX(1px);
-    opacity: 0.9;
+    opacity: 1;
 }
 
-.dashboard-sidebar-handle:hover { background: rgba(0,0,0,0.06); transform: translateX(-1px); }
+.dashboard-sidebar-handle:hover,
+.dashboard-sidebar-handle:focus-visible {
+    background: rgba(74, 74, 74, 1);
+    transform: translateY(-50%) translateX(-1px);
+    outline: none;
+}
 
 .dashboard-sidebar-brand {
     padding: 0 0.15rem 0.65rem;
@@ -334,7 +349,7 @@ body.sidebar-expanded .app-sidebar {
     left: auto;
     transform: translateX(calc(100% - 18px));
     transition: transform 180ms ease;
-    z-index: 30;
+    z-index: 12020;
     display: grid;
     gap: 0.55rem;
     width: fit-content;
@@ -346,7 +361,7 @@ body.sidebar-expanded .app-sidebar {
     backdrop-filter: blur(4px);
     box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
     max-height: calc(100vh - 124px);
-    overflow: auto;
+    overflow: visible;
 }
 
 .dashboard-calendar-navigator.overlay.is-open { transform: translateX(0); }
@@ -395,28 +410,46 @@ body.sidebar-expanded .app-sidebar {
 }
 
 .dashboard-calendar-navigator-close {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 56px;
     background: rgba(58, 58, 58, 0.96);
     color: #fff;
     font-size: 1rem;
     position: absolute;
-    top: 12px;
-    left: -16px;
+    top: 50%;
+    left: -24px;
     right: auto;
+    transform: translateY(-50%);
     z-index: 2;
-    border-radius: 10px;
+    border-radius: var(--border-radius-full) 0 0 var(--border-radius-full);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     border: 1px solid rgba(255, 255, 255, 0.28);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
+    border-left: 0;
+    box-shadow: 0 8px 14px rgba(0, 0, 0, 0.28);
+    z-index: 12060;
+}
+
+.dashboard-calendar-navigator-close {
+    color: transparent;
+    font-size: 0;
+    line-height: 0;
+}
+
+.dashboard-calendar-navigator-close::before {
+    content: '‹';
+    color: #fff;
+    font-size: 1.12rem;
+    line-height: 1;
+    transform: translateX(-1px);
 }
 
 .dashboard-calendar-navigator-close:hover,
 .dashboard-calendar-navigator-close:focus-visible {
     background: rgba(74, 74, 74, 1);
+    transform: translateY(-50%) translateX(1px);
     outline: none;
 }
 

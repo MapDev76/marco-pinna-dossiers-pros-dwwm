@@ -2,6 +2,18 @@
   const apiUrl = window.DashboardConfig?.apiDepartments;
   if (!apiUrl || !window.AppAPI) return;
 
+  function getDefaultIcon() {
+    const card = getCreateCard();
+    const input = card ? card.querySelector('input[data-field="icon"]') : null;
+    return (input?.defaultValue || input?.value || '🏷️').trim();
+  }
+
+  function getDefaultColor() {
+    const card = getCreateCard();
+    const input = card ? card.querySelector('input[data-field="color"]') : null;
+    return (input?.defaultValue || input?.value || '#b98b12').trim();
+  }
+
   function getCreateCard() {
     return document.querySelector('[data-dept-create-row]');
   }
@@ -32,47 +44,86 @@
     if (drawer) drawer.hidden = true;
   }
 
+  function closeAllPickers(exceptPopover = null) {
+    document.querySelectorAll('[data-dept-create-row] [data-picker-popover], [data-department-id] [data-picker-popover]').forEach((popover) => {
+      const shouldKeepOpen = exceptPopover && popover === exceptPopover;
+      popover.hidden = !shouldKeepOpen;
+      const stack = popover.closest('.settings-picker-stack');
+      const toggle = stack ? stack.querySelector('[data-picker-toggle]') : null;
+      if (toggle) toggle.setAttribute('aria-expanded', shouldKeepOpen ? 'true' : 'false');
+    });
+  }
+
+  function togglePicker(scope, field) {
+    if (!scope || !field) return;
+    const popover = scope.querySelector(`[data-picker-popover="${field}"]`);
+    const toggle = scope.querySelector(`[data-picker-toggle="${field}"]`);
+    if (!popover || !toggle) return;
+    const willOpen = popover.hidden;
+    closeAllPickers(willOpen ? popover : null);
+    popover.hidden = !willOpen;
+    toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  }
+
+  function syncChoiceState(scope) {
+    if (!scope) return;
+    scope.querySelectorAll('[data-choice-field]').forEach((group) => {
+      const field = group.getAttribute('data-choice-field');
+      const input = scope.querySelector(`input[data-field="${field}"]`);
+      const currentValue = (input?.value || '').trim();
+      group.querySelectorAll('[data-choice-value]').forEach((btn) => {
+        const isSelected = btn.getAttribute('data-choice-value') === currentValue;
+        btn.classList.toggle('is-selected', isSelected);
+        btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+      });
+    });
+  }
+
+  function setChoiceValue(scope, field, value) {
+    if (!scope || !field) return;
+    const input = scope.querySelector(`input[data-field="${field}"]`);
+    if (!input) return;
+    input.value = value;
+    syncChoiceState(scope);
+    closeAllPickers();
+  }
+
   function resetCreateDepartmentForm() {
     const card = getCreateCard();
     if (!card) return;
     const defaults = {
       'input[data-field="name"]': '',
-      'input[data-field="icon"]': '🏷️',
-      'input[data-field="color"]': '#b98b12',
+      'input[data-field="icon"]': getDefaultIcon(),
+      'input[data-field="color"]': getDefaultColor(),
     };
     Object.entries(defaults).forEach(([selector, value]) => {
       const input = card.querySelector(selector);
       if (input) input.value = value;
     });
+    syncChoiceState(card);
   }
 
   async function createDepartment(card) {
     if (!card) return;
     const name = card.querySelector('input[data-field="name"]')?.value.trim() || '';
-    const icon = card.querySelector('input[data-field="icon"]')?.value.trim() || null;
-    const color = card.querySelector('input[data-field="color"]')?.value.trim() || null;
+    const icon = card.querySelector('input[data-field="icon"]')?.value.trim() || getDefaultIcon();
+    const color = card.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
     const companyId = parseInt(card.querySelector('select[data-field="company_id"]')?.value || '0', 10) || 0;
 
     if (!name) return alert('Enter department name.');
     if (!companyId) return alert('Choose a company.');
 
     try {
-      const res = await AppAPI.departments.create(apiUrl, companyId, name);
+      const res = await AppAPI.postJSON(apiUrl, {
+        action: 'create',
+        company_id: companyId,
+        name,
+        icon,
+        color,
+      });
       if (!res?.ok) {
         alert('Create failed: ' + (res?.error || 'unknown'));
         return;
-      }
-
-      // Save icon/color if the API created successfully and returned id.
-      const deptId = parseInt(res?.department?.id || '0', 10) || 0;
-      if (deptId && (icon || color)) {
-        await AppAPI.departments.update(apiUrl, {
-          id: deptId,
-          company_id: companyId,
-          name,
-          icon,
-          color,
-        });
       }
 
       location.reload();
@@ -85,16 +136,17 @@
   async function saveDepartment(card) {
     if (!card) return;
     const id = parseInt(card.dataset.departmentId || '0', 10) || 0;
+    const companyId = parseInt(card.dataset.companyId || '0', 10) || 0;
     if (!id) return;
 
     const name = card.querySelector('input[data-field="name"]')?.value.trim() || '';
-    const icon = card.querySelector('input[data-field="icon"]')?.value.trim() || null;
-    const color = card.querySelector('input[data-field="color"]')?.value.trim() || null;
+    const icon = card.querySelector('input[data-field="icon"]')?.value.trim() || getDefaultIcon();
+    const color = card.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
 
     if (!name) return alert('Enter department name.');
 
     try {
-      const res = await AppAPI.departments.update(apiUrl, { id, name, icon, color });
+      const res = await AppAPI.departments.update(apiUrl, { id, company_id: companyId, name, icon, color });
       if (res?.ok) {
         location.reload();
       } else {
@@ -109,11 +161,12 @@
   async function deleteDepartment(card) {
     if (!card) return;
     const id = parseInt(card.dataset.departmentId || '0', 10) || 0;
+    const companyId = parseInt(card.dataset.companyId || '0', 10) || 0;
     if (!id) return;
     if (!confirm('Delete this department?')) return;
 
     try {
-      const res = await AppAPI.departments.delete(apiUrl, id);
+      const res = await AppAPI.postJSON(apiUrl, { action: 'delete', id, company_id: companyId });
       if (res?.ok) {
         card.remove();
       } else {
@@ -126,6 +179,28 @@
   }
 
   document.addEventListener('click', (ev) => {
+    const pickerToggle = ev.target.closest && ev.target.closest('[data-picker-toggle]');
+    if (pickerToggle) {
+      ev.preventDefault();
+      const scope = pickerToggle.closest('[data-department-id], [data-dept-create-row]');
+      const field = pickerToggle.getAttribute('data-picker-toggle');
+      togglePicker(scope, field);
+      return;
+    }
+
+    const choiceBtn = ev.target.closest && ev.target.closest('[data-choice-field] [data-choice-value]');
+    if (choiceBtn) {
+      ev.preventDefault();
+      const group = choiceBtn.closest('[data-choice-field]');
+      const scope = choiceBtn.closest('[data-department-id], [data-dept-create-row]');
+      const field = group?.getAttribute('data-choice-field');
+      const value = choiceBtn.getAttribute('data-choice-value') || '';
+      if (scope && field && value) {
+        setChoiceValue(scope, field, value);
+      }
+      return;
+    }
+
     const createBtn = ev.target.closest && ev.target.closest('.settings-dept-create');
     if (createBtn) {
       ev.preventDefault();
@@ -165,7 +240,16 @@
     if (deleteBtn) {
       ev.preventDefault();
       deleteDepartment(getDepartmentCard(deleteBtn));
+      return;
     }
+
+    if (!ev.target.closest('.settings-picker-stack')) {
+      closeAllPickers();
+    }
+  });
+
+  document.querySelectorAll('[data-dept-create-row], [data-department-id]').forEach((scope) => {
+    syncChoiceState(scope);
   });
 
   resetCreateDepartmentForm();

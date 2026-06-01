@@ -40,6 +40,31 @@ $dashboardSidebarSections = [];
 $companyId = isset($profile['company_id']) ? (int) $profile['company_id'] : null;
 $departmentId = isset($profile['department_id']) ? (int) $profile['department_id'] : null;
 
+if ($role === 'admin' && (int) ($companyId ?? 0) <= 0) {
+    $fallbackCompanyId = (int) ($currentUser['company_id'] ?? 0);
+
+    if ($fallbackCompanyId <= 0 && (int) ($departmentId ?? 0) > 0) {
+        $fallbackDepartment = $departmentModel->findById((int) $departmentId);
+        $fallbackCompanyId = (int) ($fallbackDepartment['company_id'] ?? 0);
+    }
+
+    if ($fallbackCompanyId <= 0) {
+        $companiesFallback = $companyModel->all();
+        $fallbackCompanyId = (int) ($companiesFallback[0]['id'] ?? 0);
+    }
+
+    if ($fallbackCompanyId > 0) {
+        $companyId = $fallbackCompanyId;
+        $fallbackCompany = $companyModel->findById($fallbackCompanyId);
+        if (!empty($fallbackCompany['name'])) {
+            $profile['company_name'] = $fallbackCompany['name'];
+        }
+        if (!empty($fallbackCompany['type'])) {
+            $profile['company_type'] = $fallbackCompany['type'];
+        }
+    }
+}
+
 $pageTitle = match ($role) {
     'super_admin' => 'Super Admin Dashboard',
     'admin' => 'Admin Dashboard',
@@ -61,6 +86,7 @@ $dashboardPlannerData = [
     'company' => [
         'id' => $companyId,
         'name' => $profile['company_name'] ?? ($currentUser['company_name'] ?? ''),
+        'type' => $profile['company_type'] ?? ($currentUser['company_type'] ?? ''),
     ],
     'companies' => [],
     'active_department_id' => null,
@@ -90,9 +116,11 @@ if ($role === 'super_admin') {
 
     if ($plannerCompanyId !== null && $plannerCompanyId > 0) {
         $companyName = '';
+        $companyType = '';
         foreach ($allCompanies as $companyRow) {
             if ((int) ($companyRow['id'] ?? 0) === $plannerCompanyId) {
                 $companyName = (string) ($companyRow['name'] ?? '');
+                $companyType = (string) ($companyRow['type'] ?? '');
                 break;
             }
         }
@@ -149,6 +177,7 @@ if ($role === 'super_admin') {
         $dashboardPlannerData['company'] = [
             'id' => $plannerCompanyId,
             'name' => $companyName,
+            'type' => $companyType,
         ];
         $dashboardPlannerData['active_department_id'] = $departmentRows[0]['id'] ?? null;
         $dashboardPlannerData['active_shift_id'] = $shiftRows[0]['id'] ?? null;
@@ -230,6 +259,12 @@ if ($role === 'admin' && $companyId !== null) {
 
     $dashboardPlannerData['users'] = $userRows;
     $dashboardPlannerData['shifts'] = $shiftRows;
+    $adminCompany = $companyModel->findById((int) $companyId);
+    $dashboardPlannerData['company'] = [
+        'id' => (int) $companyId,
+        'name' => (string) ($adminCompany['name'] ?? ($profile['company_name'] ?? '')),
+        'type' => (string) ($adminCompany['type'] ?? ($profile['company_type'] ?? '')),
+    ];
     $dashboardPlannerData['companies'] = array_values(array_filter(
         $companyModel->all(),
         static fn (array $company): bool => (int) ($company['id'] ?? 0) === $companyId

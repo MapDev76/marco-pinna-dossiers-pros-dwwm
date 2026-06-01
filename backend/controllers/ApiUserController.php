@@ -28,11 +28,15 @@ $raw = file_get_contents('php://input');
 $input = json_decode($raw, true) ?: $_POST;
 $action = $input['action'] ?? ($_GET['action'] ?? 'list');
 
+$requestedCompanyId = (int) ($input['company_id'] ?? ($_GET['company_id'] ?? 0));
+$profileCompanyId = (int) ($profile['company_id'] ?? 0);
+$effectiveAdminCompanyId = $profileCompanyId > 0 ? $profileCompanyId : $requestedCompanyId;
+
 try {
     switch ($action) {
         case 'list_by_company':
             if ($isAdmin) {
-                $companyId = (int) ($profile['company_id'] ?? 0);
+                $companyId = $effectiveAdminCompanyId;
             } else {
                 $companyId = (int) ($input['company_id'] ?? ($_GET['company_id'] ?? 0));
             }
@@ -48,13 +52,14 @@ try {
         case 'create':
             $departmentId = $input['department_id'] ?? null;
             $userRole = trim((string) ($input['role'] ?? 'employee'));
+            $assignedCompanyId = $isAdmin ? $effectiveAdminCompanyId : (int) ($input['company_id'] ?? 0);
 
             if ($userRole === 'super_admin') {
                 if ($isAdmin) jsonResponse(['ok' => false, 'error' => 'Forbidden role'], 403);
                 $departmentId = null;
             } elseif ($userRole === 'admin') {
-                if ($departmentId === null || $departmentId === '') {
-                    $reception = $departmentModel->findByNameAndCompanyId('Reception');
+                if (($departmentId === null || $departmentId === '') && $assignedCompanyId > 0) {
+                    $reception = $departmentModel->findByNameAndCompanyId('Reception', (int) $assignedCompanyId);
                     if ($reception) {
                         $departmentId = (int) $reception['id'];
                     }
@@ -67,9 +72,17 @@ try {
                 if (!$department) {
                     jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
                 }
+                $assignedCompanyId = (int) ($department['company_id'] ?? $assignedCompanyId);
             }
+
+            if ((int) $assignedCompanyId <= 0 && !empty($departmentId)) {
+                $deptForCompany = $departmentModel->findById((int) $departmentId);
+                $assignedCompanyId = (int) ($deptForCompany['company_id'] ?? 0);
+            }
+
             $data = [
                 'department_id' => $departmentId,
+                'company_id' => $assignedCompanyId > 0 ? $assignedCompanyId : null,
                 'first_name' => trim((string) ($input['first_name'] ?? '')),
                 'last_name' => trim((string) ($input['last_name'] ?? '')),
                 'email' => trim((string) ($input['email'] ?? '')),
@@ -80,7 +93,7 @@ try {
             ];
             if ($isAdmin && !empty($departmentId)) {
                 $dept = $departmentModel->findById((int) $departmentId);
-                if (!$dept || (int) ($dept['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
+                if (!$dept || ($effectiveAdminCompanyId > 0 && (int) ($dept['company_id'] ?? 0) !== $effectiveAdminCompanyId)) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
                 }
             }
@@ -97,13 +110,14 @@ try {
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             $departmentId = $input['department_id'] ?? null;
             $userRole = trim((string) ($input['role'] ?? 'employee'));
+            $assignedCompanyId = $isAdmin ? $effectiveAdminCompanyId : (int) ($input['company_id'] ?? 0);
 
             if ($userRole === 'super_admin') {
                 if ($isAdmin) jsonResponse(['ok' => false, 'error' => 'Forbidden role'], 403);
                 $departmentId = null;
             } elseif ($userRole === 'admin') {
-                if ($departmentId === null || $departmentId === '') {
-                    $reception = $departmentModel->findByNameAndCompanyId('Reception');
+                if (($departmentId === null || $departmentId === '') && $assignedCompanyId > 0) {
+                    $reception = $departmentModel->findByNameAndCompanyId('Reception', (int) $assignedCompanyId);
                     if ($reception) {
                         $departmentId = (int) $reception['id'];
                     }
@@ -116,6 +130,12 @@ try {
                 if (!$department) {
                     jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
                 }
+                $assignedCompanyId = (int) ($department['company_id'] ?? $assignedCompanyId);
+            }
+
+            if ((int) $assignedCompanyId <= 0 && !empty($departmentId)) {
+                $deptForCompany = $departmentModel->findById((int) $departmentId);
+                $assignedCompanyId = (int) ($deptForCompany['company_id'] ?? 0);
             }
             // Prevent admins from updating super_admin accounts
             $targetUser = $userModel->findById($id);
@@ -125,6 +145,7 @@ try {
 
             $payload = [
                 'department_id' => $departmentId,
+                'company_id' => $assignedCompanyId > 0 ? $assignedCompanyId : null,
                 'first_name' => $input['first_name'] ?? '',
                 'last_name' => $input['last_name'] ?? '',
                 'email' => $input['email'] ?? '',
@@ -137,7 +158,7 @@ try {
             }
             if ($isAdmin && !empty($departmentId)) {
                 $dept = $departmentModel->findById((int) $departmentId);
-                if (!$dept || (int) ($dept['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
+                if (!$dept || ($effectiveAdminCompanyId > 0 && (int) ($dept['company_id'] ?? 0) !== $effectiveAdminCompanyId)) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
                 }
             }
@@ -154,8 +175,27 @@ try {
             }
             // Admins may only delete users within their company
             if ($isAdmin) {
+                if ($effectiveAdminCompanyId <= 0) {
+                    jsonResponse(['ok' => false, 'error' => 'company_id is required'], 400);
+                }
+
+                $isInCompanyScope = false;
                 $dept = $departmentModel->findById((int) ($targetUser['department_id'] ?? 0));
-                if (!$dept || (int) ($dept['company_id'] ?? 0) !== (int) ($profile['company_id'] ?? 0)) {
+                if ($dept && (int) ($dept['company_id'] ?? 0) === $effectiveAdminCompanyId) {
+                    $isInCompanyScope = true;
+                }
+
+                if (!$isInCompanyScope) {
+                    $companyUsers = $userModel->companyUsersByCompanyId($effectiveAdminCompanyId);
+                    foreach ($companyUsers as $companyUser) {
+                        if ((int) ($companyUser['id'] ?? 0) === $id) {
+                            $isInCompanyScope = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!$isInCompanyScope) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
                 }
             }

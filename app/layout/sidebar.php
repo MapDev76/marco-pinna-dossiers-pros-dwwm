@@ -19,6 +19,7 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
         <button type="button" class="dashboard-sidebar-handle" data-sidebar-hover-handle aria-label="Apri sidebar">
             <span aria-hidden="true">›</span>
         </button>
+        <div class="dashboard-sidebar-scroll">
         <div class="dashboard-sidebar-brand">
             <!-- Brand/title intentionally empty to match design: no title above sidebar -->
         </div>
@@ -112,5 +113,6 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                 </div>
             </section>
         <?php endif; ?>
+        </div>
     </div>
 </aside>
