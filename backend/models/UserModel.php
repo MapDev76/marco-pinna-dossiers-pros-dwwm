@@ -204,9 +204,18 @@ class UserModel
         $statement->execute(['company_id' => $companyId]);
         $rows = $statement->fetchAll();
 
-        // Fallback for legacy schemas: when all departments are deleted, keep users visible.
+        // Fallback for legacy schemas: only when the company has no departments at all.
         if (!empty($rows)) {
             return $rows;
+        }
+
+        $deptCountStatement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM departments WHERE company_id = :company_id'
+        );
+        $deptCountStatement->execute(['company_id' => $companyId]);
+        $departmentCount = (int) $deptCountStatement->fetchColumn();
+        if ($departmentCount > 0) {
+            return [];
         }
 
         $orphanStatement = $this->pdo->prepare(
