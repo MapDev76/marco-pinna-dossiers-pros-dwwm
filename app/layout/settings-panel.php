@@ -80,26 +80,45 @@ if (($currentRole ?? '') === 'admin') {
                 </div>
                 <div class="settings-summary-card">
                     <span class="settings-summary-label">Users</span>
-                    <strong><?php echo count($visibleUsers); ?></strong>
-                </div>
-                <div class="settings-summary-card">
-                    <span class="settings-summary-label">Shifts</span>
-                    <strong><?php echo count($shifts); ?></strong>
-                </div>
-            </div>
-        </div>
+                    <div class="settings-catalog-grid">
+                        <article class="settings-card settings-catalog-card settings-department-create-card is-highlight" data-department-create-card>
+                            <div class="settings-card-head">
+                                <span class="settings-badge">New department</span>
+                                <span class="settings-color">Create</span>
+                            </div>
+                            <div class="settings-catalog-fields">
+                                <label class="settings-field">Name<input data-field="name" type="text" value=""></label>
+                                <label class="settings-field">Icon<input data-field="icon" type="text" value="🏷️"></label>
+                                <label class="settings-field">Color<input data-field="color" type="text" value="#b98b12"></label>
+                            </div>
+                            <div class="settings-card-actions">
+                                <button type="button" class="admin-action-link settings-department-create">Create</button>
+                                <button type="button" class="admin-action-link admin-action-link-secondary settings-department-reset">Reset</button>
+                            </div>
+                        </article>
 
-        <div class="settings-tabs" role="tablist" aria-label="Management rubrics">
-            <button type="button" class="settings-tab is-active" data-settings-tab="users">Users</button>
-            <button type="button" class="settings-tab" data-settings-tab="departments">Departments</button>
-            <button type="button" class="settings-tab" data-settings-tab="assignments">Assignments</button>
-            <button type="button" class="settings-tab" data-settings-tab="roles">Roles</button>
-            <button type="button" class="settings-tab" data-settings-tab="shifts">Shifts</button>
-        </div>
-
-        <div class="crud-modal-body settings-modal-body">
-            <section class="crud-panel settings-panel" data-settings-panel="assignments" hidden>
-                <div class="settings-panel-head">
+                        <?php if (empty($departments)): ?>
+                            <div class="crud-empty-state">No departments available.</div>
+                        <?php else: ?>
+                            <?php foreach ($departments as $department): ?>
+                                <div class="settings-catalog-grid">
+                                    <div class="settings-card-head">
+                                        <span class="settings-badge"><?php echo e($department['name'] ?? 'Department'); ?></span>
+                                        <span class="settings-color"><?php echo e($department['color'] ?? '#b98b12'); ?></span>
+                                    </div>
+                                    <div class="settings-catalog-fields">
+                                        <label class="settings-field">Name<input data-field="name" type="text" value="<?php echo e($department['name'] ?? ''); ?>"></label>
+                                        <label class="settings-field">Icon<input data-field="icon" type="text" value="<?php echo e($department['icon'] ?? '🏷️'); ?>"></label>
+                                        <label class="settings-field">Color<input data-field="color" type="text" value="<?php echo e($department['color'] ?? '#b98b12'); ?>"></label>
+                                    </div>
+                                    <div class="settings-card-actions">
+                                        <button type="button" class="admin-action-link settings-department-save" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>">Save</button>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-department-delete" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>">Delete</button>
+                                    </div>
+                                </article>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
                     <div>
                         <h3>Assignments</h3>
                         <p class="crud-modal-subtitle">Current planner overview for the selected department.</p>
@@ -154,12 +173,12 @@ if (($currentRole ?? '') === 'admin') {
                     </div>
                     <div class="settings-pill-row">
                         <span class="settings-pill">Catalog</span>
-                        <span class="settings-pill"><?php echo count($visibleDepartments); ?> items</span>
+                        <span class="settings-pill"><?php echo count($departments); ?> items</span>
                     </div>
                 </div>
 
                 <div class="settings-catalog-grid">
-                    <article class="settings-card settings-catalog-card settings-dept-create-card is-highlight" data-dept-create-card>
+                    <article class="settings-card settings-catalog-card settings-department-create-card is-highlight" data-department-create-card>
                         <div class="settings-card-head">
                             <span class="settings-badge">New department</span>
                             <span class="settings-color">Create</span>

@@ -365,6 +365,13 @@
           setModalContent(entity);
         }
 
+        // Move overlay and modal to document.body to avoid stacking-context issues
+        try {
+          if (overlay && overlay.parentNode !== document.body) document.body.appendChild(overlay);
+          if (targetModal && targetModal.parentNode !== document.body) document.body.appendChild(targetModal);
+        } catch (e) {
+          // ignore DOM reparenting errors
+        }
         targetModal.hidden = false;
         targetModal.classList.add('is-open');
         if (overlay) { overlay.hidden = false; overlay.classList.add('is-open'); }
@@ -372,6 +379,41 @@
         activeModal = targetModal;
         window.setTimeout(() => focusFirst(targetModal), 0);
       });
+    });
+
+    // Delegated fallback: ensure clicks on any element with `data-modal-target`
+    // open the modal even if direct listeners were not attached due to timing.
+    document.addEventListener('click', (ev) => {
+      const btn = ev.target.closest && ev.target.closest('[data-modal-target]');
+      if (!btn) return;
+      const targetId = btn.getAttribute('data-modal-target');
+      const entity = btn.getAttribute('data-modal-entity') || '';
+      const title = btn.getAttribute('data-modal-title') || btn.textContent.trim();
+      const targetModal = document.getElementById(targetId);
+      if (!targetModal) return;
+      lastFocusedElement = document.activeElement;
+      // Reuse the same opening logic used above
+      closeAll();
+      openButtons.forEach((item) => item.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      if (targetId === 'crud-modal' && crudModal) {
+        const templateId = entity ? `crud-template-${entity}` : 'crud-template-placeholder';
+        const template = document.getElementById(templateId) || document.getElementById('crud-template-placeholder');
+        if (crudTitle) crudTitle.textContent = title;
+        if (crudSubtitle) crudSubtitle.textContent = 'Common CRUD shell';
+        if (crudBody && template) crudBody.innerHTML = template.innerHTML;
+        setModalContent(entity);
+      }
+      try {
+        if (overlay && overlay.parentNode !== document.body) document.body.appendChild(overlay);
+        if (targetModal && targetModal.parentNode !== document.body) document.body.appendChild(targetModal);
+      } catch (e) {}
+      targetModal.hidden = false;
+      targetModal.classList.add('is-open');
+      if (overlay) { overlay.hidden = false; overlay.classList.add('is-open'); }
+      document.body.classList.add('modal-open');
+      activeModal = targetModal;
+      window.setTimeout(() => focusFirst(targetModal), 0);
     });
 
     // Settings tab switching inside the settings modal
@@ -387,6 +429,14 @@
         });
       });
     });
+
+    // Ensure only the active panel is visible at start
+    (function initSettingsPanels(){
+      const active = document.querySelector('.settings-tab.is-active');
+      if (!active) return;
+      const key = active.getAttribute('data-settings-tab');
+      settingsPanels.forEach((p) => { p.hidden = p.getAttribute('data-settings-panel') !== key; });
+    })();
 
     closeButtons.forEach((button) => button.addEventListener('click', closeAll));
     if (overlay) overlay.addEventListener('click', closeAll);

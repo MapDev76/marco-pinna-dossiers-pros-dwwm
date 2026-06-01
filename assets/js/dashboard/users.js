@@ -1,6 +1,7 @@
 (() => {
   const q = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
   const apiUrl = window.DashboardConfig?.apiUsers;
+  if (!apiUrl) return;
 
   function getCreateCard() { return document.querySelector('[data-user-create-card]'); }
   function resetCreateUserForm() {
@@ -24,7 +25,8 @@
   }
 
   async function createUser() {
-    const data = collectCreateData(); if (!data) return alert('No form');
+    const data = collectCreateData();
+    if (!data) return alert('No form');
     if (!data.first_name || !data.last_name || !data.email) return alert('Fill required fields');
     try {
       const res = await AppAPI.users.create(apiUrl, data);
@@ -52,18 +54,27 @@
       if (res?.ok) {
         alert('Saved');
         location.reload();
-      } else alert('Save failed: ' + (res?.error || 'unknown'));
-    } catch (e) { console.error(e); alert('Error saving user'); }
+      } else {
+        alert('Save failed: ' + (res?.error || 'unknown'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error saving user');
+    }
   }
 
   async function deleteUser(card) {
     if (!card) return;
-    const id = parseInt(card.dataset.userId || '0', 10); if (!id) return;
+    const id = parseInt(card.dataset.userId || '0', 10);
+    if (!id) return;
     if (!confirm('Delete this user?')) return;
     try {
       const res = await AppAPI.users.delete(apiUrl, id);
       if (res?.ok) { card.remove(); } else alert('Delete failed: ' + (res?.error || 'unknown'));
-    } catch (e) { console.error(e); alert('Error deleting user'); }
+    } catch (e) {
+      console.error(e);
+      alert('Error deleting user');
+    }
   }
 
   document.addEventListener('click', (ev) => {

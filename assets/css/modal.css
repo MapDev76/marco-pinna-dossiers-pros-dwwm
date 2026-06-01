@@ -7,7 +7,8 @@
     inset: 0;
     background: rgba(10, 12, 16, 0.42);
     backdrop-filter: blur(3px);
-    z-index: 9990;
+    z-index: 20000;
+    pointer-events: auto;
 }
 
 .dashboard-modal,
@@ -19,13 +20,14 @@
     width: min(1180px, calc(100vw - 32px));
     max-height: calc(100vh - 32px);
     overflow: hidden;
-    z-index: 10000;
+    z-index: 20001;
     padding: 0;
     border-radius: 30px;
     background: transparent;
     border: 0;
     box-shadow: none;
     text-align: left;
+    pointer-events: auto;
 }
 
 .crud-modal {
@@ -244,7 +246,7 @@
     float: none;
     background: #2e2e2e;
     color: #fff;
-    z-index: 10002;
+    z-index: 20002;
 }
 
 /* Modal-specific styles */
