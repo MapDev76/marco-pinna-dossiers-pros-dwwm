@@ -1,6 +1,22 @@
 (() => {
   const apiUrl = window.DashboardConfig?.apiDepartments;
+  const feedback = window.DashboardFeedback;
   if (!apiUrl || !window.AppAPI) return;
+
+  function notifyError(message) {
+    if (feedback) {
+      feedback.error('Oops!', message);
+      return;
+    }
+    alert(message);
+  }
+
+  function notifySuccess(message) {
+    if (feedback) {
+      feedback.success('Done', message);
+      return;
+    }
+  }
 
   function getDefaultIcon() {
     const card = getCreateCard();
@@ -19,7 +35,7 @@
   }
 
   function getDepartmentCard(el) {
-    return el.closest && el.closest('[data-department-id]');
+    return el.closest && el.closest('.settings-list-item-wrap[data-department-id]');
   }
 
   function getDepartmentDrawer(card) {
@@ -114,10 +130,11 @@
     const color = card.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
     const headUserIdRaw = card.querySelector('select[data-field="head_user_id"]')?.value || '';
     const headUserId = parseInt(headUserIdRaw, 10) || 0;
-    const companyId = parseInt(card.querySelector('select[data-field="company_id"]')?.value || '0', 10) || 0;
+    const companyField = card.querySelector('[data-field="company_id"]');
+    const companyId = parseInt(companyField?.value || '0', 10) || 0;
 
-    if (!name) return alert('Enter department name.');
-    if (!companyId) return alert('Choose a company.');
+    if (!name) return notifyError('Enter department name.');
+    if (!companyId) return notifyError('Choose a company.');
 
     try {
       const res = await AppAPI.postJSON(apiUrl, {
@@ -129,14 +146,19 @@
         head_user_id: headUserId > 0 ? headUserId : null,
       });
       if (!res?.ok) {
-        alert('Create failed: ' + (res?.error || 'unknown'));
+        notifyError('Create failed: ' + (res?.error || 'unknown'));
         return;
       }
 
-      location.reload();
+      if (feedback?.reloadSettingsTabWithSuccess) {
+        feedback.reloadSettingsTabWithSuccess('departments', 'Done', 'Department created successfully.');
+      } else {
+        notifySuccess('Department created successfully.');
+        location.reload();
+      }
     } catch (e) {
       console.error(e);
-      alert('Error creating department');
+      notifyError('Error creating department.');
     }
   }
 
@@ -152,18 +174,23 @@
     const headUserIdRaw = card.querySelector('select[data-field="head_user_id"]')?.value || '';
     const headUserId = parseInt(headUserIdRaw, 10) || 0;
 
-    if (!name) return alert('Enter department name.');
+    if (!name) return notifyError('Enter department name.');
 
     try {
       const res = await AppAPI.departments.update(apiUrl, { id, company_id: companyId, name, icon, color, head_user_id: headUserId > 0 ? headUserId : null });
       if (res?.ok) {
-        location.reload();
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('departments', 'Done', 'Department updated successfully.');
+        } else {
+          notifySuccess('Department updated successfully.');
+          location.reload();
+        }
       } else {
-        alert('Save failed: ' + (res?.error || 'unknown'));
+        notifyError('Save failed: ' + (res?.error || 'unknown'));
       }
     } catch (e) {
       console.error(e);
-      alert('Error saving department');
+      notifyError('Error saving department.');
     }
   }
 
@@ -177,13 +204,18 @@
     try {
       const res = await AppAPI.postJSON(apiUrl, { action: 'delete', id, company_id: companyId });
       if (res?.ok) {
-        card.remove();
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('departments', 'Done', 'Department deleted successfully.');
+        } else {
+          notifySuccess('Department deleted successfully.');
+          card.remove();
+        }
       } else {
-        alert('Delete failed: ' + (res?.error || 'unknown'));
+        notifyError('Delete failed: ' + (res?.error || 'unknown'));
       }
     } catch (e) {
       console.error(e);
-      alert('Error deleting department');
+      notifyError('Error deleting department.');
     }
   }
 

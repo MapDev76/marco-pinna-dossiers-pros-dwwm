@@ -1,4 +1,21 @@
 (() => {
+  const feedback = window.DashboardFeedback;
+
+  function notifyError(message) {
+    if (feedback) {
+      feedback.error('Oops!', message);
+      return;
+    }
+    alert(message);
+  }
+
+  function notifySuccess(message) {
+    if (feedback) {
+      feedback.success('Done', message);
+      return;
+    }
+  }
+
   function getDefaultIcon() {
     const row = getCreateRow();
     const input = row ? row.querySelector('input[data-field="icon"]') : null;
@@ -122,8 +139,8 @@
     const start_time = row.querySelector('input[data-field="start_time"]')?.value || '';
     const end_time = row.querySelector('input[data-field="end_time"]')?.value || '';
 
-    if (!departmentId) return alert('Choose a department for the new shift.');
-    if (!name) return alert('Enter a shift name.');
+    if (!departmentId) return notifyError('Choose a department for the new shift.');
+    if (!name) return notifyError('Enter a shift name.');
 
     try {
       const res = await AppAPI.shifts.create(window.DashboardConfig.apiShifts, {
@@ -135,13 +152,18 @@
         color,
       });
       if (res?.ok) {
-        location.reload();
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('shifts', 'Done', 'Shift created successfully.');
+        } else {
+          notifySuccess('Shift created successfully.');
+          location.reload();
+        }
       } else {
-        alert('Failed to create shift: ' + (res?.error || 'unknown'));
+        notifyError('Failed to create shift: ' + (res?.error || 'unknown'));
       }
     } catch (e) {
       console.error(e);
-      alert('Error creating shift');
+      notifyError('Error creating shift.');
     }
   }
 
@@ -160,13 +182,18 @@
     try {
       const res = await AppAPI.shifts.update(window.DashboardConfig.apiShifts, payload);
       if (res?.ok) {
-        location.reload();
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('shifts', 'Done', 'Shift updated successfully.');
+        } else {
+          notifySuccess('Shift updated successfully.');
+          location.reload();
+        }
       } else {
-        alert('Failed to save shift: ' + (res?.error || 'unknown'));
+        notifyError('Failed to save shift: ' + (res?.error || 'unknown'));
       }
     } catch (e) {
       console.error(e);
-      alert('Error saving shift');
+      notifyError('Error saving shift.');
     }
   }
 
@@ -178,13 +205,18 @@
     try {
       const res = await AppAPI.shifts.delete(window.DashboardConfig.apiShifts, id);
       if (res?.ok) {
-        row.remove();
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('shifts', 'Done', 'Shift deleted successfully.');
+        } else {
+          notifySuccess('Shift deleted successfully.');
+          row.remove();
+        }
       } else {
-        alert('Failed to delete shift: ' + (res?.error || 'unknown'));
+        notifyError('Failed to delete shift: ' + (res?.error || 'unknown'));
       }
     } catch (e) {
       console.error(e);
-      alert('Error deleting shift');
+      notifyError('Error deleting shift.');
     }
   }
 

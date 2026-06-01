@@ -350,12 +350,12 @@
 }
 
 .settings-list-cols-user {
-    grid-template-columns: minmax(180px, 1.3fr) minmax(220px, 1.6fr) minmax(140px, 1fr) minmax(160px, 1.2fr) minmax(90px, 0.7fr) minmax(170px, 1fr);
+    grid-template-columns: minmax(140px, 1.2fr) minmax(180px, 1.5fr) minmax(110px, 0.9fr) minmax(130px, 1fr) minmax(80px, 0.7fr) minmax(150px, 1fr);
 }
 
 .settings-list-cols-user-create,
 .settings-list-cols-user-edit {
-    grid-template-columns: repeat(4, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .settings-list-cols-dept {
@@ -391,7 +391,7 @@
 
 .settings-list-cols-shift-create,
 .settings-list-cols-shift-edit {
-    grid-template-columns: repeat(3, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .settings-list-cols-assignment {
@@ -442,6 +442,51 @@
     padding: 0.8rem;
     background: rgba(247, 248, 251, 0.9);
     border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.settings-create-row .settings-list-cols,
+.settings-edit-drawer .settings-list-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.65rem;
+    align-items: end;
+}
+
+.settings-create-row .settings-list-cols > strong,
+.settings-edit-drawer .settings-list-cols > strong,
+.settings-create-row .settings-inline-actions,
+.settings-edit-drawer .settings-inline-actions {
+    justify-self: start;
+}
+
+.settings-list-cols-user .settings-inline-actions {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+}
+
+.settings-list-cols-user .settings-inline-actions .admin-action-link {
+    min-width: 68px;
+    padding: 0.42rem 0.55rem;
+    font-size: 0.78rem;
+}
+
+[data-user-create-row] .settings-inline-actions,
+[data-shift-create-row] .settings-inline-actions {
+    grid-column: 1 / -1;
+    justify-self: center;
+    align-self: end;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    margin-top: 0.25rem;
+}
+
+[data-user-create-row] .settings-inline-actions .admin-action-link,
+[data-shift-create-row] .settings-inline-actions .admin-action-link {
+    min-width: 140px;
 }
 
 .settings-card,

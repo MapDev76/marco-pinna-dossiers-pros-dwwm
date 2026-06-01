@@ -108,12 +108,10 @@ $visibleDepartments = $departments;
 if (($currentRole ?? '') === 'admin') {
     $visibleDepartments = array_values(array_filter($departments, static fn($d) => (int) ($d['company_id'] ?? 0) === $scopeCompanyId));
 }
-$departmentCompanyOptions = $scopeCompanies;
-if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
-    $departmentCompanyOptions = [
-        ['id' => $scopeCompanyId, 'name' => $scopeCompanyName ?: 'Company'],
-    ];
-}
+$departmentCreateHeadUsers = array_values(array_filter(
+    $visibleUsers,
+    static fn(array $u): bool => ((int) ($u['company_id'] ?? 0) === $scopeCompanyId) && ((int) ($u['department_id'] ?? 0) === 0)
+));
 ?>
 <section class="dashboard-modal dashboard-settings-modal" id="modal-settings" hidden>
     <div class="crud-modal-card">
@@ -164,9 +162,10 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
 
         <div class="settings-tabs" role="tablist" aria-label="Management rubrics">
             <button type="button" class="settings-tab" data-settings-tab="users">Users</button>
-            <button type="button" class="settings-tab" data-settings-tab="departments">Departments</button>
+            <?php if ($currentRole !== 'department_manager'): ?>
+                <button type="button" class="settings-tab" data-settings-tab="departments">Departments</button>
+            <?php endif; ?>
             <button type="button" class="settings-tab" data-settings-tab="assignments">Assignments</button>
-            <button type="button" class="settings-tab" data-settings-tab="roles">Roles</button>
             <button type="button" class="settings-tab" data-settings-tab="shifts">Shifts</button>
         </div>
 
@@ -243,6 +242,7 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                 </div>
             </section>
 
+            <?php if ($currentRole !== 'department_manager'): ?>
             <section class="crud-panel settings-panel" data-settings-panel="departments" hidden>
                 <div class="settings-panel-head">
                     <div>
@@ -256,7 +256,6 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
 
                 <div class="settings-list-head settings-create-row" data-dept-create-row>
                     <div class="settings-list-cols settings-list-cols-dept">
-                        <strong>New department</strong>
                         <label class="settings-field">Name<input data-field="name" type="text" value=""></label>
                         <label class="settings-field">Icon
                             <div class="settings-picker-stack">
@@ -295,21 +294,14 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                         <label class="settings-field">Head of department
                             <select data-field="head_user_id">
                                 <option value="">-- unassigned --</option>
-                                <?php foreach ($visibleUsers as $userOption): ?>
+                                <?php foreach ($departmentCreateHeadUsers as $userOption): ?>
                                     <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>">
                                         <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? 'User')); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
-                        <label class="settings-field">Company
-                            <select data-field="company_id">
-                                <?php foreach ($departmentCompanyOptions as $c): ?>
-                                    <?php if ($currentRole !== 'super_admin' && (int) ($c['id'] ?? 0) !== $scopeCompanyId) continue; ?>
-                                    <option value="<?php echo (int) ($c['id'] ?? 0); ?>" <?php echo ((int) ($c['id'] ?? 0) === $scopeCompanyId) ? 'selected' : ''; ?>><?php echo e($c['name'] ?? 'Company'); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </label>
+                        <input data-field="company_id" type="hidden" value="<?php echo (int) $scopeCompanyId; ?>">
                         <div class="settings-inline-actions">
                             <button type="button" class="admin-action-link settings-dept-create">Create</button>
                             <button type="button" class="admin-action-link admin-action-link-secondary settings-dept-reset">Reset</button>
@@ -386,7 +378,14 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                                         <label class="settings-field">Head of department
                                             <select data-field="head_user_id">
                                                 <option value="">-- unassigned --</option>
-                                                <?php foreach ($visibleUsers as $userOption): ?>
+                                                <?php
+                                                $deptIdForHead = (int) ($department['id'] ?? 0);
+                                                $eligibleHeadUsers = array_values(array_filter(
+                                                    $visibleUsers,
+                                                    static fn(array $u): bool => ((int) ($u['company_id'] ?? 0) === $scopeCompanyId)
+                                                        && (((int) ($u['department_id'] ?? 0) === 0) || ((int) ($u['department_id'] ?? 0) === $deptIdForHead))
+                                                ));
+                                                foreach ($eligibleHeadUsers as $userOption): ?>
                                                     <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>" <?php echo ((int) ($department['head_user_id'] ?? 0) === (int) ($userOption['id'] ?? 0)) ? 'selected' : ''; ?>>
                                                         <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? 'User')); ?>
                                                     </option>
@@ -394,7 +393,7 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                                             </select>
                                         </label>
                                         <div class="settings-inline-actions">
-                                            <button type="button" class="admin-action-link settings-dept-save" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>">Save</button>
+                                            <button type="button" class="admin-action-link settings-dept-save">Save</button>
                                             <button type="button" class="admin-action-link admin-action-link-secondary settings-dept-cancel">Cancel</button>
                                         </div>
                                     </div>
@@ -404,6 +403,7 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                     <?php endif; ?>
                 </div>
             </section>
+            <?php endif; ?>
 
             <section class="crud-panel settings-panel" data-settings-panel="users" hidden>
                 <div class="settings-panel-head">
@@ -417,7 +417,6 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                 </div>
                 <div class="settings-list-head settings-create-row" data-user-create-row>
                     <div class="settings-list-cols settings-list-cols-user-create">
-                        <strong>New user</strong>
                         <label class="settings-field">First name<input data-field="first_name" type="text" value=""></label>
                         <label class="settings-field">Last name<input data-field="last_name" type="text" value=""></label>
                         <label class="settings-field">Email<input data-field="email" type="email" value=""></label>
@@ -425,7 +424,7 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                             <select data-field="role">
                                 <?php foreach ($roleCatalog as $r): ?>
                                     <?php if ($currentRole === 'admin' && $r['key'] === 'super_admin') continue; ?>
-                                    <option value="<?php echo e($r['key']); ?>"><?php echo e($r['label']); ?></option>
+                                    <option value="<?php echo e($r['key']); ?>" <?php echo $r['key'] === 'employee' ? 'selected' : ''; ?>><?php echo e($r['label']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
@@ -467,8 +466,8 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                                     <span><?php echo e($user['department_name'] ?? '--'); ?></span>
                                     <span><?php echo e($user['status'] ?? 'active'); ?></span>
                                     <div class="settings-inline-actions">
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-user-edit" aria-label="Edit user" title="Edit user">✎</button>
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-user-delete" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>" aria-label="Delete user" title="Delete user">🗑</button>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-user-edit" aria-label="Edit user" title="Edit user">✎ Edit</button>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon-danger settings-user-delete" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>" aria-label="Delete user" title="Delete user">🗑 Delete</button>
                                     </div>
                                 </div>
 
@@ -512,85 +511,6 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
                 </div>
             </section>
 
-            <section class="crud-panel settings-panel" data-settings-panel="roles" hidden>
-                <div class="settings-panel-head">
-                    <div>
-                        <h3>Roles</h3>
-                        <p class="crud-modal-subtitle">Role management list with Edit and Save for user role assignment.</p>
-                    </div>
-                    <div class="settings-pill-row">
-                        <span class="settings-pill"><?php echo count($visibleUsers); ?> users</span>
-                    </div>
-                </div>
-
-                <div class="settings-list-wrap">
-                    <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-role">
-                        <strong>User</strong>
-                        <span>Email</span>
-                        <span>Current role</span>
-                        <span>Department</span>
-                        <span>Status</span>
-                        <span>Actions</span>
-                    </div>
-
-                    <?php if (empty($visibleUsers)): ?>
-                        <div class="crud-empty-state">No users available.</div>
-                    <?php else: ?>
-                        <?php foreach ($visibleUsers as $user): ?>
-                            <article class="settings-list-item-wrap"
-                                data-role-user-id="<?php echo (int) ($user['id'] ?? 0); ?>"
-                                data-first-name="<?php echo e($user['first_name'] ?? ''); ?>"
-                                data-last-name="<?php echo e($user['last_name'] ?? ''); ?>"
-                                data-email="<?php echo e($user['email'] ?? ''); ?>"
-                                data-status="<?php echo e($user['status'] ?? 'active'); ?>"
-                                data-department-id="<?php echo (int) ($user['department_id'] ?? 0); ?>">
-                                <div class="settings-list-row settings-list-cols settings-list-cols-role">
-                                    <strong><?php echo e(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?: 'User'); ?></strong>
-                                    <span><?php echo e($user['email'] ?? ''); ?></span>
-                                    <span><?php echo e($roleLabels[$user['role'] ?? 'employee'] ?? ucfirst((string) ($user['role'] ?? 'employee'))); ?></span>
-                                    <span><?php echo e($user['department_name'] ?? '--'); ?></span>
-                                    <span><?php echo e($user['status'] ?? 'active'); ?></span>
-                                    <div class="settings-inline-actions">
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-role-edit" aria-label="Edit role assignment" title="Edit role assignment">✎</button>
-                                    </div>
-                                </div>
-
-                                <div class="settings-edit-drawer" hidden>
-                                    <div class="settings-list-cols settings-list-cols-role-edit">
-                                        <label class="settings-field">Role
-                                            <select data-field="role">
-                                                <?php foreach ($roleCatalog as $r): ?>
-                                                    <?php if ($currentRole === 'admin' && $r['key'] === 'super_admin') continue; ?>
-                                                    <option value="<?php echo e($r['key']); ?>" <?php echo (($user['role'] ?? '') === $r['key']) ? 'selected' : ''; ?>><?php echo e($r['label']); ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </label>
-                                        <label class="settings-field">Department
-                                            <select data-field="department_id">
-                                                <option value="">-- none --</option>
-                                                <?php foreach ($visibleDepartments as $department): ?>
-                                                    <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo ((int) ($user['department_id'] ?? 0) === (int) ($department['id'] ?? 0)) ? 'selected' : ''; ?>><?php echo e($department['name'] ?? 'Department'); ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </label>
-                                        <label class="settings-field">Status
-                                            <select data-field="status">
-                                                <option value="active" <?php echo (($user['status'] ?? 'active') === 'active') ? 'selected' : ''; ?>>Active</option>
-                                                <option value="inactive" <?php echo (($user['status'] ?? '') === 'inactive') ? 'selected' : ''; ?>>Inactive</option>
-                                            </select>
-                                        </label>
-                                        <div class="settings-inline-actions">
-                                            <button type="button" class="admin-action-link settings-role-save">Save</button>
-                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-role-cancel">Cancel</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </section>
-
             <section class="crud-panel settings-panel" data-settings-panel="shifts" hidden>
                 <div class="settings-panel-head">
                     <div>
@@ -604,7 +524,6 @@ if (empty($departmentCompanyOptions) && $scopeCompanyId > 0) {
 
                 <div class="settings-list-head settings-create-row" data-shift-create-row>
                     <div class="settings-list-cols settings-list-cols-shift-create">
-                        <strong>New shift</strong>
                         <label class="settings-field">Department
                             <select data-field="department_id">
                                 <?php foreach ($visibleDepartments as $department): ?>

@@ -9,6 +9,16 @@
  */
 
 (function(){
+  var feedback = window.DashboardFeedback;
+
+  function notifyError(message) {
+    if (feedback) {
+      feedback.error('Oops!', message);
+      return;
+    }
+    alert(message);
+  }
+
   function initCalendarDnd(options) {
     var calendarShell = options.calendarShell;
     var state = options.state;
@@ -69,7 +79,7 @@
 
         var activeShift = getActiveShift();
         if (!activeShift) {
-          alert('Select a shift first.');
+          notifyError('Select a shift first.');
           return;
         }
 
@@ -82,7 +92,7 @@
           status: 'assigned',
         });
       } catch (error) {
-        alert((error && error.message) || 'Unable to update assignment.');
+        notifyError((error && error.message) || 'Unable to update assignment.');
       }
     });
   }

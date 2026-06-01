@@ -56,12 +56,17 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                     <button type="button" class="dashboard-sidebar-link management-toggle" aria-expanded="false">Departments</button>
                     <div class="dashboard-management-list dashboard-sidebar-department-list" hidden>
                         <?php foreach (($dashboardPlannerData['departments'] ?? []) as $department): ?>
+                            <?php $deptIcon = $department['icon'] ?? '🏷️'; ?>
+                            <?php $deptColor = $department['color'] ?? '#b98b12'; ?>
                             <button type="button"
                                 class="dashboard-sidebar-department-button <?php echo ((int) ($dashboardPlannerData['active_department_id'] ?? 0) === (int) $department['id']) ? 'is-active' : ''; ?>"
                                 data-planner-department-id="<?php echo (int) $department['id']; ?>"
                                 data-planner-department-name="<?php echo e($department['name'] ?? ''); ?>"
-                                data-planner-department-description="<?php echo e($department['description'] ?? ''); ?>">
-                                <?php echo e($department['name'] ?? 'Department'); ?>
+                                data-planner-department-description="<?php echo e($department['description'] ?? ''); ?>"
+                                data-planner-department-icon="<?php echo e($deptIcon); ?>"
+                                data-planner-department-color="<?php echo e($deptColor); ?>">
+                                <span style="color: <?php echo e($deptColor); ?>;"><?php echo e($deptIcon); ?></span>
+                                <span><?php echo e($department['name'] ?? 'Department'); ?></span>
                             </button>
                         <?php endforeach; ?>
                     </div>
@@ -79,9 +84,11 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                     } else {
                         $users = $activeDept['users'] ?? [];
                         $shifts = $activeDept['shifts'] ?? [];
+                        $activeDeptIcon = $activeDept['icon'] ?? '🏷️';
+                        $activeDeptColor = $activeDept['color'] ?? '#b98b12';
                         ?>
                         <div class="dashboard-sidebar-planner-title">
-                            <span><?php echo e($activeDept['name'] ?? 'Department'); ?></span>
+                            <span style="color: <?php echo e($activeDeptColor); ?>;"><?php echo e($activeDeptIcon); ?> <?php echo e($activeDept['name'] ?? 'Department'); ?></span>
                             <span><?php echo count($users); ?> staff</span>
                         </div>
                         <div class="dashboard-sidebar-planner-description"><?php echo e($activeDept['description'] ?? ''); ?></div>

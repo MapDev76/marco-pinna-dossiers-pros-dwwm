@@ -749,8 +749,11 @@
       const totalShifts = shifts.length * visibleDateKeys.size;
       const freeShifts = Math.max(totalShifts - assignedShifts, 0);
 
+      const departmentName = activeDepartment.name || 'Department';
+      const departmentIcon = (activeDepartment.icon || '').toString().trim();
+
       return {
-        title: activeDepartment.name || 'Department',
+        title: departmentIcon ? `${departmentIcon} ${departmentName}` : departmentName,
         totalShifts,
         assignedShifts,
         freeShifts,
@@ -831,9 +834,12 @@
 
       const users = activeDepartment.users || [];
       const shifts = activeDepartment.shifts || [];
+      const deptName = activeDepartment.name || 'Department';
+      const deptIcon = (activeDepartment.icon || '').toString().trim() || '🏷️';
+      const deptColor = (activeDepartment.color || '#b98b12').toString();
       plannerDetail.innerHTML = `
         <div class="dashboard-sidebar-planner-title">
-          <span>${activeDepartment.name || 'Department'}</span>
+          <span style="color:${deptColor}">${deptIcon} ${deptName}</span>
           <span>${users.length} staff</span>
         </div>
         <div class="dashboard-sidebar-planner-description">${activeDepartment.description || 'Assigned team and shift list.'}</div>

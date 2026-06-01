@@ -1,5 +1,21 @@
 (() => {
   const apiUrl = window.DashboardConfig?.apiDashboard;
+  const feedback = window.DashboardFeedback;
+
+  function notifyError(message) {
+    if (feedback) {
+      feedback.error('Oops!', message);
+      return;
+    }
+    alert(message);
+  }
+
+  function notifySuccess(message) {
+    if (feedback) {
+      feedback.success('Done', message);
+      return;
+    }
+  }
 
   function isAssignmentsPanelActive() {
     const panel = document.querySelector('.settings-panel[data-settings-panel="assignments"]');
@@ -46,20 +62,25 @@
     };
 
     if (!payload.shift_id || !payload.work_date) {
-      alert('Shift and work date are required.');
+      notifyError('Shift and work date are required.');
       return;
     }
 
     try {
       const res = await AppAPI.postJSON(apiUrl, payload);
       if (res?.ok || res?.success) {
-        location.reload();
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('assignments', 'Done', 'Assignment updated successfully.');
+        } else {
+          notifySuccess('Assignment updated successfully.');
+          location.reload();
+        }
       } else {
-        alert('Save failed: ' + (res?.error || 'unknown'));
+        notifyError('Save failed: ' + (res?.error || 'unknown'));
       }
     } catch (e) {
       console.error(e);
-      alert('Error saving assignment');
+      notifyError('Error saving assignment.');
     }
   }
 

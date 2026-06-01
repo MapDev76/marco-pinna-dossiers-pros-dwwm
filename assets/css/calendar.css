@@ -205,6 +205,9 @@ body.sidebar-expanded .app-sidebar {
 }
 
 .dashboard-sidebar-department-button {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     width: 100%;
     border: 1px solid rgba(157, 121, 16, 0.18);
     border-radius: var(--border-radius-md);

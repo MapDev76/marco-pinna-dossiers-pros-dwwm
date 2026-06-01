@@ -1,5 +1,21 @@
 (() => {
   const apiUrl = window.DashboardConfig?.apiUsers;
+  const feedback = window.DashboardFeedback;
+
+  function notifyError(message) {
+    if (feedback) {
+      feedback.error('Oops!', message);
+      return;
+    }
+    alert(message);
+  }
+
+  function notifySuccess(message) {
+    if (feedback) {
+      feedback.success('Done', message);
+      return;
+    }
+  }
 
   function getCreateCard() { return document.querySelector('[data-user-create-row]'); }
   function resetCreateUserForm() {
@@ -23,15 +39,24 @@
   }
 
   async function createUser() {
-    const data = collectCreateData(); if (!data) return alert('No form');
-    if (!data.first_name || !data.last_name || !data.email) return alert('Fill required fields');
+    const data = collectCreateData(); if (!data) return notifyError('Form not found.');
+    if (!data.first_name || !data.last_name || !data.email) return notifyError('Fill required fields.');
     try {
       const res = await AppAPI.users.create(apiUrl, data);
-      if (res?.ok) location.reload(); else alert('Create failed: ' + (res?.error || 'unknown'));
-    } catch (e) { console.error(e); alert('Error creating user'); }
+      if (res?.ok) {
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('users', 'Done', 'User created successfully.');
+        } else {
+          notifySuccess('User created successfully.');
+          location.reload();
+        }
+      } else {
+        notifyError('Create failed: ' + (res?.error || 'unknown'));
+      }
+    } catch (e) { console.error(e); notifyError('Error creating user.'); }
   }
 
-  function getUserCard(el) { return el.closest && el.closest('[data-user-id]'); }
+  function getUserCard(el) { return el.closest && el.closest('.settings-list-item-wrap[data-user-id]'); }
 
   function getUserDrawer(card) {
     return card ? card.querySelector('.settings-edit-drawer') : null;
@@ -72,9 +97,16 @@
     try {
       const res = await AppAPI.users.update(apiUrl, payload);
       if (res?.ok) {
-        location.reload();
-      } else alert('Save failed: ' + (res?.error || 'unknown'));
-    } catch (e) { console.error(e); alert('Error saving user'); }
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('users', 'Done', 'User updated successfully.');
+        } else {
+          notifySuccess('User updated successfully.');
+          location.reload();
+        }
+      } else {
+        notifyError('Save failed: ' + (res?.error || 'unknown'));
+      }
+    } catch (e) { console.error(e); notifyError('Error saving user.'); }
   }
 
   async function deleteUser(card) {
@@ -83,8 +115,17 @@
     if (!confirm('Delete this user?')) return;
     try {
       const res = await AppAPI.users.delete(apiUrl, id);
-      if (res?.ok) { card.remove(); } else alert('Delete failed: ' + (res?.error || 'unknown'));
-    } catch (e) { console.error(e); alert('Error deleting user'); }
+      if (res?.ok) {
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('users', 'Done', 'User deleted successfully.');
+        } else {
+          notifySuccess('User deleted successfully.');
+          card.remove();
+        }
+      } else {
+        notifyError('Delete failed: ' + (res?.error || 'unknown'));
+      }
+    } catch (e) { console.error(e); notifyError('Error deleting user.'); }
   }
 
   document.addEventListener('click', (ev) => {
