@@ -177,3 +177,41 @@ function requireSuperAdmin(): void
 {
     requireRole('super_admin', 'Access restricted to Super Admin.');
 }
+
+/**
+ * Ensures scheduler-related columns support shift kinds and open assignments
+ * without introducing extra tables.
+ */
+function ensureSchedulerSchema(PDO $pdo): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+
+    try {
+        $pdo->exec("ALTER TABLE shifts ADD COLUMN kind ENUM('work', 'rest', 'vacation', 'sick', 'overtime') NOT NULL DEFAULT 'work' AFTER description");
+    } catch (Throwable $e) {
+        // Column already exists.
+    }
+
+    try {
+        $pdo->exec("ALTER TABLE shifts MODIFY kind ENUM('work', 'rest', 'vacation', 'sick', 'overtime') NOT NULL DEFAULT 'work'");
+    } catch (Throwable $e) {
+        // Ignore if enum already matches.
+    }
+
+    try {
+        $pdo->exec('ALTER TABLE user_shifts MODIFY user_id INT NULL');
+    } catch (Throwable $e) {
+        // Ignore if already nullable.
+    }
+
+    try {
+        $pdo->exec('ALTER TABLE user_shifts MODIFY status ENUM("open", "assigned", "completed", "cancelled", "in_progress") NOT NULL DEFAULT "assigned"');
+    } catch (Throwable $e) {
+        // Ignore if enum already matches.
+    }
+
+    $initialized = true;
+}

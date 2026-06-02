@@ -7,6 +7,7 @@ if (!isLoggedIn() || !in_array((currentUser()['role'] ?? ''), ['super_admin', 'a
 }
 
 $pdo = getPDO();
+ensureSchedulerSchema($pdo);
 $shiftModel = new ShiftModel($pdo);
 
 $raw = file_get_contents('php://input');
@@ -38,9 +39,65 @@ try {
                 'icon' => $input['icon'] ?? null,
                 'color' => $input['color'] ?? null,
                 'description' => $input['description'] ?? null,
+                'kind' => $input['kind'] ?? 'work',
                 'start_time' => $input['start_time'],
                 'end_time' => $input['end_time'],
             ]);
+
+            $rangeStart = trim((string) ($input['range_start'] ?? ''));
+            $rangeEnd = trim((string) ($input['range_end'] ?? ''));
+            $rangeMode = trim((string) ($input['range_mode'] ?? 'none'));
+            $activeDays = max(0, min(31, (int) ($input['active_days'] ?? 0)));
+            if ($rangeStart !== '' && $rangeEnd !== '' && $rangeMode !== 'none') {
+                $start = new DateTimeImmutable($rangeStart);
+                $end = new DateTimeImmutable($rangeEnd);
+                if ($end < $start) {
+                    [$start, $end] = [$end, $start];
+                }
+
+                $datesToInsert = [];
+                $cursorIndex = 0;
+                foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
+                    $include = false;
+                    if ($rangeMode === 'all' || $rangeMode === 'date_range') {
+                        $include = true;
+                    } elseif ($rangeMode === 'weekly') {
+                        $dayOfCycle = ($cursorIndex % 7) + 1;
+                        $include = $dayOfCycle <= max(0, min(7, $activeDays));
+                    } elseif ($rangeMode === 'monthly') {
+                        $dayOfMonth = (int) $date->format('j');
+                        $include = $dayOfMonth <= max(0, min(31, $activeDays));
+                    }
+
+                    if ($include) {
+                        $datesToInsert[] = $date->format('Y-m-d');
+                    }
+                    $cursorIndex++;
+                }
+
+                if (!empty($datesToInsert)) {
+                    $existingStmt = $pdo->prepare(
+                        'SELECT id FROM user_shifts WHERE shift_id = :shift_id AND work_date = :work_date LIMIT 1'
+                    );
+                    $insertStmt = $pdo->prepare(
+                        'INSERT INTO user_shifts (shift_id, user_id, work_date, status)
+                         VALUES (:shift_id, NULL, :work_date, "open")'
+                    );
+                    foreach ($datesToInsert as $workDate) {
+                        $existingStmt->execute([
+                            'shift_id' => $id,
+                            'work_date' => $workDate,
+                        ]);
+                        if ($existingStmt->fetchColumn()) {
+                            continue;
+                        }
+                        $insertStmt->execute([
+                            'shift_id' => $id,
+                            'work_date' => $workDate,
+                        ]);
+                    }
+                }
+            }
 
             $shift = $shiftModel->findById($id);
             jsonResponse(['ok' => true, 'shift' => $shift]);

@@ -18,6 +18,7 @@ if (!isLoggedIn()) {
 }
 
 $pdo = getPDO();
+ensureSchedulerSchema($pdo);
 $userModel = new UserModel($pdo);
 $companyModel = new CompanyModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
@@ -96,6 +97,17 @@ $dashboardPlannerData = [
     'assignments' => [],
 ];
 
+$resolvePreferredDepartmentId = static function (array $departmentRows, string $preferredName = 'reception'): ?int {
+    foreach ($departmentRows as $departmentRow) {
+        $name = strtolower(trim((string) ($departmentRow['name'] ?? '')));
+        if ($name === $preferredName) {
+            return (int) ($departmentRow['id'] ?? 0);
+        }
+    }
+
+    return isset($departmentRows[0]['id']) ? (int) $departmentRows[0]['id'] : null;
+};
+
 $plannerCompanyId = null;
 if ($role === 'super_admin') {
     $requestedCompanyId = (int) ($_GET['settings_company_id'] ?? 0);
@@ -130,7 +142,7 @@ if ($role === 'super_admin') {
         $departmentIds = array_values(array_map(static fn (array $department): int => (int) $department['id'], $departmentRows));
         $shiftRows = [];
         if (!empty($departmentIds)) {
-            $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.start_time, s.end_time, d.name AS department_name';
+            $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
             $placeholders = implode(', ', array_fill(0, count($departmentIds), '?'));
             $shiftStatement = $pdo->prepare(
                 'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.department_id IN (' . $placeholders . ') ORDER BY s.department_id ASC, s.start_time ASC, s.id ASC'
@@ -193,13 +205,16 @@ if ($role === 'super_admin') {
                     s.name AS shift_name,
                     s.icon AS shift_icon,
                     s.color AS shift_color,
-                    s.description AS shift_description,
+                          s.description AS shift_description,
+                          s.kind AS shift_kind,
                     s.start_time,
                     s.end_time,
                     d.id AS department_id,
                     d.name AS department_name,
+                          d.color AS department_color,
                     u.id AS user_id,
-                    CONCAT(u.first_name, " ", u.last_name) AS user_name
+                          CONCAT(u.first_name, " ", u.last_name) AS user_name,
+                          CASE WHEN us.user_id IS NULL THEN "open" ELSE "assigned" END AS assignment_source
              FROM user_shifts us
              INNER JOIN shifts s ON s.id = us.shift_id
              INNER JOIN departments d ON d.id = s.department_id
@@ -219,7 +234,7 @@ if ($role === 'admin' && $companyId !== null) {
     $departmentIds = array_values(array_map(static fn (array $department): int => (int) $department['id'], $departmentRows));
     $shiftRows = [];
     if (!empty($departmentIds)) {
-        $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.start_time, s.end_time, d.name AS department_name';
+        $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
         $placeholders = implode(', ', array_fill(0, count($departmentIds), '?'));
         $shiftStatement = $pdo->prepare(
             'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.department_id IN (' . $placeholders . ') ORDER BY s.department_id ASC, s.start_time ASC, s.id ASC'
@@ -274,8 +289,16 @@ if ($role === 'admin' && $companyId !== null) {
         $companyModel->all(),
         static fn (array $company): bool => (int) ($company['id'] ?? 0) === $companyId
     ));
-    $dashboardPlannerData['active_department_id'] = $departmentRows[0]['id'] ?? null;
-    $dashboardPlannerData['active_shift_id'] = $shiftRows[0]['id'] ?? null;
+    $adminActiveDepartmentId = $resolvePreferredDepartmentId($departmentRows, 'reception');
+    $dashboardPlannerData['active_department_id'] = $adminActiveDepartmentId;
+    $preferredShift = null;
+    foreach ($shiftRows as $shiftRow) {
+        if ((int) ($shiftRow['department_id'] ?? 0) === (int) ($adminActiveDepartmentId ?? 0)) {
+            $preferredShift = $shiftRow;
+            break;
+        }
+    }
+    $dashboardPlannerData['active_shift_id'] = $preferredShift['id'] ?? ($shiftRows[0]['id'] ?? null);
     $calendarStatement = $pdo->prepare(
         'SELECT us.id AS assignment_id,
                 us.work_date,
@@ -285,13 +308,16 @@ if ($role === 'admin' && $companyId !== null) {
                 s.name AS shift_name,
                 s.icon AS shift_icon,
                 s.color AS shift_color,
-                s.description AS shift_description,
+                  s.description AS shift_description,
+                  s.kind AS shift_kind,
                 s.start_time,
                 s.end_time,
                 d.id AS department_id,
                 d.name AS department_name,
+                  d.color AS department_color,
                 u.id AS user_id,
-                CONCAT(u.first_name, " ", u.last_name) AS user_name
+                  CONCAT(u.first_name, " ", u.last_name) AS user_name,
+                  CASE WHEN us.user_id IS NULL THEN "open" ELSE "assigned" END AS assignment_source
          FROM user_shifts us
          INNER JOIN shifts s ON s.id = us.shift_id
          INNER JOIN departments d ON d.id = s.department_id
@@ -308,7 +334,7 @@ if ($role === 'department_manager' && $departmentId !== null) {
     $dashboardCalendarScopeLabel = trim((string) (($profile['department_name'] ?? 'Department') . ' calendar'));
     $departmentRows = $departmentModel->byCompanyId($companyId ?? 0);
     $teamRows = $userModel->teamByDepartmentId($departmentId);
-    $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.start_time, s.end_time, d.name AS department_name';
+    $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
 
     $shiftStatement = $pdo->prepare(
         'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.department_id = :department_id ORDER BY s.start_time ASC, s.id ASC'
@@ -353,13 +379,16 @@ if ($role === 'department_manager' && $departmentId !== null) {
                 s.name AS shift_name,
                 s.icon AS shift_icon,
                 s.color AS shift_color,
-                s.description AS shift_description,
+                  s.description AS shift_description,
+                  s.kind AS shift_kind,
                 s.start_time,
                 s.end_time,
                 d.id AS department_id,
                 d.name AS department_name,
+                  d.color AS department_color,
                 u.id AS user_id,
-                CONCAT(u.first_name, " ", u.last_name) AS user_name
+                  CONCAT(u.first_name, " ", u.last_name) AS user_name,
+                  CASE WHEN us.user_id IS NULL THEN "open" ELSE "assigned" END AS assignment_source
          FROM user_shifts us
          INNER JOIN shifts s ON s.id = us.shift_id
          INNER JOIN departments d ON d.id = s.department_id

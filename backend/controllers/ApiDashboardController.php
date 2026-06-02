@@ -23,6 +23,7 @@ $input = json_decode($raw, true) ?: $_POST;
 $action = $input['action'] ?? ($_GET['action'] ?? 'view');
 
 $pdo = getPDO();
+ensureSchedulerSchema($pdo);
 $userModel = new UserModel($pdo);
 $companyModel = new CompanyModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
@@ -30,7 +31,7 @@ $user = currentUser();
 $role = $user['role'] ?? 'employee';
 $profile = $userModel->profileWithRelations((int) $user['id']) ?? [];
 
-if (in_array($action, ['assign_shift', 'move_shift'], true)) {
+if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_assign_open'], true)) {
     if (!in_array($role, ['admin', 'department_manager'], true)) {
         jsonResponse(['success' => false, 'error' => 'Unauthorized'], 403);
     }
@@ -41,30 +42,202 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
     $workDate = trim((string) ($input['work_date'] ?? ''));
     $status = trim((string) ($input['status'] ?? 'assigned'));
 
+    $validateSingleShiftPerDay = static function (PDO $pdo, int $targetUserId, string $targetDate, int $excludeAssignmentId = 0): ?string {
+        if ($targetUserId <= 0 || $targetDate === '') {
+            return null;
+        }
+        $check = $pdo->prepare(
+            'SELECT id FROM user_shifts
+             WHERE user_id = :user_id
+               AND work_date = :work_date
+               AND id <> :exclude_id
+               AND status <> "cancelled"
+             LIMIT 1'
+        );
+        $check->execute([
+            'user_id' => $targetUserId,
+            'work_date' => $targetDate,
+            'exclude_id' => $excludeAssignmentId,
+        ]);
+
+        return $check->fetchColumn() ? 'Employee already has a shift for this day.' : null;
+    };
+
+    if ($action === 'auto_assign_open') {
+        $maxHoursPerMonth = max(1, (int) ($input['max_hours_per_month'] ?? 176));
+        $maxDaysPerMonth = max(1, (int) ($input['max_days_per_month'] ?? 22));
+        $rangeStart = trim((string) ($input['range_start'] ?? date('Y-m-01')));
+        $rangeEnd = trim((string) ($input['range_end'] ?? date('Y-m-t')));
+
+        $scopeWhere = '1=1';
+        $scopeParams = [
+            'range_start' => $rangeStart,
+            'range_end' => $rangeEnd,
+        ];
+        if ($role === 'department_manager') {
+            $scopeWhere = 'd.id = :department_id';
+            $scopeParams['department_id'] = (int) ($profile['department_id'] ?? 0);
+        } elseif ($role === 'admin') {
+            $scopeWhere = 'd.company_id = :company_id';
+            $scopeParams['company_id'] = (int) ($profile['company_id'] ?? 0);
+        }
+
+        $openStmt = $pdo->prepare(
+            'SELECT us.id, us.work_date, s.id AS shift_id, s.start_time, s.end_time, s.kind AS shift_kind, d.id AS department_id
+             FROM user_shifts us
+             INNER JOIN shifts s ON s.id = us.shift_id
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE ' . $scopeWhere . ' AND us.work_date BETWEEN :range_start AND :range_end AND us.user_id IS NULL AND us.status = "open" AND s.kind = "work"
+             ORDER BY us.work_date ASC, s.start_time ASC, us.id ASC'
+        );
+        $openStmt->execute($scopeParams);
+        $openRows = $openStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $scopeOnlyParams = $scopeParams;
+        unset($scopeOnlyParams['range_start'], $scopeOnlyParams['range_end']);
+        $userStmt = $pdo->prepare(
+            'SELECT u.id, u.department_id
+             FROM users u
+             LEFT JOIN departments d ON d.id = u.department_id
+             WHERE u.status = "active" AND ' . $scopeWhere . '
+             ORDER BY u.id ASC'
+        );
+        $userStmt->execute($scopeOnlyParams);
+        $users = $userStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $hoursByUserMonth = [];
+        $daysByUserMonth = [];
+        $dayBusy = [];
+        $snapshot = $pdo->prepare(
+            'SELECT us.user_id, us.work_date, s.start_time, s.end_time
+             FROM user_shifts us
+             INNER JOIN shifts s ON s.id = us.shift_id
+             WHERE us.user_id IS NOT NULL AND us.work_date BETWEEN :range_start AND :range_end AND us.status <> "cancelled"'
+        );
+        $snapshot->execute([
+            'range_start' => $rangeStart,
+            'range_end' => $rangeEnd,
+        ]);
+        foreach ($snapshot->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $uid = (int) ($row['user_id'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            $date = (string) ($row['work_date'] ?? '');
+            $month = substr($date, 0, 7);
+            $startParts = explode(':', (string) ($row['start_time'] ?? '00:00:00'));
+            $endParts = explode(':', (string) ($row['end_time'] ?? '00:00:00'));
+            $startMinutes = ((int) ($startParts[0] ?? 0) * 60) + (int) ($startParts[1] ?? 0);
+            $endMinutes = ((int) ($endParts[0] ?? 0) * 60) + (int) ($endParts[1] ?? 0);
+            $delta = $endMinutes - $startMinutes;
+            if ($delta <= 0) {
+                $delta += 24 * 60;
+            }
+            $hoursByUserMonth[$uid][$month] = ($hoursByUserMonth[$uid][$month] ?? 0.0) + ($delta / 60);
+            $daysByUserMonth[$uid][$month][$date] = true;
+            $dayBusy[$uid][$date] = true;
+        }
+
+        $updateAssignment = $pdo->prepare(
+            'UPDATE user_shifts SET user_id = :user_id, status = "assigned", updated_at = CURRENT_TIMESTAMP WHERE id = :id'
+        );
+        $assignedCount = 0;
+        foreach ($openRows as $openRow) {
+            $slotDate = (string) ($openRow['work_date'] ?? '');
+            $slotDepartmentId = (int) ($openRow['department_id'] ?? 0);
+            $slotMonth = substr($slotDate, 0, 7);
+            $startParts = explode(':', (string) ($openRow['start_time'] ?? '00:00:00'));
+            $endParts = explode(':', (string) ($openRow['end_time'] ?? '00:00:00'));
+            $startMinutes = ((int) ($startParts[0] ?? 0) * 60) + (int) ($startParts[1] ?? 0);
+            $endMinutes = ((int) ($endParts[0] ?? 0) * 60) + (int) ($endParts[1] ?? 0);
+            $delta = $endMinutes - $startMinutes;
+            if ($delta <= 0) {
+                $delta += 24 * 60;
+            }
+            $slotHours = $delta / 60;
+
+            $candidate = null;
+            $candidateHours = PHP_FLOAT_MAX;
+            foreach ($users as $candidateUser) {
+                $uid = (int) ($candidateUser['id'] ?? 0);
+                if ($uid <= 0) {
+                    continue;
+                }
+                if ($role === 'department_manager' && (int) ($candidateUser['department_id'] ?? 0) !== $slotDepartmentId) {
+                    continue;
+                }
+                if (!empty($dayBusy[$uid][$slotDate])) {
+                    continue;
+                }
+                $monthHours = (float) ($hoursByUserMonth[$uid][$slotMonth] ?? 0.0);
+                $monthDaysCount = count($daysByUserMonth[$uid][$slotMonth] ?? []);
+                if (($monthHours + $slotHours) > $maxHoursPerMonth || ($monthDaysCount + 1) > $maxDaysPerMonth) {
+                    continue;
+                }
+                if ($monthHours < $candidateHours) {
+                    $candidate = $uid;
+                    $candidateHours = $monthHours;
+                }
+            }
+
+            if ($candidate) {
+                $updateAssignment->execute([
+                    'user_id' => $candidate,
+                    'id' => (int) ($openRow['id'] ?? 0),
+                ]);
+                $hoursByUserMonth[$candidate][$slotMonth] = ($hoursByUserMonth[$candidate][$slotMonth] ?? 0.0) + $slotHours;
+                $daysByUserMonth[$candidate][$slotMonth][$slotDate] = true;
+                $dayBusy[$candidate][$slotDate] = true;
+                $assignedCount++;
+            }
+        }
+
+        jsonResponse([
+            'success' => true,
+            'ok' => true,
+            'assigned_count' => $assignedCount,
+            'open_remaining' => max(count($openRows) - $assignedCount, 0),
+        ]);
+    }
+
     $assignmentUserId = $userId;
     if ($action === 'move_shift' && $assignmentId > 0) {
         $assignmentLookup = $pdo->prepare('SELECT user_id, shift_id FROM user_shifts WHERE id = :id LIMIT 1');
         $assignmentLookup->execute(['id' => $assignmentId]);
         $assignmentRow = $assignmentLookup->fetch(PDO::FETCH_ASSOC) ?: [];
-        $assignmentUserId = (int) ($assignmentRow['user_id'] ?? 0);
+        if ($assignmentUserId <= 0 && array_key_exists('user_id', $assignmentRow)) {
+            $assignmentUserId = (int) ($assignmentRow['user_id'] ?? 0);
+        }
         if ($shiftId <= 0) {
             $shiftId = (int) ($assignmentRow['shift_id'] ?? 0);
         }
     }
 
-    if ($workDate === '' || $shiftId <= 0 || ($action === 'assign_shift' && $userId <= 0)) {
+    if ($action === 'unassign_shift') {
+        if ($assignmentId <= 0) {
+            jsonResponse(['success' => false, 'error' => 'assignment_id is required'], 400);
+        }
+        $update = $pdo->prepare('UPDATE user_shifts SET user_id = NULL, status = "open", updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        $update->execute(['id' => $assignmentId]);
+        $status = 'open';
+    }
+
+    if ($action !== 'unassign_shift' && ($workDate === '' || $shiftId <= 0 || ($action === 'assign_shift' && $userId <= 0))) {
         jsonResponse(['success' => false, 'error' => 'Missing required fields'], 400);
     }
 
-    $shiftSelect = 's.id, s.department_id, s.icon, s.color, d.company_id, d.name AS department_name';
+    $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.kind, s.start_time, s.end_time, d.company_id, d.name AS department_name, d.color AS department_color';
 
-    $shiftCheck = $pdo->prepare(
-        'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.id = :shift_id LIMIT 1'
-    );
-    $shiftCheck->execute(['shift_id' => $shiftId]);
-    $shift = $shiftCheck->fetch(PDO::FETCH_ASSOC);
-    if (!$shift) {
-        jsonResponse(['success' => false, 'error' => 'Shift not found'], 404);
+    $shift = null;
+    if ($shiftId > 0) {
+        $shiftCheck = $pdo->prepare(
+            'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.id = :shift_id LIMIT 1'
+        );
+        $shiftCheck->execute(['shift_id' => $shiftId]);
+        $shift = $shiftCheck->fetch(PDO::FETCH_ASSOC);
+        if (!$shift) {
+            jsonResponse(['success' => false, 'error' => 'Shift not found'], 404);
+        }
     }
 
     $userCheck = $pdo->prepare(
@@ -88,14 +261,27 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
         }
     }
 
-    if ($role === 'department_manager' && (int) $shift['department_id'] !== (int) ($profile['department_id'] ?? 0)) {
+    if ($shift && $role === 'department_manager' && (int) $shift['department_id'] !== (int) ($profile['department_id'] ?? 0)) {
         jsonResponse(['success' => false, 'error' => 'Shift is outside your department'], 403);
     }
-    if ($role === 'admin' && (int) $shift['company_id'] !== (int) ($profile['company_id'] ?? 0)) {
+    if ($shift && $role === 'admin' && (int) $shift['company_id'] !== (int) ($profile['company_id'] ?? 0)) {
         jsonResponse(['success' => false, 'error' => 'Shift is outside your company'], 403);
     }
 
     if ($action === 'assign_shift') {
+        $conflict = $validateSingleShiftPerDay($pdo, $assignmentUserId, $workDate);
+        if ($conflict !== null) {
+            jsonResponse(['success' => false, 'error' => $conflict], 400);
+        }
+
+        $openExisting = $pdo->prepare(
+            'SELECT id FROM user_shifts WHERE shift_id = :shift_id AND work_date = :work_date AND user_id IS NULL LIMIT 1'
+        );
+        $openExisting->execute([
+            'shift_id' => $shiftId,
+            'work_date' => $workDate,
+        ]);
+        $existingOpenId = (int) ($openExisting->fetchColumn() ?: 0);
         $existing = $pdo->prepare(
             'SELECT id FROM user_shifts WHERE user_id = :user_id AND shift_id = :shift_id AND work_date = :work_date LIMIT 1'
         );
@@ -109,6 +295,14 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
             $update = $pdo->prepare('UPDATE user_shifts SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
             $update->execute(['status' => $status, 'id' => $existingId]);
             $assignmentId = $existingId;
+        } elseif ($existingOpenId > 0) {
+            $update = $pdo->prepare('UPDATE user_shifts SET user_id = :user_id, status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+            $update->execute([
+                'user_id' => $assignmentUserId,
+                'status' => $status ?: 'assigned',
+                'id' => $existingOpenId,
+            ]);
+            $assignmentId = $existingOpenId;
         } else {
             $insert = $pdo->prepare(
                 'INSERT INTO user_shifts (shift_id, user_id, work_date, status)
@@ -126,11 +320,20 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
         if ($assignmentId <= 0) {
             jsonResponse(['success' => false, 'error' => 'assignment_id is required'], 400);
         }
-        $update = $pdo->prepare('UPDATE user_shifts SET shift_id = :shift_id, work_date = :work_date, status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+
+        if ($assignmentUserId > 0) {
+            $conflict = $validateSingleShiftPerDay($pdo, $assignmentUserId, $workDate, $assignmentId);
+            if ($conflict !== null) {
+                jsonResponse(['success' => false, 'error' => $conflict], 400);
+            }
+        }
+
+        $update = $pdo->prepare('UPDATE user_shifts SET shift_id = :shift_id, user_id = :user_id, work_date = :work_date, status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $update->execute([
             'shift_id' => $shiftId,
+            'user_id' => $assignmentUserId > 0 ? $assignmentUserId : null,
             'work_date' => $workDate,
-            'status' => $status ?: 'assigned',
+            'status' => ($assignmentUserId > 0 ? ($status ?: 'assigned') : 'open'),
             'id' => $assignmentId,
         ]);
     }
@@ -145,12 +348,15 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
         's.icon AS shift_icon',
         's.color AS shift_color',
         's.description AS shift_description',
+        's.kind AS shift_kind',
         's.start_time',
         's.end_time',
         'd.id AS department_id',
         'd.name AS department_name',
+        'd.color AS department_color',
         'u.id AS user_id',
         'CONCAT(u.first_name, " ", u.last_name) AS user_name',
+        'CASE WHEN us.user_id IS NULL THEN "open" ELSE "assigned" END AS assignment_source',
     ];
 
     $assignmentLookup = $pdo->prepare(

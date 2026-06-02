@@ -26,8 +26,8 @@ class ShiftModel
     public function create(array $data): int
     {
         $statement = $this->pdo->prepare(
-            'INSERT INTO shifts (department_id, name, icon, color, description, start_time, end_time)
-             VALUES (:department_id, :name, :icon, :color, :description, :start_time, :end_time)'
+            'INSERT INTO shifts (department_id, name, icon, color, description, kind, start_time, end_time)
+             VALUES (:department_id, :name, :icon, :color, :description, :kind, :start_time, :end_time)'
         );
         $statement->execute([
             'department_id' => $data['department_id'],
@@ -35,6 +35,7 @@ class ShiftModel
             'icon' => $data['icon'] ?? null,
             'color' => $data['color'] ?? null,
             'description' => $data['description'] ?? null,
+            'kind' => $data['kind'] ?? 'work',
             'start_time' => $data['start_time'],
             'end_time' => $data['end_time'],
         ]);
@@ -50,6 +51,7 @@ class ShiftModel
             'icon = :icon',
             'color = :color',
             'description = :description',
+            'kind = :kind',
             'start_time = :start_time',
             'end_time = :end_time',
         ];
@@ -61,6 +63,7 @@ class ShiftModel
             'icon' => $data['icon'] ?? null,
             'color' => $data['color'] ?? null,
             'description' => $data['description'] ?? null,
+            'kind' => $data['kind'] ?? 'work',
             'start_time' => $data['start_time'] ?? null,
             'end_time' => $data['end_time'] ?? null,
             'id' => $id,
