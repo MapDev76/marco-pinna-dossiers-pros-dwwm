@@ -119,6 +119,7 @@
       'input[data-field="name"]': '',
       'input[data-field="icon"]': row.querySelector('input[data-field="icon"]')?.defaultValue || getDefaultIcon(),
       'input[data-field="color"]': row.querySelector('input[data-field="color"]')?.defaultValue || getDefaultColor(),
+      'input[data-field="description"]': '',
       'input[data-field="start_time"]': '09:00',
       'input[data-field="end_time"]': '17:00',
     };
@@ -136,6 +137,7 @@
     const name = row.querySelector('input[data-field="name"]')?.value.trim() || '';
     const icon = row.querySelector('input[data-field="icon"]')?.value.trim() || getDefaultIcon();
     const color = row.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
+    const description = row.querySelector('input[data-field="description"]')?.value.trim() || '';
     const start_time = row.querySelector('input[data-field="start_time"]')?.value || '';
     const end_time = row.querySelector('input[data-field="end_time"]')?.value || '';
 
@@ -150,6 +152,7 @@
         end_time,
         icon,
         color,
+        description,
       });
       if (res?.ok) {
         if (feedback?.reloadSettingsTabWithSuccess) {
@@ -176,6 +179,7 @@
       name: row.querySelector('input[data-field="name"]')?.value || '',
       icon: row.querySelector('input[data-field="icon"]')?.value || getDefaultIcon(),
       color: row.querySelector('input[data-field="color"]')?.value || getDefaultColor(),
+      description: row.querySelector('input[data-field="description"]')?.value || '',
       start_time: row.querySelector('input[data-field="start_time"]')?.value || '',
       end_time: row.querySelector('input[data-field="end_time"]')?.value || '',
     };

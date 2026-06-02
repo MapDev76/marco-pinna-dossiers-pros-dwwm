@@ -130,10 +130,10 @@ if ($role === 'super_admin') {
         $departmentIds = array_values(array_map(static fn (array $department): int => (int) $department['id'], $departmentRows));
         $shiftRows = [];
         if (!empty($departmentIds)) {
-            $shiftSelect = 'id, department_id, name, icon, color, start_time, end_time';
+            $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.start_time, s.end_time, d.name AS department_name';
             $placeholders = implode(', ', array_fill(0, count($departmentIds), '?'));
             $shiftStatement = $pdo->prepare(
-                'SELECT ' . $shiftSelect . ' FROM shifts WHERE department_id IN (' . $placeholders . ') ORDER BY department_id ASC, start_time ASC, id ASC'
+                'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.department_id IN (' . $placeholders . ') ORDER BY s.department_id ASC, s.start_time ASC, s.id ASC'
             );
             $shiftStatement->execute($departmentIds);
             $shiftRows = $shiftStatement->fetchAll();
@@ -193,6 +193,7 @@ if ($role === 'super_admin') {
                     s.name AS shift_name,
                     s.icon AS shift_icon,
                     s.color AS shift_color,
+                    s.description AS shift_description,
                     s.start_time,
                     s.end_time,
                     d.id AS department_id,
@@ -218,10 +219,10 @@ if ($role === 'admin' && $companyId !== null) {
     $departmentIds = array_values(array_map(static fn (array $department): int => (int) $department['id'], $departmentRows));
     $shiftRows = [];
     if (!empty($departmentIds)) {
-        $shiftSelect = 'id, department_id, name, icon, color, start_time, end_time';
+        $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.start_time, s.end_time, d.name AS department_name';
         $placeholders = implode(', ', array_fill(0, count($departmentIds), '?'));
         $shiftStatement = $pdo->prepare(
-            'SELECT ' . $shiftSelect . ' FROM shifts WHERE department_id IN (' . $placeholders . ') ORDER BY department_id ASC, start_time ASC, id ASC'
+            'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.department_id IN (' . $placeholders . ') ORDER BY s.department_id ASC, s.start_time ASC, s.id ASC'
         );
         $shiftStatement->execute($departmentIds);
         $shiftRows = $shiftStatement->fetchAll();
@@ -284,6 +285,7 @@ if ($role === 'admin' && $companyId !== null) {
                 s.name AS shift_name,
                 s.icon AS shift_icon,
                 s.color AS shift_color,
+                s.description AS shift_description,
                 s.start_time,
                 s.end_time,
                 d.id AS department_id,
@@ -306,10 +308,10 @@ if ($role === 'department_manager' && $departmentId !== null) {
     $dashboardCalendarScopeLabel = trim((string) (($profile['department_name'] ?? 'Department') . ' calendar'));
     $departmentRows = $departmentModel->byCompanyId($companyId ?? 0);
     $teamRows = $userModel->teamByDepartmentId($departmentId);
-    $shiftSelect = 'id, department_id, name, icon, color, start_time, end_time';
+    $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.start_time, s.end_time, d.name AS department_name';
 
     $shiftStatement = $pdo->prepare(
-        'SELECT ' . $shiftSelect . ' FROM shifts WHERE department_id = :department_id ORDER BY start_time ASC, id ASC'
+        'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.department_id = :department_id ORDER BY s.start_time ASC, s.id ASC'
     );
     $shiftStatement->execute(['department_id' => $departmentId]);
     $shiftRows = $shiftStatement->fetchAll();
@@ -351,6 +353,7 @@ if ($role === 'department_manager' && $departmentId !== null) {
                 s.name AS shift_name,
                 s.icon AS shift_icon,
                 s.color AS shift_color,
+                s.description AS shift_description,
                 s.start_time,
                 s.end_time,
                 d.id AS department_id,

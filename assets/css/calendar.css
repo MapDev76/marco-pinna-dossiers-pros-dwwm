@@ -147,6 +147,21 @@ body.sidebar-expanded .app-sidebar {
     letter-spacing: 0.04em;
 }
 
+.dashboard-sidebar-department-toggle {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+
+.dashboard-sidebar-department-toggle:hover,
+.dashboard-sidebar-department-toggle:focus-visible {
+    color: var(--color-primary-dark);
+    outline: none;
+}
+
 .dashboard-sidebar-link {
     width: 100%;
     border: 0;
@@ -199,9 +214,30 @@ body.sidebar-expanded .app-sidebar {
     gap: 0.5rem;
 }
 
+.dashboard-sidebar-current-department {
+    margin-top: -0.1rem;
+    margin-bottom: 0.15rem;
+}
+
+.dashboard-sidebar-current-department-button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: var(--font-weight-bold);
+    text-align: left;
+    cursor: pointer;
+}
+
 .dashboard-sidebar-department-list {
     display: grid;
     gap: 0.35rem;
+}
+
+.dashboard-sidebar-department-list[hidden] {
+    display: none !important;
 }
 
 .dashboard-sidebar-department-button {
@@ -270,6 +306,17 @@ body.sidebar-expanded .app-sidebar {
     font-size: 0.72rem;
     font-weight: var(--font-weight-bold);
     cursor: grab;
+}
+
+.dashboard-sidebar-shift-chip {
+    border-color: color-mix(in srgb, var(--shift-chip-color, #2f6fed) 45%, #ffffff 55%);
+    background: color-mix(in srgb, var(--shift-chip-color, #2f6fed) 14%, #ffffff 86%);
+    color: #1e2a38;
+}
+
+.dashboard-sidebar-shift-icon {
+    font-size: 0.92rem;
+    line-height: 1;
 }
 
 .dashboard-sidebar-shift-chip.is-active {
@@ -395,21 +442,25 @@ body.sidebar-expanded .app-sidebar {
 .dashboard-calendar-navigator-action {
     border: 0;
     border-radius: var(--border-radius-full);
-
-/* Shift badge shown inside calendar event */
-.calendar-event-badge {
-    display: inline-block;
-    width: 1.6rem;
-    height: 1.6rem;
-    line-height: 1.6rem;
-    text-align: center;
-    font-size: 1rem;
-    margin-right: 0.35rem;
-}
     font: inherit;
     font-weight: var(--font-weight-bold);
     cursor: pointer;
     white-space: nowrap;
+}
+
+/* Shift badge shown inside calendar event */
+.calendar-event-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.45rem;
+    height: 1.45rem;
+    line-height: 1;
+    text-align: center;
+    font-size: 1rem;
+    margin-right: 0.2rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
 }
 
 .dashboard-calendar-navigator-close {
@@ -603,8 +654,9 @@ body.sidebar-expanded .app-sidebar {
     gap: 0.12rem;
     padding: 0.5rem 0.55rem;
     border-radius: var(--border-radius-md);
-    border: 1px solid rgba(157, 121, 16, 0.16);
-    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid color-mix(in srgb, var(--event-shift-color, #b98b12) 40%, #ffffff 60%);
+    border-left: 4px solid var(--event-shift-color, #b98b12);
+    background: color-mix(in srgb, var(--event-shift-color, #b98b12) 10%, #ffffff 90%);
 }
 
 .calendar-event[draggable="true"] {

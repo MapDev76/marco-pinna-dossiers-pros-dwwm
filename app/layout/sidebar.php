@@ -51,10 +51,12 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
 
         <?php if (in_array($sidebarRole, ['admin', 'department_manager'], true)): ?>
             <section class="dashboard-sidebar-group dashboard-sidebar-departments-panel">
-                <p class="dashboard-sidebar-group-title"><span>📁</span> Departments</p>
+                <button type="button" class="dashboard-sidebar-group-title dashboard-sidebar-department-toggle" data-sidebar-department-toggle aria-expanded="false">
+                    <span>📁</span> Departments
+                </button>
+                <div class="dashboard-sidebar-current-department" data-sidebar-current-department></div>
                 <div>
-                    <button type="button" class="dashboard-sidebar-link management-toggle" aria-expanded="false">Departments</button>
-                    <div class="dashboard-management-list dashboard-sidebar-department-list" hidden>
+                    <div class="dashboard-management-list dashboard-sidebar-department-list">
                         <?php foreach (($dashboardPlannerData['departments'] ?? []) as $department): ?>
                             <?php $deptIcon = $department['icon'] ?? '🏷️'; ?>
                             <?php $deptColor = $department['color'] ?? '#b98b12'; ?>
@@ -70,7 +72,6 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                             </button>
                         <?php endforeach; ?>
                     </div>
-                    <div class="dashboard-department-current" hidden></div>
                 </div>
                 <div class="dashboard-sidebar-planner-detail" data-sidebar-planner-detail>
                     <?php
@@ -108,8 +109,11 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                             <div class="dashboard-sidebar-group-title"><span>⏱</span> Shifts</div>
                             <div class="dashboard-sidebar-chip-group">
                                 <?php if (!empty($shifts)): foreach ($shifts as $shift): ?>
-                                    <button type="button" class="dashboard-sidebar-shift-chip" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">
-                                        <?php echo e($shift['name'] ?? 'Shift'); ?>
+                                    <?php $shiftIcon = $shift['icon'] ?? '🕒'; ?>
+                                    <?php $shiftColor = $shift['color'] ?? '#2f6fed'; ?>
+                                    <button type="button" class="dashboard-sidebar-shift-chip" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" style="--shift-chip-color: <?php echo e($shiftColor); ?>;">
+                                        <span class="dashboard-sidebar-shift-icon"><?php echo e($shiftIcon); ?></span>
+                                        <span><?php echo e($shift['name'] ?? 'Shift'); ?></span>
                                     </button>
                                 <?php endforeach; else: ?>
                                     <div class="dashboard-sidebar-planner-placeholder">No shifts configured.</div>

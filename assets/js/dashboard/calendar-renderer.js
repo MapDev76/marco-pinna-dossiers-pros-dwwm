@@ -48,8 +48,9 @@
     var renderAssignmentCard = function (event, compact) {
       var assignee = event.user_name || 'Unassigned';
       var departmentName = event.department_name || 'Department';
-      var badge = (event.shift_icon ? '<span class="calendar-event-badge" style="color: ' + (event.shift_color || '') + '">' + (event.shift_icon || '') + '</span>' : '');
-      return '\n        <article class="calendar-event' + (compact ? ' is-compact' : '') + '" data-assignment-id="' + (event.assignment_id || '') + '" draggable="true">\n          ' + badge + '\n          <span class="calendar-event-time">' + formatEventTime(event) + '</span>\n          <span class="calendar-event-title">' + (event.shift_name || 'Shift') + '</span>\n          <span class="calendar-event-meta">' + departmentName + ' • ' + assignee + (event.status ? ' • ' + event.status : '') + '</span>\n        </article>\n      ';
+      var shiftColor = event.shift_color || '#2f6fed';
+      var badge = (event.shift_icon ? '<span class="calendar-event-badge" style="color: ' + shiftColor + '">' + (event.shift_icon || '') + '</span>' : '');
+      return '\n        <article class="calendar-event' + (compact ? ' is-compact' : '') + '" data-assignment-id="' + (event.assignment_id || '') + '" draggable="true" style="--event-shift-color:' + shiftColor + '">\n          ' + badge + '\n          <span class="calendar-event-time">' + formatEventTime(event) + '</span>\n          <span class="calendar-event-title">' + (event.shift_name || 'Shift') + '</span>\n          <span class="calendar-event-meta">' + departmentName + ' • ' + assignee + (event.status ? ' • ' + event.status : '') + '</span>\n        </article>\n      ';
     };
 
     var renderDayCard = function (date, options) {

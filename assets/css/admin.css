@@ -386,7 +386,7 @@
 }
 
 .settings-list-cols-shift {
-    grid-template-columns: minmax(170px, 1.2fr) minmax(170px, 1.2fr) minmax(160px, 1.2fr) minmax(90px, 0.6fr) minmax(120px, 0.9fr) minmax(170px, 1fr);
+    grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(220px, 1.4fr) minmax(150px, 1fr) minmax(90px, 0.5fr) minmax(120px, 0.7fr) minmax(170px, 0.9fr);
 }
 
 .settings-list-cols-shift-create,
@@ -395,7 +395,7 @@
 }
 
 .settings-list-cols-assignment {
-    grid-template-columns: minmax(130px, 0.9fr) minmax(170px, 1.2fr) minmax(160px, 1.2fr) minmax(170px, 1.2fr) minmax(120px, 0.8fr) minmax(130px, 0.8fr);
+    grid-template-columns: minmax(120px, 0.8fr) minmax(150px, 1fr) minmax(220px, 1.4fr) minmax(160px, 1fr) minmax(170px, 1fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr);
 }
 
 .settings-list-cols-assignment-edit {
@@ -457,6 +457,77 @@
 .settings-create-row .settings-inline-actions,
 .settings-edit-drawer .settings-inline-actions {
     justify-self: start;
+}
+
+.settings-meta-inline {
+    display: block;
+    margin-top: 0.12rem;
+    font-size: 0.72rem;
+    color: var(--color-text-light);
+}
+
+.settings-analytics-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-analytics-card {
+    padding: 0.75rem;
+    border: 1px solid rgba(157, 121, 16, 0.18);
+    border-radius: 12px;
+    background: linear-gradient(180deg, #fffefa 0%, #fffaf0 100%);
+    display: grid;
+    gap: 0.45rem;
+}
+
+.settings-analytics-card h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--color-text);
+}
+
+.settings-analytics-list {
+    display: grid;
+    gap: 0.42rem;
+}
+
+.settings-analytics-item {
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    background: #fff;
+    padding: 0.5rem 0.6rem;
+    display: grid;
+    gap: 0.25rem;
+}
+
+.settings-analytics-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    color: var(--color-text-light);
+}
+
+.settings-analytics-item-head strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-text);
+}
+
+.settings-analytics-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    font-size: 0.76rem;
+    color: var(--color-text-light);
+}
+
+.settings-metric-warning {
+    color: #8b1b1b;
+    font-weight: var(--font-weight-bold);
 }
 
 .settings-list-cols-user .settings-inline-actions {
@@ -553,6 +624,12 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--spacing-xs);
+}
+
+@media (max-width: 1100px) {
+    .settings-analytics-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .settings-field input {

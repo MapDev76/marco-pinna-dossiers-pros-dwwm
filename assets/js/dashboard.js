@@ -751,9 +751,11 @@
 
       const departmentName = activeDepartment.name || 'Department';
       const departmentIcon = (activeDepartment.icon || '').toString().trim();
+      const departmentColor = (activeDepartment.color || '#b98b12').toString();
 
       return {
         title: departmentIcon ? `${departmentIcon} ${departmentName}` : departmentName,
+        titleColor: departmentColor,
         totalShifts,
         assignedShifts,
         freeShifts,
@@ -779,7 +781,10 @@
         const title = calendarSection.querySelector('[data-calendar-title]');
         const stats = calendarSection.querySelector('[data-calendar-stats]');
         const counters = getCalendarCounters();
-        if (title) title.textContent = counters.title;
+        if (title) {
+          title.textContent = counters.title;
+          title.style.color = counters.titleColor || '';
+        }
         if (stats) {
           stats.textContent = `${counters.totalShifts} shifts • ${counters.assignedShifts} assigned • ${counters.freeShifts} free for ${formatRangeLabel()}`;
         }
@@ -857,8 +862,9 @@
           <div class="dashboard-sidebar-group-title"><span>⏱</span> Shifts</div>
           <div class="dashboard-sidebar-chip-group">
             ${shifts.length ? shifts.map((shift) => `
-              <button type="button" class="dashboard-sidebar-shift-chip ${Number(shift.id) === Number(state.activeShiftId) ? 'is-active' : ''}" data-shift-id="${shift.id}">
-                ${shift.name || 'Shift'} ${formatShiftTime(shift)}
+              <button type="button" class="dashboard-sidebar-shift-chip ${Number(shift.id) === Number(state.activeShiftId) ? 'is-active' : ''}" data-shift-id="${shift.id}" style="--shift-chip-color:${(shift.color || '#2f6fed')}">
+                <span class="dashboard-sidebar-shift-icon">${shift.icon || '🕒'}</span>
+                <span>${shift.name || 'Shift'} ${formatShiftTime(shift)}</span>
               </button>
             `).join('') : '<div class="dashboard-sidebar-planner-placeholder">No shifts configured.</div>'}
           </div>
@@ -964,30 +970,6 @@
         updateChrome,
       });
     }
-
-    // Departments now use the same structure as Management (management-toggle + dashboard-management-list)
-    const departmentCurrent = document.querySelector('.dashboard-department-current');
-
-    // Initialize current department display if one is active
-    (function initCurrentDepartmentDisplay(){
-      const active = document.querySelector('.dashboard-sidebar-department-button.is-active');
-      if (active && departmentCurrent) {
-        departmentCurrent.innerHTML = '';
-        const name = active.getAttribute('data-planner-department-name') || active.textContent.trim();
-        const btnEl = document.createElement('button');
-        btnEl.type = 'button';
-        btnEl.className = 'dashboard-department-current-btn dashboard-sidebar-link';
-        btnEl.textContent = name;
-        btnEl.addEventListener('click', () => {
-          // open the list for selecting another
-          const list = document.querySelector('.dashboard-management-list');
-          if (list) list.hidden = false;
-          departmentCurrent.hidden = true;
-        });
-        departmentCurrent.appendChild(btnEl);
-        departmentCurrent.hidden = false;
-      }
-    })();
 
     if (window.DashboardCalendar && typeof window.DashboardCalendar.init === 'function') {
       window.DashboardCalendar.init({

@@ -71,9 +71,9 @@ $departmentIconCatalogMap = [
     'generic' => ['🏷️', '🧑‍💼', '🔧', '📦', '📁', '🛠️', '💼', '🧭', '📌', '🧾'],
 ];
 $shiftIconCatalogMap = [
-    'hospitality' => ['🌅', '☀️', '🌇', '🌙', '🛎️', '🍽️', '🧹', '🚗'],
-    'healthcare' => ['🩺', '💉', '🚑', '🏥', '🌙', '☀️', '🧪', '💊'],
-    'generic' => ['🕒', '☀️', '🌙', '🛠️', '📦', '👥', '🧭', '⚙️'],
+    'hospitality' => ['🌅', '☀️', '🌇', '🌙', '🛎️', '🍽️', '🧹', '🚗', '🛌', '🌴', '🏖️', '🧘', '☕', '🤒', '💤'],
+    'healthcare' => ['🩺', '💉', '🚑', '🏥', '🌙', '☀️', '🧪', '💊', '🛌', '🧘', '☕', '💤', '🤒', '🏖️', '🌴'],
+    'generic' => ['🕒', '☀️', '🌙', '🛠️', '📦', '👥', '🧭', '⚙️', '🛌', '💤', '🧘', '☕', '🌴', '🏖️', '🤒'],
 ];
 
 $departmentIconCatalog = $departmentIconCatalogMap[$companyDomain] ?? $departmentIconCatalogMap['generic'];
@@ -108,6 +108,197 @@ $visibleDepartments = $departments;
 if (($currentRole ?? '') === 'admin') {
     $visibleDepartments = array_values(array_filter($departments, static fn($d) => (int) ($d['company_id'] ?? 0) === $scopeCompanyId));
 }
+
+$activeAssignmentStatuses = ['assigned', 'in_progress', 'completed'];
+$durationHoursForTimes = static function (?string $startTime, ?string $endTime): float {
+    if (!$startTime || !$endTime) {
+        return 0.0;
+    }
+
+    $startParts = explode(':', $startTime);
+    $endParts = explode(':', $endTime);
+    if (count($startParts) < 2 || count($endParts) < 2) {
+        return 0.0;
+    }
+
+    $startMinutes = ((int) $startParts[0] * 60) + (int) $startParts[1];
+    $endMinutes = ((int) $endParts[0] * 60) + (int) $endParts[1];
+    $delta = $endMinutes - $startMinutes;
+    if ($delta <= 0) {
+        $delta += 24 * 60;
+    }
+
+    return round($delta / 60, 2);
+};
+
+$shiftById = [];
+foreach ($shifts as $shift) {
+    $shiftById[(int) ($shift['id'] ?? 0)] = $shift;
+}
+
+$assignmentTotals = [
+    'total' => count($assignments),
+    'active' => 0,
+    'cancelled' => 0,
+    'assigned_hours' => 0.0,
+    'covered_days' => 0,
+    'days_range' => 0,
+    'unassigned_shift_templates' => 0,
+];
+$assignmentRangeStart = '';
+$assignmentRangeEnd = '';
+$coveredDates = [];
+$coverageByDepartment = [];
+$departmentMetrics = [];
+$userWorkloadMap = [];
+$usedShiftIds = [];
+
+foreach ($visibleDepartments as $department) {
+    $deptId = (int) ($department['id'] ?? 0);
+    if ($deptId <= 0) {
+        continue;
+    }
+    $departmentMetrics[$deptId] = [
+        'department_id' => $deptId,
+        'department_name' => (string) ($department['name'] ?? 'Department'),
+        'department_icon' => (string) ($department['icon'] ?? '🏷️'),
+        'department_color' => (string) ($department['color'] ?? '#b98b12'),
+        'assignments' => 0,
+        'active_assignments' => 0,
+        'hours' => 0.0,
+        'uncovered_days' => 0,
+    ];
+}
+
+foreach ($assignments as $assignment) {
+    $workDate = (string) ($assignment['work_date'] ?? '');
+    $status = (string) ($assignment['status'] ?? 'assigned');
+    $isActiveAssignment = in_array($status, $activeAssignmentStatuses, true);
+    $deptId = (int) ($assignment['department_id'] ?? 0);
+    $userId = (int) ($assignment['user_id'] ?? 0);
+    $shiftId = (int) ($assignment['shift_id'] ?? 0);
+    $shiftName = (string) ($assignment['shift_name'] ?? 'Shift');
+    $shiftStart = (string) ($assignment['start_time'] ?? ($shiftById[$shiftId]['start_time'] ?? ''));
+    $shiftEnd = (string) ($assignment['end_time'] ?? ($shiftById[$shiftId]['end_time'] ?? ''));
+    $durationHours = $durationHoursForTimes($shiftStart, $shiftEnd);
+
+    if ($workDate !== '') {
+        if ($assignmentRangeStart === '' || $workDate < $assignmentRangeStart) {
+            $assignmentRangeStart = $workDate;
+        }
+        if ($assignmentRangeEnd === '' || $workDate > $assignmentRangeEnd) {
+            $assignmentRangeEnd = $workDate;
+        }
+    }
+
+    if (isset($departmentMetrics[$deptId])) {
+        $departmentMetrics[$deptId]['assignments']++;
+    }
+
+    if (!$isActiveAssignment) {
+        $assignmentTotals['cancelled']++;
+        continue;
+    }
+
+    $assignmentTotals['active']++;
+    $assignmentTotals['assigned_hours'] += $durationHours;
+    if ($workDate !== '') {
+        $coveredDates[$workDate] = true;
+        if (!isset($coverageByDepartment[$deptId])) {
+            $coverageByDepartment[$deptId] = [];
+        }
+        $coverageByDepartment[$deptId][$workDate] = true;
+    }
+
+    if ($shiftId > 0) {
+        $usedShiftIds[$shiftId] = true;
+    }
+
+    if (isset($departmentMetrics[$deptId])) {
+        $departmentMetrics[$deptId]['active_assignments']++;
+        $departmentMetrics[$deptId]['hours'] += $durationHours;
+    }
+
+    if ($userId > 0) {
+        if (!isset($userWorkloadMap[$userId])) {
+            $userWorkloadMap[$userId] = [
+                'user_id' => $userId,
+                'user_name' => (string) ($assignment['user_name'] ?? 'User'),
+                'assignments' => 0,
+                'hours' => 0.0,
+                'days' => [],
+                'shifts' => [],
+            ];
+        }
+        $userWorkloadMap[$userId]['assignments']++;
+        $userWorkloadMap[$userId]['hours'] += $durationHours;
+        if ($workDate !== '') {
+            $userWorkloadMap[$userId]['days'][$workDate] = true;
+        }
+        if (!isset($userWorkloadMap[$userId]['shifts'][$shiftName])) {
+            $userWorkloadMap[$userId]['shifts'][$shiftName] = 0;
+        }
+        $userWorkloadMap[$userId]['shifts'][$shiftName]++;
+    }
+}
+
+if ($assignmentRangeStart === '' || $assignmentRangeEnd === '') {
+    $assignmentRangeStart = date('Y-m-d');
+    $assignmentRangeEnd = date('Y-m-d', strtotime('+13 days'));
+}
+
+$periodStart = new DateTimeImmutable($assignmentRangeStart);
+$periodEnd = new DateTimeImmutable($assignmentRangeEnd);
+$periodEndExclusive = $periodEnd->modify('+1 day');
+$periodDays = (int) $periodStart->diff($periodEnd)->days + 1;
+$assignmentTotals['days_range'] = max(1, $periodDays);
+$assignmentTotals['covered_days'] = count($coveredDates);
+$assignmentTotals['unassigned_shift_templates'] = max(0, count($shifts) - count($usedShiftIds));
+
+$dayKeysInRange = [];
+foreach (new DatePeriod($periodStart, new DateInterval('P1D'), $periodEndExclusive) as $date) {
+    $dayKeysInRange[] = $date->format('Y-m-d');
+}
+foreach ($departmentMetrics as $deptId => $metric) {
+    $uncoveredCount = 0;
+    foreach ($dayKeysInRange as $dayKey) {
+        if (!isset($coverageByDepartment[$deptId][$dayKey])) {
+            $uncoveredCount++;
+        }
+    }
+    $departmentMetrics[$deptId]['uncovered_days'] = $uncoveredCount;
+}
+
+$departmentCoverageRows = array_values($departmentMetrics);
+usort($departmentCoverageRows, static function (array $a, array $b): int {
+    return $b['uncovered_days'] <=> $a['uncovered_days'];
+});
+
+$userWorkloadRows = array_values($userWorkloadMap);
+foreach ($userWorkloadRows as &$workloadRow) {
+    $workloadRow['hours'] = round((float) $workloadRow['hours'], 2);
+    $workloadRow['days_count'] = count($workloadRow['days']);
+    arsort($workloadRow['shifts']);
+    $shiftChunks = [];
+    foreach ($workloadRow['shifts'] as $shiftName => $count) {
+        $shiftChunks[] = $shiftName . ' (' . $count . ')';
+        if (count($shiftChunks) >= 3) {
+            break;
+        }
+    }
+    $workloadRow['shift_preview'] = implode(', ', $shiftChunks);
+}
+unset($workloadRow);
+usort($userWorkloadRows, static function (array $a, array $b): int {
+    if ($a['hours'] === $b['hours']) {
+        return $b['assignments'] <=> $a['assignments'];
+    }
+
+    return $b['hours'] <=> $a['hours'];
+});
+
+$assignmentTotals['assigned_hours'] = round((float) $assignmentTotals['assigned_hours'], 2);
+
 $departmentCreateHeadUsers = array_values(array_filter(
     $visibleUsers,
     static fn(array $u): bool => ((int) ($u['company_id'] ?? 0) === $scopeCompanyId) && ((int) ($u['department_id'] ?? 0) === 0)
@@ -174,12 +365,73 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <div class="settings-panel-head">
                     <div>
                         <h3>Assignments</h3>
-                        <p class="crud-modal-subtitle">Planner assignments in list mode, editable row by row.</p>
+                        <p class="crud-modal-subtitle">Planner assignments with operational insights for admin decisions.</p>
                     </div>
                     <div class="settings-pill-row">
                         <span class="settings-pill">Company: <?php echo e($scopeCompanyName); ?></span>
                         <span class="settings-pill">Assignments: <?php echo count($assignments); ?></span>
+                        <span class="settings-pill">Active: <?php echo (int) ($assignmentTotals['active'] ?? 0); ?></span>
+                        <span class="settings-pill">Cancelled: <?php echo (int) ($assignmentTotals['cancelled'] ?? 0); ?></span>
+                        <span class="settings-pill">Hours assigned: <?php echo e(number_format((float) ($assignmentTotals['assigned_hours'] ?? 0), 2)); ?>h</span>
+                        <span class="settings-pill">Covered days: <?php echo (int) ($assignmentTotals['covered_days'] ?? 0); ?>/<?php echo (int) ($assignmentTotals['days_range'] ?? 0); ?></span>
+                        <span class="settings-pill">Shifts not assigned: <?php echo (int) ($assignmentTotals['unassigned_shift_templates'] ?? 0); ?></span>
                     </div>
+                </div>
+
+                <div class="settings-analytics-grid">
+                    <section class="settings-analytics-card">
+                        <h4>Coverage by Department</h4>
+                        <p class="crud-modal-subtitle">
+                            Range: <?php echo e($assignmentRangeStart); ?> to <?php echo e($assignmentRangeEnd); ?>
+                        </p>
+                        <?php if (empty($departmentCoverageRows)): ?>
+                            <div class="crud-empty-state">No department data available.</div>
+                        <?php else: ?>
+                            <div class="settings-analytics-list">
+                                <?php foreach (array_slice($departmentCoverageRows, 0, 12) as $deptMetric): ?>
+                                    <article class="settings-analytics-item">
+                                        <div class="settings-analytics-item-head">
+                                            <strong>
+                                                <span class="settings-dept-title-icon" style="background: color-mix(in srgb, <?php echo e($deptMetric['department_color'] ?? '#b98b12'); ?> 18%, #ffffff 82%);">
+                                                    <?php echo e($deptMetric['department_icon'] ?? '🏷️'); ?>
+                                                </span>
+                                                <?php echo e($deptMetric['department_name'] ?? 'Department'); ?>
+                                            </strong>
+                                        </div>
+                                        <div class="settings-analytics-metrics">
+                                            <span>Assignments: <?php echo (int) ($deptMetric['active_assignments'] ?? 0); ?></span>
+                                            <span>Hours: <?php echo e(number_format((float) ($deptMetric['hours'] ?? 0), 2)); ?>h</span>
+                                            <span class="settings-metric-warning">Uncovered days: <?php echo (int) ($deptMetric['uncovered_days'] ?? 0); ?></span>
+                                        </div>
+                                    </article>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </section>
+
+                    <section class="settings-analytics-card">
+                        <h4>Workload by User</h4>
+                        <p class="crud-modal-subtitle">Hours, days and most frequent shifts assigned to each user.</p>
+                        <?php if (empty($userWorkloadRows)): ?>
+                            <div class="crud-empty-state">No user workload data available.</div>
+                        <?php else: ?>
+                            <div class="settings-analytics-list">
+                                <?php foreach (array_slice($userWorkloadRows, 0, 12) as $workload): ?>
+                                    <article class="settings-analytics-item">
+                                        <div class="settings-analytics-item-head">
+                                            <strong><?php echo e($workload['user_name'] ?? 'User'); ?></strong>
+                                            <span><?php echo (int) ($workload['assignments'] ?? 0); ?> assignments</span>
+                                        </div>
+                                        <div class="settings-analytics-metrics">
+                                            <span>Hours: <?php echo e(number_format((float) ($workload['hours'] ?? 0), 2)); ?>h</span>
+                                            <span>Days: <?php echo (int) ($workload['days_count'] ?? 0); ?></span>
+                                            <span>Shifts: <?php echo e($workload['shift_preview'] ?: 'n/a'); ?></span>
+                                        </div>
+                                    </article>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </section>
                 </div>
 
                 <div class="settings-list-wrap">
@@ -188,6 +440,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <span>Department</span>
                         <span>Shift</span>
                         <span>User</span>
+                        <span>Workload</span>
                         <span>Status</span>
                         <span>Actions</span>
                     </div>
@@ -200,8 +453,24 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <div class="settings-list-row settings-list-cols settings-list-cols-assignment">
                                     <strong><?php echo e($assignment['work_date'] ?? ''); ?></strong>
                                     <span><?php echo e($assignment['department_name'] ?? '--'); ?></span>
-                                    <span><?php echo e($assignment['shift_name'] ?? '--'); ?></span>
+                                    <span>
+                                        <?php echo e($assignment['shift_icon'] ?? '🕒'); ?>
+                                        <?php echo e($assignment['shift_name'] ?? '--'); ?>
+                                        <?php if (!empty($assignment['shift_description'])): ?>
+                                            <small class="settings-meta-inline"><?php echo e($assignment['shift_description']); ?></small>
+                                        <?php endif; ?>
+                                    </span>
                                     <span><?php echo e($assignment['user_name'] ?? 'Unassigned'); ?></span>
+                                    <?php
+                                        $assignmentDuration = $durationHoursForTimes(
+                                            (string) ($assignment['start_time'] ?? ''),
+                                            (string) ($assignment['end_time'] ?? '')
+                                        );
+                                    ?>
+                                    <span>
+                                        <?php echo e(($assignment['start_time'] ?? '--:--') . ' - ' . ($assignment['end_time'] ?? '--:--')); ?>
+                                        <small class="settings-meta-inline"><?php echo e(number_format($assignmentDuration, 2)); ?>h</small>
+                                    </span>
                                     <span><?php echo e($assignment['status'] ?? 'assigned'); ?></span>
                                     <div class="settings-inline-actions">
                                         <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-assignment-edit" aria-label="Edit assignment" title="Edit assignment">✎</button>
@@ -216,7 +485,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             <select data-field="shift_id">
                                                 <?php foreach ($shifts as $shift): ?>
                                                     <option value="<?php echo (int) ($shift['id'] ?? 0); ?>" <?php echo ((int) ($assignment['shift_id'] ?? 0) === (int) ($shift['id'] ?? 0)) ? 'selected' : ''; ?>>
-                                                        <?php echo e(($shift['name'] ?? 'Shift') . ' • ' . ($shift['department_name'] ?? '')); ?>
+                                                        <?php echo e(($shift['icon'] ?? '🕒') . ' ' . ($shift['name'] ?? 'Shift') . ' • ' . ($shift['department_name'] ?? '')); ?><?php echo !empty($shift['description']) ? e(' • ' . $shift['description']) : ''; ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -568,6 +837,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 </div>
                             </div>
                         </label>
+                        <label class="settings-field">Description
+                            <input data-field="description" type="text" value="" placeholder="Shift purpose, rest type, notes">
+                        </label>
                         <label class="settings-field">Start<input data-field="start_time" type="time" value="09:00"></label>
                         <label class="settings-field">End<input data-field="end_time" type="time" value="17:00"></label>
                         <div class="settings-inline-actions">
@@ -581,6 +853,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-shift">
                         <strong>Name</strong>
                         <span>Department</span>
+                        <span>Description</span>
                         <span>Time</span>
                         <span>Icon</span>
                         <span>Color</span>
@@ -595,6 +868,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <div class="settings-list-row settings-list-cols settings-list-cols-shift">
                                     <strong><?php echo e($shift['name'] ?? 'Shift'); ?></strong>
                                     <span><?php echo e($shift['department_name'] ?? ''); ?></span>
+                                    <span><?php echo e($shift['description'] ?? '--'); ?></span>
                                     <span><?php echo e(($shift['start_time'] ?? '--:--') . ' - ' . ($shift['end_time'] ?? '--:--')); ?></span>
                                     <span><?php echo e($shift['icon'] ?? '🕒'); ?></span>
                                     <span><?php echo e($shift['color'] ?? '#2f6fed'); ?></span>
@@ -639,6 +913,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                     </div>
                                                 </div>
                                             </div>
+                                        </label>
+                                        <label class="settings-field">Description
+                                            <input data-field="description" type="text" value="<?php echo e($shift['description'] ?? ''); ?>" placeholder="Shift purpose, rest type, notes">
                                         </label>
                                         <label class="settings-field">Start<input data-field="start_time" type="time" value="<?php echo e($shift['start_time'] ?? ''); ?>"></label>
                                         <label class="settings-field">End<input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>"></label>

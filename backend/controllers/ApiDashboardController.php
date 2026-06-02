@@ -144,6 +144,7 @@ if (in_array($action, ['assign_shift', 'move_shift'], true)) {
         's.name AS shift_name',
         's.icon AS shift_icon',
         's.color AS shift_color',
+        's.description AS shift_description',
         's.start_time',
         's.end_time',
         'd.id AS department_id',
