@@ -751,7 +751,36 @@
 }
 
 .settings-auto-assign-row {
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.6rem;
+    padding: 0.55rem 0.6rem;
+}
+
+.settings-auto-assign-row .settings-list-cols.settings-list-cols-shift-create {
+    grid-template-columns: minmax(170px, 1.15fr) repeat(2, minmax(128px, 0.8fr)) repeat(2, minmax(115px, 0.72fr)) minmax(188px, 0.95fr);
+    gap: 0.45rem;
+    align-items: end;
+}
+
+.settings-auto-assign-row .settings-field {
+    margin: 0;
+}
+
+.settings-auto-assign-row .settings-field input,
+.settings-auto-assign-row .settings-field select {
+    min-height: 30px;
+    padding: 0.28rem 0.42rem;
+    font-size: 0.82rem;
+}
+
+.settings-auto-assign-row .settings-inline-actions {
+    gap: 0.32rem;
+    flex-wrap: nowrap;
+}
+
+.settings-auto-assign-row .admin-action-link {
+    min-height: 30px;
+    padding: 0.28rem 0.48rem;
+    font-size: 0.76rem;
 }
 
 .settings-create-row-shift {

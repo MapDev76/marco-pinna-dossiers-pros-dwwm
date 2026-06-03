@@ -193,6 +193,10 @@
         max-width: 100%;
     }
 
+    .settings-auto-assign-row .settings-inline-actions {
+        flex-wrap: wrap;
+    }
+
     .settings-tabs {
         overflow-x: auto;
         padding-bottom: 0.4rem;

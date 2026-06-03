@@ -142,6 +142,7 @@ foreach ($shifts as $shift) {
 $currentMonthPrefix = date('Y-m');
 $currentMonthStart = date('Y-m-01');
 $currentMonthEnd = date('Y-m-t');
+$currentMonthLabel = date('F Y');
 $todayDate = date('Y-m-d');
 $assignmentsCurrentMonth = array_values(array_filter(
     $assignments,
@@ -423,11 +424,11 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <div class="settings-panel-head">
                     <div>
                         <h3>Assignments</h3>
-                        <p class="crud-modal-subtitle">Planner assignments with operational insights for admin decisions.</p>
+                        <p class="crud-modal-subtitle">Planner assignments with operational insights for admin decisions (current month).</p>
                     </div>
                     <div class="settings-pill-row">
                         <span class="settings-pill">Company: <?php echo e($scopeCompanyName); ?></span>
-                        <span class="settings-pill">Month: <?php echo e(date('F Y')); ?></span>
+                        <span class="settings-pill">Month: <?php echo e($currentMonthLabel); ?></span>
                         <span class="settings-pill">Assignments: <?php echo count($assignmentsCurrentMonth); ?></span>
                         <span class="settings-pill">Active: <?php echo (int) ($assignmentTotals['active'] ?? 0); ?></span>
                         <span class="settings-pill">Cancelled: <?php echo (int) ($assignmentTotals['cancelled'] ?? 0); ?></span>
@@ -600,7 +601,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <section class="settings-analytics-card">
                         <h4>Coverage by Department</h4>
                         <p class="crud-modal-subtitle">
-                            Range: <?php echo e($assignmentRangeStart); ?> to <?php echo e($assignmentRangeEnd); ?>
+                            Current month: <?php echo e($currentMonthLabel); ?> (range: <?php echo e($assignmentRangeStart); ?> to <?php echo e($assignmentRangeEnd); ?>)
                         </p>
                         <?php if (empty($departmentCoverageRows)): ?>
                             <div class="crud-empty-state">No department data available.</div>
@@ -629,7 +630,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                     <section class="settings-analytics-card">
                         <h4>Workload by User</h4>
-                        <p class="crud-modal-subtitle">Hours, days and most frequent shifts assigned to each user.</p>
+                        <p class="crud-modal-subtitle">Current month <?php echo e($currentMonthLabel); ?>: hours, days and most frequent shifts assigned to each user.</p>
                         <?php if (empty($userWorkloadRows)): ?>
                             <div class="crud-empty-state">No user workload data available.</div>
                         <?php else: ?>
@@ -653,6 +654,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 </div>
 
                 <div class="settings-list-wrap">
+                    <p class="crud-modal-subtitle">Daily assignments list for current month <?php echo e($currentMonthLabel); ?>.</p>
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-assignment">
                         <strong>Date</strong>
                         <span>Department</span>

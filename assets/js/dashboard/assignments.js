@@ -52,6 +52,26 @@
     return !!panel && !panel.hidden;
   }
 
+  function todayKey() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function currentMonthStartKey() {
+    const today = todayKey();
+    return `${today.slice(0, 7)}-01`;
+  }
+
+  function isPastDateKey(dateKey) {
+    return !!dateKey && dateKey < todayKey();
+  }
+
+  function normalizeCurrentMonthRange(start, end) {
+    const minDate = currentMonthStartKey();
+    const safeStart = start && start >= minDate ? start : minDate;
+    const safeEnd = end && end >= safeStart ? end : safeStart;
+    return { start: safeStart, end: safeEnd };
+  }
+
   function loadRules() {
     try {
       const raw = localStorage.getItem(RULES_STORAGE_KEY);
@@ -615,6 +635,10 @@
       notifyError('Shift and work date are required.');
       return;
     }
+    if (isPastDateKey(payload.work_date)) {
+      notifyError('Past dates are read-only and cannot be edited.');
+      return;
+    }
 
     try {
       const res = await AppAPI.postJSON(apiUrl, payload);
@@ -638,6 +662,11 @@
     if (!row || !apiUrl || !window.AppAPI) return;
     const assignmentId = parseInt(row.dataset.assignmentId || '0', 10) || 0;
     if (!assignmentId) return;
+    const rowDate = String(row.dataset.assignmentWorkDate || '').trim();
+    if (isPastDateKey(rowDate)) {
+      notifyError('Past dates are read-only and cannot be edited.');
+      return;
+    }
 
     try {
       const res = await AppAPI.postJSON(apiUrl, {
@@ -664,6 +693,15 @@
     if (!apiUrl || !window.AppAPI) return;
 
     try {
+      const range = normalizeCurrentMonthRange(
+        document.querySelector('[data-auto-assign-range-start]')?.value || '',
+        document.querySelector('[data-auto-assign-range-end]')?.value || ''
+      );
+      const rangeStartInput = document.querySelector('[data-auto-assign-range-start]');
+      const rangeEndInput = document.querySelector('[data-auto-assign-range-end]');
+      if (rangeStartInput) rangeStartInput.value = range.start;
+      if (rangeEndInput) rangeEndInput.value = range.end;
+
       const employeeRules = {
         ...loadRules(),
         ...collectRulesFromRows(),
@@ -671,8 +709,8 @@
       const res = await AppAPI.postJSON(apiUrl, {
         action: 'auto_assign_open',
         scope_shift_id: parseInt(document.querySelector('[data-auto-assign-shift]')?.value || '0', 10) || 0,
-        range_start: document.querySelector('[data-auto-assign-range-start]')?.value || '',
-        range_end: document.querySelector('[data-auto-assign-range-end]')?.value || '',
+        range_start: range.start,
+        range_end: range.end,
         max_hours_per_month: parseInt(document.querySelector('[data-auto-assign-max-hours]')?.value || '176', 10) || 176,
         max_days_per_month: parseInt(document.querySelector('[data-auto-assign-max-days]')?.value || '22', 10) || 22,
         employee_rules: employeeRules,
@@ -699,8 +737,16 @@
     if (!apiUrl || !window.AppAPI) return;
 
     const scopeShiftId = parseInt(document.querySelector('[data-auto-assign-shift]')?.value || '0', 10) || 0;
-    const rangeStart = document.querySelector('[data-auto-assign-range-start]')?.value || '';
-    const rangeEnd = document.querySelector('[data-auto-assign-range-end]')?.value || '';
+    const normalizedRange = normalizeCurrentMonthRange(
+      document.querySelector('[data-auto-assign-range-start]')?.value || '',
+      document.querySelector('[data-auto-assign-range-end]')?.value || ''
+    );
+    const rangeStartInput = document.querySelector('[data-auto-assign-range-start]');
+    const rangeEndInput = document.querySelector('[data-auto-assign-range-end]');
+    if (rangeStartInput) rangeStartInput.value = normalizedRange.start;
+    if (rangeEndInput) rangeEndInput.value = normalizedRange.end;
+    const rangeStart = normalizedRange.start;
+    const rangeEnd = normalizedRange.end;
     const shiftLabel = document.querySelector('[data-auto-assign-shift]')?.selectedOptions?.[0]?.textContent?.trim() || 'selected shifts';
     const rangeLabel = rangeStart && rangeEnd ? `${rangeStart} to ${rangeEnd}` : 'the selected range';
 

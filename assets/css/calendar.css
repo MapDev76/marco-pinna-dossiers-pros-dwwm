@@ -658,8 +658,9 @@ body.sidebar-expanded .app-sidebar {
 }
 
 .calendar-day-card.is-current {
-    border-color: rgba(157, 121, 16, 0.34);
-    box-shadow: 0 0 0 1px rgba(157, 121, 16, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    border-width: 2px;
+    border-color: rgba(157, 121, 16, 0.5);
+    box-shadow: 0 0 0 2px rgba(157, 121, 16, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .calendar-day-card.is-muted {
