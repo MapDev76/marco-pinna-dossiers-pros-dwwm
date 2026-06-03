@@ -588,6 +588,7 @@
     const plannerDepartmentButtons = document.querySelectorAll('[data-planner-department-id]');
     const plannerData = window.DashboardPlannerData || {};
     const apiDashboard = (window.DashboardConfig || {}).apiDashboard;
+    const RULES_STORAGE_KEY = 'staffease:auto-assign-rules:v1';
 
     if (!sidebar && !calendarShell && !navigatorPanel) {
       return;
@@ -598,6 +599,17 @@
         return JSON.parse(value);
       } catch (error) {
         return fallback;
+      }
+    };
+
+    const loadAssignmentRules = () => {
+      try {
+        const raw = window.localStorage.getItem(RULES_STORAGE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch (_error) {
+        return {};
       }
     };
 
@@ -650,6 +662,8 @@
       selectedDate: calendarToday,
       activeDepartmentId: Number(plannerData.active_department_id || departments[0]?.id || 0),
       activeShiftId: Number(plannerData.active_shift_id || 0),
+      activeUserId: 0,
+      activeUserName: '',
       calendarExpanded: false,
       draggingUserId: null,
       draggingAssignmentId: null,
@@ -669,6 +683,41 @@
     const getActiveShifts = () => (getActiveDepartment()?.shifts || []);
     const getActiveUsers = () => (getActiveDepartment()?.users || []);
     const getActiveShift = () => getActiveShifts().find((shift) => Number(shift.id) === Number(state.activeShiftId)) || getActiveShifts()[0] || null;
+    const getActiveUser = () => getActiveUsers().find((user) => Number(user.id) === Number(state.activeUserId)) || null;
+    const isUserAvailableForDate = (userId, slotDate) => {
+      const normalizedUserId = Number(userId || 0);
+      const normalizedDate = String(slotDate || '').trim();
+      if (!normalizedUserId || !/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) {
+        return true;
+      }
+
+      const rules = loadAssignmentRules();
+      const rule = rules[String(normalizedUserId)] || rules[normalizedUserId] || null;
+      if (!rule || typeof rule !== 'object') {
+        return true;
+      }
+
+      const slotMonth = normalizedDate.slice(0, 7);
+      const currentMonth = dateKey(calendarToday).slice(0, 7);
+      const nextMonthDate = new Date(calendarToday.getFullYear(), calendarToday.getMonth() + 1, 1, 12, 0, 0, 0);
+      const nextMonth = dateKey(nextMonthDate).slice(0, 7);
+      const scope = String(rule.scope || 'all');
+      if (scope === 'current' && slotMonth !== currentMonth) {
+        return true;
+      }
+      if (scope === 'next' && slotMonth < nextMonth) {
+        return true;
+      }
+
+      const specialDates = Array.isArray(rule.special_dates) ? rule.special_dates : [];
+      if (specialDates.some((item) => String(item?.date || '') === normalizedDate)) {
+        return false;
+      }
+
+      const offWeekdays = Array.isArray(rule.off_weekdays) ? rule.off_weekdays.map((value) => Number(value)) : [];
+      const weekday = new Date(`${normalizedDate}T12:00:00`).getDay();
+      return !offWeekdays.includes(weekday);
+    };
 
     const setActiveDepartment = (departmentId) => {
       const department = getDepartmentById(departmentId);
@@ -676,6 +725,9 @@
       state.activeDepartmentId = Number(department.id);
       const firstShift = (department.shifts || [])[0] || null;
       state.activeShiftId = firstShift ? Number(firstShift.id) : 0;
+      const nextUser = (department.users || []).find((user) => Number(user.id) === Number(state.activeUserId));
+      state.activeUserId = nextUser ? Number(nextUser.id) : 0;
+      state.activeUserName = nextUser ? `${nextUser.first_name || ''} ${nextUser.last_name || ''}`.trim() : '';
       renderSidebarPlanner();
       renderCalendar();
     };
@@ -683,6 +735,20 @@
     const setActiveShift = (shiftId) => {
       state.activeShiftId = Number(shiftId);
       renderSidebarPlanner();
+      renderCalendar();
+    };
+
+    const setActiveUser = (userId, userName) => {
+      const normalizedId = Number(userId || 0);
+      if (normalizedId > 0 && normalizedId === Number(state.activeUserId || 0)) {
+        state.activeUserId = 0;
+        state.activeUserName = '';
+      } else {
+        state.activeUserId = normalizedId;
+        state.activeUserName = String(userName || '').trim();
+      }
+      renderSidebarPlanner();
+      renderCalendar();
     };
 
     const formatShiftTime = (shift) => {
@@ -815,6 +881,8 @@
         monthLabelFormatter,
         updateChrome,
         getActiveDepartment,
+        isUserAvailableForDate,
+        getVisibleDateKeys,
       })
       : null;
 
@@ -845,6 +913,7 @@
       const deptName = activeDepartment.name || 'Department';
       const deptIcon = (activeDepartment.icon || '').toString().trim() || '🏷️';
       const deptColor = (activeDepartment.color || '#b98b12').toString();
+      const activeShift = getActiveShift();
       plannerDetail.innerHTML = `
         <div class="dashboard-sidebar-planner-title">
           <span style="color:${deptColor}">${deptIcon} ${deptName}</span>
@@ -854,11 +923,18 @@
         <div>
           <div class="dashboard-sidebar-group-title"><span>👤</span> Employees</div>
           <div class="dashboard-sidebar-chip-group">
-            ${users.length ? users.map((user) => `
-              <button type="button" class="dashboard-sidebar-user-chip" draggable="true" data-user-id="${user.id}" data-user-name="${(user.first_name || '') + ' ' + (user.last_name || '')}" title="Drag to calendar">
-                ${user.first_name || ''} ${user.last_name || ''}
-              </button>
-            `).join('') : '<div class="dashboard-sidebar-planner-placeholder">No employees in this department.</div>'}
+            ${users.length ? users.map((user) => {
+              const userId = Number(user.id || 0);
+              const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || `Employee #${userId}`;
+              const isActiveUser = userId === Number(state.activeUserId || 0);
+              return `
+              <article class="dashboard-sidebar-user-card ${isActiveUser ? 'is-active' : ''}" data-sidebar-user-card="${userId}" data-user-id="${userId}" data-user-name="${userName}">
+                <button type="button" class="dashboard-sidebar-user-chip ${isActiveUser ? 'is-active' : ''}" draggable="true" data-user-id="${userId}" data-user-name="${userName}" title="Click or drag to calendar">
+                  ${userName}
+                </button>
+              </article>
+            `;
+            }).join('') : '<div class="dashboard-sidebar-planner-placeholder">No employees in this department.</div>'}
           </div>
         </div>
         <div>
@@ -874,7 +950,14 @@
         </div>
       `;
 
-      plannerDetail.querySelectorAll('[data-user-id]').forEach((button) => {
+      plannerDetail.querySelectorAll('[data-sidebar-user-card]').forEach((card) => {
+        card.addEventListener('pointerdown', (event) => {
+          if (event.button !== 0) return;
+          setActiveUser(card.getAttribute('data-user-id'), card.getAttribute('data-user-name'));
+        });
+      });
+
+      plannerDetail.querySelectorAll('.dashboard-sidebar-user-chip[data-user-id]').forEach((button) => {
         button.addEventListener('dragstart', (event) => {
           state.draggingUserId = button.getAttribute('data-user-id');
           state.draggingAssignmentId = null;
@@ -1005,10 +1088,12 @@
       window.DashboardCalendar.init({
         calendarShell,
         events,
+        state,
         toLocalDate,
         openDate,
         unassignAssignment,
         assignShift,
+        isUserAvailableForDate,
       });
     }
 
@@ -1021,6 +1106,7 @@
         assignShift,
         moveShift,
         safeParseJson,
+        isUserAvailableForDate,
       });
     }
 

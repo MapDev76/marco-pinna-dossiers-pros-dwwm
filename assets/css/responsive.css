@@ -208,6 +208,10 @@
         grid-template-columns: 1fr;
     }
 
+    .settings-assignment-employee-window-grid {
+        grid-template-columns: 1fr;
+    }
+
     .dashboard-calendar {
         grid-template-columns: 1fr;
         height: auto;
@@ -439,6 +443,43 @@
         flex: 1 1 calc(50% - 0.3rem);
         min-width: 0;
         text-align: center;
+    }
+
+    .settings-assignment-employee-modal {
+        padding: 0.4rem;
+    }
+
+    .settings-assignment-employee-window {
+        width: calc(100vw - 0.8rem);
+        max-height: calc(100vh - 0.8rem);
+        border-radius: 14px;
+        padding: 0.65rem;
+    }
+
+    .settings-assignment-week-days {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .settings-assignment-shift-group-list {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-assignment-modal-open-range {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-assignment-modal-open-slots .settings-inline-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .settings-assignment-modal-open-slots .settings-inline-actions .admin-action-link {
+        width: 100%;
+        max-width: none;
+    }
+
+    .settings-assignment-open-slot-list {
+        max-height: 260px;
     }
 
     .settings-list-header {

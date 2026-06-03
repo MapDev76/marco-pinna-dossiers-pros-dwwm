@@ -139,8 +139,17 @@ foreach ($shifts as $shift) {
     $shiftById[(int) ($shift['id'] ?? 0)] = $shift;
 }
 
+$currentMonthPrefix = date('Y-m');
+$currentMonthStart = date('Y-m-01');
+$currentMonthEnd = date('Y-m-t');
+$todayDate = date('Y-m-d');
+$assignmentsCurrentMonth = array_values(array_filter(
+    $assignments,
+    static fn(array $assignment): bool => str_starts_with((string) ($assignment['work_date'] ?? ''), $currentMonthPrefix)
+));
+
 $assignmentTotals = [
-    'total' => count($assignments),
+    'total' => count($assignmentsCurrentMonth),
     'active' => 0,
     'cancelled' => 0,
     'assigned_hours' => 0.0,
@@ -173,7 +182,7 @@ foreach ($visibleDepartments as $department) {
     ];
 }
 
-foreach ($assignments as $assignment) {
+foreach ($assignmentsCurrentMonth as $assignment) {
     $workDate = (string) ($assignment['work_date'] ?? '');
     $status = (string) ($assignment['status'] ?? 'assigned');
     $isActiveAssignment = in_array($status, $activeAssignmentStatuses, true);
@@ -246,9 +255,14 @@ foreach ($assignments as $assignment) {
 }
 
 if ($assignmentRangeStart === '' || $assignmentRangeEnd === '') {
-    $assignmentRangeStart = date('Y-m-d');
-    $assignmentRangeEnd = date('Y-m-d', strtotime('+13 days'));
+    $assignmentRangeStart = $todayDate;
+    $assignmentRangeEnd = $currentMonthEnd;
 }
+
+$assignmentRangeStart = max($assignmentRangeStart, $currentMonthStart);
+$assignmentRangeEnd = max($assignmentRangeStart, $assignmentRangeEnd);
+$autoAssignDefaultStart = max($todayDate, $currentMonthStart);
+$autoAssignDefaultEnd = max($autoAssignDefaultStart, $currentMonthEnd);
 
 $periodStart = new DateTimeImmutable($assignmentRangeStart);
 $periodEnd = new DateTimeImmutable($assignmentRangeEnd);
@@ -302,7 +316,7 @@ usort($userWorkloadRows, static function (array $a, array $b): int {
 
 $assignmentTotals['assigned_hours'] = round((float) $assignmentTotals['assigned_hours'], 2);
 $openAssignmentsCount = count(array_filter(
-    $assignments,
+    $assignmentsCurrentMonth,
     static fn(array $assignment): bool => (int) ($assignment['user_id'] ?? 0) <= 0 || (($assignment['status'] ?? '') === 'open')
 ));
 
@@ -369,6 +383,43 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
         <div class="crud-modal-body settings-modal-body">
             <section class="crud-panel settings-panel" data-settings-panel="assignments" hidden>
+                <?php
+                    $employeeAssignmentStats = [];
+                    foreach ($visibleUsers as $userStat) {
+                        $statUserId = (int) ($userStat['id'] ?? 0);
+                        if ($statUserId <= 0) {
+                            continue;
+                        }
+                        $employeeAssignmentStats[$statUserId] = [
+                            'assigned' => 0,
+                            'sick' => 0,
+                            'vacation' => 0,
+                            'rest' => 0,
+                        ];
+                    }
+
+                    foreach ($assignmentsCurrentMonth as $assignmentStat) {
+                        $statUserId = (int) ($assignmentStat['user_id'] ?? 0);
+                        if ($statUserId <= 0 || !isset($employeeAssignmentStats[$statUserId])) {
+                            continue;
+                        }
+
+                        $statusValue = (string) ($assignmentStat['status'] ?? 'assigned');
+                        if (in_array($statusValue, ['cancelled', 'open'], true)) {
+                            continue;
+                        }
+
+                        $employeeAssignmentStats[$statUserId]['assigned']++;
+                        $kindValue = strtolower((string) ($assignmentStat['shift_kind'] ?? 'work'));
+                        if ($kindValue === 'sick') {
+                            $employeeAssignmentStats[$statUserId]['sick']++;
+                        } elseif ($kindValue === 'vacation') {
+                            $employeeAssignmentStats[$statUserId]['vacation']++;
+                        } elseif ($kindValue === 'rest') {
+                            $employeeAssignmentStats[$statUserId]['rest']++;
+                        }
+                    }
+                ?>
                 <div class="settings-panel-head">
                     <div>
                         <h3>Assignments</h3>
@@ -376,7 +427,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     </div>
                     <div class="settings-pill-row">
                         <span class="settings-pill">Company: <?php echo e($scopeCompanyName); ?></span>
-                        <span class="settings-pill">Assignments: <?php echo count($assignments); ?></span>
+                        <span class="settings-pill">Month: <?php echo e(date('F Y')); ?></span>
+                        <span class="settings-pill">Assignments: <?php echo count($assignmentsCurrentMonth); ?></span>
                         <span class="settings-pill">Active: <?php echo (int) ($assignmentTotals['active'] ?? 0); ?></span>
                         <span class="settings-pill">Cancelled: <?php echo (int) ($assignmentTotals['cancelled'] ?? 0); ?></span>
                         <span class="settings-pill">Hours assigned: <?php echo e(number_format((float) ($assignmentTotals['assigned_hours'] ?? 0), 2)); ?>h</span>
@@ -396,70 +448,152 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <?php endforeach; ?>
                             </select>
                         </label>
-                        <label class="settings-field">From date<input data-auto-assign-range-start type="date" value="<?php echo e($assignmentRangeStart); ?>"></label>
-                        <label class="settings-field">To date<input data-auto-assign-range-end type="date" value="<?php echo e($assignmentRangeEnd); ?>"></label>
+                        <label class="settings-field">From date<input data-auto-assign-range-start type="date" value="<?php echo e($autoAssignDefaultStart); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
+                        <label class="settings-field">To date<input data-auto-assign-range-end type="date" value="<?php echo e($autoAssignDefaultEnd); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
                         <label class="settings-field">Max hours / month<input data-auto-assign-max-hours type="number" min="1" step="1" value="176"></label>
                         <label class="settings-field">Max days / month<input data-auto-assign-max-days type="number" min="1" step="1" value="22"></label>
                         <div class="settings-inline-actions">
                             <button type="button" class="admin-action-link" data-auto-assign-open>Auto assign open</button>
+                            <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-clear>Clear assigned shifts</button>
                         </div>
                     </div>
                 </div>
 
-                <section class="settings-analytics-card settings-auto-rules-card" data-auto-assign-rules>
-                    <h4>Auto Assignment Rules by Employee</h4>
-                    <p class="crud-modal-subtitle">Rules are applied only inside this Assignments rubric and are used to exclude employees from auto-assignment.</p>
+                <section class="settings-analytics-card settings-assignment-employee-index" data-assignment-employee-index>
+                    <div class="settings-assignment-employee-index-head">
+                        <h4>Employees</h4>
+                        <p class="crud-modal-subtitle">Select an employee to open all individual data, assigned shifts and availability rules.</p>
+                    </div>
                     <?php if (empty($visibleUsers)): ?>
-                        <div class="crud-empty-state">No active employees available for rules.</div>
+                        <div class="crud-empty-state">No active employees available.</div>
                     <?php else: ?>
-                        <div class="settings-auto-rules-list">
-                            <?php foreach ($visibleUsers as $userRule): ?>
-                                <?php
-                                    $ruleUserId = (int) ($userRule['id'] ?? 0);
-                                    $ruleUserName = trim((string) (($userRule['first_name'] ?? '') . ' ' . ($userRule['last_name'] ?? '')));
-                                    if ($ruleUserName === '') {
-                                        $ruleUserName = (string) ($userRule['email'] ?? ('User #' . $ruleUserId));
-                                    }
-                                ?>
-                                <article class="settings-auto-rule-item" data-auto-rule-user-id="<?php echo $ruleUserId; ?>" data-auto-rule-user-name="<?php echo e($ruleUserName); ?>">
-                                    <div class="settings-auto-rule-head">
-                                        <strong><?php echo e($ruleUserName); ?></strong>
-                                        <label class="settings-field">Scope
-                                            <select data-auto-rule-scope>
-                                                <option value="all">All months</option>
-                                                <option value="current">Current month only</option>
-                                                <option value="next">Next months only</option>
-                                            </select>
-                                        </label>
-                                    </div>
-                                    <div class="settings-auto-rule-weekdays">
-                                        <span class="settings-auto-rule-label">Weekly rest days</span>
-                                        <label><input type="checkbox" data-auto-rule-weekday="1">Mon</label>
-                                        <label><input type="checkbox" data-auto-rule-weekday="2">Tue</label>
-                                        <label><input type="checkbox" data-auto-rule-weekday="3">Wed</label>
-                                        <label><input type="checkbox" data-auto-rule-weekday="4">Thu</label>
-                                        <label><input type="checkbox" data-auto-rule-weekday="5">Fri</label>
-                                        <label><input type="checkbox" data-auto-rule-weekday="6">Sat</label>
-                                        <label><input type="checkbox" data-auto-rule-weekday="0">Sun</label>
-                                    </div>
-                                    <div class="settings-auto-rule-specials">
-                                        <label class="settings-field">Unavailable day<input type="date" data-auto-rule-special-date></label>
-                                        <label class="settings-field">Reason
-                                            <select data-auto-rule-special-reason>
-                                                <option value="rest">Weekly rest</option>
-                                                <option value="leave">Leave</option>
-                                                <option value="vacation">Vacation</option>
-                                                <option value="sick">Sick leave</option>
-                                                <option value="special">Special day</option>
-                                            </select>
-                                        </label>
-                                        <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-rule-add-special>Add unavailable date</button>
-                                    </div>
-                                    <div class="settings-auto-rule-special-list" data-auto-rule-special-list></div>
-                                </article>
-                            <?php endforeach; ?>
-                        </div>
+                        <?php
+                            $departmentNameById = [];
+                            foreach ($visibleDepartments as $deptOption) {
+                                $departmentNameById[(int) ($deptOption['id'] ?? 0)] = (string) ($deptOption['name'] ?? 'Department');
+                            }
+
+                            $usersByDepartment = [];
+                            foreach ($visibleUsers as $employeeItem) {
+                                $employeeDepartmentId = (int) ($employeeItem['department_id'] ?? 0);
+                                $employeeDepartmentName = (string) ($employeeItem['department_name'] ?? ($departmentNameById[$employeeDepartmentId] ?? 'Unassigned'));
+                                if ($employeeDepartmentName === '') {
+                                    $employeeDepartmentName = 'Unassigned';
+                                }
+                                if (!isset($usersByDepartment[$employeeDepartmentName])) {
+                                    $usersByDepartment[$employeeDepartmentName] = [];
+                                }
+                                $usersByDepartment[$employeeDepartmentName][] = $employeeItem;
+                            }
+
+                            ksort($usersByDepartment);
+                        ?>
+                        <?php foreach ($usersByDepartment as $departmentLabel => $departmentUsers): ?>
+                            <section class="settings-assignment-employee-group">
+                                <div class="settings-assignment-employee-group-title">🏷 <?php echo e($departmentLabel); ?></div>
+                                <div class="settings-assignment-employee-list">
+                                    <?php foreach ($departmentUsers as $employeeItem): ?>
+                                        <?php
+                                            $employeeId = (int) ($employeeItem['id'] ?? 0);
+                                            $employeeName = trim((string) (($employeeItem['first_name'] ?? '') . ' ' . ($employeeItem['last_name'] ?? '')));
+                                            if ($employeeName === '') {
+                                                $employeeName = (string) ($employeeItem['email'] ?? ('Employee #' . $employeeId));
+                                            }
+                                            $employeeStat = $employeeAssignmentStats[$employeeId] ?? ['assigned' => 0, 'sick' => 0, 'vacation' => 0, 'rest' => 0];
+                                        ?>
+                                        <button
+                                            type="button"
+                                            class="settings-assignment-employee-item"
+                                            data-assignment-employee-open
+                                            data-user-id="<?php echo $employeeId; ?>"
+                                            data-user-name="<?php echo e($employeeName); ?>"
+                                            data-user-department-id="<?php echo (int) ($employeeItem['department_id'] ?? 0); ?>"
+                                            data-user-department-name="<?php echo e($departmentLabel); ?>"
+                                        >
+                                            <strong><?php echo e($employeeName); ?></strong>
+                                            <span><?php echo e($employeeItem['email'] ?? ''); ?></span>
+                                            <small>
+                                                Assigned: <?php echo (int) ($employeeStat['assigned'] ?? 0); ?>
+                                                • Sick: <?php echo (int) ($employeeStat['sick'] ?? 0); ?>
+                                                • Vacation: <?php echo (int) ($employeeStat['vacation'] ?? 0); ?>
+                                                • Rest: <?php echo (int) ($employeeStat['rest'] ?? 0); ?>
+                                            </small>
+                                        </button>
+                                    <?php endforeach; ?>
+                                </div>
+                            </section>
+                        <?php endforeach; ?>
                     <?php endif; ?>
+                </section>
+
+                <script type="application/json" data-assignment-shift-catalog>
+                    <?php
+                        $shiftCatalog = array_map(static function (array $shift): array {
+                            return [
+                                'id' => (int) ($shift['id'] ?? 0),
+                                'name' => (string) ($shift['name'] ?? 'Shift'),
+                                'icon' => (string) ($shift['icon'] ?? '🕒'),
+                                'kind' => (string) ($shift['kind'] ?? 'work'),
+                                'start_time' => (string) ($shift['start_time'] ?? ''),
+                                'end_time' => (string) ($shift['end_time'] ?? ''),
+                                'department_id' => (int) ($shift['department_id'] ?? 0),
+                                'department_name' => (string) ($shift['department_name'] ?? 'Department'),
+                            ];
+                        }, $shifts);
+                        echo json_encode($shiftCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    ?>
+                </script>
+
+                <section class="settings-assignment-employee-modal" data-assignment-employee-modal hidden>
+                    <div class="settings-assignment-employee-window">
+                        <header class="settings-assignment-employee-window-head">
+                            <div>
+                                <h4 data-assignment-modal-title>Employee details</h4>
+                                <p class="crud-modal-subtitle" data-assignment-modal-subtitle>Assigned shifts, absences and availability rules.</p>
+                            </div>
+                            <button type="button" class="dashboard-modal-close" data-assignment-employee-close aria-label="Close employee details">&times;</button>
+                        </header>
+                        <div class="settings-assignment-employee-window-grid">
+                            <section class="settings-analytics-card">
+                                <h5>Availability Rules</h5>
+                                <div class="settings-auto-rule-weekdays" data-assignment-modal-weekdays></div>
+                                <div class="settings-auto-rule-specials">
+                                    <label class="settings-field">Unavailable day<input type="date" data-assignment-modal-special-date></label>
+                                    <label class="settings-field">Reason
+                                        <select data-assignment-modal-special-reason>
+                                            <option value="rest">Weekly rest</option>
+                                            <option value="leave">Leave</option>
+                                            <option value="vacation">Vacation</option>
+                                            <option value="sick">Sick leave</option>
+                                            <option value="special">Special day</option>
+                                        </select>
+                                    </label>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special>Add date</button>
+                                </div>
+                                <div class="settings-auto-rule-special-list" data-assignment-modal-special-list></div>
+                                <h5>Weekly Availability</h5>
+                                <div class="settings-assignment-weekly-grid" data-assignment-modal-weekly></div>
+                            </section>
+                            <section class="settings-analytics-card">
+                                <h5>Assigned Shifts</h5>
+                                <div class="settings-assignment-modal-shift-list" data-assignment-modal-shifts></div>
+                            </section>
+                            <section class="settings-analytics-card settings-assignment-modal-open-slots">
+                                <h5>Open Shifts to Cover</h5>
+                                <p class="crud-modal-subtitle">Select only open shifts in the employee department and within the date range below.</p>
+                                <div class="settings-assignment-modal-open-range">
+                                    <label class="settings-field">From date<input type="date" data-assignment-modal-open-from></label>
+                                    <label class="settings-field">To date<input type="date" data-assignment-modal-open-to></label>
+                                </div>
+                                <div class="settings-inline-actions">
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-clear>Clear selection</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-reselect>Re-select available</button>
+                                    <button type="button" class="admin-action-link" data-assignment-modal-open-assign>Assign selected</button>
+                                </div>
+                                <div class="settings-assignment-open-slot-list" data-assignment-modal-open-list></div>
+                            </section>
+                        </div>
+                    </div>
                 </section>
 
                 <div class="settings-analytics-grid">
@@ -529,11 +663,26 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <span>Actions</span>
                     </div>
 
-                    <?php if (empty($assignments)): ?>
+                    <?php if (empty($assignmentsCurrentMonth)): ?>
                         <div class="crud-empty-state">No assignments available.</div>
                     <?php else: ?>
-                        <?php foreach (array_slice($assignments, 0, 250) as $assignment): ?>
-                            <article class="settings-list-item-wrap" data-assignment-id="<?php echo (int) ($assignment['assignment_id'] ?? 0); ?>">
+                        <?php foreach (array_slice($assignmentsCurrentMonth, 0, 250) as $assignment): ?>
+                            <article
+                                class="settings-list-item-wrap"
+                                data-assignment-id="<?php echo (int) ($assignment['assignment_id'] ?? 0); ?>"
+                                data-assignment-user-id="<?php echo (int) ($assignment['user_id'] ?? 0); ?>"
+                                data-assignment-user-name="<?php echo e($assignment['user_name'] ?: 'Open slot'); ?>"
+                                data-assignment-work-date="<?php echo e($assignment['work_date'] ?? ''); ?>"
+                                data-assignment-shift-id="<?php echo (int) ($assignment['shift_id'] ?? 0); ?>"
+                                data-assignment-shift-name="<?php echo e($assignment['shift_name'] ?? '--'); ?>"
+                                data-assignment-shift-icon="<?php echo e($assignment['shift_icon'] ?? '🕒'); ?>"
+                                data-assignment-shift-kind="<?php echo e($assignment['shift_kind'] ?? 'work'); ?>"
+                                data-assignment-status="<?php echo e($assignment['status'] ?? ((int) ($assignment['user_id'] ?? 0) > 0 ? 'assigned' : 'open')); ?>"
+                                data-assignment-start-time="<?php echo e($assignment['start_time'] ?? ''); ?>"
+                                data-assignment-end-time="<?php echo e($assignment['end_time'] ?? ''); ?>"
+                                data-assignment-department-id="<?php echo (int) ($assignment['department_id'] ?? 0); ?>"
+                                data-assignment-department-name="<?php echo e($assignment['department_name'] ?? '--'); ?>"
+                            >
                                 <div class="settings-list-row settings-list-cols settings-list-cols-assignment">
                                     <strong><?php echo e($assignment['work_date'] ?? ''); ?></strong>
                                     <span><?php echo e($assignment['department_name'] ?? '--'); ?></span>

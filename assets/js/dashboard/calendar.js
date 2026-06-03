@@ -25,7 +25,7 @@
     }
   }
 
-  function createBulkAssignModal(assignShift, events) {
+  function createBulkAssignModal(assignShift, events, isUserAvailableForDate) {
     var state = {
       assignment: null,
       dates: [],
@@ -92,6 +92,7 @@
         if (Number(item.shift_id || 0) !== shiftId) return;
         if (Number(item.user_id || 0) > 0) return;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return;
+        if (typeof isUserAvailableForDate === 'function' && !isUserAvailableForDate(Number(state.assignment.user_id || 0), dateValue)) return;
         if (isDateAlreadyAssigned(dateValue)) return;
         unique.add(dateValue);
       });
@@ -167,6 +168,10 @@
       if (!value) return;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
         notifyError('Use date format YYYY-MM-DD.');
+        return;
+      }
+      if (typeof isUserAvailableForDate === 'function' && !isUserAvailableForDate(Number(state.assignment?.user_id || 0), value)) {
+        notifyError('This employee is unavailable on ' + value + '.');
         return;
       }
       if (isDateAlreadyAssigned(value)) {
@@ -357,20 +362,78 @@
   function initCalendarInteractions(options) {
     var calendarShell = options.calendarShell;
     var events = options.events || [];
+    var state = options.state || {};
     var toLocalDate = options.toLocalDate;
     var openDate = options.openDate;
     var unassignAssignment = options.unassignAssignment;
     var assignShift = options.assignShift;
-    var bulkAssignModal = createBulkAssignModal(assignShift, events);
+    var isUserAvailableForDate = options.isUserAvailableForDate;
+    var bulkAssignModal = createBulkAssignModal(assignShift, events, isUserAvailableForDate);
+
+    var toDateKey = function (dateObj) {
+      var y = String(dateObj.getFullYear());
+      var m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      var d = String(dateObj.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    };
+
+    var isPastDateKey = function (dateValue) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ''))) return false;
+      var now = new Date();
+      now.setHours(12, 0, 0, 0);
+      return String(dateValue) < toDateKey(now);
+    };
 
     if (!calendarShell) return;
 
     calendarShell.addEventListener('click', function (event) {
+      var sidebarAssignButton = event.target.closest('[data-calendar-sidebar-assign]');
+      if (sidebarAssignButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        var selectedUserId = Number(sidebarAssignButton.getAttribute('data-user-id'));
+        var selectedShiftId = Number(sidebarAssignButton.getAttribute('data-shift-id'));
+        var selectedWorkDate = String(sidebarAssignButton.getAttribute('data-work-date') || '');
+        var selectedUserName = String(sidebarAssignButton.getAttribute('data-user-name') || state.activeUserName || 'Employee');
+        if (!selectedUserId || !selectedShiftId || !selectedWorkDate || typeof assignShift !== 'function') {
+          notifyError('Missing assignment context.');
+          return;
+        }
+        if (isPastDateKey(selectedWorkDate)) {
+          notifyError('Past days are locked and cannot be edited.');
+          return;
+        }
+        if (typeof isUserAvailableForDate === 'function' && !isUserAvailableForDate(selectedUserId, selectedWorkDate)) {
+          notifyError(selectedUserName + ' is unavailable on ' + selectedWorkDate + '.');
+          return;
+        }
+
+        (async function () {
+          try {
+            await assignShift({
+              user_id: selectedUserId,
+              shift_id: selectedShiftId,
+              work_date: selectedWorkDate,
+              status: 'assigned',
+            });
+            notifySuccess(selectedUserName + ' assigned successfully.');
+          } catch (error) {
+            notifyError((error && error.message) || 'Unable to assign employee to this open shift.');
+          }
+        })();
+        return;
+      }
+
       var unassignButton = event.target.closest('[data-calendar-unassign]');
       if (unassignButton) {
         event.preventDefault();
         event.stopPropagation();
         var assignmentToUnassign = Number(unassignButton.getAttribute('data-calendar-unassign'));
+        var assignmentForUnassign = events.find(function (item) { return Number(item.assignment_id) === assignmentToUnassign; });
+        if (assignmentForUnassign && isPastDateKey(String(assignmentForUnassign.work_date || ''))) {
+          notifyError('Past days are locked and cannot be edited.');
+          return;
+        }
         if (assignmentToUnassign && typeof unassignAssignment === 'function') {
           unassignAssignment(assignmentToUnassign);
         }
@@ -382,6 +445,9 @@
         event.preventDefault();
         var assignmentCardForSlot = slotToggle.closest('.calendar-event');
         if (!assignmentCardForSlot) return;
+        if (assignmentCardForSlot.getAttribute('data-is-past-day') === '1') {
+          return;
+        }
         var slotUserId = slotToggle.getAttribute('data-user-id') || '';
 
         calendarShell.querySelectorAll('.calendar-event-slot-expanded').forEach(function (panel) {
@@ -411,6 +477,10 @@
         var assignmentIdForDuplicate = Number(assignOtherDatesButton.getAttribute('data-calendar-assign-other-dates'));
         var sourceAssignment = events.find(function (item) { return Number(item.assignment_id) === assignmentIdForDuplicate; });
         if (!sourceAssignment || !Number(sourceAssignment.user_id || 0) || !Number(sourceAssignment.shift_id || 0) || typeof assignShift !== 'function') {
+          return;
+        }
+        if (isPastDateKey(String(sourceAssignment.work_date || ''))) {
+          notifyError('Past days are locked and cannot be edited.');
           return;
         }
 
