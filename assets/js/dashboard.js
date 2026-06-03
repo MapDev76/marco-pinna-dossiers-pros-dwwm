@@ -684,17 +684,36 @@
     const getActiveUsers = () => (getActiveDepartment()?.users || []);
     const getActiveShift = () => getActiveShifts().find((shift) => Number(shift.id) === Number(state.activeShiftId)) || getActiveShifts()[0] || null;
     const getActiveUser = () => getActiveUsers().find((user) => Number(user.id) === Number(state.activeUserId)) || null;
-    const isUserAvailableForDate = (userId, slotDate) => {
+    const getUserAvailabilityStatus = (userId, slotDate) => {
       const normalizedUserId = Number(userId || 0);
       const normalizedDate = String(slotDate || '').trim();
       if (!normalizedUserId || !/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) {
-        return true;
+        return { available: true, reason: '' };
+      }
+
+      const assignedOnDate = events.find((item) =>
+        Number(item.user_id || 0) === normalizedUserId
+        && String(item.work_date || '') === normalizedDate
+        && String(item.status || '').toLowerCase() !== 'cancelled'
+      );
+      if (assignedOnDate) {
+        const assignedKind = String(assignedOnDate.shift_kind || 'work').toLowerCase();
+        if (assignedKind === 'rest') {
+          return { available: false, reason: 'Non disponibile: rest day.' };
+        }
+        if (assignedKind === 'sick') {
+          return { available: false, reason: 'Non disponibile: malattia.' };
+        }
+        if (assignedKind === 'vacation') {
+          return { available: false, reason: 'Non disponibile: vacanza.' };
+        }
+        return { available: false, reason: 'Non disponibile: impiegato gia assegnato per questo giorno.' };
       }
 
       const rules = loadAssignmentRules();
       const rule = rules[String(normalizedUserId)] || rules[normalizedUserId] || null;
       if (!rule || typeof rule !== 'object') {
-        return true;
+        return { available: true, reason: '' };
       }
 
       const slotMonth = normalizedDate.slice(0, 7);
@@ -703,21 +722,41 @@
       const nextMonth = dateKey(nextMonthDate).slice(0, 7);
       const scope = String(rule.scope || 'all');
       if (scope === 'current' && slotMonth !== currentMonth) {
-        return true;
+        return { available: true, reason: '' };
       }
       if (scope === 'next' && slotMonth < nextMonth) {
-        return true;
+        return { available: true, reason: '' };
       }
 
       const specialDates = Array.isArray(rule.special_dates) ? rule.special_dates : [];
-      if (specialDates.some((item) => String(item?.date || '') === normalizedDate)) {
-        return false;
+      const specialMatch = specialDates.find((item) => String(item?.date || '') === normalizedDate);
+      if (specialMatch) {
+        const reason = String(specialMatch.reason || 'special').toLowerCase();
+        if (reason === 'rest') {
+          return { available: false, reason: 'Non disponibile: rest day.' };
+        }
+        if (reason === 'sick') {
+          return { available: false, reason: 'Non disponibile: malattia.' };
+        }
+        if (reason === 'vacation') {
+          return { available: false, reason: 'Non disponibile: vacanza.' };
+        }
+        if (reason === 'leave') {
+          return { available: false, reason: 'Non disponibile: ferie.' };
+        }
+        return { available: false, reason: 'Non disponibile.' };
       }
 
       const offWeekdays = Array.isArray(rule.off_weekdays) ? rule.off_weekdays.map((value) => Number(value)) : [];
       const weekday = new Date(`${normalizedDate}T12:00:00`).getDay();
-      return !offWeekdays.includes(weekday);
+      if (offWeekdays.includes(weekday)) {
+        return { available: false, reason: 'Non disponibile: rest day.' };
+      }
+
+      return { available: true, reason: '' };
     };
+
+    const isUserAvailableForDate = (userId, slotDate) => getUserAvailabilityStatus(userId, slotDate).available;
 
     const setActiveDepartment = (departmentId) => {
       const department = getDepartmentById(departmentId);
@@ -882,6 +921,7 @@
         updateChrome,
         getActiveDepartment,
         isUserAvailableForDate,
+        getUserAvailabilityStatus,
         getVisibleDateKeys,
       })
       : null;
@@ -1094,6 +1134,7 @@
         unassignAssignment,
         assignShift,
         isUserAvailableForDate,
+        getUserAvailabilityStatus,
       });
     }
 
@@ -1107,6 +1148,7 @@
         moveShift,
         safeParseJson,
         isUserAvailableForDate,
+        getUserAvailabilityStatus,
       });
     }
 

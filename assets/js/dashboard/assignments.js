@@ -16,16 +16,33 @@
   const employeeModalSubtitle = employeeModal?.querySelector('[data-assignment-modal-subtitle]') || null;
   const employeeModalWeekdays = employeeModal?.querySelector('[data-assignment-modal-weekdays]') || null;
   const employeeModalSpecialDate = employeeModal?.querySelector('[data-assignment-modal-special-date]') || null;
+  const employeeModalSpecialFrom = employeeModal?.querySelector('[data-assignment-modal-special-from]') || null;
+  const employeeModalSpecialTo = employeeModal?.querySelector('[data-assignment-modal-special-to]') || null;
   const employeeModalSpecialReason = employeeModal?.querySelector('[data-assignment-modal-special-reason]') || null;
   const employeeModalSpecialList = employeeModal?.querySelector('[data-assignment-modal-special-list]') || null;
+  const employeeModalMonthUnavailable = employeeModal?.querySelector('[data-assignment-modal-month-unavailable]') || null;
   const employeeModalShifts = employeeModal?.querySelector('[data-assignment-modal-shifts]') || null;
   const employeeModalWeekly = employeeModal?.querySelector('[data-assignment-modal-weekly]') || null;
   const employeeModalOpenFrom = employeeModal?.querySelector('[data-assignment-modal-open-from]') || null;
   const employeeModalOpenTo = employeeModal?.querySelector('[data-assignment-modal-open-to]') || null;
+  const employeeModalOpenShift = employeeModal?.querySelector('[data-assignment-modal-open-shift]') || null;
   const employeeModalOpenList = employeeModal?.querySelector('[data-assignment-modal-open-list]') || null;
   const employeeModalOpenClear = employeeModal?.querySelector('[data-assignment-modal-open-clear]') || null;
   const employeeModalOpenReselect = employeeModal?.querySelector('[data-assignment-modal-open-reselect]') || null;
   const employeeModalOpenAssign = employeeModal?.querySelector('[data-assignment-modal-open-assign]') || null;
+  const employeeModalAbsenceFrom = employeeModal?.querySelector('[data-assignment-modal-absence-from]') || null;
+  const employeeModalAbsenceTo = employeeModal?.querySelector('[data-assignment-modal-absence-to]') || null;
+  const employeeModalAbsenceType = employeeModal?.querySelector('[data-assignment-modal-absence-type]') || null;
+  const shiftCatalogNode = document.querySelector('[data-assignment-shift-catalog]');
+  const shiftCatalog = (() => {
+    if (!shiftCatalogNode) return [];
+    try {
+      const parsed = JSON.parse(shiftCatalogNode.textContent || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+      return [];
+    }
+  })();
   let activeEmployeeUserId = 0;
   let activeEmployeeUserName = '';
   let activeEmployeeDepartmentId = 0;
@@ -52,6 +69,23 @@
     return !!panel && !panel.hidden;
   }
 
+  function getAssignmentsListWrap() {
+    return document.querySelector('[data-assignment-list-wrap]');
+  }
+
+  function getAssignmentsListToggle() {
+    return document.querySelector('[data-assignment-list-toggle]');
+  }
+
+  function setAssignmentsListVisible(visible) {
+    const wrap = getAssignmentsListWrap();
+    const toggle = getAssignmentsListToggle();
+    if (!wrap || !toggle) return;
+    wrap.hidden = !visible;
+    toggle.setAttribute('aria-expanded', visible ? 'true' : 'false');
+    toggle.textContent = visible ? 'Hide daily assignments list' : 'Show daily assignments list';
+  }
+
   function todayKey() {
     return new Date().toISOString().slice(0, 10);
   }
@@ -59,6 +93,12 @@
   function currentMonthStartKey() {
     const today = todayKey();
     return `${today.slice(0, 7)}-01`;
+  }
+
+  function currentMonthEndKey() {
+    const today = new Date();
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return dateKeyFromDate(end);
   }
 
   function isPastDateKey(dateKey) {
@@ -70,6 +110,26 @@
     const safeStart = start && start >= minDate ? start : minDate;
     const safeEnd = end && end >= safeStart ? end : safeStart;
     return { start: safeStart, end: safeEnd };
+  }
+
+  function normalizeDateRange(fromDate, toDate) {
+    const from = normalizeDateKey(fromDate);
+    const to = normalizeDateKey(toDate);
+    if (!from || !to) return null;
+    return from <= to ? { start: from, end: to } : { start: to, end: from };
+  }
+
+  function getDateKeysInRange(startKey, endKey) {
+    const range = normalizeDateRange(startKey, endKey);
+    if (!range) return [];
+    const list = [];
+    const cursor = new Date(`${range.start}T12:00:00`);
+    const end = new Date(`${range.end}T12:00:00`);
+    while (cursor <= end) {
+      list.push(dateKeyFromDate(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return list;
   }
 
   function loadRules() {
@@ -220,6 +280,157 @@
     applyRulesToRows(rules);
   }
 
+  function getUnavailableDatesInCurrentMonth(rule) {
+    const monthStart = currentMonthStartKey();
+    const monthEnd = currentMonthEndKey();
+    const unavailable = new Map();
+    const offWeekdays = new Set(Array.isArray(rule?.off_weekdays) ? rule.off_weekdays.map((value) => parseInt(value, 10)) : []);
+    getDateKeysInRange(monthStart, monthEnd).forEach((dateKey) => {
+      const weekday = new Date(`${dateKey}T12:00:00`).getDay();
+      if (offWeekdays.has(weekday)) {
+        unavailable.set(dateKey, 'rest');
+      }
+    });
+    (Array.isArray(rule?.special_dates) ? rule.special_dates : []).forEach((item) => {
+      const dateValue = normalizeDateKey(item?.date || '');
+      if (!dateValue || dateValue < monthStart || dateValue > monthEnd) return;
+      unavailable.set(dateValue, String(item?.reason || 'special'));
+    });
+    return Array.from(unavailable.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, reason]) => ({ date, reason }));
+  }
+
+  function renderCurrentMonthUnavailable(rule) {
+    if (!employeeModalMonthUnavailable) return;
+    const dates = getUnavailableDatesInCurrentMonth(rule);
+    if (!dates.length) {
+      employeeModalMonthUnavailable.innerHTML = '<span class="crud-modal-subtitle">No unavailable dates in current month.</span>';
+      return;
+    }
+    employeeModalMonthUnavailable.innerHTML = dates
+      .map((item) => `<span class="settings-auto-rule-chip">${item.date} • ${toRuleReasonLabel(item.reason)}</span>`)
+      .join('');
+  }
+
+  function syncRuleRangeDefaults() {
+    const monthStart = currentMonthStartKey();
+    const monthEnd = currentMonthEndKey();
+    if (employeeModalSpecialDate && !normalizeDateKey(employeeModalSpecialDate.value)) {
+      employeeModalSpecialDate.value = monthStart;
+    }
+    if (employeeModalSpecialFrom && !normalizeDateKey(employeeModalSpecialFrom.value)) {
+      employeeModalSpecialFrom.value = monthStart;
+    }
+    if (employeeModalSpecialTo && !normalizeDateKey(employeeModalSpecialTo.value)) {
+      employeeModalSpecialTo.value = monthEnd;
+    }
+  }
+
+  function syncAbsenceRangeDefaults() {
+    const monthStart = currentMonthStartKey();
+    const monthEnd = currentMonthEndKey();
+    if (employeeModalAbsenceFrom && !normalizeDateKey(employeeModalAbsenceFrom.value)) {
+      employeeModalAbsenceFrom.value = monthStart;
+    }
+    if (employeeModalAbsenceTo && !normalizeDateKey(employeeModalAbsenceTo.value)) {
+      employeeModalAbsenceTo.value = monthEnd;
+    }
+  }
+
+  function populateOpenShiftFilter() {
+    if (!employeeModalOpenShift) return;
+    const options = shiftCatalog
+      .filter((item) => Number(item?.department_id || 0) === Number(activeEmployeeDepartmentId || 0))
+      .filter((item) => String(item?.kind || '').toLowerCase() === 'work')
+      .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+    const currentValue = String(employeeModalOpenShift.value || '0');
+    const optionHtml = options
+      .map((item) => {
+        const id = parseInt(String(item?.id || '0'), 10) || 0;
+        const icon = String(item?.icon || '🕒');
+        const name = String(item?.name || 'Shift');
+        return `<option value="${id}">${icon} ${name}</option>`;
+      })
+      .join('');
+    employeeModalOpenShift.innerHTML = `<option value="0">All department shifts</option>${optionHtml}`;
+    employeeModalOpenShift.value = employeeModalOpenShift.querySelector(`option[value="${currentValue}"]`) ? currentValue : '0';
+  }
+
+  function getAbsenceShiftIdByType(type) {
+    const targetType = String(type || '').toLowerCase();
+    const match = shiftCatalog.find((item) => Number(item?.department_id || 0) === Number(activeEmployeeDepartmentId || 0) && String(item?.kind || '').toLowerCase() === targetType);
+    return parseInt(String(match?.id || '0'), 10) || 0;
+  }
+
+  function addUnavailableRangeForActiveEmployee() {
+    if (!activeEmployeeUserId) return;
+    const range = normalizeDateRange(employeeModalSpecialFrom?.value || '', employeeModalSpecialTo?.value || '');
+    const reason = String(employeeModalSpecialReason?.value || 'special').trim() || 'special';
+    if (!range) {
+      notifyError('Choose a valid date range.');
+      return;
+    }
+    const monthStart = currentMonthStartKey();
+    const monthEnd = currentMonthEndKey();
+    const boundedStart = range.start < monthStart ? monthStart : range.start;
+    const boundedEnd = range.end > monthEnd ? monthEnd : range.end;
+    const boundedRange = normalizeDateRange(boundedStart, boundedEnd);
+    if (!boundedRange) {
+      notifyError('Range is outside current month.');
+      return;
+    }
+    const currentRule = getRuleForUser(activeEmployeeUserId);
+    const existing = new Map((currentRule.special_dates || []).map((item) => [String(item?.date || ''), String(item?.reason || 'special')]));
+    getDateKeysInRange(boundedRange.start, boundedRange.end).forEach((dateKey) => existing.set(dateKey, reason));
+    currentRule.special_dates = Array.from(existing.entries()).map(([date, itemReason]) => ({ date, reason: itemReason }));
+    setRuleForUser(activeEmployeeUserId, currentRule);
+    openEmployeeModal(activeEmployeeUserId, activeEmployeeUserName, activeEmployeeDepartmentId, activeEmployeeDepartmentName);
+  }
+
+  function resetRulesForActiveEmployee() {
+    if (!activeEmployeeUserId) return;
+    setRuleForUser(activeEmployeeUserId, { scope: 'all', off_weekdays: [], special_dates: [] });
+    openEmployeeModal(activeEmployeeUserId, activeEmployeeUserName, activeEmployeeDepartmentId, activeEmployeeDepartmentName);
+  }
+
+  async function assignAbsenceRange() {
+    if (!activeEmployeeUserId) return;
+    const range = normalizeDateRange(employeeModalAbsenceFrom?.value || '', employeeModalAbsenceTo?.value || '');
+    if (!range) {
+      notifyError('Choose a valid absence date range.');
+      return;
+    }
+    const absenceType = String(employeeModalAbsenceType?.value || 'vacation').toLowerCase();
+    const shiftId = getAbsenceShiftIdByType(absenceType);
+    if (!shiftId) {
+      notifyError('No shift template found for selected absence type in this department.');
+      return;
+    }
+    const targetDates = getDateKeysInRange(range.start, range.end).filter((dateKey) => !isPastDateKey(dateKey));
+    if (!targetDates.length) {
+      notifyError('No editable dates found in selected range.');
+      return;
+    }
+    let assignedCount = 0;
+    for (const dateKey of targetDates) {
+      const success = await assignShiftForEmployee(shiftId, dateKey, '', { silent: true });
+      if (success) assignedCount += 1;
+    }
+    const skippedCount = targetDates.length - assignedCount;
+    if (assignedCount > 0) {
+      const successMessage = `${assignedCount} absence day(s) assigned.` + (skippedCount > 0 ? ` Skipped: ${skippedCount}.` : '');
+      if (feedback?.reloadSettingsTabWithSuccess) {
+        feedback.reloadSettingsTabWithSuccess('assignments', 'Done', successMessage);
+      } else {
+        notifySuccess(successMessage);
+        location.reload();
+      }
+      return;
+    }
+    notifyError('No absence days were assigned.');
+  }
+
   function dateKeyFromDate(dateObj) {
     const y = String(dateObj.getFullYear());
     const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -258,6 +469,7 @@
     const rangeStart = fromValue || visibleRange.start;
     const rangeEnd = toValue || visibleRange.end;
     const selectedDepartmentId = Number(activeEmployeeDepartmentId || 0);
+    const selectedShiftId = parseInt(String(getEmployeeModalField('[data-assignment-modal-open-shift]')?.value || '0'), 10) || 0;
 
     return Array.from(document.querySelectorAll('[data-calendar-date] .calendar-event.is-open[data-is-open-slot="1"]'))
       .map((card) => {
@@ -274,6 +486,7 @@
       .filter((slot) => {
         if (!slot.workDate || !slot.shiftId) return false;
         if (selectedDepartmentId <= 0 || slot.departmentId !== selectedDepartmentId) return false;
+        if (selectedShiftId > 0 && slot.shiftId !== selectedShiftId) return false;
         if (slot.workDate < todayKey) return false;
         if (rangeStart && slot.workDate < rangeStart) return false;
         if (rangeEnd && slot.workDate > rangeEnd) return false;
@@ -371,31 +584,29 @@
     const offWeekdays = new Set(Array.isArray(rule?.off_weekdays) ? rule.off_weekdays.map((value) => parseInt(value, 10)) : []);
     const specialDateMap = new Map((Array.isArray(rule?.special_dates) ? rule.special_dates : []).map((item) => [String(item?.date || ''), String(item?.reason || 'special')]));
 
-    const start = new Date();
-    start.setHours(12, 0, 0, 0);
-    const weekStart = new Date(start);
-    const weekDay = weekStart.getDay();
-    const mondayDelta = weekDay === 0 ? -6 : 1 - weekDay;
-    weekStart.setDate(weekStart.getDate() + mondayDelta);
-
+    const monthStart = currentMonthStartKey();
+    const monthEnd = currentMonthEndKey();
+    const monthDays = getDateKeysInRange(monthStart, monthEnd);
     const weekBlocks = [];
-    for (let weekIndex = 0; weekIndex < 3; weekIndex += 1) {
-      const days = [];
-      for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
-        const dateObj = new Date(weekStart);
-        dateObj.setDate(weekStart.getDate() + (weekIndex * 7) + dayIndex);
-        const key = dateKeyFromDate(dateObj);
-        const weekday = dateObj.getDay();
-        const specialReason = specialDateMap.get(key) || '';
-        const blocked = !!specialReason || offWeekdays.has(weekday);
-        days.push({
-          key,
-          label: WEEKDAY_OPTIONS.find((item) => item.value === weekday)?.label || '',
-          blocked,
-          reason: specialReason || (offWeekdays.has(weekday) ? 'rest' : ''),
-        });
+    let currentWeek = [];
+    monthDays.forEach((dateKey) => {
+      const dateObj = new Date(`${dateKey}T12:00:00`);
+      const weekday = dateObj.getDay();
+      const specialReason = specialDateMap.get(dateKey) || '';
+      const blocked = !!specialReason || offWeekdays.has(weekday);
+      currentWeek.push({
+        key: dateKey,
+        label: WEEKDAY_OPTIONS.find((item) => item.value === weekday)?.label || '',
+        blocked,
+        reason: specialReason || (offWeekdays.has(weekday) ? 'rest' : ''),
+      });
+      if (currentWeek.length === 7) {
+        weekBlocks.push(currentWeek);
+        currentWeek = [];
       }
-      weekBlocks.push(days);
+    });
+    if (currentWeek.length) {
+      weekBlocks.push(currentWeek);
     }
 
     employeeModalWeekly.innerHTML = weekBlocks.map((days, index) => {
@@ -404,10 +615,16 @@
           <strong>Week ${index + 1}</strong>
           <div class="settings-assignment-week-days">
             ${days.map((day) => `
-              <span class="settings-assignment-week-day ${day.blocked ? 'is-unavailable' : 'is-available'}" title="${day.reason ? toRuleReasonLabel(day.reason) : 'Available'}">
+              <button
+                type="button"
+                class="settings-assignment-week-day ${day.blocked ? 'is-unavailable' : 'is-available'}"
+                data-assignment-modal-week-day="${day.key}"
+                data-assignment-modal-week-day-state="${day.blocked ? 'unavailable' : 'available'}"
+                title="${day.reason ? toRuleReasonLabel(day.reason) : 'Available'}"
+              >
                 <small>${day.label}</small>
                 <b>${day.key.slice(8)}</b>
-              </span>
+              </button>
             `).join('')}
           </div>
         </article>
@@ -553,7 +770,11 @@
     renderEmployeeWeekdays(rule);
     renderEmployeeSpecialDates(rule);
     renderEmployeeWeeklyAvailability(rule);
+    renderCurrentMonthUnavailable(rule);
     renderEmployeeShiftList(rows);
+    syncRuleRangeDefaults();
+    syncAbsenceRangeDefaults();
+    populateOpenShiftFilter();
     syncOpenSlotRangeDefaults();
     clearOpenSlotSelection();
     renderOpenSlotSelection();
@@ -701,6 +922,12 @@
       const rangeEndInput = document.querySelector('[data-auto-assign-range-end]');
       if (rangeStartInput) rangeStartInput.value = range.start;
       if (rangeEndInput) rangeEndInput.value = range.end;
+      const minEmployeesRaw = parseInt(document.querySelector('[data-auto-assign-min-employees]')?.value || '1', 10);
+      const maxEmployeesRaw = parseInt(document.querySelector('[data-auto-assign-max-employees]')?.value || '3', 10);
+      const minEmployeesPerShiftDay = Number.isFinite(minEmployeesRaw) ? Math.max(0, minEmployeesRaw) : 1;
+      const maxEmployeesPerShiftDay = Number.isFinite(maxEmployeesRaw) ? Math.max(1, maxEmployeesRaw) : 3;
+      const normalizedMin = Math.min(minEmployeesPerShiftDay, maxEmployeesPerShiftDay);
+      const normalizedMax = Math.max(minEmployeesPerShiftDay, maxEmployeesPerShiftDay);
 
       const employeeRules = {
         ...loadRules(),
@@ -711,13 +938,16 @@
         scope_shift_id: parseInt(document.querySelector('[data-auto-assign-shift]')?.value || '0', 10) || 0,
         range_start: range.start,
         range_end: range.end,
-        max_hours_per_month: parseInt(document.querySelector('[data-auto-assign-max-hours]')?.value || '176', 10) || 176,
-        max_days_per_month: parseInt(document.querySelector('[data-auto-assign-max-days]')?.value || '22', 10) || 22,
+        min_employees_per_shift_day: normalizedMin,
+        max_employees_per_shift_day: normalizedMax,
         employee_rules: employeeRules,
       });
       if (res?.ok || res?.success) {
         const skippedByRules = parseInt(res.skipped_by_rules || '0', 10) || 0;
-        const message = `Assigned ${res.assigned_count || 0} shifts. Open remaining: ${res.open_remaining || 0}.` + (skippedByRules > 0 ? ` Skipped by rules: ${skippedByRules}.` : '');
+        const groupsBelowMin = parseInt(res.groups_below_min || '0', 10) || 0;
+        const message = `Assigned ${res.assigned_count || 0} shifts. Open remaining: ${res.open_remaining || 0}.`
+          + (skippedByRules > 0 ? ` Skipped by rules: ${skippedByRules}.` : '')
+          + (groupsBelowMin > 0 ? ` Shift-days below minimum: ${groupsBelowMin}.` : '');
         if (feedback?.reloadSettingsTabWithSuccess) {
           feedback.reloadSettingsTabWithSuccess('assignments', 'Done', message);
         } else {
@@ -843,6 +1073,14 @@
       return;
     }
 
+    const assignmentListToggleBtn = ev.target.closest && ev.target.closest('[data-assignment-list-toggle]');
+    if (assignmentListToggleBtn) {
+      ev.preventDefault();
+      const wrap = getAssignmentsListWrap();
+      setAssignmentsListVisible(!!wrap?.hidden);
+      return;
+    }
+
     const openEmployeeBtn = ev.target.closest && ev.target.closest('[data-assignment-employee-open]');
     if (openEmployeeBtn) {
       ev.preventDefault();
@@ -901,6 +1139,43 @@
       return;
     }
 
+    const modalAddSpecialRangeBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-add-special-range]');
+    if (modalAddSpecialRangeBtn && activeEmployeeUserId > 0) {
+      ev.preventDefault();
+      addUnavailableRangeForActiveEmployee();
+      return;
+    }
+
+    const modalRulesResetBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-rules-reset]');
+    if (modalRulesResetBtn && activeEmployeeUserId > 0) {
+      ev.preventDefault();
+      resetRulesForActiveEmployee();
+      return;
+    }
+
+    const weekDayToggleBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-week-day]');
+    if (weekDayToggleBtn && activeEmployeeUserId > 0) {
+      ev.preventDefault();
+      const dateValue = normalizeDateKey(weekDayToggleBtn.getAttribute('data-assignment-modal-week-day') || '');
+      if (!dateValue) return;
+
+      const selectedReason = String(employeeModalSpecialReason?.value || 'rest').trim() || 'rest';
+      const currentRule = getRuleForUser(activeEmployeeUserId);
+      const specialDates = Array.isArray(currentRule.special_dates) ? currentRule.special_dates.slice() : [];
+      const existingIndex = specialDates.findIndex((item) => String(item?.date || '') === dateValue);
+
+      if (existingIndex >= 0) {
+        specialDates.splice(existingIndex, 1);
+      } else {
+        specialDates.push({ date: dateValue, reason: selectedReason });
+      }
+
+      currentRule.special_dates = specialDates.sort((a, b) => String(a?.date || '').localeCompare(String(b?.date || '')));
+      setRuleForUser(activeEmployeeUserId, currentRule);
+      openEmployeeModal(activeEmployeeUserId, activeEmployeeUserName, activeEmployeeDepartmentId, activeEmployeeDepartmentName);
+      return;
+    }
+
     const openSlotToggle = ev.target.closest && ev.target.closest('[data-assignment-modal-open-toggle]');
     if (openSlotToggle && activeEmployeeUserId > 0) {
       ev.preventDefault();
@@ -936,12 +1211,35 @@
       return;
     }
 
+    const openSlotCoverAllBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-open-cover-all]');
+    if (openSlotCoverAllBtn && activeEmployeeUserId > 0) {
+      ev.preventDefault();
+      reselectionOpenSlots();
+      assignSelectedOpenSlots();
+      return;
+    }
+
+    const absenceAssignBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-absence-assign]');
+    if (absenceAssignBtn && activeEmployeeUserId > 0) {
+      ev.preventDefault();
+      assignAbsenceRange();
+      return;
+    }
+
+    const absenceResetBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-absence-reset]');
+    if (absenceResetBtn && activeEmployeeUserId > 0) {
+      ev.preventDefault();
+      syncAbsenceRangeDefaults();
+      return;
+    }
+
     const modalEditShiftBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-edit]');
     if (modalEditShiftBtn) {
       ev.preventDefault();
       const assignmentId = modalEditShiftBtn.getAttribute('data-assignment-modal-edit') || '';
       const row = document.querySelector(`[data-assignment-id="${assignmentId}"]`);
       if (row) {
+        setAssignmentsListVisible(true);
         openDrawer(row);
         row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
@@ -979,6 +1277,14 @@
       const currentRule = getRuleForUser(activeEmployeeUserId);
       currentRule.off_weekdays = Array.from(new Set(checked)).sort();
       setRuleForUser(activeEmployeeUserId, currentRule);
+      renderEmployeeWeeklyAvailability(currentRule);
+      renderCurrentMonthUnavailable(currentRule);
+      renderOpenSlotSelection();
+      return;
+    }
+
+    if (target.matches('[data-assignment-modal-open-shift]') && activeEmployeeUserId > 0) {
+      selectedOpenSlotKeys = new Set();
       renderOpenSlotSelection();
       return;
     }
@@ -993,6 +1299,19 @@
       }
       selectedOpenSlotKeys = new Set();
       renderOpenSlotSelection();
+    }
+
+    if ((target.matches('[data-assignment-modal-special-from]') || target.matches('[data-assignment-modal-special-to]') || target.matches('[data-assignment-modal-absence-from]') || target.matches('[data-assignment-modal-absence-to]')) && activeEmployeeUserId > 0) {
+      const specialRange = normalizeDateRange(employeeModalSpecialFrom?.value || '', employeeModalSpecialTo?.value || '');
+      if (specialRange) {
+        if (employeeModalSpecialFrom) employeeModalSpecialFrom.value = specialRange.start;
+        if (employeeModalSpecialTo) employeeModalSpecialTo.value = specialRange.end;
+      }
+      const absenceRange = normalizeDateRange(employeeModalAbsenceFrom?.value || '', employeeModalAbsenceTo?.value || '');
+      if (absenceRange) {
+        if (employeeModalAbsenceFrom) employeeModalAbsenceFrom.value = absenceRange.start;
+        if (employeeModalAbsenceTo) employeeModalAbsenceTo.value = absenceRange.end;
+      }
     }
   });
 

@@ -1,5 +1,6 @@
 (() => {
   const apiUrl = window.DashboardConfig?.apiUsers;
+  const companyApiUrl = window.DashboardConfig?.apiCompanies;
   const feedback = window.DashboardFeedback;
 
   function notifyError(message) {
@@ -129,7 +130,33 @@
     } catch (e) { console.error(e); notifyError('Error deleting user.'); }
   }
 
+  async function saveCompanySignatureIp() {
+    const input = document.querySelector('[data-company-signature-ip]');
+    if (!input) return;
+
+    const companyId = parseInt(input.dataset.companyId || '0', 10);
+    if (!companyId || !companyApiUrl) {
+      notifyError('Company configuration is not available.');
+      return;
+    }
+
+    const ip = (input.value || '').trim();
+    try {
+      const res = await AppAPI.companies.setSignatureIp(companyApiUrl, companyId, ip);
+      if (res?.ok) {
+        notifySuccess('Company Wi-Fi IP saved.');
+      } else {
+        notifyError('Save failed: ' + (res?.error || 'unknown'));
+      }
+    } catch (e) {
+      console.error(e);
+      notifyError('Error while saving company Wi-Fi IP.');
+    }
+  }
+
   document.addEventListener('click', (ev) => {
+    const saveCompanyIpBtn = ev.target.closest && ev.target.closest('[data-company-signature-ip-save]');
+    if (saveCompanyIpBtn) { ev.preventDefault(); saveCompanySignatureIp(); return; }
     const createBtn = ev.target.closest && ev.target.closest('.settings-user-create');
     if (createBtn) { ev.preventDefault(); createUser(); return; }
     const resetBtn = ev.target.closest && ev.target.closest('.settings-user-reset');

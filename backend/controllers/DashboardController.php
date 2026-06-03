@@ -88,6 +88,7 @@ $dashboardPlannerData = [
         'id' => $companyId,
         'name' => $profile['company_name'] ?? ($currentUser['company_name'] ?? ''),
         'type' => $profile['company_type'] ?? ($currentUser['company_type'] ?? ''),
+        'signature_ip' => null,
     ],
     'companies' => [],
     'active_department_id' => null,
@@ -129,10 +130,12 @@ if ($role === 'super_admin') {
     if ($plannerCompanyId !== null && $plannerCompanyId > 0) {
         $companyName = '';
         $companyType = '';
+        $companySignatureIp = null;
         foreach ($allCompanies as $companyRow) {
             if ((int) ($companyRow['id'] ?? 0) === $plannerCompanyId) {
                 $companyName = (string) ($companyRow['name'] ?? '');
                 $companyType = (string) ($companyRow['type'] ?? '');
+                $companySignatureIp = $companyRow['signature_ip'] ?? null;
                 break;
             }
         }
@@ -192,6 +195,7 @@ if ($role === 'super_admin') {
             'id' => $plannerCompanyId,
             'name' => $companyName,
             'type' => $companyType,
+            'signature_ip' => $companySignatureIp,
         ];
         $dashboardPlannerData['active_department_id'] = $departmentRows[0]['id'] ?? null;
         $dashboardPlannerData['active_shift_id'] = $shiftRows[0]['id'] ?? null;
@@ -284,6 +288,7 @@ if ($role === 'admin' && $companyId !== null) {
         'id' => (int) $companyId,
         'name' => (string) ($adminCompany['name'] ?? ($profile['company_name'] ?? '')),
         'type' => (string) ($adminCompany['type'] ?? ($profile['company_type'] ?? '')),
+        'signature_ip' => $adminCompany['signature_ip'] ?? null,
     ];
     $dashboardPlannerData['companies'] = array_values(array_filter(
         $companyModel->all(),

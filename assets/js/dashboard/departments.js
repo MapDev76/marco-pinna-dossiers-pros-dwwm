@@ -30,6 +30,10 @@
     return (input?.defaultValue || input?.value || '#b98b12').trim();
   }
 
+  function getColorPreviewInput(scope) {
+    return scope ? scope.querySelector('input[data-color-preview]') : null;
+  }
+
   function getCreateCard() {
     return document.querySelector('[data-dept-create-row]');
   }
@@ -87,6 +91,12 @@
       const field = group.getAttribute('data-choice-field');
       const input = scope.querySelector(`input[data-field="${field}"]`);
       const currentValue = (input?.value || '').trim();
+      const previewInput = field === 'color' ? getColorPreviewInput(scope) : null;
+      if (previewInput) {
+        previewInput.value = '';
+        previewInput.style.setProperty('--selected-color', currentValue || '#b98b12');
+        previewInput.title = currentValue || '#b98b12';
+      }
       group.querySelectorAll('[data-choice-value]').forEach((btn) => {
         const isSelected = btn.getAttribute('data-choice-value') === currentValue;
         btn.classList.toggle('is-selected', isSelected);
@@ -100,6 +110,14 @@
     const input = scope.querySelector(`input[data-field="${field}"]`);
     if (!input) return;
     input.value = value;
+    if (field === 'color') {
+      const previewInput = getColorPreviewInput(scope);
+      if (previewInput) {
+        previewInput.value = '';
+        previewInput.style.setProperty('--selected-color', value || '#b98b12');
+        previewInput.title = value || '#b98b12';
+      }
+    }
     syncChoiceState(scope);
     closeAllPickers();
   }

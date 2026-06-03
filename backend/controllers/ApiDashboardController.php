@@ -120,8 +120,11 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             ]);
         }
 
-        $maxHoursPerMonth = max(1, (int) ($input['max_hours_per_month'] ?? 176));
-        $maxDaysPerMonth = max(1, (int) ($input['max_days_per_month'] ?? 22));
+        $minEmployeesPerShiftDay = max(0, (int) ($input['min_employees_per_shift_day'] ?? 1));
+        $maxEmployeesPerShiftDay = max(1, (int) ($input['max_employees_per_shift_day'] ?? 3));
+        if ($minEmployeesPerShiftDay > $maxEmployeesPerShiftDay) {
+            $minEmployeesPerShiftDay = $maxEmployeesPerShiftDay;
+        }
         $employeeRulesRaw = $input['employee_rules'] ?? [];
 
         if (is_string($employeeRulesRaw)) {
@@ -246,7 +249,6 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         $users = $userStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $hoursByUserMonth = [];
-        $daysByUserMonth = [];
         $dayBusy = [];
         $snapshot = $pdo->prepare(
             'SELECT us.user_id, us.work_date, s.start_time, s.end_time
@@ -274,66 +276,129 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                 $delta += 24 * 60;
             }
             $hoursByUserMonth[$uid][$month] = ($hoursByUserMonth[$uid][$month] ?? 0.0) + ($delta / 60);
-            $daysByUserMonth[$uid][$month][$date] = true;
             $dayBusy[$uid][$date] = true;
         }
+
+        $coverageParams = $scopeParams;
+        $coverageStmt = $pdo->prepare(
+            'SELECT us.shift_id, us.work_date,
+                    SUM(CASE WHEN us.user_id IS NOT NULL AND us.status <> "cancelled" THEN 1 ELSE 0 END) AS assigned_count
+             FROM user_shifts us
+             INNER JOIN shifts s ON s.id = us.shift_id
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE ' . $scopeWhere . '
+               AND us.work_date BETWEEN :range_start AND :range_end
+               AND s.kind = "work"' . $openShiftFilter . '
+             GROUP BY us.shift_id, us.work_date'
+        );
+        $coverageStmt->execute($coverageParams);
+        $coverageByShiftDate = [];
+        foreach ($coverageStmt->fetchAll(PDO::FETCH_ASSOC) as $coverageRow) {
+            $coverageKey = ((int) ($coverageRow['shift_id'] ?? 0)) . '|' . (string) ($coverageRow['work_date'] ?? '');
+            $coverageByShiftDate[$coverageKey] = (int) ($coverageRow['assigned_count'] ?? 0);
+        }
+
+        $openRowsByShiftDate = [];
+        foreach ($openRows as $openRow) {
+            $groupKey = ((int) ($openRow['shift_id'] ?? 0)) . '|' . (string) ($openRow['work_date'] ?? '');
+            if (!isset($openRowsByShiftDate[$groupKey])) {
+                $openRowsByShiftDate[$groupKey] = [];
+            }
+            $openRowsByShiftDate[$groupKey][] = $openRow;
+            if (!array_key_exists($groupKey, $coverageByShiftDate)) {
+                $coverageByShiftDate[$groupKey] = 0;
+            }
+        }
+
+        $groupOrder = array_keys($openRowsByShiftDate);
+        usort($groupOrder, static function (string $a, string $b) use ($coverageByShiftDate, $minEmployeesPerShiftDay): int {
+            [$aShift, $aDate] = array_pad(explode('|', $a, 2), 2, '');
+            [$bShift, $bDate] = array_pad(explode('|', $b, 2), 2, '');
+            $aAssigned = (int) ($coverageByShiftDate[$a] ?? 0);
+            $bAssigned = (int) ($coverageByShiftDate[$b] ?? 0);
+            $aDeficit = max($minEmployeesPerShiftDay - $aAssigned, 0);
+            $bDeficit = max($minEmployeesPerShiftDay - $bAssigned, 0);
+            if ($aDeficit !== $bDeficit) {
+                return $bDeficit <=> $aDeficit;
+            }
+            if ($aDate !== $bDate) {
+                return $aDate <=> $bDate;
+            }
+
+            return ((int) $aShift) <=> ((int) $bShift);
+        });
 
         $updateAssignment = $pdo->prepare(
             'UPDATE user_shifts SET user_id = :user_id, status = "assigned", updated_at = CURRENT_TIMESTAMP WHERE id = :id'
         );
         $assignedCount = 0;
         $skippedByRules = 0;
-        foreach ($openRows as $openRow) {
-            $slotDate = (string) ($openRow['work_date'] ?? '');
-            $slotDepartmentId = (int) ($openRow['department_id'] ?? 0);
-            $slotMonth = substr($slotDate, 0, 7);
-            $startParts = explode(':', (string) ($openRow['start_time'] ?? '00:00:00'));
-            $endParts = explode(':', (string) ($openRow['end_time'] ?? '00:00:00'));
-            $startMinutes = ((int) ($startParts[0] ?? 0) * 60) + (int) ($startParts[1] ?? 0);
-            $endMinutes = ((int) ($endParts[0] ?? 0) * 60) + (int) ($endParts[1] ?? 0);
-            $delta = $endMinutes - $startMinutes;
-            if ($delta <= 0) {
-                $delta += 24 * 60;
-            }
-            $slotHours = $delta / 60;
-
-            $candidate = null;
-            $candidateHours = PHP_FLOAT_MAX;
-            foreach ($users as $candidateUser) {
-                $uid = (int) ($candidateUser['id'] ?? 0);
-                if ($uid <= 0) {
-                    continue;
-                }
-                if ((int) ($candidateUser['department_id'] ?? 0) !== $slotDepartmentId) {
-                    continue;
-                }
-                if (!empty($dayBusy[$uid][$slotDate])) {
-                    continue;
-                }
-                if ($isBlockedByRule($uid, $slotDate)) {
-                    $skippedByRules++;
-                    continue;
-                }
-                $monthHours = (float) ($hoursByUserMonth[$uid][$slotMonth] ?? 0.0);
-                $monthDaysCount = count($daysByUserMonth[$uid][$slotMonth] ?? []);
-                if (($monthHours + $slotHours) > $maxHoursPerMonth || ($monthDaysCount + 1) > $maxDaysPerMonth) {
-                    continue;
-                }
-                if ($monthHours < $candidateHours) {
-                    $candidate = $uid;
-                    $candidateHours = $monthHours;
-                }
+        foreach ($groupOrder as $groupKey) {
+            $assignedInGroup = (int) ($coverageByShiftDate[$groupKey] ?? 0);
+            if ($assignedInGroup >= $maxEmployeesPerShiftDay) {
+                continue;
             }
 
-            if ($candidate) {
-                $updateAssignment->execute([
-                    'user_id' => $candidate,
-                    'id' => (int) ($openRow['id'] ?? 0),
-                ]);
-                $hoursByUserMonth[$candidate][$slotMonth] = ($hoursByUserMonth[$candidate][$slotMonth] ?? 0.0) + $slotHours;
-                $daysByUserMonth[$candidate][$slotMonth][$slotDate] = true;
-                $dayBusy[$candidate][$slotDate] = true;
-                $assignedCount++;
+            foreach ($openRowsByShiftDate[$groupKey] as $openRow) {
+                if ($assignedInGroup >= $maxEmployeesPerShiftDay) {
+                    break;
+                }
+
+                $slotDate = (string) ($openRow['work_date'] ?? '');
+                $slotDepartmentId = (int) ($openRow['department_id'] ?? 0);
+                $slotMonth = substr($slotDate, 0, 7);
+                $startParts = explode(':', (string) ($openRow['start_time'] ?? '00:00:00'));
+                $endParts = explode(':', (string) ($openRow['end_time'] ?? '00:00:00'));
+                $startMinutes = ((int) ($startParts[0] ?? 0) * 60) + (int) ($startParts[1] ?? 0);
+                $endMinutes = ((int) ($endParts[0] ?? 0) * 60) + (int) ($endParts[1] ?? 0);
+                $delta = $endMinutes - $startMinutes;
+                if ($delta <= 0) {
+                    $delta += 24 * 60;
+                }
+                $slotHours = $delta / 60;
+
+                $candidate = null;
+                $candidateHours = PHP_FLOAT_MAX;
+                foreach ($users as $candidateUser) {
+                    $uid = (int) ($candidateUser['id'] ?? 0);
+                    if ($uid <= 0) {
+                        continue;
+                    }
+                    if ((int) ($candidateUser['department_id'] ?? 0) !== $slotDepartmentId) {
+                        continue;
+                    }
+                    if (!empty($dayBusy[$uid][$slotDate])) {
+                        continue;
+                    }
+                    if ($isBlockedByRule($uid, $slotDate)) {
+                        $skippedByRules++;
+                        continue;
+                    }
+                    $monthHours = (float) ($hoursByUserMonth[$uid][$slotMonth] ?? 0.0);
+                    if ($monthHours < $candidateHours) {
+                        $candidate = $uid;
+                        $candidateHours = $monthHours;
+                    }
+                }
+
+                if ($candidate) {
+                    $updateAssignment->execute([
+                        'user_id' => $candidate,
+                        'id' => (int) ($openRow['id'] ?? 0),
+                    ]);
+                    $hoursByUserMonth[$candidate][$slotMonth] = ($hoursByUserMonth[$candidate][$slotMonth] ?? 0.0) + $slotHours;
+                    $dayBusy[$candidate][$slotDate] = true;
+                    $assignedInGroup++;
+                    $coverageByShiftDate[$groupKey] = $assignedInGroup;
+                    $assignedCount++;
+                }
+            }
+        }
+
+        $groupsBelowMin = 0;
+        foreach ($coverageByShiftDate as $assignedInGroup) {
+            if ((int) $assignedInGroup < $minEmployeesPerShiftDay) {
+                $groupsBelowMin++;
             }
         }
 
@@ -343,6 +408,9 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             'assigned_count' => $assignedCount,
             'open_remaining' => max(count($openRows) - $assignedCount, 0),
             'skipped_by_rules' => $skippedByRules,
+            'groups_below_min' => $groupsBelowMin,
+            'min_employees_per_shift_day' => $minEmployeesPerShiftDay,
+            'max_employees_per_shift_day' => $maxEmployeesPerShiftDay,
         ]);
     }
 
@@ -374,7 +442,16 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
 
         $update = $pdo->prepare('UPDATE user_shifts SET user_id = NULL, status = "open", updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $update->execute(['id' => $assignmentId]);
-        $status = 'open';
+        jsonResponse([
+            'success' => true,
+            'ok' => true,
+            'assignment' => [
+                'assignment_id' => $assignmentId,
+                'status' => 'open',
+                'user_id' => 0,
+                'user_name' => '',
+            ],
+        ]);
     }
 
     if ($action !== 'unassign_shift' && ($workDate === '' || $shiftId <= 0 || ($action === 'assign_shift' && $userId <= 0))) {

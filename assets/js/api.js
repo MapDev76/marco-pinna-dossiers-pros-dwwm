@@ -19,7 +19,17 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      return res.json();
+      const raw = await res.text();
+      try {
+        return JSON.parse(raw || '{}');
+      } catch (_error) {
+        return {
+          success: false,
+          ok: false,
+          status: res.status,
+          error: (raw || '').trim() || 'Server returned a non-JSON response.',
+        };
+      }
     },
     uploadForm: async function(form){
       const fd = new FormData(form);

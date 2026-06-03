@@ -20,6 +20,7 @@ $flashError = getFlash('error');
 $isDashboardRoute = $route === 'dashboard';
 $isHomeRoute = $route === 'home';
 $isLoginRoute = $route === 'login';
+$isMySpaceRoute = $route === 'my-space';
 $isCompactDashboard = $isDashboardRoute && isLoggedIn() && in_array((currentUser()['role'] ?? ''), ['admin', 'department_manager'], true);
 $bodyClasses = [];
 if ($isDashboardRoute) {
@@ -30,6 +31,9 @@ if ($isHomeRoute) {
 }
 if ($isLoginRoute) {
         $bodyClasses[] = 'route-login';
+}
+if ($isMySpaceRoute) {
+        $bodyClasses[] = 'route-my-space';
 }
 $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time());
 ?>
@@ -55,7 +59,7 @@ require __DIR__ . '/app/layout/header.php';
 <?php if ((currentUser()['role'] ?? '') !== 'super_admin'): ?>
 <?php require __DIR__ . '/app/layout/sidebar.php'; ?>
 <?php endif; ?>
-<?php require __DIR__ . '/app/layout/settings.php'; ?>
+<?php require __DIR__ . '/app/layout/settings-panel.php'; ?>
 <?php require __DIR__ . '/app/layout/schedule.php'; ?>
 <?php endif; ?>
 
@@ -129,6 +133,10 @@ require $viewFile;
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/assignments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/assignments.js'); ?>"></script>
+<?php endif; ?>
+
+<?php if ($isMySpaceRoute && isLoggedIn()): ?>
+<script src="<?php echo $basePath; ?>/assets/js/employee-space.js?v=<?php echo filemtime(__DIR__ . '/assets/js/employee-space.js'); ?>"></script>
 <?php endif; ?>
 
 </body>

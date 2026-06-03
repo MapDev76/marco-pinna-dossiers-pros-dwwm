@@ -323,6 +323,15 @@
     gap: 0.5rem;
 }
 
+.settings-list-wrap[data-assignment-list-wrap][hidden] {
+    display: none !important;
+}
+
+.settings-assignment-list-toggle-row {
+    margin-top: 0.15rem;
+    margin-bottom: 0.3rem;
+}
+
 .settings-list-item-wrap {
     border: 1px solid var(--color-border-light);
     border-radius: 12px;
@@ -333,6 +342,29 @@
 .settings-list-row {
     padding: 0.7rem 0.8rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.settings-company-ip-wrap {
+    border-color: rgba(157, 121, 16, 0.28);
+    background: linear-gradient(180deg, #fffdf6 0%, #fffaeb 100%);
+}
+
+.settings-company-ip-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+
+.settings-company-ip-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: min(100%, 460px);
+}
+
+.settings-company-ip-controls input {
+    min-height: 40px;
 }
 
 .settings-list-item-wrap > .settings-list-row:last-child {
@@ -411,6 +443,87 @@
     backdrop-filter: blur(2px);
 }
 
+.employee-space-shell {
+    gap: 0.85rem;
+}
+
+.employee-space-hero {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.employee-network-status-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+}
+
+.employee-network-status-card {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid rgba(157, 121, 16, 0.25);
+    background: #fff8e6;
+}
+
+.employee-network-status-card.is-ok {
+    border-color: rgba(17, 148, 63, 0.35);
+    background: #edfdf2;
+}
+
+.employee-network-status-card.is-blocked {
+    border-color: rgba(185, 28, 28, 0.35);
+    background: #fff1f2;
+}
+
+.employee-sign-form {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.employee-signature-pad-shell {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.employee-signature-pad-shell canvas {
+    width: 100%;
+    height: 180px;
+    border-radius: 12px;
+    touch-action: none;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.employee-signature-pad-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.employee-shift-cards {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.employee-shift-card {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 0.65rem 0.75rem;
+    background: #ffffff;
+    display: grid;
+    gap: 0.2rem;
+}
+
+.employee-shift-card header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+
 .settings-assignment-employee-modal[hidden] {
     display: none !important;
 }
@@ -420,8 +533,8 @@
     max-height: calc(100vh - 1.6rem);
     overflow: auto;
     display: grid;
-    gap: 0.65rem;
-    padding: 0.88rem;
+    gap: 0.55rem;
+    padding: 0.76rem;
     border-radius: 18px;
     border: 1px solid rgba(157, 121, 16, 0.2);
     background: linear-gradient(180deg, #fffefa 0%, #fffaf0 100%);
@@ -441,8 +554,33 @@
 
 .settings-assignment-employee-window-grid {
     display: grid;
-    grid-template-columns: minmax(280px, 1fr) minmax(420px, 1.4fr);
-    gap: 0.6rem;
+    grid-template-columns: minmax(260px, 1fr) minmax(340px, 1.2fr);
+    gap: 0.5rem;
+}
+
+.settings-assignment-employee-window .settings-analytics-card {
+    padding: 0.62rem;
+    gap: 0.42rem;
+}
+
+.settings-assignment-employee-window .settings-field input,
+.settings-assignment-employee-window .settings-field select {
+    min-height: 30px;
+    padding: 0.3rem 0.42rem;
+    font-size: 0.8rem;
+}
+
+.settings-assignment-employee-window .admin-action-link {
+    min-height: 30px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.76rem;
+}
+
+.settings-assignment-modal-range-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    align-items: end;
 }
 
 .settings-assignment-weekly-grid {
@@ -473,6 +611,16 @@
     padding: 0.32rem 0.2rem;
     border-radius: 8px;
     border: 1px solid transparent;
+    font: inherit;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.settings-assignment-week-day:hover,
+.settings-assignment-week-day:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.14);
+    outline: none;
 }
 
 .settings-assignment-week-day small {
@@ -543,7 +691,7 @@
 
 .settings-assignment-modal-open-range {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.45rem;
 }
 
@@ -1213,8 +1361,15 @@
 }
 
 .settings-choice-btn-color {
-    width: 34px;
-    padding: 0;
+    min-width: 100px;
+    padding: 0.55rem 0.7rem;
+    gap: 0.35rem;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.76rem;
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.1;
+    text-align: center;
 }
 
 .settings-color-swatch {
@@ -1224,6 +1379,44 @@
     border-radius: 999px;
     border: 1px solid rgba(0, 0, 0, 0.16);
     background: var(--choice-color, #b98b12);
+}
+
+.settings-picker-row input[data-color-preview] {
+    min-height: 44px;
+    border-radius: var(--border-radius-md);
+    border: 1px solid rgba(0, 0, 0, 0.16);
+    background: var(--selected-color, #b98b12);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    color: transparent;
+    caret-color: transparent;
+    text-shadow: none;
+    cursor: default;
+}
+
+.settings-picker-row input[data-color-preview]:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 0 0 2px rgba(47, 111, 237, 0.2);
+}
+
+.settings-choice-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.settings-color-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    font-weight: var(--font-weight-semibold);
+}
+
+.settings-color-display .settings-color-swatch {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
 }
 
 .settings-field.span-2 {

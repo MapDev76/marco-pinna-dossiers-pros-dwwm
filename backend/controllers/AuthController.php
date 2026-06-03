@@ -61,6 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             };
 
             setFlash('success', 'Login successful. Welcome ' . $welcomeLabel . '.');
+            if (($user['role'] ?? '') === 'employee') {
+                redirectTo('my-space');
+            }
             redirectTo('dashboard');
         }
     }

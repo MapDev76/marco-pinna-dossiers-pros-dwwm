@@ -359,6 +359,205 @@
     };
   }
 
+  function createDayFullscreenModal(events, toLocalDate, openDate) {
+    var host = document.createElement('div');
+    host.className = 'calendar-day-fullscreen-overlay';
+    host.hidden = true;
+    host.innerHTML = '\n      <section class="calendar-day-fullscreen-modal" role="dialog" aria-modal="true" aria-label="Day assignments">\n        <header class="calendar-day-fullscreen-head">\n          <div>\n            <p class="calendar-day-fullscreen-kicker">Daily overview</p>\n            <h3 data-calendar-day-fullscreen-title></h3>\n          </div>\n          <div class="calendar-day-fullscreen-head-actions">\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-prev>Previous day</button>\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-next>Next day</button>\n            <button type="button" class="calendar-day-fullscreen-close" data-calendar-day-fullscreen-close aria-label="Close">×</button>\n          </div>\n        </header>\n        <section class="calendar-day-fullscreen-unavailable" data-calendar-day-fullscreen-unavailable></section>\n        <div class="calendar-day-fullscreen-list" data-calendar-day-fullscreen-list></div>\n      </section>\n    ';
+
+    document.body.appendChild(host);
+
+    var titleNode = host.querySelector('[data-calendar-day-fullscreen-title]');
+    var listNode = host.querySelector('[data-calendar-day-fullscreen-list]');
+    var unavailableNode = host.querySelector('[data-calendar-day-fullscreen-unavailable]');
+    var closeButton = host.querySelector('[data-calendar-day-fullscreen-close]');
+    var prevButton = host.querySelector('[data-calendar-day-fullscreen-prev]');
+    var nextButton = host.querySelector('[data-calendar-day-fullscreen-next]');
+    var panel = host.querySelector('.calendar-day-fullscreen-modal');
+    var titleFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    var state = {
+      currentDate: '',
+    };
+
+    function closeModal() {
+      host.hidden = true;
+    }
+
+    function toDateLabel(dateValue) {
+      var dateObj = typeof toLocalDate === 'function' ? toLocalDate(dateValue) : new Date(dateValue + 'T12:00:00');
+      if (!dateObj || Number.isNaN(dateObj.getTime())) return String(dateValue || 'Selected date');
+      return titleFormatter.format(dateObj);
+    }
+
+    function groupByShift(dayEvents) {
+      return dayEvents.reduce(function (map, event) {
+        var key = String(event.shift_id || 0);
+        if (!map.has(key)) {
+          map.set(key, {
+            shiftName: event.shift_name || 'Shift',
+            shiftIcon: event.shift_icon || '🕒',
+            shiftColor: event.shift_color || '#2f6fed',
+            startTime: event.start_time || null,
+            endTime: event.end_time || null,
+            employees: [],
+          });
+        }
+        if (Number(event.user_id || 0) > 0) {
+          var fullName = String(event.user_name || '').trim();
+          map.get(key).employees.push(fullName || ('Employee #' + Number(event.user_id || 0)));
+        }
+        return map;
+      }, new Map());
+    }
+
+    function formatShiftTime(group) {
+      var start = typeof group.startTime === 'string' ? group.startTime.slice(0, 5) : '--:--';
+      var end = typeof group.endTime === 'string' ? group.endTime.slice(0, 5) : '--:--';
+      return start + ' - ' + end;
+    }
+
+    function addDaysToKey(dateValue, delta) {
+      var base = typeof toLocalDate === 'function' ? toLocalDate(dateValue) : new Date(dateValue + 'T12:00:00');
+      if (!base || Number.isNaN(base.getTime())) return dateValue;
+      base.setDate(base.getDate() + delta);
+      var y = String(base.getFullYear());
+      var m = String(base.getMonth() + 1).padStart(2, '0');
+      var d = String(base.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+
+    function getUnavailableByReason(dayEvents) {
+      var reasonMap = {
+        rest: [],
+        vacation: [],
+        sick: [],
+      };
+
+      dayEvents.forEach(function (event) {
+        var kind = String(event.shift_kind || '').toLowerCase();
+        if (!kind && String(event.status || '').toLowerCase() === 'rest') {
+          kind = 'rest';
+        }
+        if (!kind && String(event.status || '').toLowerCase() === 'vacation') {
+          kind = 'vacation';
+        }
+        if (!kind && String(event.status || '').toLowerCase() === 'sick') {
+          kind = 'sick';
+        }
+
+        var normalizedReason = '';
+        if (kind === 'rest' || kind === 'restday' || kind === 'rest_day') normalizedReason = 'rest';
+        if (kind === 'vacation') normalizedReason = 'vacation';
+        if (kind === 'sick') normalizedReason = 'sick';
+        if (!normalizedReason) return;
+
+        var userId = Number(event.user_id || 0);
+        if (!userId) return;
+        var fullName = String(event.user_name || '').trim() || ('Employee #' + userId);
+        if (!reasonMap[normalizedReason].includes(fullName)) {
+          reasonMap[normalizedReason].push(fullName);
+        }
+      });
+
+      return reasonMap;
+    }
+
+    function openModal(dateValue) {
+      var normalizedDate = String(dateValue || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) return;
+      state.currentDate = normalizedDate;
+
+      var dayEvents = (events || []).filter(function (event) {
+        return String(event.work_date || '') === normalizedDate;
+      });
+      var groups = Array.from(groupByShift(dayEvents).values()).sort(function (a, b) {
+        return String(a.startTime || '').localeCompare(String(b.startTime || ''));
+      });
+
+      if (titleNode) {
+        titleNode.textContent = toDateLabel(normalizedDate);
+      }
+
+      if (listNode) {
+        if (!groups.length) {
+          listNode.innerHTML = '<p class="calendar-day-fullscreen-empty">No shifts scheduled for this date.</p>';
+        } else {
+          listNode.innerHTML = groups.map(function (group) {
+            var employees = group.employees.length
+              ? group.employees
+              : ['Open shift'];
+            return '\n              <article class="calendar-day-fullscreen-shift" style="--fullscreen-shift-color:' + group.shiftColor + '">\n                <div class="calendar-day-fullscreen-shift-head">\n                  <span class="calendar-day-fullscreen-shift-title">' + group.shiftIcon + ' ' + group.shiftName + '</span>\n                  <span class="calendar-day-fullscreen-shift-time">' + formatShiftTime(group) + '</span>\n                </div>\n                <ul class="calendar-day-fullscreen-employees">' + employees.map(function (name) {
+                  return '<li>' + name + '</li>';
+                }).join('') + '</ul>\n              </article>\n            ';
+          }).join('');
+        }
+      }
+
+      if (unavailableNode) {
+        var unavailable = getUnavailableByReason(dayEvents);
+        var hasUnavailable = unavailable.rest.length || unavailable.vacation.length || unavailable.sick.length;
+        if (!hasUnavailable) {
+          unavailableNode.innerHTML = '';
+          unavailableNode.hidden = true;
+        } else {
+          unavailableNode.hidden = false;
+          unavailableNode.innerHTML = '\n            <div class="calendar-day-fullscreen-unavailable-head">Unavailable employees</div>\n            <div class="calendar-day-fullscreen-unavailable-grid">\n              <section class="calendar-day-fullscreen-unavailable-card is-rest">\n                <h4>Rest day</h4>\n                ' + (unavailable.rest.length ? ('<ul>' + unavailable.rest.map(function (name) { return '<li>' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-vacation">\n                <h4>Vacation</h4>\n                ' + (unavailable.vacation.length ? ('<ul>' + unavailable.vacation.map(function (name) { return '<li>' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-sick">\n                <h4>Sick</h4>\n                ' + (unavailable.sick.length ? ('<ul>' + unavailable.sick.map(function (name) { return '<li>' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n            </div>\n          ';
+        }
+      }
+
+      host.hidden = false;
+    }
+
+    if (panel) {
+      panel.addEventListener('click', function (event) {
+        event.stopPropagation();
+      });
+    }
+
+    if (closeButton) {
+      closeButton.addEventListener('click', function () {
+        closeModal();
+      });
+    }
+
+    if (prevButton) {
+      prevButton.addEventListener('click', function () {
+        var previousDate = addDaysToKey(state.currentDate, -1);
+        if (typeof openDate === 'function') {
+          openDate(toLocalDate(previousDate));
+        }
+        openModal(previousDate);
+      });
+    }
+
+    if (nextButton) {
+      nextButton.addEventListener('click', function () {
+        var nextDate = addDaysToKey(state.currentDate, 1);
+        if (typeof openDate === 'function') {
+          openDate(toLocalDate(nextDate));
+        }
+        openModal(nextDate);
+      });
+    }
+
+    host.addEventListener('click', function (event) {
+      if (event.target === host) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !host.hidden) {
+        closeModal();
+      }
+    });
+
+    return {
+      open: openModal,
+      close: closeModal,
+    };
+  }
+
   function initCalendarInteractions(options) {
     var calendarShell = options.calendarShell;
     var events = options.events || [];
@@ -368,7 +567,9 @@
     var unassignAssignment = options.unassignAssignment;
     var assignShift = options.assignShift;
     var isUserAvailableForDate = options.isUserAvailableForDate;
+    var getUserAvailabilityStatus = options.getUserAvailabilityStatus;
     var bulkAssignModal = createBulkAssignModal(assignShift, events, isUserAvailableForDate);
+    var dayFullscreenModal = createDayFullscreenModal(events, toLocalDate, openDate);
 
     var toDateKey = function (dateObj) {
       var y = String(dateObj.getFullYear());
@@ -404,7 +605,10 @@
           return;
         }
         if (typeof isUserAvailableForDate === 'function' && !isUserAvailableForDate(selectedUserId, selectedWorkDate)) {
-          notifyError(selectedUserName + ' is unavailable on ' + selectedWorkDate + '.');
+          var unavailableReason = (typeof getUserAvailabilityStatus === 'function')
+            ? String((getUserAvailabilityStatus(selectedUserId, selectedWorkDate) || {}).reason || '')
+            : '';
+          notifyError(unavailableReason || (selectedUserName + ' is unavailable on ' + selectedWorkDate + '.'));
           return;
         }
 
@@ -435,7 +639,14 @@
           return;
         }
         if (assignmentToUnassign && typeof unassignAssignment === 'function') {
-          unassignAssignment(assignmentToUnassign);
+          (async function () {
+            try {
+              await unassignAssignment(assignmentToUnassign);
+              notifySuccess('Shift unassigned successfully.');
+            } catch (error) {
+              notifyError((error && error.message) || 'Unable to unassign shift.');
+            }
+          })();
         }
         return;
       }
@@ -495,7 +706,10 @@
       var dateCard = event.target.closest('[data-calendar-date]');
       if (dateCard) {
         var dateValue = dateCard.getAttribute('data-calendar-date');
-        if (dateValue) openDate(toLocalDate(dateValue));
+        if (dateValue) {
+          openDate(toLocalDate(dateValue));
+          dayFullscreenModal.open(dateValue);
+        }
         return;
       }
 
@@ -505,6 +719,7 @@
         var assignment = events.find(function (item) { return Number(item.assignment_id) === assignmentId; });
         if (assignment && assignment.work_date) {
           openDate(toLocalDate(assignment.work_date));
+          dayFullscreenModal.open(String(assignment.work_date || ''));
         }
       }
     });

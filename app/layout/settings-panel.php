@@ -12,6 +12,7 @@ $users = is_array($planner['users'] ?? null) ? $planner['users'] : [];
 $plannerCompany = is_array($planner['company'] ?? null) ? $planner['company'] : [];
 $scopeCompanyId = (int) ($plannerCompany['id'] ?? ($departments[0]['company_id'] ?? ($currentUser['company_id'] ?? 0)));
 $scopeCompanyName = (string) ($plannerCompany['name'] ?? ($currentUser['company_name'] ?? 'StaffEase Pro'));
+$scopeCompanySignatureIp = trim((string) ($plannerCompany['signature_ip'] ?? ''));
 $scopeCompanies = is_array($planner['companies'] ?? null) ? $planner['companies'] : [];
 $visibleUsers = $users;
 $currentRole = $currentUser['role'] ?? '';
@@ -66,22 +67,57 @@ if (
 }
 
 $departmentIconCatalogMap = [
-    'hospitality' => ['🛎️', '🧹', '🍽️', '🍸', '🚗', '🏊', '🧖', '🛏️', '🧳', '🎟️'],
-    'healthcare' => ['🏥', '🩺', '💉', '🧪', '🩻', '🧬', '🚑', '💊', '🫀', '🧫'],
-    'generic' => ['🏷️', '🧑‍💼', '🔧', '📦', '📁', '🛠️', '💼', '🧭', '📌', '🧾'],
+    'hospitality' => ['🛎️', '🧹', '🍽️', '🍸', '🚗', '🏊', '🧖', '🛏️', '🧳', '🎟️', '🍳', '🥐', '🍷', '🪟', '🌺', '🧴', '🧯', '🧰', '🗝️', '🪴', '🛗', '🧺', '🧼', '🪣', '📞', '🧻'],
+    'healthcare' => ['🏥', '🩺', '💉', '🧪', '🩻', '🧬', '🚑', '💊', '🫀', '🧫', '🧑‍⚕️', '🧑‍🔬', '🩹', '🧴', '🧯', '🛏️', '🧠', '📋', '🫁', '🦴', '🧻', '🧼', '⚕️', '🩸', '🧎', '🚪'],
+    'generic' => ['🏷️', '🧑‍💼', '🔧', '📦', '📁', '🛠️', '💼', '🧭', '📌', '🧾', '🧰', '📊', '🧑‍🏭', '🧑‍🎨', '🧪', '🛰️', '🔒', '📣', '📎', '🗂️', '🗄️', '🧮', '🖨️', '📬', '🛒', '📡'],
 ];
 $shiftIconCatalogMap = [
-    'hospitality' => ['🌅', '☀️', '🌇', '🌙', '🛎️', '🍽️', '🧹', '🚗', '🛌', '🌴', '🏖️', '🧘', '☕', '🤒', '💤'],
-    'healthcare' => ['🩺', '💉', '🚑', '🏥', '🌙', '☀️', '🧪', '💊', '🛌', '🧘', '☕', '💤', '🤒', '🏖️', '🌴'],
-    'generic' => ['🕒', '☀️', '🌙', '🛠️', '📦', '👥', '🧭', '⚙️', '🛌', '💤', '🧘', '☕', '🌴', '🏖️', '🤒'],
+    'hospitality' => ['🌅', '☀️', '🌇', '🌙', '🛎️', '🍽️', '🧹', '🚗', '🛌', '🌴', '🏖️', '🧘', '☕', '🤒', '💤', '🍳', '🥐', '🍷', '🚪', '🧺', '🧽', '🧯', '🧳', '🗝️', '🛗', '🪴', '🧴', '🪣'],
+    'healthcare' => ['🩺', '💉', '🚑', '🏥', '🌙', '☀️', '🧪', '💊', '🛌', '🧘', '☕', '💤', '🤒', '🏖️', '🌴', '🧑‍⚕️', '🧑‍🔬', '🩹', '🧼', '🧯', '📋', '🫁', '🩸', '🦴', '⚕️', '🚪', '🧴', '🧻'],
+    'generic' => ['🕒', '☀️', '🌙', '🛠️', '📦', '👥', '🧭', '⚙️', '🛌', '💤', '🧘', '☕', '🌴', '🏖️', '🤒', '🧑‍💻', '📞', '📬', '🚚', '🧹', '🧯', '📈', '🖨️', '🧮', '📡', '🗂️', '🪛', '🔌'],
 ];
 
 $departmentIconCatalog = $departmentIconCatalogMap[$companyDomain] ?? $departmentIconCatalogMap['generic'];
 $shiftIconCatalog = $shiftIconCatalogMap[$companyDomain] ?? $shiftIconCatalogMap['generic'];
-$pickerColorCatalog = [
-    '#b98b12', '#2f6fed', '#0f766e', '#c2410c', '#be123c', '#4f46e5', '#15803d', '#7c3aed', '#0891b2', '#374151',
-    '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#6366f1', '#ec4899',
+$pickerColorCatalogMap = [
+    '#b98b12' => 'Warm Amber',
+    '#d97706' => 'Golden Hour',
+    '#f59e0b' => 'Sunbeam',
+    '#fbbf24' => 'Honey',
+    '#facc15' => 'Lemon Glow',
+    '#84cc16' => 'Lime Spark',
+    '#22c55e' => 'Fresh Green',
+    '#16a34a' => 'Forest Green',
+    '#10b981' => 'Mint',
+    '#14b8a6' => 'Teal Mist',
+    '#0f766e' => 'Deep Teal',
+    '#06b6d4' => 'Sky Tide',
+    '#0891b2' => 'Ocean Blue',
+    '#0ea5e9' => 'Clear Blue',
+    '#3b82f6' => 'Bright Blue',
+    '#2f6fed' => 'Royal Blue',
+    '#6366f1' => 'Indigo Pulse',
+    '#4f46e5' => 'Blue Violet',
+    '#7c3aed' => 'Violet Bloom',
+    '#a855f7' => 'Lavender',
+    '#d946ef' => 'Orchid',
+    '#ec4899' => 'Rose Bloom',
+    '#be123c' => 'Crimson',
+    '#ef4444' => 'Vivid Red',
+    '#f97316' => 'Tangerine',
+    '#ea580c' => 'Ember',
+    '#c2410c' => 'Burnt Orange',
+    '#374151' => 'Slate',
+    '#475569' => 'Steel',
+    '#64748b' => 'Mist Gray',
+    '#6b7280' => 'Stone Gray',
+    '#1f2937' => 'Midnight',
+    '#111827' => 'Ink',
 ];
+$pickerColorCatalog = array_keys($pickerColorCatalogMap);
+$pickerColorLabel = static function (string $color) use ($pickerColorCatalogMap): string {
+    return $pickerColorCatalogMap[$color] ?? $color;
+};
 $activeDepartment = null;
 if (!empty($departments)) {
     foreach ($departments as $department) {
@@ -424,18 +460,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <div class="settings-panel-head">
                     <div>
                         <h3>Assignments</h3>
-                        <p class="crud-modal-subtitle">Planner assignments with operational insights for admin decisions (current month).</p>
-                    </div>
-                    <div class="settings-pill-row">
-                        <span class="settings-pill">Company: <?php echo e($scopeCompanyName); ?></span>
-                        <span class="settings-pill">Month: <?php echo e($currentMonthLabel); ?></span>
-                        <span class="settings-pill">Assignments: <?php echo count($assignmentsCurrentMonth); ?></span>
-                        <span class="settings-pill">Active: <?php echo (int) ($assignmentTotals['active'] ?? 0); ?></span>
-                        <span class="settings-pill">Cancelled: <?php echo (int) ($assignmentTotals['cancelled'] ?? 0); ?></span>
-                        <span class="settings-pill">Hours assigned: <?php echo e(number_format((float) ($assignmentTotals['assigned_hours'] ?? 0), 2)); ?>h</span>
-                        <span class="settings-pill">Covered days: <?php echo (int) ($assignmentTotals['covered_days'] ?? 0); ?>/<?php echo (int) ($assignmentTotals['days_range'] ?? 0); ?></span>
-                        <span class="settings-pill">Shifts not assigned: <?php echo (int) ($assignmentTotals['unassigned_shift_templates'] ?? 0); ?></span>
-                        <span class="settings-pill">Open slots: <?php echo (int) $openAssignmentsCount; ?></span>
+                        <p class="crud-modal-subtitle">Planner assignments with operational insights for admin decisions (Current Month).</p>
                     </div>
                 </div>
 
@@ -451,8 +476,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         </label>
                         <label class="settings-field">From date<input data-auto-assign-range-start type="date" value="<?php echo e($autoAssignDefaultStart); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
                         <label class="settings-field">To date<input data-auto-assign-range-end type="date" value="<?php echo e($autoAssignDefaultEnd); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
-                        <label class="settings-field">Max hours / month<input data-auto-assign-max-hours type="number" min="1" step="1" value="176"></label>
-                        <label class="settings-field">Max days / month<input data-auto-assign-max-days type="number" min="1" step="1" value="22"></label>
+                        <label class="settings-field">Minimum employees / shift / day<input data-auto-assign-min-employees type="number" min="0" step="1" value="1"></label>
+                        <label class="settings-field">Maximum employees / shift / day<input data-auto-assign-max-employees type="number" min="1" step="1" value="3"></label>
                         <div class="settings-inline-actions">
                             <button type="button" class="admin-action-link" data-auto-assign-open>Auto assign open</button>
                             <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-clear>Clear assigned shifts</button>
@@ -557,6 +582,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="settings-assignment-employee-window-grid">
                             <section class="settings-analytics-card">
                                 <h5>Availability Rules</h5>
+                                <p class="crud-modal-subtitle">Set weekly rest days and unavailable dates for the current month.</p>
                                 <div class="settings-auto-rule-weekdays" data-assignment-modal-weekdays></div>
                                 <div class="settings-auto-rule-specials">
                                     <label class="settings-field">Unavailable day<input type="date" data-assignment-modal-special-date></label>
@@ -571,9 +597,17 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     </label>
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special>Add date</button>
                                 </div>
+                                <div class="settings-assignment-modal-range-row">
+                                    <label class="settings-field">From date<input type="date" data-assignment-modal-special-from></label>
+                                    <label class="settings-field">To date<input type="date" data-assignment-modal-special-to></label>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special-range>Add range</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rules-reset>Reset rules</button>
+                                </div>
                                 <div class="settings-auto-rule-special-list" data-assignment-modal-special-list></div>
-                                <h5>Weekly Availability</h5>
+                                <h5>Current Month Availability</h5>
                                 <div class="settings-assignment-weekly-grid" data-assignment-modal-weekly></div>
+                                <h5>Unavailable Dates (Current Month)</h5>
+                                <div class="settings-auto-rule-special-list" data-assignment-modal-month-unavailable></div>
                             </section>
                             <section class="settings-analytics-card">
                                 <h5>Assigned Shifts</h5>
@@ -585,13 +619,38 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <div class="settings-assignment-modal-open-range">
                                     <label class="settings-field">From date<input type="date" data-assignment-modal-open-from></label>
                                     <label class="settings-field">To date<input type="date" data-assignment-modal-open-to></label>
+                                    <label class="settings-field">Shift
+                                        <select data-assignment-modal-open-shift>
+                                            <option value="0">All department shifts</option>
+                                        </select>
+                                    </label>
                                 </div>
                                 <div class="settings-inline-actions">
+                                    <button type="button" class="admin-action-link" data-assignment-modal-open-cover-all>Cover all available dates</button>
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-clear>Clear selection</button>
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-reselect>Re-select available</button>
                                     <button type="button" class="admin-action-link" data-assignment-modal-open-assign>Assign selected</button>
                                 </div>
                                 <div class="settings-assignment-open-slot-list" data-assignment-modal-open-list></div>
+                            </section>
+                            <section class="settings-analytics-card settings-assignment-modal-open-slots">
+                                <h5>Assign Absence Range</h5>
+                                <p class="crud-modal-subtitle">Assign vacation, sick leave, or rest day from date to date.</p>
+                                <div class="settings-assignment-modal-open-range">
+                                    <label class="settings-field">From date<input type="date" data-assignment-modal-absence-from></label>
+                                    <label class="settings-field">To date<input type="date" data-assignment-modal-absence-to></label>
+                                    <label class="settings-field">Type
+                                        <select data-assignment-modal-absence-type>
+                                            <option value="vacation">Vacation</option>
+                                            <option value="sick">Sick leave</option>
+                                            <option value="rest">Rest day</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <div class="settings-inline-actions">
+                                    <button type="button" class="admin-action-link" data-assignment-modal-absence-assign>Assign absence range</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-absence-reset>Reset dates</button>
+                                </div>
                             </section>
                         </div>
                     </div>
@@ -601,7 +660,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <section class="settings-analytics-card">
                         <h4>Coverage by Department</h4>
                         <p class="crud-modal-subtitle">
-                            Current month: <?php echo e($currentMonthLabel); ?> (range: <?php echo e($assignmentRangeStart); ?> to <?php echo e($assignmentRangeEnd); ?>)
+                            Current Month: <?php echo e($currentMonthLabel); ?> (range: <?php echo e($assignmentRangeStart); ?> to <?php echo e($assignmentRangeEnd); ?>)
                         </p>
                         <?php if (empty($departmentCoverageRows)): ?>
                             <div class="crud-empty-state">No department data available.</div>
@@ -630,7 +689,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                     <section class="settings-analytics-card">
                         <h4>Workload by User</h4>
-                        <p class="crud-modal-subtitle">Current month <?php echo e($currentMonthLabel); ?>: hours, days and most frequent shifts assigned to each user.</p>
+                        <p class="crud-modal-subtitle">Current Month <?php echo e($currentMonthLabel); ?>: hours, days, and most frequent shifts assigned to each user.</p>
                         <?php if (empty($userWorkloadRows)): ?>
                             <div class="crud-empty-state">No user workload data available.</div>
                         <?php else: ?>
@@ -653,8 +712,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     </section>
                 </div>
 
-                <div class="settings-list-wrap">
-                    <p class="crud-modal-subtitle">Daily assignments list for current month <?php echo e($currentMonthLabel); ?>.</p>
+                <div class="settings-inline-actions settings-assignment-list-toggle-row">
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-list-toggle aria-expanded="false">
+                        Show daily assignments list
+                    </button>
+                </div>
+
+                <div class="settings-list-wrap" data-assignment-list-wrap hidden>
+                    <p class="crud-modal-subtitle">Daily assignments list for Current Month <?php echo e($currentMonthLabel); ?>.</p>
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-assignment">
                         <strong>Date</strong>
                         <span>Department</span>
@@ -757,6 +822,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
+
             </section>
 
             <?php if ($currentRole !== 'department_manager'): ?>
@@ -794,14 +860,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <label class="settings-field">Color
                             <div class="settings-picker-stack">
                                 <div class="settings-picker-row">
-                                    <input data-field="color" type="text" value="#b98b12" readonly>
+                                    <input data-field="color" type="hidden" value="#b98b12">
+                                    <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: #b98b12;">
                                     <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
                                 </div>
                                 <div class="settings-picker-popover" data-picker-popover="color" hidden>
                                     <div class="settings-choice-grid" data-choice-field="color">
                                         <?php foreach ($pickerColorCatalog as $color): ?>
-                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
+                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
                                                 <span class="settings-color-swatch" aria-hidden="true"></span>
+                                                <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
                                             </button>
                                         <?php endforeach; ?>
                                     </div>
@@ -878,14 +946,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <label class="settings-field">Color
                                             <div class="settings-picker-stack">
                                                 <div class="settings-picker-row">
-                                                    <input data-field="color" type="text" value="<?php echo e($department['color'] ?? '#b98b12'); ?>" readonly>
+                                                    <input data-field="color" type="hidden" value="<?php echo e($department['color'] ?? '#b98b12'); ?>">
+                                                    <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: <?php echo e($department['color'] ?? '#b98b12'); ?>;">
                                                     <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
                                                 </div>
                                                 <div class="settings-picker-popover" data-picker-popover="color" hidden>
                                                     <div class="settings-choice-grid" data-choice-field="color">
                                                         <?php foreach ($pickerColorCatalog as $color): ?>
-                                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
+                                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
                                                                 <span class="settings-color-swatch" aria-hidden="true"></span>
+                                                                <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
                                                             </button>
                                                         <?php endforeach; ?>
                                                     </div>
@@ -932,6 +1002,28 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <span class="settings-pill"><?php echo count($visibleUsers); ?> users</span>
                     </div>
                 </div>
+
+                <?php if (in_array($currentRole, ['super_admin', 'admin'], true) && $scopeCompanyId > 0): ?>
+                    <div class="settings-list-item-wrap settings-company-ip-wrap">
+                        <div class="settings-list-row settings-company-ip-row">
+                            <div>
+                                <strong>Authorized Wi-Fi IP for attendance signature</strong>
+                                <p class="crud-modal-subtitle">Leave empty to allow attendance signature from any network. If set, employees can sign only from this IP.</p>
+                            </div>
+                            <div class="settings-company-ip-controls">
+                                <input
+                                    type="text"
+                                    value="<?php echo e($scopeCompanySignatureIp); ?>"
+                                    placeholder="Example: 192.168.1.120"
+                                    data-company-signature-ip
+                                    data-company-id="<?php echo (int) $scopeCompanyId; ?>"
+                                >
+                                <button type="button" class="admin-action-link" data-company-signature-ip-save>Save Wi-Fi IP</button>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <div class="settings-list-head settings-create-row" data-user-create-row>
                     <div class="settings-list-cols settings-list-cols-user-create">
                         <label class="settings-field">First name<input data-field="first_name" type="text" value=""></label>
@@ -1077,14 +1169,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <label class="settings-field">Color
                                 <div class="settings-picker-stack">
                                     <div class="settings-picker-row">
-                                        <input data-field="color" type="text" value="#2f6fed" readonly>
+                                        <input data-field="color" type="hidden" value="#2f6fed">
+                                        <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: #2f6fed;">
                                         <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
                                     </div>
                                     <div class="settings-picker-popover" data-picker-popover="color" hidden>
                                         <div class="settings-choice-grid" data-choice-field="color">
                                             <?php foreach ($pickerColorCatalog as $color): ?>
-                                                <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
+                                                <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
                                                     <span class="settings-color-swatch" aria-hidden="true"></span>
+                                                    <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
                                                 </button>
                                             <?php endforeach; ?>
                                         </div>
@@ -1127,7 +1221,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <span><?php echo e($shift['description'] ?? '--'); ?></span>
                                     <span><?php echo e(($shift['start_time'] ?? '--:--') . ' - ' . ($shift['end_time'] ?? '--:--')); ?></span>
                                     <span><?php echo e($shift['icon'] ?? '🕒'); ?></span>
-                                    <span><?php echo e($shift['color'] ?? '#2f6fed'); ?></span>
+                                    <span class="settings-color-display" style="--choice-color: <?php echo e($shift['color'] ?? '#2f6fed'); ?>;">
+                                        <span class="settings-color-swatch" aria-hidden="true"></span>
+                                        <span><?php echo e($pickerColorLabel((string) ($shift['color'] ?? '#2f6fed'))); ?></span>
+                                    </span>
                                     <div class="settings-inline-actions">
                                         <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-shift-edit" aria-label="Edit shift" title="Edit shift">✎</button>
                                         <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-shift-delete" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" aria-label="Delete shift" title="Delete shift">🗑</button>
@@ -1156,14 +1253,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <label class="settings-field">Color
                                             <div class="settings-picker-stack">
                                                 <div class="settings-picker-row">
-                                                    <input data-field="color" type="text" value="<?php echo e($shift['color'] ?? '#2f6fed'); ?>" readonly>
+                                                    <input data-field="color" type="hidden" value="<?php echo e($shift['color'] ?? '#2f6fed'); ?>">
+                                                    <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: <?php echo e($shift['color'] ?? '#2f6fed'); ?>;">
                                                     <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
                                                 </div>
                                                 <div class="settings-picker-popover" data-picker-popover="color" hidden>
                                                     <div class="settings-choice-grid" data-choice-field="color">
                                                         <?php foreach ($pickerColorCatalog as $color): ?>
-                                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
+                                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
                                                                 <span class="settings-color-swatch" aria-hidden="true"></span>
+                                                                <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
                                                             </button>
                                                         <?php endforeach; ?>
                                                     </div>

@@ -24,6 +24,7 @@
     var updateChrome = options.updateChrome;
     var getActiveDepartment = options.getActiveDepartment;
     var isUserAvailableForDate = options.isUserAvailableForDate;
+    var getUserAvailabilityStatus = options.getUserAvailabilityStatus;
     var getVisibleDateKeys = options.getVisibleDateKeys;
     var todayKey = dateKey(calendarToday);
 
@@ -89,7 +90,7 @@
       });
       var isOpenSlot = assignedEmployees.length === 0 && shiftKind === 'work';
       var isPastSlot = String(baseEvent.work_date || '') < String(todayKey || '');
-      var isSidebarAssignableTarget = isOpenSlot
+      var isSidebarAssignCandidate = isOpenSlot
         && !isPastSlot
         && activeUserId > 0
         && shiftId > 0
@@ -100,8 +101,16 @@
           if (!key) return false;
           var keys = getVisibleDateKeys() || [];
           return keys.indexOf(key) >= 0;
-        })()
-        && (typeof isUserAvailableForDate !== 'function' || isUserAvailableForDate(activeUserId, String(baseEvent.work_date || '')));
+        })();
+      var availabilityStatus = isSidebarAssignCandidate
+        ? (typeof getUserAvailabilityStatus === 'function'
+          ? (getUserAvailabilityStatus(activeUserId, String(baseEvent.work_date || '')) || { available: true, reason: '' })
+          : { available: (typeof isUserAvailableForDate !== 'function' || isUserAvailableForDate(activeUserId, String(baseEvent.work_date || ''))), reason: '' })
+        : { available: true, reason: '' };
+      var isSidebarAssignableTarget = isSidebarAssignCandidate && availabilityStatus.available;
+      var sidebarUnavailableReason = (!availabilityStatus.available && availabilityStatus.reason)
+        ? String(availabilityStatus.reason)
+        : 'Non disponibile.';
       var employeeSlot = '';
 
       if (assignedEmployees.length > 0) {
@@ -121,10 +130,12 @@
       } else if (isOpenSlot) {
         employeeSlot = isSidebarAssignableTarget
           ? '\n            <div class="calendar-event-slot-stack">\n              <button type="button" class="calendar-event-slot-empty is-sidebar-assign-prompt" data-calendar-sidebar-assign data-user-id="' + activeUserId + '" data-user-name="' + escapeHtml(activeUserName) + '" data-shift-id="' + shiftId + '" data-work-date="' + escapeHtml(baseEvent.work_date || '') + '" aria-label="Assign ' + escapeHtml(activeUserName) + ' to this open shift">\n                <span class="calendar-event-slot-empty-label">Open shift</span>\n                <span class="calendar-event-slot-empty-prompt">Assign ' + escapeHtml(activeUserName) + '?</span>\n              </button>\n            </div>'
-          : '\n            <div class="calendar-event-slot-stack">\n              <span class="calendar-event-slot-empty">Open shift</span>\n            </div>';
+          : (isSidebarAssignCandidate
+            ? '\n            <div class="calendar-event-slot-stack">\n              <span class="calendar-event-slot-empty is-sidebar-unavailable" title="' + escapeHtml(sidebarUnavailableReason) + '">\n                <span class="calendar-event-slot-empty-label">Open shift</span>\n                <span class="calendar-event-slot-empty-prompt">' + escapeHtml(sidebarUnavailableReason) + '</span>\n              </span>\n            </div>'
+            : '\n            <div class="calendar-event-slot-stack">\n              <span class="calendar-event-slot-empty">Open shift</span>\n            </div>');
       }
 
-      return '\n        <article class="calendar-event' + (compact ? ' is-compact' : '') + (shiftKind !== 'work' ? ' is-nonwork is-kind-' + shiftKind : '') + ((assignedEmployees.length === 0) ? ' is-open' : '') + (isSidebarAssignableTarget ? ' is-sidebar-assign-target' : '') + (isPastSlot ? ' is-past' : '') + '"' + (assignmentId > 0 ? ' data-assignment-id="' + assignmentId + '"' : '') + ' data-shift-id="' + shiftId + '" data-work-date="' + escapeHtml(baseEvent.work_date || '') + '" data-department-id="' + Number(baseEvent.department_id || 0) + '" data-department-name="' + escapeHtml(baseEvent.department_name || '') + '" data-shift-kind="' + escapeHtml(shiftKind) + '" data-is-open-slot="' + (isOpenSlot ? '1' : '0') + '" data-is-past-day="' + (isPastSlot ? '1' : '0') + '" draggable="' + ((!isPastSlot && !isVirtual && assignmentId > 0) ? 'true' : 'false') + '" style="--event-shift-color:' + shiftColor + '">\n          <div class="calendar-event-main-row">\n            <div class="calendar-event-shift-row">\n              <div class="calendar-event-top">' + badge + '</div>\n              <span class="calendar-event-time">' + formatEventTime(baseEvent) + '</span>\n              <span class="calendar-event-title">' + (baseEvent.shift_name || 'Shift') + '</span>\n            </div>\n            ' + employeeSlot + '\n          </div>\n        </article>\n      ';
+      return '\n        <article class="calendar-event' + (compact ? ' is-compact' : '') + (shiftKind !== 'work' ? ' is-nonwork is-kind-' + shiftKind : '') + ((assignedEmployees.length === 0) ? ' is-open' : '') + (isSidebarAssignableTarget ? ' is-sidebar-assign-target' : '') + ((!isSidebarAssignableTarget && isSidebarAssignCandidate) ? ' is-sidebar-unavailable-target' : '') + (isPastSlot ? ' is-past' : '') + '"' + (assignmentId > 0 ? ' data-assignment-id="' + assignmentId + '"' : '') + ' data-shift-id="' + shiftId + '" data-work-date="' + escapeHtml(baseEvent.work_date || '') + '" data-department-id="' + Number(baseEvent.department_id || 0) + '" data-department-name="' + escapeHtml(baseEvent.department_name || '') + '" data-shift-kind="' + escapeHtml(shiftKind) + '" data-is-open-slot="' + (isOpenSlot ? '1' : '0') + '" data-is-past-day="' + (isPastSlot ? '1' : '0') + '" draggable="' + ((!isPastSlot && !isVirtual && assignmentId > 0) ? 'true' : 'false') + '" style="--event-shift-color:' + shiftColor + '">\n          <div class="calendar-event-main-row">\n            <div class="calendar-event-shift-row">\n              <div class="calendar-event-top">' + badge + '</div>\n              <span class="calendar-event-time">' + formatEventTime(baseEvent) + '</span>\n              <span class="calendar-event-title">' + (baseEvent.shift_name || 'Shift') + '</span>\n            </div>\n            ' + employeeSlot + '\n          </div>\n        </article>\n      ';
     };
 
     var renderDayCard = function (date, options) {

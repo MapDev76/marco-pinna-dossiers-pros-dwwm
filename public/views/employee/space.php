@@ -1,8 +1,13 @@
 <!-- Employee space: view your shifts, attendances and personal requests. -->
 <?php
 $shifts = $shifts ?? [];
+$todaySignableShifts = $todaySignableShifts ?? [];
 $requests = $requests ?? [];
 $attendances = $attendances ?? [];
+$requiredSignatureIp = trim((string) ($requiredSignatureIp ?? ''));
+$clientIp = trim((string) ($clientIp ?? ''));
+$isSignatureIpRestricted = (bool) ($isSignatureIpRestricted ?? false);
+$isCurrentNetworkAuthorized = (bool) ($isCurrentNetworkAuthorized ?? true);
 $requestTypeLabels = [
     'shift_coverage' => 'Shift coverage',
     'leave' => 'Leave',
@@ -26,33 +31,84 @@ $statusLabels = [
     'unread' => 'Unread',
 ];
 ?>
-<div class="admin-shell">
-    <div class="admin-hero">
+<div class="admin-shell employee-space-shell">
+    <div class="admin-hero employee-space-hero">
         <h1>My Employee Space</h1>
-        <p>View your shifts, record attendance and create requests.</p>
+        <p>Only your personal shifts are visible here. Attendance is signed with touchscreen.</p>
+
+        <div class="employee-network-status-grid">
+            <div class="employee-network-status-card <?php echo $isCurrentNetworkAuthorized ? 'is-ok' : 'is-blocked'; ?>">
+                <strong>Network access</strong>
+                <?php if ($isSignatureIpRestricted): ?>
+                    <span>Required company Wi-Fi IP: <?php echo e($requiredSignatureIp); ?></span>
+                    <span>Your connection IP: <?php echo e($clientIp !== '' ? $clientIp : 'Not detected'); ?></span>
+                <?php else: ?>
+                    <span>No Wi-Fi IP restriction configured. Attendance can be signed from any network.</span>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 
     <?php if (!empty($error)): ?>
         <div class="flash flash-error"><?php echo e($error); ?></div>
     <?php endif; ?>
 
-    <section class="admin-card">
-        <h2>Record attendance</h2>
-        <form method="post" class="admin-form admin-form-grid">
+    <section class="admin-card employee-sign-card">
+        <h2>Sign today attendance</h2>
+        <?php if (empty($todaySignableShifts)): ?>
+            <p class="crud-modal-subtitle">No shift assigned to you for today.</p>
+        <?php endif; ?>
+
+        <form method="post" class="admin-form employee-sign-form" data-employee-signature-form>
             <input type="hidden" name="action" value="sign_attendance">
+            <input type="hidden" name="signature_data" value="" data-signature-data>
+
             <label>
-                <span>Select a shift</span>
-                <select name="user_shift_id" required>
+                <span>Today assigned shift</span>
+                <select name="user_shift_id" required <?php echo empty($todaySignableShifts) ? 'disabled' : ''; ?>>
                     <option value="">Select</option>
-                    <?php foreach ($shifts as $shift): ?>
-                        <option value="<?php echo (int) $shift['id']; ?>"><?php echo e($shift['work_date'] . ' - ' . $shift['shift_name'] . ' - ' . $shift['department_name']); ?></option>
+                    <?php foreach ($todaySignableShifts as $shift): ?>
+                        <option value="<?php echo (int) $shift['id']; ?>"><?php echo e($shift['work_date'] . ' - ' . $shift['shift_name'] . ' - ' . $shift['department_name'] . ' (' . ($shift['start_time'] ?? '--:--') . ' - ' . ($shift['end_time'] ?? '--:--') . ')'); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
-            <div class="form-actions span-2">
-                <button type="submit">Record attendance</button>
+
+            <div class="employee-signature-pad-shell">
+                <span>Touchscreen signature</span>
+                <canvas width="520" height="180" data-signature-canvas aria-label="Signature pad"></canvas>
+                <div class="employee-signature-pad-actions">
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-signature-clear>Clear signature</button>
+                    <small>Sign with finger on mobile or mouse/stylus on desktop.</small>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" <?php echo (empty($todaySignableShifts) || !$isCurrentNetworkAuthorized) ? 'disabled' : ''; ?>>Sign attendance</button>
             </div>
         </form>
+
+        <?php if (!$isCurrentNetworkAuthorized): ?>
+            <p class="crud-modal-subtitle">Attendance signing is blocked from this network. Connect to company Wi-Fi and retry.</p>
+        <?php endif; ?>
+    </section>
+
+    <section class="admin-card">
+        <h2>My shifts</h2>
+        <?php if (empty($shifts)): ?>
+            <p class="crud-modal-subtitle">No shifts available.</p>
+        <?php endif; ?>
+        <div class="employee-shift-cards">
+            <?php foreach ($shifts as $shift): ?>
+                <article class="employee-shift-card">
+                    <header>
+                        <strong><?php echo e($shift['work_date']); ?></strong>
+                        <span><?php echo e($statusLabels[$shift['status']] ?? $shift['status']); ?></span>
+                    </header>
+                    <p><?php echo e($shift['shift_name']); ?> | <?php echo e($shift['department_name']); ?></p>
+                    <small><?php echo e(($shift['start_time'] ?? '--:--') . ' - ' . ($shift['end_time'] ?? '--:--')); ?></small>
+                </article>
+            <?php endforeach; ?>
+        </div>
     </section>
 
     <section class="admin-card">
@@ -82,35 +138,6 @@ $statusLabels = [
                 <button type="submit">Submit request</button>
             </div>
         </form>
-    </section>
-
-    <section class="admin-card">
-        <h2>Mes quarts</h2>
-        <div class="table-wrap">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Shift</th>
-                        <th>Department</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($shifts)): ?>
-                        <tr><td colspan="4">No shifts available.</td></tr>
-                    <?php endif; ?>
-                    <?php foreach ($shifts as $shift): ?>
-                        <tr>
-                            <td><?php echo e($shift['work_date']); ?></td>
-                            <td><?php echo e($shift['shift_name']); ?></td>
-                            <td><?php echo e($shift['department_name']); ?></td>
-                            <td><?php echo e($statusLabels[$shift['status']] ?? $shift['status']); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
     </section>
 
     <section class="admin-card">

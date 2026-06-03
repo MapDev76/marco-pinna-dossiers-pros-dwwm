@@ -10,7 +10,14 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 
-if (!isLoggedIn() || !isSuperAdmin()) {
+if (!isLoggedIn()) {
+    jsonResponse(['error' => 'Unauthorized'], 403);
+}
+
+$profile = currentUser();
+$isSuperAdmin = isSuperAdmin();
+$isAdmin = (($profile['role'] ?? '') === 'admin');
+if (!$isSuperAdmin && !$isAdmin) {
     jsonResponse(['error' => 'Unauthorized'], 403);
 }
 
@@ -24,11 +31,17 @@ $action = $input['action'] ?? ($_GET['action'] ?? 'list');
 try {
     switch ($action) {
         case 'list':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+            }
             $rows = $companyModel->directoryWithAdminsAndDepartments();
             jsonResponse(['ok' => true, 'companies' => $rows]);
             break;
 
         case 'create':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+            }
             $name = trim((string) ($input['name'] ?? ''));
             if ($name === '') {
                 jsonResponse(['ok' => false, 'error' => 'Name is required'], 400);
@@ -65,6 +78,9 @@ try {
             break;
 
         case 'update':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['ok' => false, 'error' => 'Invalid id'], 400);
@@ -87,6 +103,9 @@ try {
             break;
 
         case 'delete':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['ok' => false, 'error' => 'Invalid id'], 400);
@@ -101,6 +120,25 @@ try {
             $ip = trim((string) ($input['ip'] ?? ''));
             if ($companyId <= 0) {
                 jsonResponse(['ok' => false, 'error' => 'Invalid company_id'], 400);
+            }
+
+            if ($isAdmin) {
+                $adminCompanyId = (int) currentUserCompanyId($profile);
+                if ($adminCompanyId <= 0) {
+                    $userStmt = $pdo->prepare(
+                        'SELECT d.company_id
+                         FROM users u
+                         LEFT JOIN departments d ON d.id = u.department_id
+                         WHERE u.id = :user_id
+                         LIMIT 1'
+                    );
+                    $userStmt->execute(['user_id' => (int) ($profile['id'] ?? 0)]);
+                    $adminCompanyId = (int) ($userStmt->fetchColumn() ?: 0);
+                }
+
+                if ($adminCompanyId <= 0 || $companyId !== $adminCompanyId) {
+                    jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+                }
             }
 
             // Vérifier que la colonne existe

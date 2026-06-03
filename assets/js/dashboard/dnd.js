@@ -28,6 +28,7 @@
     var moveShift = options.moveShift;
     var safeParseJson = options.safeParseJson;
     var isUserAvailableForDate = options.isUserAvailableForDate;
+    var getUserAvailabilityStatus = options.getUserAvailabilityStatus;
 
     var toDateKey = function (dateObj) {
       var y = String(dateObj.getFullYear());
@@ -44,6 +45,92 @@
     };
 
     if (!calendarShell) return;
+
+    var dropHint = document.createElement('div');
+    dropHint.className = 'calendar-drop-hint';
+    dropHint.hidden = true;
+    document.body.appendChild(dropHint);
+
+    var hideDropHint = function () {
+      dropHint.hidden = true;
+    };
+
+    var updateDropHint = function (event, dropContext) {
+      var targetAssignmentCard = dropContext && dropContext.targetAssignmentCard ? dropContext.targetAssignmentCard : null;
+      var dateCard = dropContext && dropContext.dateCard ? dropContext.dateCard : null;
+      var workDate = String(targetAssignmentCard && targetAssignmentCard.getAttribute('data-work-date') || dateCard && dateCard.getAttribute('data-calendar-date') || '');
+      if (!workDate) {
+        hideDropHint();
+        return;
+      }
+
+      var shiftLabel = '';
+      if (targetAssignmentCard) {
+        shiftLabel = String(targetAssignmentCard.querySelector('.calendar-event-title') && targetAssignmentCard.querySelector('.calendar-event-title').textContent || '').trim();
+      }
+      if (!shiftLabel) {
+        var activeShift = getActiveShift && getActiveShift();
+        shiftLabel = String(activeShift && activeShift.name || 'Shift');
+      }
+
+      dropHint.textContent = 'Drop on: ' + shiftLabel + ' - ' + workDate;
+      dropHint.style.left = String(event.clientX + 14) + 'px';
+      dropHint.style.top = String(event.clientY + 14) + 'px';
+      dropHint.hidden = false;
+    };
+
+    var clearDropHighlights = function () {
+      calendarShell.querySelectorAll('.calendar-event.is-drag-target').forEach(function (node) {
+        node.classList.remove('is-drag-target');
+      });
+      calendarShell.querySelectorAll('.calendar-day-card.is-drop-target').forEach(function (node) {
+        node.classList.remove('is-drop-target');
+      });
+      hideDropHint();
+    };
+
+    var pickNearestEventCard = function (dateCard, clientY) {
+      if (!dateCard) return null;
+      var cards = Array.from(dateCard.querySelectorAll('.calendar-event'));
+      if (!cards.length) return null;
+      if (!Number.isFinite(clientY)) return cards[0];
+      var bestCard = cards[0];
+      var bestDistance = Number.POSITIVE_INFINITY;
+      cards.forEach(function (card) {
+        var rect = card.getBoundingClientRect();
+        var distance = 0;
+        if (clientY < rect.top) {
+          distance = rect.top - clientY;
+        } else if (clientY > rect.bottom) {
+          distance = clientY - rect.bottom;
+        }
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestCard = card;
+        }
+      });
+      return bestCard;
+    };
+
+    var resolveDropContext = function (event) {
+      var pointerTarget = null;
+      if (typeof document.elementFromPoint === 'function' && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+        pointerTarget = document.elementFromPoint(event.clientX, event.clientY);
+      }
+      var rawTarget = pointerTarget || event.target;
+      var targetAssignmentCard = rawTarget && rawTarget.closest ? rawTarget.closest('.calendar-event') : null;
+      var dateCard = rawTarget && rawTarget.closest ? rawTarget.closest('[data-calendar-date]') : null;
+      if (!dateCard && event.target && event.target.closest) {
+        dateCard = event.target.closest('[data-calendar-date]');
+      }
+      if (!targetAssignmentCard && dateCard) {
+        targetAssignmentCard = pickNearestEventCard(dateCard, event.clientY);
+      }
+      return {
+        targetAssignmentCard: targetAssignmentCard,
+        dateCard: dateCard,
+      };
+    };
 
     calendarShell.addEventListener('dragstart', function (event) {
       var slotCard = event.target.closest('[data-calendar-slot-drag]');
@@ -94,32 +181,38 @@
     });
 
     calendarShell.addEventListener('dragover', function (event) {
-      if (event.target.closest('[data-calendar-date]') || event.target.closest('[data-assignment-id]')) {
-        event.preventDefault();
-        var targetEvent = event.target.closest('[data-assignment-id]');
-        if (targetEvent) {
-          targetEvent.classList.add('is-drag-target');
-        }
+      var dropContext = resolveDropContext(event);
+      if (!dropContext.dateCard && !dropContext.targetAssignmentCard) return;
+      event.preventDefault();
+      clearDropHighlights();
+      if (dropContext.targetAssignmentCard) {
+        dropContext.targetAssignmentCard.classList.add('is-drag-target');
       }
+      if (dropContext.dateCard) {
+        dropContext.dateCard.classList.add('is-drop-target');
+      }
+      updateDropHint(event, dropContext);
     });
 
     calendarShell.addEventListener('dragleave', function (event) {
-      var targetEvent = event.target.closest('[data-assignment-id]');
-      if (targetEvent) {
-        targetEvent.classList.remove('is-drag-target');
+      var related = event.relatedTarget;
+      if (!related || !calendarShell.contains(related)) {
+        clearDropHighlights();
       }
     });
 
-    calendarShell.addEventListener('drop', async function (event) {
-      calendarShell.querySelectorAll('.calendar-event.is-drag-target').forEach(function (node) {
-        node.classList.remove('is-drag-target');
-      });
+    calendarShell.addEventListener('dragend', function () {
+      clearDropHighlights();
+    });
 
-      var targetAssignmentCard = event.target.closest('[data-assignment-id]');
-      var dateCard = event.target.closest('[data-calendar-date]');
+    calendarShell.addEventListener('drop', async function (event) {
+      var dropContext = resolveDropContext(event);
+      clearDropHighlights();
+      var targetAssignmentCard = dropContext.targetAssignmentCard;
+      var dateCard = dropContext.dateCard;
       if (!dateCard && !targetAssignmentCard) return;
       event.preventDefault();
-      var workDate = targetAssignmentCard ? targetAssignmentCard.closest('[data-calendar-date]')?.getAttribute('data-calendar-date') : dateCard.getAttribute('data-calendar-date');
+      var workDate = String(targetAssignmentCard ? (targetAssignmentCard.getAttribute('data-work-date') || '') : (dateCard.getAttribute('data-calendar-date') || ''));
       if (!workDate) return;
       if (isPastDateKey(workDate)) {
         notifyError('Past days are locked and cannot be edited.');
@@ -133,29 +226,43 @@
         );
 
         if (data.type === 'slot') {
-          if (!targetAssignmentCard) {
+          var activeShiftForDrop = getActiveShift();
+          var sourceShiftId = Number(data.shiftId || 0);
+          var targetShiftId = Number(targetAssignmentCard && targetAssignmentCard.getAttribute('data-shift-id') || 0);
+          if (!targetShiftId) {
+            targetShiftId = Number(activeShiftForDrop && activeShiftForDrop.id || 0) || sourceShiftId;
+          }
+          if (!targetShiftId) return;
+          if (typeof isUserAvailableForDate === 'function' && !isUserAvailableForDate(Number(data.userId || 0), String(workDate))) {
+            var reason = (typeof getUserAvailabilityStatus === 'function')
+              ? String((getUserAvailabilityStatus(Number(data.userId || 0), String(workDate)) || {}).reason || '')
+              : '';
+            notifyError(reason || ('This employee is unavailable on ' + String(workDate) + '.'));
             return;
           }
-          var targetAssignmentId = Number(targetAssignmentCard.getAttribute('data-assignment-id'));
-          var targetAssignment = events.find(function (item) { return Number(item.assignment_id) === targetAssignmentId; });
-          if (!targetAssignment) return;
-          if (typeof isUserAvailableForDate === 'function' && !isUserAvailableForDate(Number(data.userId || 0), String(targetAssignment.work_date || workDate))) {
-            notifyError('This employee is unavailable on ' + String(targetAssignment.work_date || workDate) + '.');
-            return;
+          var sourceAssignmentId = Number(data.assignmentId || 0);
+          if (sourceAssignmentId > 0) {
+            await moveShift({
+              assignment_id: sourceAssignmentId,
+              user_id: Number(data.userId || 0),
+              shift_id: targetShiftId,
+              work_date: String(workDate),
+              status: 'assigned',
+            });
+          } else {
+            await assignShift({
+              user_id: Number(data.userId || 0),
+              shift_id: targetShiftId,
+              work_date: String(workDate),
+              status: 'assigned',
+            });
           }
-          await assignShift({
-            user_id: Number(data.userId || 0),
-            shift_id: Number(targetAssignment.shift_id || 0),
-            work_date: String(targetAssignment.work_date || workDate),
-            status: 'assigned',
-          });
           return;
         }
 
         if (data.type === 'assignment' && data.assignmentId) {
-          var assignment = events.find(function (item) { return Number(item.assignment_id) === Number(data.assignmentId); });
-          if (!assignment) return;
-          await moveShift({ assignment_id: assignment.assignment_id, work_date: workDate });
+          var targetShiftForMove = Number(targetAssignmentCard && targetAssignmentCard.getAttribute('data-shift-id') || 0);
+          await moveShift({ assignment_id: Number(data.assignmentId), shift_id: targetShiftForMove || undefined, work_date: workDate });
           return;
         }
 
@@ -168,12 +275,16 @@
         var userId = data.userId || state.draggingUserId;
         if (!userId) return;
         if (typeof isUserAvailableForDate === 'function' && !isUserAvailableForDate(Number(userId), workDate)) {
-          notifyError('This employee is unavailable on ' + workDate + '.');
+          var unavailable = (typeof getUserAvailabilityStatus === 'function')
+            ? String((getUserAvailabilityStatus(Number(userId), workDate) || {}).reason || '')
+            : '';
+          notifyError(unavailable || ('This employee is unavailable on ' + workDate + '.'));
           return;
         }
+        var targetShiftFromCard = Number(targetAssignmentCard && targetAssignmentCard.getAttribute('data-shift-id') || 0);
         await assignShift({
           user_id: Number(userId),
-          shift_id: Number(activeShift.id),
+          shift_id: targetShiftFromCard > 0 ? targetShiftFromCard : Number(activeShift.id),
           work_date: workDate,
           status: 'assigned',
         });

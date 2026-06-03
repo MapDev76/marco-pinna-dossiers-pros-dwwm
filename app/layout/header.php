@@ -87,29 +87,39 @@ if ($route === 'home') {
         'icon' => 'home.svg',
         'alt' => 'Home',
     ];
-    $rightIcons[] = [
-        'type' => 'button',
-        'title' => 'Settings',
-        'target' => 'modal-settings',
-        'entity' => 'settings',
-        'icon' => 'setting.svg',
-        'alt' => 'Settings',
-    ];
-    $rightIcons[] = [
-        'type' => 'button',
-        'title' => 'Documents',
-        'target' => 'crud-modal',
-        'entity' => 'documents',
-        'icon' => 'document.svg',
-        'alt' => 'Documents',
-    ];
-    $rightIcons[] = [
-        'type' => 'button',
-        'title' => 'Print',
-        'target' => 'modal-print',
-        'icon' => 'print-outline.svg',
-        'alt' => 'Print',
-    ];
+    if ($route === 'dashboard') {
+        $rightIcons[] = [
+            'type' => 'button',
+            'title' => 'Settings',
+            'target' => 'modal-settings',
+            'entity' => 'settings',
+            'icon' => 'setting.svg',
+            'alt' => 'Settings',
+        ];
+        $rightIcons[] = [
+            'type' => 'button',
+            'title' => 'Documents',
+            'target' => 'crud-modal',
+            'entity' => 'documents',
+            'icon' => 'document.svg',
+            'alt' => 'Documents',
+        ];
+        $rightIcons[] = [
+            'type' => 'button',
+            'title' => 'Print',
+            'target' => 'modal-print',
+            'icon' => 'print-outline.svg',
+            'alt' => 'Print',
+        ];
+    } else {
+        $rightIcons[] = [
+            'type' => 'link',
+            'href' => appUrl($role === 'employee' ? 'my-space' : 'dashboard'),
+            'title' => $role === 'employee' ? 'My space' : 'Dashboard',
+            'icon' => 'setting.svg',
+            'alt' => $role === 'employee' ? 'My space' : 'Dashboard',
+        ];
+    }
     $rightIcons[] = [
         'type' => 'link',
         'href' => appUrl('logout'),

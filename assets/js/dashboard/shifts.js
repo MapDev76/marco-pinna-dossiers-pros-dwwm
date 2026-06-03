@@ -38,6 +38,10 @@
     return (input?.defaultValue || input?.value || '#2f6fed').trim();
   }
 
+  function getColorPreviewInput(scope) {
+    return scope ? scope.querySelector('input[data-color-preview]') : null;
+  }
+
   function isShiftsPanelActive() {
     const panel = document.querySelector('.settings-panel[data-settings-panel="shifts"]');
     return !!panel && !panel.hidden;
@@ -89,6 +93,12 @@
       const field = group.getAttribute('data-choice-field');
       const input = scope.querySelector(`input[data-field="${field}"]`);
       const currentValue = (input?.value || '').trim();
+      const previewInput = field === 'color' ? getColorPreviewInput(scope) : null;
+      if (previewInput) {
+        previewInput.value = '';
+        previewInput.style.setProperty('--selected-color', currentValue || '#2f6fed');
+        previewInput.title = currentValue || '#2f6fed';
+      }
       group.querySelectorAll('[data-choice-value]').forEach((btn) => {
         const isSelected = btn.getAttribute('data-choice-value') === currentValue;
         btn.classList.toggle('is-selected', isSelected);
@@ -102,6 +112,14 @@
     const input = scope.querySelector(`input[data-field="${field}"]`);
     if (!input) return;
     input.value = value;
+    if (field === 'color') {
+      const previewInput = getColorPreviewInput(scope);
+      if (previewInput) {
+        previewInput.value = '';
+        previewInput.style.setProperty('--selected-color', value || '#2f6fed');
+        previewInput.title = value || '#2f6fed';
+      }
+    }
     syncChoiceState(scope);
     closeAllPickers();
   }
