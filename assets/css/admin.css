@@ -271,6 +271,11 @@
     flex-wrap: wrap;
 }
 
+.settings-modal-head {
+    display: grid;
+    gap: var(--spacing-sm);
+}
+
 .settings-pill-row {
     display: flex;
     flex-wrap: wrap;

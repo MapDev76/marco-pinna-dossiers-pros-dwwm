@@ -111,6 +111,32 @@
         width: calc(100vw - 18px);
     }
 
+    .dashboard-settings-modal {
+        padding: 0;
+        max-height: calc(100vh - 12px);
+    }
+
+    .dashboard-settings-modal .crud-modal-card {
+        max-height: calc(100vh - 12px);
+        border-radius: 22px;
+        padding: 0.9rem;
+    }
+
+    .settings-modal-head {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .settings-company-switcher {
+        width: 100%;
+        max-width: none;
+        margin-top: 0;
+    }
+
+    .settings-company-switcher .settings-field {
+        width: 100%;
+    }
+
     .settings-board,
     .schedule-board,
     .settings-form-grid,
@@ -171,6 +197,7 @@
         overflow-x: auto;
         padding-bottom: 0.4rem;
         flex-wrap: nowrap;
+        margin-top: 0.2rem;
     }
 
     .settings-tab {
@@ -334,6 +361,51 @@
         grid-template-columns: 1fr;
     }
 
+    .dashboard-settings-modal {
+        width: calc(100vw - 10px);
+        max-height: calc(100vh - 8px);
+    }
+
+    .dashboard-settings-modal .crud-modal-card {
+        max-height: calc(100vh - 8px);
+        border-radius: 16px;
+        padding: 0.72rem;
+    }
+
+    .dashboard-settings-modal .dashboard-modal-close {
+        top: 10px;
+        right: 10px;
+    }
+
+    .settings-modal-head {
+        gap: 0.55rem;
+        padding-right: 2.2rem;
+    }
+
+    .settings-summary {
+        margin: 0;
+    }
+
+    .settings-summary-card {
+        padding: 0.62rem;
+    }
+
+    .settings-panel-head {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .settings-pill-row {
+        width: 100%;
+        gap: 0.35rem;
+    }
+
+    .settings-pill {
+        width: 100%;
+        justify-content: center;
+    }
+
     .settings-list-cols,
     .settings-list-cols-user,
     .settings-list-cols-user-create,
@@ -352,13 +424,41 @@
     }
 
     .settings-tabs {
-        flex-wrap: nowrap;
-        overflow-x: auto;
+        flex-wrap: wrap;
+        overflow-x: visible;
         scrollbar-width: none;
+        margin: 0.45rem 0;
     }
 
     .settings-tabs::-webkit-scrollbar {
         display: none;
+    }
+
+    .settings-tab {
+        min-height: 40px;
+        flex: 1 1 calc(50% - 0.3rem);
+        min-width: 0;
+        text-align: center;
+    }
+
+    .settings-list-header {
+        display: none;
+    }
+
+    .settings-list-item-wrap > .settings-list-row {
+        padding: 0.62rem;
+    }
+
+    [data-user-create-row] .settings-inline-actions,
+    [data-shift-create-row] .settings-inline-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    [data-user-create-row] .settings-inline-actions .admin-action-link,
+    [data-shift-create-row] .settings-inline-actions .admin-action-link {
+        width: 100%;
+        max-width: none;
     }
 
     .dashboard-calendar-shell {
@@ -458,6 +558,15 @@
 
     h1 {
         font-size: var(--font-size-lg);
+    }
+
+    .settings-summary-card strong {
+        font-size: 0.96rem;
+    }
+
+    .settings-pill {
+        min-height: 28px;
+        font-size: 0.72rem;
     }
 }
 
