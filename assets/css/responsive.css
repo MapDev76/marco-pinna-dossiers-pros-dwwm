@@ -141,6 +141,28 @@
         grid-template-columns: 1fr;
     }
 
+    .settings-list-cols-shift-create {
+        max-height: 56vh;
+        overflow-y: auto;
+        padding-right: 0.28rem;
+    }
+
+    .settings-shift-create-column {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-shift-create-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-list-cols-shift-edit {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-shift-create-actions .admin-action-link {
+        max-width: 100%;
+    }
+
     .settings-tabs {
         overflow-x: auto;
         padding-bottom: 0.4rem;

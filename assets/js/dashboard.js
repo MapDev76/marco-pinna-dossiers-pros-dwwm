@@ -745,7 +745,10 @@
       const shifts = activeDepartment.shifts || [];
       const visibleDateKeys = new Set(getVisibleDateKeys());
       const departmentAssignments = events.filter((event) => Number(event.department_id) === Number(activeDepartment.id));
-      const assignedShifts = departmentAssignments.filter((event) => visibleDateKeys.has(event.work_date || '')).length;
+      const assignedShifts = departmentAssignments.filter((event) => {
+        if (!visibleDateKeys.has(event.work_date || '')) return false;
+        return Number(event.user_id || 0) > 0;
+      }).length;
       const totalShifts = shifts.length * visibleDateKeys.size;
       const freeShifts = Math.max(totalShifts - assignedShifts, 0);
 
@@ -893,12 +896,17 @@
         notes: assignment.notes || null,
         shift_id: Number(assignment.shift_id || 0),
         shift_name: assignment.shift_name || '',
+        shift_kind: assignment.shift_kind || 'work',
+        shift_icon: assignment.shift_icon || '',
+        shift_color: assignment.shift_color || '',
         start_time: assignment.start_time || null,
         end_time: assignment.end_time || null,
         department_id: Number(assignment.department_id || 0),
         department_name: assignment.department_name || '',
+        department_color: assignment.department_color || '',
         user_id: Number(assignment.user_id || 0),
         user_name: assignment.user_name || '',
+        assignment_source: assignment.assignment_source || (Number(assignment.user_id || 0) > 0 ? 'assigned' : 'open'),
       };
       const index = events.findIndex((item) => Number(item.assignment_id) === Number(normalized.assignment_id));
       if (index >= 0) {
@@ -935,6 +943,28 @@
       }
       if (response.assignment) {
         upsertAssignment(response.assignment);
+      }
+      renderCalendar();
+    };
+
+    const unassignAssignment = async (assignmentId) => {
+      if (!apiDashboard || !window.AppAPI || !assignmentId) return;
+      const response = await AppAPI.postJSON(apiDashboard, {
+        action: 'unassign_shift',
+        assignment_id: Number(assignmentId),
+      });
+      if (!response || response.ok === false || response.success === false) {
+        throw new Error(response?.error || response?.message || 'Unable to unassign shift');
+      }
+      const index = events.findIndex((item) => Number(item.assignment_id) === Number(assignmentId));
+      if (index >= 0) {
+        events[index] = {
+          ...events[index],
+          user_id: 0,
+          user_name: '',
+          status: 'open',
+          assignment_source: 'open',
+        };
       }
       renderCalendar();
     };
@@ -977,6 +1007,7 @@
         events,
         toLocalDate,
         openDate,
+        unassignAssignment,
       });
     }
 

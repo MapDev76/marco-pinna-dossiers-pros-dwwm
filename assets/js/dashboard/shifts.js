@@ -16,6 +16,16 @@
     }
   }
 
+  function getCurrentMonthRange() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const first = new Date(y, m, 1);
+    const last = new Date(y, m + 1, 0);
+    const fmt = (d) => d.toISOString().slice(0, 10);
+    return { start: fmt(first), end: fmt(last) };
+  }
+
   function getDefaultIcon() {
     const row = getCreateRow();
     const input = row ? row.querySelector('input[data-field="icon"]') : null;
@@ -111,6 +121,7 @@
     const row = getCreateRow();
     if (!row) return;
     const activeDepartmentId = Number(window.DashboardPlannerData?.active_department_id || 0);
+    const month = getCurrentMonthRange();
     const deptSelect = row.querySelector('select[data-field="department_id"]');
     if (deptSelect && activeDepartmentId) {
       deptSelect.value = String(activeDepartmentId);
@@ -120,6 +131,8 @@
       'input[data-field="icon"]': row.querySelector('input[data-field="icon"]')?.defaultValue || getDefaultIcon(),
       'input[data-field="color"]': row.querySelector('input[data-field="color"]')?.defaultValue || getDefaultColor(),
       'input[data-field="description"]': '',
+      'input[data-field="range_start"]': month.start,
+      'input[data-field="range_end"]': month.end,
       'input[data-field="start_time"]': '09:00',
       'input[data-field="end_time"]': '17:00',
     };
@@ -138,11 +151,15 @@
     const icon = row.querySelector('input[data-field="icon"]')?.value.trim() || getDefaultIcon();
     const color = row.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
     const description = row.querySelector('input[data-field="description"]')?.value.trim() || '';
+    const range_start = row.querySelector('input[data-field="range_start"]')?.value || '';
+    const range_end = row.querySelector('input[data-field="range_end"]')?.value || '';
     const start_time = row.querySelector('input[data-field="start_time"]')?.value || '';
     const end_time = row.querySelector('input[data-field="end_time"]')?.value || '';
 
     if (!departmentId) return notifyError('Choose a department for the new shift.');
     if (!name) return notifyError('Enter a shift name.');
+    if (!range_start || !range_end) return notifyError('Set both start and end date.');
+    if (range_end < range_start) return notifyError('End date must be after start date.');
 
     try {
       const res = await AppAPI.shifts.create(window.DashboardConfig.apiShifts, {
@@ -153,6 +170,9 @@
         icon,
         color,
         description,
+        kind: 'work',
+        range_start,
+        range_end,
       });
       if (res?.ok) {
         if (feedback?.reloadSettingsTabWithSuccess) {
@@ -180,6 +200,7 @@
       icon: row.querySelector('input[data-field="icon"]')?.value || getDefaultIcon(),
       color: row.querySelector('input[data-field="color"]')?.value || getDefaultColor(),
       description: row.querySelector('input[data-field="description"]')?.value || '',
+      kind: 'work',
       start_time: row.querySelector('input[data-field="start_time"]')?.value || '',
       end_time: row.querySelector('input[data-field="end_time"]')?.value || '',
     };

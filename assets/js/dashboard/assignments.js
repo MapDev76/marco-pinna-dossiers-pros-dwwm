@@ -57,6 +57,7 @@
       action: 'move_shift',
       assignment_id: assignmentId,
       shift_id: parseInt(row.querySelector('[data-field="shift_id"]')?.value || '0', 10) || 0,
+      user_id: parseInt(row.querySelector('[data-field="user_id"]')?.value || '0', 10) || 0,
       work_date: row.querySelector('[data-field="work_date"]')?.value || '',
       status: row.querySelector('[data-field="status"]')?.value || 'assigned',
     };
@@ -84,6 +85,61 @@
     }
   }
 
+  async function unassignAssignment(row) {
+    if (!row || !apiUrl || !window.AppAPI) return;
+    const assignmentId = parseInt(row.dataset.assignmentId || '0', 10) || 0;
+    if (!assignmentId) return;
+
+    try {
+      const res = await AppAPI.postJSON(apiUrl, {
+        action: 'unassign_shift',
+        assignment_id: assignmentId,
+      });
+      if (res?.ok || res?.success) {
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('assignments', 'Done', 'Shift unassigned successfully.');
+        } else {
+          notifySuccess('Shift unassigned successfully.');
+          location.reload();
+        }
+      } else {
+        notifyError('Unassign failed: ' + (res?.error || 'unknown'));
+      }
+    } catch (e) {
+      console.error(e);
+      notifyError('Error unassigning shift.');
+    }
+  }
+
+  async function autoAssignOpen() {
+    if (!apiUrl || !window.AppAPI) return;
+
+    try {
+      const res = await AppAPI.postJSON(apiUrl, {
+        action: 'auto_assign_open',
+        scope_shift_id: parseInt(document.querySelector('[data-auto-assign-shift]')?.value || '0', 10) || 0,
+        range_start: document.querySelector('[data-auto-assign-range-start]')?.value || '',
+        range_end: document.querySelector('[data-auto-assign-range-end]')?.value || '',
+        max_hours_per_month: parseInt(document.querySelector('[data-auto-assign-max-hours]')?.value || '176', 10) || 176,
+        max_days_per_month: parseInt(document.querySelector('[data-auto-assign-max-days]')?.value || '22', 10) || 22,
+      });
+      if (res?.ok || res?.success) {
+        const message = `Assigned ${res.assigned_count || 0} shifts. Open remaining: ${res.open_remaining || 0}.`;
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('assignments', 'Done', message);
+        } else {
+          notifySuccess(message);
+          location.reload();
+        }
+      } else {
+        notifyError('Auto assignment failed: ' + (res?.error || 'unknown'));
+      }
+    } catch (e) {
+      console.error(e);
+      notifyError('Error running auto assignment.');
+    }
+  }
+
   document.addEventListener('click', (ev) => {
     if (!isAssignmentsPanelActive()) return;
 
@@ -105,6 +161,20 @@
     if (saveBtn) {
       ev.preventDefault();
       saveAssignment(getRow(saveBtn));
+      return;
+    }
+
+    const unassignBtn = ev.target.closest && ev.target.closest('.settings-assignment-unassign');
+    if (unassignBtn) {
+      ev.preventDefault();
+      unassignAssignment(getRow(unassignBtn));
+      return;
+    }
+
+    const autoAssignBtn = ev.target.closest && ev.target.closest('[data-auto-assign-open]');
+    if (autoAssignBtn) {
+      ev.preventDefault();
+      autoAssignOpen();
     }
   });
 })();

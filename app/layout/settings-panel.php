@@ -78,7 +78,10 @@ $shiftIconCatalogMap = [
 
 $departmentIconCatalog = $departmentIconCatalogMap[$companyDomain] ?? $departmentIconCatalogMap['generic'];
 $shiftIconCatalog = $shiftIconCatalogMap[$companyDomain] ?? $shiftIconCatalogMap['generic'];
-$pickerColorCatalog = ['#b98b12', '#2f6fed', '#0f766e', '#c2410c', '#be123c', '#4f46e5', '#15803d', '#7c3aed', '#0891b2', '#374151'];
+$pickerColorCatalog = [
+    '#b98b12', '#2f6fed', '#0f766e', '#c2410c', '#be123c', '#4f46e5', '#15803d', '#7c3aed', '#0891b2', '#374151',
+    '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#6366f1', '#ec4899',
+];
 $activeDepartment = null;
 if (!empty($departments)) {
     foreach ($departments as $department) {
@@ -298,6 +301,10 @@ usort($userWorkloadRows, static function (array $a, array $b): int {
 });
 
 $assignmentTotals['assigned_hours'] = round((float) $assignmentTotals['assigned_hours'], 2);
+$openAssignmentsCount = count(array_filter(
+    $assignments,
+    static fn(array $assignment): bool => (int) ($assignment['user_id'] ?? 0) <= 0 || (($assignment['status'] ?? '') === 'open')
+));
 
 $departmentCreateHeadUsers = array_values(array_filter(
     $visibleUsers,
@@ -375,6 +382,27 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <span class="settings-pill">Hours assigned: <?php echo e(number_format((float) ($assignmentTotals['assigned_hours'] ?? 0), 2)); ?>h</span>
                         <span class="settings-pill">Covered days: <?php echo (int) ($assignmentTotals['covered_days'] ?? 0); ?>/<?php echo (int) ($assignmentTotals['days_range'] ?? 0); ?></span>
                         <span class="settings-pill">Shifts not assigned: <?php echo (int) ($assignmentTotals['unassigned_shift_templates'] ?? 0); ?></span>
+                        <span class="settings-pill">Open slots: <?php echo (int) $openAssignmentsCount; ?></span>
+                    </div>
+                </div>
+
+                <div class="settings-create-row settings-auto-assign-row">
+                    <div class="settings-list-cols settings-list-cols-shift-create">
+                        <label class="settings-field">Auto assign shift
+                            <select data-auto-assign-shift>
+                                <option value="0">All open work shifts</option>
+                                <?php foreach ($shifts as $shift): ?>
+                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(($shift['icon'] ?? '🕒') . ' ' . ($shift['name'] ?? 'Shift')); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label class="settings-field">From date<input data-auto-assign-range-start type="date" value="<?php echo e($assignmentRangeStart); ?>"></label>
+                        <label class="settings-field">To date<input data-auto-assign-range-end type="date" value="<?php echo e($assignmentRangeEnd); ?>"></label>
+                        <label class="settings-field">Max hours / month<input data-auto-assign-max-hours type="number" min="1" step="1" value="176"></label>
+                        <label class="settings-field">Max days / month<input data-auto-assign-max-days type="number" min="1" step="1" value="22"></label>
+                        <div class="settings-inline-actions">
+                            <button type="button" class="admin-action-link" data-auto-assign-open>Auto assign open</button>
+                        </div>
                     </div>
                 </div>
 
@@ -456,11 +484,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <span>
                                         <?php echo e($assignment['shift_icon'] ?? '🕒'); ?>
                                         <?php echo e($assignment['shift_name'] ?? '--'); ?>
+                                        <small class="settings-meta-inline"><?php echo e(ucfirst((string) ($assignment['shift_kind'] ?? 'work'))); ?></small>
                                         <?php if (!empty($assignment['shift_description'])): ?>
                                             <small class="settings-meta-inline"><?php echo e($assignment['shift_description']); ?></small>
                                         <?php endif; ?>
                                     </span>
-                                    <span><?php echo e($assignment['user_name'] ?? 'Unassigned'); ?></span>
+                                    <span><?php echo e($assignment['user_name'] ?: 'Open slot'); ?></span>
                                     <?php
                                         $assignmentDuration = $durationHoursForTimes(
                                             (string) ($assignment['start_time'] ?? ''),
@@ -471,7 +500,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <?php echo e(($assignment['start_time'] ?? '--:--') . ' - ' . ($assignment['end_time'] ?? '--:--')); ?>
                                         <small class="settings-meta-inline"><?php echo e(number_format($assignmentDuration, 2)); ?>h</small>
                                     </span>
-                                    <span><?php echo e($assignment['status'] ?? 'assigned'); ?></span>
+                                    <span><?php echo e($assignment['status'] ?? ((int) ($assignment['user_id'] ?? 0) > 0 ? 'assigned' : 'open')); ?></span>
                                     <div class="settings-inline-actions">
                                         <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-assignment-edit" aria-label="Edit assignment" title="Edit assignment">✎</button>
                                     </div>
@@ -490,9 +519,20 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                 <?php endforeach; ?>
                                             </select>
                                         </label>
+                                        <label class="settings-field">Employee
+                                            <select data-field="user_id">
+                                                <option value="">Open slot</option>
+                                                <?php foreach ($visibleUsers as $userOption): ?>
+                                                    <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>" <?php echo ((int) ($assignment['user_id'] ?? 0) === (int) ($userOption['id'] ?? 0)) ? 'selected' : ''; ?>>
+                                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? 'User')); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </label>
                                         <label class="settings-field">Status
                                             <select data-field="status">
-                                                <?php $assignmentStatus = (string) ($assignment['status'] ?? 'assigned'); ?>
+                                                <?php $assignmentStatus = (string) ($assignment['status'] ?? ((int) ($assignment['user_id'] ?? 0) > 0 ? 'assigned' : 'open')); ?>
+                                                <option value="open" <?php echo $assignmentStatus === 'open' ? 'selected' : ''; ?>>Open</option>
                                                 <option value="assigned" <?php echo $assignmentStatus === 'assigned' ? 'selected' : ''; ?>>Assigned</option>
                                                 <option value="in_progress" <?php echo $assignmentStatus === 'in_progress' ? 'selected' : ''; ?>>In progress</option>
                                                 <option value="completed" <?php echo $assignmentStatus === 'completed' ? 'selected' : ''; ?>>Completed</option>
@@ -501,6 +541,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         </label>
                                         <div class="settings-inline-actions">
                                             <button type="button" class="admin-action-link settings-assignment-save">Save</button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-assignment-unassign">Unassign</button>
                                             <button type="button" class="admin-action-link admin-action-link-secondary settings-assignment-cancel">Cancel</button>
                                         </div>
                                     </div>
@@ -791,58 +832,66 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     </div>
                 </div>
 
-                <div class="settings-list-head settings-create-row" data-shift-create-row>
+                <div class="settings-list-head settings-create-row settings-create-row-shift" data-shift-create-row>
                     <div class="settings-list-cols settings-list-cols-shift-create">
-                        <label class="settings-field">Department
-                            <select data-field="department_id">
-                                <?php foreach ($visibleDepartments as $department): ?>
-                                    <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo (int) ($department['id'] ?? 0) === (int) ($planner['active_department_id'] ?? 0) ? 'selected' : ''; ?>>
-                                        <?php echo e($department['name'] ?? 'Department'); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </label>
-                        <label class="settings-field">Name<input data-field="name" type="text" value="" placeholder="Morning shift"></label>
-                        <label class="settings-field">Icon
-                            <div class="settings-picker-stack">
-                                <div class="settings-picker-row">
-                                    <input data-field="icon" type="text" value="<?php echo e($shiftIconCatalog[0] ?? '🕒'); ?>" readonly>
-                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
-                                </div>
-                                <div class="settings-picker-popover" data-picker-popover="icon" hidden>
-                                    <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
-                                        <?php foreach ($shiftIconCatalog as $icon): ?>
-                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
-                                                <span aria-hidden="true"><?php echo e($icon); ?></span>
-                                            </button>
-                                        <?php endforeach; ?>
+                        <div class="settings-shift-create-column settings-shift-create-column-left">
+                            <label class="settings-field">Department
+                                <select data-field="department_id">
+                                    <?php foreach ($visibleDepartments as $department): ?>
+                                        <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo (int) ($department['id'] ?? 0) === (int) ($planner['active_department_id'] ?? 0) ? 'selected' : ''; ?>>
+                                            <?php echo e($department['name'] ?? 'Department'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <label class="settings-field">Name<input data-field="name" type="text" value="" placeholder="Morning shift"></label>
+                            <label class="settings-field">From date<input data-field="range_start" type="date" value=""></label>
+                            <label class="settings-field">To date<input data-field="range_end" type="date" value=""></label>
+                        </div>
+
+                        <div class="settings-shift-create-column settings-shift-create-column-right">
+                            <label class="settings-field">Icon
+                                <div class="settings-picker-stack">
+                                    <div class="settings-picker-row">
+                                        <input data-field="icon" type="text" value="<?php echo e($shiftIconCatalog[0] ?? '🕒'); ?>" readonly>
+                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                    </div>
+                                    <div class="settings-picker-popover" data-picker-popover="icon" hidden>
+                                        <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
+                                            <?php foreach ($shiftIconCatalog as $icon): ?>
+                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                                    <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                                </button>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </label>
-                        <label class="settings-field">Color
-                            <div class="settings-picker-stack">
-                                <div class="settings-picker-row">
-                                    <input data-field="color" type="text" value="#2f6fed" readonly>
-                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
-                                </div>
-                                <div class="settings-picker-popover" data-picker-popover="color" hidden>
-                                    <div class="settings-choice-grid" data-choice-field="color">
-                                        <?php foreach ($pickerColorCatalog as $color): ?>
-                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
-                                                <span class="settings-color-swatch" aria-hidden="true"></span>
-                                            </button>
-                                        <?php endforeach; ?>
+                            </label>
+                            <label class="settings-field">Color
+                                <div class="settings-picker-stack">
+                                    <div class="settings-picker-row">
+                                        <input data-field="color" type="text" value="#2f6fed" readonly>
+                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                    </div>
+                                    <div class="settings-picker-popover" data-picker-popover="color" hidden>
+                                        <div class="settings-choice-grid" data-choice-field="color">
+                                            <?php foreach ($pickerColorCatalog as $color): ?>
+                                                <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($color); ?>">
+                                                    <span class="settings-color-swatch" aria-hidden="true"></span>
+                                                </button>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </label>
-                        <label class="settings-field">Description
-                            <input data-field="description" type="text" value="" placeholder="Shift purpose, rest type, notes">
-                        </label>
-                        <label class="settings-field">Start<input data-field="start_time" type="time" value="09:00"></label>
-                        <label class="settings-field">End<input data-field="end_time" type="time" value="17:00"></label>
-                        <div class="settings-inline-actions">
+                            </label>
+                            <label class="settings-field">Description
+                                <input data-field="description" type="text" value="" placeholder="Shift notes">
+                            </label>
+                            <label class="settings-field">Start<input data-field="start_time" type="time" value="09:00"></label>
+                            <label class="settings-field">End<input data-field="end_time" type="time" value="17:00"></label>
+                        </div>
+
+                        <div class="settings-shift-create-actions">
                             <button type="button" class="admin-action-link settings-shift-create">Create shift</button>
                             <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-reset">Reset</button>
                         </div>
@@ -914,8 +963,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                 </div>
                                             </div>
                                         </label>
-                                        <label class="settings-field">Description
-                                            <input data-field="description" type="text" value="<?php echo e($shift['description'] ?? ''); ?>" placeholder="Shift purpose, rest type, notes">
+                                        <label class="settings-field settings-field-wide">Description
+                                            <input data-field="description" type="text" value="<?php echo e($shift['description'] ?? ''); ?>" placeholder="Shift notes">
                                         </label>
                                         <label class="settings-field">Start<input data-field="start_time" type="time" value="<?php echo e($shift['start_time'] ?? ''); ?>"></label>
                                         <label class="settings-field">End<input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>"></label>

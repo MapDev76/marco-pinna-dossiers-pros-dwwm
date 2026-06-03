@@ -26,7 +26,7 @@ try {
             break;
 
         case 'create':
-            $required = ['department_id', 'name', 'start_time', 'end_time'];
+            $required = ['department_id', 'name', 'start_time', 'end_time', 'range_start', 'range_end'];
             foreach ($required as $r) {
                 if (empty($input[$r]) && $input[$r] !== '0') {
                     jsonResponse(['ok' => false, 'error' => $r . ' required'], 400);
@@ -39,63 +39,48 @@ try {
                 'icon' => $input['icon'] ?? null,
                 'color' => $input['color'] ?? null,
                 'description' => $input['description'] ?? null,
-                'kind' => $input['kind'] ?? 'work',
+                'kind' => 'work',
                 'start_time' => $input['start_time'],
                 'end_time' => $input['end_time'],
             ]);
 
             $rangeStart = trim((string) ($input['range_start'] ?? ''));
             $rangeEnd = trim((string) ($input['range_end'] ?? ''));
-            $rangeMode = trim((string) ($input['range_mode'] ?? 'none'));
-            $activeDays = max(0, min(31, (int) ($input['active_days'] ?? 0)));
-            if ($rangeStart !== '' && $rangeEnd !== '' && $rangeMode !== 'none') {
-                $start = new DateTimeImmutable($rangeStart);
-                $end = new DateTimeImmutable($rangeEnd);
-                if ($end < $start) {
-                    [$start, $end] = [$end, $start];
-                }
+            if ($rangeStart === '' || $rangeEnd === '') {
+                jsonResponse(['ok' => false, 'error' => 'range_start and range_end required'], 400);
+            }
 
-                $datesToInsert = [];
-                $cursorIndex = 0;
-                foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
-                    $include = false;
-                    if ($rangeMode === 'all' || $rangeMode === 'date_range') {
-                        $include = true;
-                    } elseif ($rangeMode === 'weekly') {
-                        $dayOfCycle = ($cursorIndex % 7) + 1;
-                        $include = $dayOfCycle <= max(0, min(7, $activeDays));
-                    } elseif ($rangeMode === 'monthly') {
-                        $dayOfMonth = (int) $date->format('j');
-                        $include = $dayOfMonth <= max(0, min(31, $activeDays));
-                    }
+            $start = new DateTimeImmutable($rangeStart);
+            $end = new DateTimeImmutable($rangeEnd);
+            if ($end < $start) {
+                [$start, $end] = [$end, $start];
+            }
 
-                    if ($include) {
-                        $datesToInsert[] = $date->format('Y-m-d');
-                    }
-                    $cursorIndex++;
-                }
+            $datesToInsert = [];
+            foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
+                $datesToInsert[] = $date->format('Y-m-d');
+            }
 
-                if (!empty($datesToInsert)) {
-                    $existingStmt = $pdo->prepare(
-                        'SELECT id FROM user_shifts WHERE shift_id = :shift_id AND work_date = :work_date LIMIT 1'
-                    );
-                    $insertStmt = $pdo->prepare(
-                        'INSERT INTO user_shifts (shift_id, user_id, work_date, status)
-                         VALUES (:shift_id, NULL, :work_date, "open")'
-                    );
-                    foreach ($datesToInsert as $workDate) {
-                        $existingStmt->execute([
-                            'shift_id' => $id,
-                            'work_date' => $workDate,
-                        ]);
-                        if ($existingStmt->fetchColumn()) {
-                            continue;
-                        }
-                        $insertStmt->execute([
-                            'shift_id' => $id,
-                            'work_date' => $workDate,
-                        ]);
+            if (!empty($datesToInsert)) {
+                $existingStmt = $pdo->prepare(
+                    'SELECT id FROM user_shifts WHERE shift_id = :shift_id AND work_date = :work_date LIMIT 1'
+                );
+                $insertStmt = $pdo->prepare(
+                    'INSERT INTO user_shifts (shift_id, user_id, work_date, status)
+                     VALUES (:shift_id, NULL, :work_date, "open")'
+                );
+                foreach ($datesToInsert as $workDate) {
+                    $existingStmt->execute([
+                        'shift_id' => $id,
+                        'work_date' => $workDate,
+                    ]);
+                    if ($existingStmt->fetchColumn()) {
+                        continue;
                     }
+                    $insertStmt->execute([
+                        'shift_id' => $id,
+                        'work_date' => $workDate,
+                    ]);
                 }
             }
 

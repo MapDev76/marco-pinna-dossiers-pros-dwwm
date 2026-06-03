@@ -13,10 +13,21 @@
     var events = options.events || [];
     var toLocalDate = options.toLocalDate;
     var openDate = options.openDate;
+    var unassignAssignment = options.unassignAssignment;
 
     if (!calendarShell) return;
 
     calendarShell.addEventListener('click', function (event) {
+      var unassignButton = event.target.closest('[data-calendar-unassign]');
+      if (unassignButton) {
+        event.preventDefault();
+        var assignmentToUnassign = Number(unassignButton.getAttribute('data-calendar-unassign'));
+        if (assignmentToUnassign && typeof unassignAssignment === 'function') {
+          unassignAssignment(assignmentToUnassign);
+        }
+        return;
+      }
+
       var dateCard = event.target.closest('[data-calendar-date]');
       if (dateCard) {
         var dateValue = dateCard.getAttribute('data-calendar-date');

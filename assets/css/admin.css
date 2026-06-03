@@ -386,7 +386,7 @@
 }
 
 .settings-list-cols-shift {
-    grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(220px, 1.4fr) minmax(150px, 1fr) minmax(90px, 0.5fr) minmax(120px, 0.7fr) minmax(170px, 0.9fr);
+    grid-template-columns: minmax(140px, 1.1fr) minmax(130px, 1fr) minmax(180px, 1.35fr) minmax(130px, 0.9fr) minmax(70px, 0.45fr) minmax(100px, 0.65fr) minmax(130px, 0.8fr);
 }
 
 .settings-list-cols-shift-create,
@@ -394,12 +394,100 @@
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
+.settings-list-cols-shift-edit {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.settings-list-cols-shift-edit .settings-field {
+    min-width: 0;
+}
+
+.settings-list-cols-shift-edit .settings-field input,
+.settings-list-cols-shift-edit .settings-field select {
+    width: 100%;
+    max-width: 100%;
+}
+
+.settings-list-cols-shift-edit .settings-field:has(input[data-field="description"]) {
+    grid-column: 1 / -1;
+}
+
+.settings-list-cols-shift-edit .settings-field-wide {
+    grid-column: 1 / -1;
+}
+
 .settings-list-cols-assignment {
     grid-template-columns: minmax(120px, 0.8fr) minmax(150px, 1fr) minmax(220px, 1.4fr) minmax(160px, 1fr) minmax(170px, 1fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr);
 }
 
 .settings-list-cols-assignment-edit {
-    grid-template-columns: repeat(3, minmax(160px, 1fr)) minmax(170px, 1fr);
+    grid-template-columns: repeat(4, minmax(160px, 1fr)) minmax(170px, 1fr);
+}
+
+.settings-auto-assign-row {
+    margin-bottom: 0.8rem;
+}
+
+.settings-create-row-shift {
+    border-style: dashed;
+    border-width: 2px;
+    padding: 0.62rem;
+}
+
+.settings-create-row .settings-list-cols.settings-list-cols-shift-create {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(132px, 0.36fr);
+    align-items: start;
+    gap: 0.55rem;
+}
+
+.settings-shift-create-column {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: end;
+}
+
+.settings-shift-create-column .settings-field {
+    margin: 0;
+}
+
+.settings-shift-create-column .settings-field input,
+.settings-shift-create-column .settings-field select {
+    width: 100%;
+    max-width: 100%;
+    min-height: 32px;
+    padding: 0.34rem 0.48rem;
+}
+
+.settings-shift-create-actions {
+    display: grid;
+    gap: 0.4rem;
+    align-content: start;
+    justify-items: stretch;
+    min-width: 0;
+}
+
+.settings-shift-create-actions .admin-action-link {
+    width: 100%;
+    max-width: 124px;
+    min-height: 30px;
+    padding: 0.32rem 0.52rem;
+    font-size: 0.78rem;
+    justify-self: start;
+}
+
+.settings-shift-create-hint {
+    margin: 0;
+    font-size: 0.76rem;
+    color: var(--color-text-light);
+    line-height: 1.35;
+    grid-column: 1 / -1;
+}
+
+.settings-list-cols-shift .settings-inline-actions .admin-action-link {
+    min-height: 30px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.78rem;
 }
 
 .settings-list-cols-role {
@@ -450,6 +538,10 @@
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 0.65rem;
     align-items: end;
+}
+
+.settings-edit-drawer {
+    overflow-x: hidden;
 }
 
 .settings-create-row .settings-list-cols > strong,
