@@ -42,13 +42,14 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
     $workDate = trim((string) ($input['work_date'] ?? ''));
     $status = trim((string) ($input['status'] ?? 'assigned'));
 
-    $validateSingleShiftPerDay = static function (PDO $pdo, int $targetUserId, string $targetDate, int $excludeAssignmentId = 0): ?string {
-        if ($targetUserId <= 0 || $targetDate === '') {
+    $validateSingleShiftPerDay = static function (PDO $pdo, int $targetUserId, int $targetShiftId, string $targetDate, int $excludeAssignmentId = 0): ?string {
+        if ($targetUserId <= 0 || $targetShiftId <= 0 || $targetDate === '') {
             return null;
         }
         $check = $pdo->prepare(
             'SELECT id FROM user_shifts
              WHERE user_id = :user_id
+               AND shift_id = :shift_id
                AND work_date = :work_date
                AND id <> :exclude_id
                AND status <> "cancelled"
@@ -56,11 +57,12 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         );
         $check->execute([
             'user_id' => $targetUserId,
+            'shift_id' => $targetShiftId,
             'work_date' => $targetDate,
             'exclude_id' => $excludeAssignmentId,
         ]);
 
-        return $check->fetchColumn() ? 'Employee already has a shift for this day.' : null;
+        return $check->fetchColumn() ? 'Employee already has this shift for this date.' : null;
     };
 
     if ($action === 'auto_assign_open') {
@@ -362,7 +364,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
     }
 
     if ($action === 'assign_shift') {
-        $conflict = $validateSingleShiftPerDay($pdo, $assignmentUserId, $workDate);
+        $conflict = $validateSingleShiftPerDay($pdo, $assignmentUserId, $shiftId, $workDate);
         if ($conflict !== null) {
             jsonResponse(['success' => false, 'error' => $conflict], 400);
         }
@@ -415,7 +417,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         }
 
         if ($assignmentUserId > 0) {
-            $conflict = $validateSingleShiftPerDay($pdo, $assignmentUserId, $workDate, $assignmentId);
+            $conflict = $validateSingleShiftPerDay($pdo, $assignmentUserId, $shiftId, $workDate, $assignmentId);
             if ($conflict !== null) {
                 jsonResponse(['success' => false, 'error' => $conflict], 400);
             }

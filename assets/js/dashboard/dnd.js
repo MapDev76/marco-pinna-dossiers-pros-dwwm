@@ -31,12 +31,30 @@
     if (!calendarShell) return;
 
     calendarShell.addEventListener('dragstart', function (event) {
+      var slotCard = event.target.closest('[data-calendar-slot-drag]');
+      if (slotCard) {
+        state.draggingUserId = slotCard.getAttribute('data-user-id');
+        state.draggingAssignmentId = slotCard.getAttribute('data-assignment-id');
+        if (event.dataTransfer) {
+          event.dataTransfer.setData('text/plain', JSON.stringify({
+            type: 'slot',
+            assignmentId: state.draggingAssignmentId,
+            userId: state.draggingUserId,
+            shiftId: slotCard.getAttribute('data-shift-id'),
+            workDate: slotCard.getAttribute('data-work-date') || '',
+          }));
+          event.dataTransfer.effectAllowed = 'move';
+        }
+        return;
+      }
+
       var userChip = event.target.closest('[data-user-id]');
       if (userChip) {
         state.draggingUserId = userChip.getAttribute('data-user-id');
         state.draggingAssignmentId = null;
         if (event.dataTransfer) {
           event.dataTransfer.setData('text/plain', JSON.stringify({ type: 'user', userId: state.draggingUserId }));
+          event.dataTransfer.effectAllowed = 'copyMove';
         }
         return;
       }
@@ -47,21 +65,38 @@
         state.draggingUserId = null;
         if (event.dataTransfer) {
           event.dataTransfer.setData('text/plain', JSON.stringify({ type: 'assignment', assignmentId: state.draggingAssignmentId }));
+          event.dataTransfer.effectAllowed = 'move';
         }
       }
     });
 
     calendarShell.addEventListener('dragover', function (event) {
-      if (event.target.closest('[data-calendar-date]')) {
+      if (event.target.closest('[data-calendar-date]') || event.target.closest('[data-assignment-id]')) {
         event.preventDefault();
+        var targetEvent = event.target.closest('[data-assignment-id]');
+        if (targetEvent) {
+          targetEvent.classList.add('is-drag-target');
+        }
+      }
+    });
+
+    calendarShell.addEventListener('dragleave', function (event) {
+      var targetEvent = event.target.closest('[data-assignment-id]');
+      if (targetEvent) {
+        targetEvent.classList.remove('is-drag-target');
       }
     });
 
     calendarShell.addEventListener('drop', async function (event) {
+      calendarShell.querySelectorAll('.calendar-event.is-drag-target').forEach(function (node) {
+        node.classList.remove('is-drag-target');
+      });
+
+      var targetAssignmentCard = event.target.closest('[data-assignment-id]');
       var dateCard = event.target.closest('[data-calendar-date]');
-      if (!dateCard) return;
+      if (!dateCard && !targetAssignmentCard) return;
       event.preventDefault();
-      var workDate = dateCard.getAttribute('data-calendar-date');
+      var workDate = targetAssignmentCard ? targetAssignmentCard.closest('[data-calendar-date]')?.getAttribute('data-calendar-date') : dateCard.getAttribute('data-calendar-date');
       if (!workDate) return;
 
       try {
@@ -69,6 +104,22 @@
           (event.dataTransfer && (event.dataTransfer.getData('application/json') || event.dataTransfer.getData('text/plain'))) || '{}',
           {}
         );
+
+        if (data.type === 'slot') {
+          if (!targetAssignmentCard) {
+            return;
+          }
+          var targetAssignmentId = Number(targetAssignmentCard.getAttribute('data-assignment-id'));
+          var targetAssignment = events.find(function (item) { return Number(item.assignment_id) === targetAssignmentId; });
+          if (!targetAssignment) return;
+          await assignShift({
+            user_id: Number(data.userId || 0),
+            shift_id: Number(targetAssignment.shift_id || 0),
+            work_date: String(targetAssignment.work_date || workDate),
+            status: 'assigned',
+          });
+          return;
+        }
 
         if (data.type === 'assignment' && data.assignmentId) {
           var assignment = events.find(function (item) { return Number(item.assignment_id) === Number(data.assignmentId); });

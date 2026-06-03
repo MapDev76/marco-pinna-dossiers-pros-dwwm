@@ -45,26 +45,51 @@
       }, new Map());
     };
 
-    var renderAssignmentCard = function (event, compact) {
-      var shiftKind = (event.shift_kind || 'work').toLowerCase();
-      var isVirtual = !!event.is_virtual_open;
-      var isOpen = isVirtual || String(event.assignment_source || '') === 'open' || !event.user_id;
-      var shiftColor = event.shift_color || '#2f6fed';
-      var assignmentId = Number(event.assignment_id || 0);
-      var userId = Number(event.user_id || 0);
-      var shiftId = Number(event.shift_id || 0);
-      var employeeName = (event.user_name || '').trim();
-      var initials = (event.user_name || '').split(' ').filter(Boolean).map(function (chunk) { return chunk.charAt(0).toUpperCase(); }).slice(0, 2).join('');
-      var badge = (event.shift_icon ? '<span class="calendar-event-badge" style="color: ' + shiftColor + '">' + (event.shift_icon || '') + '</span>' : '');
-      var userBadge = (!isOpen && initials ? '<span class="calendar-event-user-badge" style="--event-user-color:' + (event.department_color || shiftColor) + '">' + initials + '</span>' : '');
-      var employeeSlot = (!isOpen && userId > 0)
-        ? '\n            <button type="button" class="calendar-event-slot-card" data-calendar-slot-toggle data-assignment-id="' + assignmentId + '" aria-expanded="false" title="Employee slot">\n              ' + userBadge + '\n            </button>\n            <div class="calendar-event-slot-expanded" data-calendar-slot-panel hidden>\n              <span class="calendar-event-slot-name">' + (employeeName || 'Employee') + '</span>\n              <div class="calendar-event-slot-actions">\n                <button type="button" class="calendar-event-slot-btn" data-calendar-assign-other-dates="' + assignmentId + '" data-user-id="' + userId + '" data-shift-id="' + shiftId + '" title="Assign this employee to other dates">Assign other dates</button>\n                <button type="button" class="calendar-event-slot-btn is-danger" data-calendar-unassign="' + assignmentId + '" aria-label="Unassign shift" title="Unassign shift">×</button>\n              </div>\n            </div>\n          '
-        : '';
-      var kindClass = shiftKind !== 'work' ? ' is-nonwork is-kind-' + shiftKind : '';
-      var openClass = isOpen ? ' is-open' : '';
-      var draggable = (!isVirtual && Number(event.assignment_id || 0) > 0) ? 'true' : 'false';
-      var assignmentAttr = assignmentId > 0 ? ' data-assignment-id="' + assignmentId + '"' : '';
-      return '\n        <article class="calendar-event' + (compact ? ' is-compact' : '') + kindClass + openClass + '"' + assignmentAttr + ' draggable="' + draggable + '" style="--event-shift-color:' + shiftColor + '">\n          <div class="calendar-event-main-row">\n            <div class="calendar-event-shift-row">\n              <div class="calendar-event-top">' + badge + '</div>\n              <span class="calendar-event-time">' + formatEventTime(event) + '</span>\n              <span class="calendar-event-title">' + (event.shift_name || 'Shift') + '</span>\n            </div>\n            ' + employeeSlot + '\n          </div>\n        </article>\n      ';
+    var groupEventsByShiftDate = function (items) {
+      return items.reduce(function (groups, event) {
+        var shiftKey = String(event.shift_id || '') + '|' + String(event.work_date || '');
+        if (!shiftKey || shiftKey === '|') return groups;
+        if (!groups.has(shiftKey)) {
+          groups.set(shiftKey, {
+            key: shiftKey,
+            base: event,
+            events: [],
+          });
+        }
+        groups.get(shiftKey).events.push(event);
+        return groups;
+      }, new Map());
+    };
+
+    var renderAssignmentCard = function (group, compact) {
+      var baseEvent = group.base || group.events[0] || {};
+      var shiftKind = (baseEvent.shift_kind || 'work').toLowerCase();
+      var isVirtual = !!baseEvent.is_virtual_open;
+      var shiftColor = baseEvent.shift_color || '#2f6fed';
+      var shiftId = Number(baseEvent.shift_id || 0);
+      var assignmentId = Number(baseEvent.assignment_id || 0);
+      var badge = (baseEvent.shift_icon ? '<span class="calendar-event-badge" style="color: ' + shiftColor + '">' + (baseEvent.shift_icon || '') + '</span>' : '');
+      var assignedEmployees = (group.events || []).filter(function (event) {
+        return Number(event.user_id || 0) > 0;
+      });
+      var employeeSlot = '';
+
+      if (assignedEmployees.length > 0) {
+        employeeSlot = '\n            <div class="calendar-event-slot-stack">' + assignedEmployees.map(function (employeeEvent) {
+          var employeeId = Number(employeeEvent.user_id || 0);
+          var employeeAssignmentId = Number(employeeEvent.assignment_id || 0);
+          var employeeName = (employeeEvent.user_name || '').trim();
+          var employeeInitials = employeeName.split(' ').filter(Boolean).map(function (chunk) { return chunk.charAt(0).toUpperCase(); }).slice(0, 2).join('');
+          var employeeBadge = employeeInitials ? '<span class="calendar-event-user-badge" style="--event-user-color:' + shiftColor + '; background:' + shiftColor + '; color:#ffffff;">' + employeeInitials + '</span>' : '';
+          var employeeFullName = employeeName || 'Employee';
+          var employeeLabel = '<span class="calendar-event-user-fullname">' + employeeFullName + '</span>';
+          return '\n              <button type="button" class="calendar-event-slot-card is-drag-source" data-calendar-slot-toggle data-calendar-slot-drag draggable="true" data-assignment-id="' + employeeAssignmentId + '" data-user-id="' + employeeId + '" data-shift-id="' + shiftId + '" data-work-date="' + (employeeEvent.work_date || '') + '" aria-expanded="false" title="' + employeeFullName + '">\n                ' + employeeBadge + employeeLabel + '\n              </button>\n              <div class="calendar-event-slot-expanded" data-calendar-slot-panel data-user-id="' + employeeId + '" hidden>\n                <span class="calendar-event-slot-name">' + employeeFullName + '</span>\n                <div class="calendar-event-slot-actions">\n                  <button type="button" class="calendar-event-slot-btn" data-calendar-assign-other-dates="' + employeeAssignmentId + '" data-user-id="' + employeeId + '" data-shift-id="' + shiftId + '" title="Assign this employee to other dates" aria-label="Assign this employee to other dates">+</button>\n                  <button type="button" class="calendar-event-slot-btn is-danger" data-calendar-unassign="' + employeeAssignmentId + '" aria-label="Unassign shift" title="Unassign shift">×</button>\n                </div>\n              </div>\n            ';
+        }).join('') + '\n            </div>';
+      } else if (isVirtual) {
+        employeeSlot = '\n            <div class="calendar-event-slot-stack">\n              <span class="calendar-event-slot-empty">Open shift</span>\n            </div>';
+      }
+
+      return '\n        <article class="calendar-event' + (compact ? ' is-compact' : '') + (shiftKind !== 'work' ? ' is-nonwork is-kind-' + shiftKind : '') + ((assignedEmployees.length === 0) ? ' is-open' : '') + '"' + (assignmentId > 0 ? ' data-assignment-id="' + assignmentId + '"' : '') + ' draggable="' + ((!isVirtual && assignmentId > 0) ? 'true' : 'false') + '" style="--event-shift-color:' + shiftColor + '">\n          <div class="calendar-event-main-row">\n            <div class="calendar-event-shift-row">\n              <div class="calendar-event-top">' + badge + '</div>\n              <span class="calendar-event-time">' + formatEventTime(baseEvent) + '</span>\n              <span class="calendar-event-title">' + (baseEvent.shift_name || 'Shift') + '</span>\n            </div>\n            ' + employeeSlot + '\n          </div>\n        </article>\n      ';
     };
 
     var renderDayCard = function (date, options) {
@@ -73,14 +98,15 @@
       var activeDepartment = typeof getActiveDepartment === 'function' ? getActiveDepartment() : null;
       var shiftTemplates = activeDepartment && Array.isArray(activeDepartment.shifts) ? activeDepartment.shifts : [];
       var scheduledShiftIds = {};
+
       dayEvents.forEach(function (event) {
         scheduledShiftIds[String(event.shift_id || '')] = true;
       });
+
       shiftTemplates.forEach(function (shift) {
         var shiftId = Number(shift.id || 0);
-        if (!shiftId || scheduledShiftIds[String(shiftId)]) {
-          return;
-        }
+        if (!shiftId || scheduledShiftIds[String(shiftId)]) return;
+
         dayEvents.push({
           assignment_id: 0,
           work_date: key,
@@ -101,14 +127,16 @@
           is_virtual_open: true,
         });
       });
-      dayEvents.sort(function (a, b) {
-        return String(a.start_time || '').localeCompare(String(b.start_time || ''));
+
+      var groupedEvents = Array.from(groupEventsByShiftDate(dayEvents).values()).sort(function (a, b) {
+        return String(a.base.start_time || '').localeCompare(String(b.base.start_time || ''));
       });
       var isCurrentDay = key === dateKey(calendarToday);
       var isSelected = key === dateKey(state.selectedDate);
       var isMuted = !!(options && options.muted);
       var dayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date).toUpperCase();
-      return '\n        <article class="calendar-day-card' + (isCurrentDay ? ' is-current' : '') + (isSelected ? ' is-selected' : '') + (isMuted ? ' is-muted' : '') + '" data-calendar-date="' + key + '" data-date-key="' + key + '">\n          <header class="calendar-day-head">\n            <span class="calendar-day-weekday">' + dayLabel + '</span>\n            <span class="calendar-day-number">' + date.getDate() + '</span>\n          </header>\n          <div class="calendar-day-events">\n            ' + (dayEvents.length ? dayEvents.map(function (event) { return renderAssignmentCard(event, true); }).join('') : '<div class="calendar-empty">Drop a user here to assign a shift</div>') + '\n          </div>\n        </article>\n      ';
+
+      return '\n        <article class="calendar-day-card' + (isCurrentDay ? ' is-current' : '') + (isSelected ? ' is-selected' : '') + (isMuted ? ' is-muted' : '') + '" data-calendar-date="' + key + '" data-date-key="' + key + '">\n          <header class="calendar-day-head">\n            <span class="calendar-day-weekday">' + dayLabel + '</span>\n            <span class="calendar-day-number">' + date.getDate() + '</span>\n          </header>\n          <div class="calendar-day-events">\n            ' + (groupedEvents.length ? groupedEvents.map(function (group) { return renderAssignmentCard(group, true); }).join('') : '<div class="calendar-empty">Drop a user here to assign a shift</div>') + '\n          </div>\n        </article>\n      ';
     };
 
     var renderYearCard = function (monthIndex) {
@@ -128,10 +156,10 @@
     var renderDetail = function () {
       if (!calendarDetail) return;
       var key = dateKey(state.selectedDate);
-      var selectedEvents = (eventsByDate().get(key) || []).slice().sort(function (a, b) {
-        return String(a.start_time || '').localeCompare(String(b.start_time || ''));
+      var selectedEvents = Array.from(groupEventsByShiftDate((eventsByDate().get(key) || []).slice()).values()).sort(function (a, b) {
+        return String(a.base.start_time || '').localeCompare(String(b.base.start_time || ''));
       });
-      calendarDetail.innerHTML = '\n        <div class="dashboard-calendar-detail-title">\n          <span>' + fullDateFormatter.format(state.selectedDate) + '</span>\n          <span>' + selectedEvents.length + ' shifts</span>\n        </div>\n        <div class="dashboard-calendar-detail-meta">\n          <span class="dashboard-calendar-detail-chip">' + monthLabelFormatter.format(state.selectedDate) + '</span>\n          <span class="dashboard-calendar-detail-chip">' + dateKey(state.selectedDate) + '</span>\n        </div>\n        <div class="calendar-day-events">\n          ' + (selectedEvents.length ? selectedEvents.map(function (event) { return renderAssignmentCard(event, false); }).join('') : '<div class="dashboard-calendar-detail-empty">No assignments for this date.</div>') + '\n        </div>\n      ';
+      calendarDetail.innerHTML = '\n        <div class="dashboard-calendar-detail-title">\n          <span>' + fullDateFormatter.format(state.selectedDate) + '</span>\n          <span>' + selectedEvents.length + ' shifts</span>\n        </div>\n        <div class="dashboard-calendar-detail-meta">\n          <span class="dashboard-calendar-detail-chip">' + monthLabelFormatter.format(state.selectedDate) + '</span>\n          <span class="dashboard-calendar-detail-chip">' + dateKey(state.selectedDate) + '</span>\n        </div>\n        <div class="calendar-day-events">\n          ' + (selectedEvents.length ? selectedEvents.map(function (group) { return renderAssignmentCard(group, false); }).join('') : '<div class="dashboard-calendar-detail-empty">No assignments for this date.</div>') + '\n        </div>\n      ';
     };
 
     var renderCalendar = function () {
@@ -145,9 +173,7 @@
       }
 
       var cells = [];
-      if (state.mode === 'day') {
-        cells.push(renderDayCard(state.selectedDate));
-      } else if (state.mode === 'week') {
+      if (state.mode === 'week') {
         var startWeek = startOfWeek(state.focusDate);
         for (var weekIndex = 0; weekIndex < 7; weekIndex += 1) {
           cells.push(renderDayCard(addDays(startWeek, weekIndex)));
@@ -164,6 +190,7 @@
           cells.push(renderDayCard(cursor, { muted: cursor.getMonth() !== state.focusDate.getMonth() }));
         }
       }
+
       calendarShell.innerHTML = cells.join('');
     };
 

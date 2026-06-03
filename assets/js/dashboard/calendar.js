@@ -366,15 +366,28 @@
     if (!calendarShell) return;
 
     calendarShell.addEventListener('click', function (event) {
+      var unassignButton = event.target.closest('[data-calendar-unassign]');
+      if (unassignButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        var assignmentToUnassign = Number(unassignButton.getAttribute('data-calendar-unassign'));
+        if (assignmentToUnassign && typeof unassignAssignment === 'function') {
+          unassignAssignment(assignmentToUnassign);
+        }
+        return;
+      }
+
       var slotToggle = event.target.closest('[data-calendar-slot-toggle]');
       if (slotToggle) {
         event.preventDefault();
         var assignmentCardForSlot = slotToggle.closest('.calendar-event');
         if (!assignmentCardForSlot) return;
+        var slotUserId = slotToggle.getAttribute('data-user-id') || '';
 
         calendarShell.querySelectorAll('.calendar-event-slot-expanded').forEach(function (panel) {
           var parentCard = panel.closest('.calendar-event');
-          var isSameCard = parentCard === assignmentCardForSlot;
+          var panelUserId = panel.getAttribute('data-user-id') || '';
+          var isSameCard = parentCard === assignmentCardForSlot && panelUserId === slotUserId;
           panel.hidden = isSameCard ? !panel.hidden : true;
           if (!isSameCard && parentCard) {
             parentCard.classList.remove('is-slot-expanded');
@@ -383,7 +396,9 @@
           }
         });
 
-        var ownPanel = assignmentCardForSlot.querySelector('.calendar-event-slot-expanded');
+        var ownPanel = slotUserId
+          ? assignmentCardForSlot.querySelector('.calendar-event-slot-expanded[data-user-id="' + slotUserId + '"]')
+          : assignmentCardForSlot.querySelector('.calendar-event-slot-expanded');
         var isExpanded = ownPanel ? !ownPanel.hidden : false;
         assignmentCardForSlot.classList.toggle('is-slot-expanded', isExpanded);
         slotToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
@@ -404,16 +419,6 @@
       }
 
       if (event.target.closest('[data-calendar-slot-panel]')) {
-        return;
-      }
-
-      var unassignButton = event.target.closest('[data-calendar-unassign]');
-      if (unassignButton) {
-        event.preventDefault();
-        var assignmentToUnassign = Number(unassignButton.getAttribute('data-calendar-unassign'));
-        if (assignmentToUnassign && typeof unassignAssignment === 'function') {
-          unassignAssignment(assignmentToUnassign);
-        }
         return;
       }
 
