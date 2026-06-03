@@ -1008,6 +1008,7 @@
         toLocalDate,
         openDate,
         unassignAssignment,
+        assignShift,
       });
     }
 

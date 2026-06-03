@@ -334,6 +334,91 @@
     border-bottom: 0;
 }
 
+.settings-auto-rules-card {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.settings-auto-rules-list {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.settings-auto-rule-item {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.75rem;
+    border-radius: 12px;
+    border: 1px solid rgba(157, 121, 16, 0.16);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.settings-auto-rule-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.settings-auto-rule-weekdays {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+}
+
+.settings-auto-rule-label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-light);
+}
+
+.settings-auto-rule-weekdays label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    font-size: var(--font-size-sm);
+}
+
+.settings-auto-rule-specials {
+    display: grid;
+    gap: 0.45rem;
+    grid-template-columns: minmax(170px, 1fr) minmax(170px, 1fr) auto;
+    align-items: end;
+}
+
+.settings-auto-rule-special-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.settings-auto-rule-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(157, 121, 16, 0.2);
+    border-radius: 999px;
+    background: rgba(255, 248, 221, 0.9);
+    padding: 0.24rem 0.52rem;
+    font-size: 0.72rem;
+    font-weight: var(--font-weight-bold);
+}
+
+.settings-auto-rule-chip button {
+    border: 0;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 999px;
+    background: rgba(139, 27, 27, 0.18);
+    color: #8b1b1b;
+    font: inherit;
+    font-weight: var(--font-weight-extra-bold);
+    line-height: 1;
+    cursor: pointer;
+}
+
 .settings-list-header {
     background: rgba(157, 121, 16, 0.08);
     border: 1px solid rgba(157, 121, 16, 0.16);

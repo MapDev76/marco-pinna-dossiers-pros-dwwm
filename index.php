@@ -18,7 +18,19 @@ $viewFile = $viewFile ?? $targetFile;
 $flashSuccess = getFlash('success');
 $flashError = getFlash('error');
 $isDashboardRoute = $route === 'dashboard';
+$isHomeRoute = $route === 'home';
+$isLoginRoute = $route === 'login';
 $isCompactDashboard = $isDashboardRoute && isLoggedIn() && in_array((currentUser()['role'] ?? ''), ['admin', 'department_manager'], true);
+$bodyClasses = [];
+if ($isDashboardRoute) {
+        $bodyClasses[] = 'route-dashboard';
+}
+if ($isHomeRoute) {
+        $bodyClasses[] = 'route-home';
+}
+if ($isLoginRoute) {
+        $bodyClasses[] = 'route-login';
+}
 $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time());
 ?>
 <!DOCTYPE html>
@@ -32,7 +44,7 @@ $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time())
         <link rel="stylesheet" href="<?php echo $basePath; ?>/assets/css/style.css?v=<?php echo e($cssVersion); ?>">
         <script defer src="<?php echo $basePath; ?>/assets/js/flash.js?v=<?php echo filemtime(__DIR__ . '/assets/js/flash.js'); ?>"></script>
 </head>
-<body class="<?php echo $isDashboardRoute ? 'route-dashboard' : ''; ?>">
+<body class="<?php echo e(implode(' ', $bodyClasses)); ?>">
 
 <?php
 // En-tête partagé utilisé par toutes les pages.

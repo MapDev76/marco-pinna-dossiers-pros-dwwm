@@ -22,9 +22,9 @@
     .route-dashboard .dashboard-content {
         position: fixed;
         top: 76px;
-        left: 10px;
-        right: 10px;
-        bottom: 10px;
+        left: 0;
+        right: 0;
+        bottom: 0;
         width: auto;
         max-width: none;
         transform: none;
@@ -32,7 +32,7 @@
     }
 
     body.sidebar-expanded .route-dashboard .dashboard-content {
-        left: 10px;
+        left: 0;
         width: auto;
     }
 
@@ -138,6 +138,10 @@
     .settings-list-cols-assignment-edit,
     .settings-list-cols-role,
     .settings-list-cols-role-edit {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-auto-rule-specials {
         grid-template-columns: 1fr;
     }
 
@@ -306,15 +310,15 @@
 
     .route-dashboard .dashboard-content {
         top: 68px;
-        left: 6px;
-        right: 6px;
-        bottom: 8px;
+        left: 0;
+        right: 0;
+        bottom: 0;
         width: auto;
         max-width: none;
     }
 
     body.sidebar-expanded .route-dashboard .dashboard-content {
-        left: 6px;
+        left: 0;
         width: auto;
     }
 
@@ -463,6 +467,21 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .route-home .content,
+    .route-login .content {
+        position: relative;
+        top: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 24px);
+        max-width: 720px;
+        max-height: none;
+        margin: 84px auto 16px;
+        padding: 1rem;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .site-navbar-inner {
         padding: 0 12px;
     }
@@ -508,6 +527,14 @@
         grid-template-columns: 1fr;
         gap: 14px;
         margin-top: 1.5rem;
+    }
+
+    .route-home .content,
+    .route-login .content {
+        width: calc(100% - 12px);
+        max-width: none;
+        margin: 78px auto 10px;
+        padding: 0.95rem;
     }
 
     .feature-card {
@@ -564,6 +591,12 @@
 @media (max-width: 560px) {
     .editable-grid {
         grid-template-columns: 1fr;
+    }
+
+    .route-home .content,
+    .route-login .content {
+        margin: 72px auto 8px;
+        padding: 0.9rem;
     }
 
     .feature-input {

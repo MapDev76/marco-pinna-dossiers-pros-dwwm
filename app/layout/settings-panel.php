@@ -406,6 +406,62 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     </div>
                 </div>
 
+                <section class="settings-analytics-card settings-auto-rules-card" data-auto-assign-rules>
+                    <h4>Auto Assignment Rules by Employee</h4>
+                    <p class="crud-modal-subtitle">Rules are applied only inside this Assignments rubric and are used to exclude employees from auto-assignment.</p>
+                    <?php if (empty($visibleUsers)): ?>
+                        <div class="crud-empty-state">No active employees available for rules.</div>
+                    <?php else: ?>
+                        <div class="settings-auto-rules-list">
+                            <?php foreach ($visibleUsers as $userRule): ?>
+                                <?php
+                                    $ruleUserId = (int) ($userRule['id'] ?? 0);
+                                    $ruleUserName = trim((string) (($userRule['first_name'] ?? '') . ' ' . ($userRule['last_name'] ?? '')));
+                                    if ($ruleUserName === '') {
+                                        $ruleUserName = (string) ($userRule['email'] ?? ('User #' . $ruleUserId));
+                                    }
+                                ?>
+                                <article class="settings-auto-rule-item" data-auto-rule-user-id="<?php echo $ruleUserId; ?>" data-auto-rule-user-name="<?php echo e($ruleUserName); ?>">
+                                    <div class="settings-auto-rule-head">
+                                        <strong><?php echo e($ruleUserName); ?></strong>
+                                        <label class="settings-field">Scope
+                                            <select data-auto-rule-scope>
+                                                <option value="all">All months</option>
+                                                <option value="current">Current month only</option>
+                                                <option value="next">Next months only</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                    <div class="settings-auto-rule-weekdays">
+                                        <span class="settings-auto-rule-label">Weekly rest days</span>
+                                        <label><input type="checkbox" data-auto-rule-weekday="1">Mon</label>
+                                        <label><input type="checkbox" data-auto-rule-weekday="2">Tue</label>
+                                        <label><input type="checkbox" data-auto-rule-weekday="3">Wed</label>
+                                        <label><input type="checkbox" data-auto-rule-weekday="4">Thu</label>
+                                        <label><input type="checkbox" data-auto-rule-weekday="5">Fri</label>
+                                        <label><input type="checkbox" data-auto-rule-weekday="6">Sat</label>
+                                        <label><input type="checkbox" data-auto-rule-weekday="0">Sun</label>
+                                    </div>
+                                    <div class="settings-auto-rule-specials">
+                                        <label class="settings-field">Unavailable day<input type="date" data-auto-rule-special-date></label>
+                                        <label class="settings-field">Reason
+                                            <select data-auto-rule-special-reason>
+                                                <option value="rest">Weekly rest</option>
+                                                <option value="leave">Leave</option>
+                                                <option value="vacation">Vacation</option>
+                                                <option value="sick">Sick leave</option>
+                                                <option value="special">Special day</option>
+                                            </select>
+                                        </label>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-rule-add-special>Add unavailable date</button>
+                                    </div>
+                                    <div class="settings-auto-rule-special-list" data-auto-rule-special-list></div>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </section>
+
                 <div class="settings-analytics-grid">
                     <section class="settings-analytics-card">
                         <h4>Coverage by Department</h4>

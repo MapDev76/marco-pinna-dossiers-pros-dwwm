@@ -49,20 +49,22 @@
       var shiftKind = (event.shift_kind || 'work').toLowerCase();
       var isVirtual = !!event.is_virtual_open;
       var isOpen = isVirtual || String(event.assignment_source || '') === 'open' || !event.user_id;
-      var assignee = isOpen ? 'Open slot' : (event.user_name || 'Assigned');
-      var departmentName = event.department_name || 'Department';
       var shiftColor = event.shift_color || '#2f6fed';
+      var assignmentId = Number(event.assignment_id || 0);
+      var userId = Number(event.user_id || 0);
+      var shiftId = Number(event.shift_id || 0);
+      var employeeName = (event.user_name || '').trim();
       var initials = (event.user_name || '').split(' ').filter(Boolean).map(function (chunk) { return chunk.charAt(0).toUpperCase(); }).slice(0, 2).join('');
       var badge = (event.shift_icon ? '<span class="calendar-event-badge" style="color: ' + shiftColor + '">' + (event.shift_icon || '') + '</span>' : '');
       var userBadge = (!isOpen && initials ? '<span class="calendar-event-user-badge" style="--event-user-color:' + (event.department_color || shiftColor) + '">' + initials + '</span>' : '');
-      var unassignBtn = (!isVirtual && Number(event.assignment_id || 0) > 0 && Number(event.user_id || 0) > 0)
-        ? '<button type="button" class="calendar-event-unassign" data-calendar-unassign="' + Number(event.assignment_id || 0) + '" aria-label="Unassign shift" title="Unassign shift">×</button>'
+      var employeeSlot = (!isOpen && userId > 0)
+        ? '\n            <button type="button" class="calendar-event-slot-card" data-calendar-slot-toggle data-assignment-id="' + assignmentId + '" aria-expanded="false" title="Employee slot">\n              ' + userBadge + '\n            </button>\n            <div class="calendar-event-slot-expanded" data-calendar-slot-panel hidden>\n              <span class="calendar-event-slot-name">' + (employeeName || 'Employee') + '</span>\n              <div class="calendar-event-slot-actions">\n                <button type="button" class="calendar-event-slot-btn" data-calendar-assign-other-dates="' + assignmentId + '" data-user-id="' + userId + '" data-shift-id="' + shiftId + '" title="Assign this employee to other dates">Assign other dates</button>\n                <button type="button" class="calendar-event-slot-btn is-danger" data-calendar-unassign="' + assignmentId + '" aria-label="Unassign shift" title="Unassign shift">×</button>\n              </div>\n            </div>\n          '
         : '';
       var kindClass = shiftKind !== 'work' ? ' is-nonwork is-kind-' + shiftKind : '';
       var openClass = isOpen ? ' is-open' : '';
       var draggable = (!isVirtual && Number(event.assignment_id || 0) > 0) ? 'true' : 'false';
-      var assignmentAttr = Number(event.assignment_id || 0) > 0 ? ' data-assignment-id="' + Number(event.assignment_id || 0) + '"' : '';
-      return '\n        <article class="calendar-event' + (compact ? ' is-compact' : '') + kindClass + openClass + '"' + assignmentAttr + ' draggable="' + draggable + '" style="--event-shift-color:' + shiftColor + '">\n          <div class="calendar-event-top">' + badge + userBadge + unassignBtn + '</div>\n          <span class="calendar-event-time">' + formatEventTime(event) + '</span>\n          <span class="calendar-event-title">' + (event.shift_name || 'Shift') + '</span>\n          <span class="calendar-event-meta">' + departmentName + ' • ' + assignee + (event.status ? ' • ' + event.status : '') + '</span>\n        </article>\n      ';
+      var assignmentAttr = assignmentId > 0 ? ' data-assignment-id="' + assignmentId + '"' : '';
+      return '\n        <article class="calendar-event' + (compact ? ' is-compact' : '') + kindClass + openClass + '"' + assignmentAttr + ' draggable="' + draggable + '" style="--event-shift-color:' + shiftColor + '">\n          <div class="calendar-event-main-row">\n            <div class="calendar-event-shift-row">\n              <div class="calendar-event-top">' + badge + '</div>\n              <span class="calendar-event-time">' + formatEventTime(event) + '</span>\n              <span class="calendar-event-title">' + (event.shift_name || 'Shift') + '</span>\n            </div>\n            ' + employeeSlot + '\n          </div>\n        </article>\n      ';
     };
 
     var renderDayCard = function (date, options) {

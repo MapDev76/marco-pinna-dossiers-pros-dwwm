@@ -64,10 +64,92 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
     };
 
     if ($action === 'auto_assign_open') {
+        $scopeShiftId = max(0, (int) ($input['scope_shift_id'] ?? 0));
         $maxHoursPerMonth = max(1, (int) ($input['max_hours_per_month'] ?? 176));
         $maxDaysPerMonth = max(1, (int) ($input['max_days_per_month'] ?? 22));
         $rangeStart = trim((string) ($input['range_start'] ?? date('Y-m-01')));
         $rangeEnd = trim((string) ($input['range_end'] ?? date('Y-m-t')));
+        $employeeRulesRaw = $input['employee_rules'] ?? [];
+
+        if (is_string($employeeRulesRaw)) {
+            $decodedRules = json_decode($employeeRulesRaw, true);
+            $employeeRulesRaw = is_array($decodedRules) ? $decodedRules : [];
+        }
+
+        $employeeRules = [];
+        if (is_array($employeeRulesRaw)) {
+            foreach ($employeeRulesRaw as $rawUserId => $rawRule) {
+                $normalizedUserId = (int) $rawUserId;
+                if ($normalizedUserId <= 0 || !is_array($rawRule)) {
+                    continue;
+                }
+
+                $scope = (string) ($rawRule['scope'] ?? 'all');
+                if (!in_array($scope, ['all', 'current', 'next'], true)) {
+                    $scope = 'all';
+                }
+
+                $offWeekdays = [];
+                if (is_array($rawRule['off_weekdays'] ?? null)) {
+                    foreach ($rawRule['off_weekdays'] as $weekday) {
+                        $weekdayInt = (int) $weekday;
+                        if ($weekdayInt >= 0 && $weekdayInt <= 6) {
+                            $offWeekdays[$weekdayInt] = true;
+                        }
+                    }
+                }
+
+                $specialDates = [];
+                if (is_array($rawRule['special_dates'] ?? null)) {
+                    foreach ($rawRule['special_dates'] as $specialDate) {
+                        if (!is_array($specialDate)) {
+                            continue;
+                        }
+                        $dateValue = trim((string) ($specialDate['date'] ?? ''));
+                        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateValue)) {
+                            continue;
+                        }
+                        $specialDates[$dateValue] = true;
+                    }
+                }
+
+                $employeeRules[$normalizedUserId] = [
+                    'scope' => $scope,
+                    'off_weekdays' => $offWeekdays,
+                    'special_dates' => $specialDates,
+                ];
+            }
+        }
+
+        $currentMonth = date('Y-m');
+        $nextMonth = date('Y-m', strtotime('first day of next month'));
+
+        $isBlockedByRule = static function (int $userId, string $slotDate) use ($employeeRules, $currentMonth, $nextMonth): bool {
+            if ($userId <= 0 || $slotDate === '' || empty($employeeRules[$userId])) {
+                return false;
+            }
+
+            $rule = $employeeRules[$userId];
+            $slotMonth = substr($slotDate, 0, 7);
+            $scope = (string) ($rule['scope'] ?? 'all');
+            if ($scope === 'current' && $slotMonth !== $currentMonth) {
+                return false;
+            }
+            if ($scope === 'next' && $slotMonth < $nextMonth) {
+                return false;
+            }
+
+            if (!empty($rule['special_dates'][$slotDate])) {
+                return true;
+            }
+
+            $weekday = (int) date('w', strtotime($slotDate));
+            if (!empty($rule['off_weekdays'][$weekday])) {
+                return true;
+            }
+
+            return false;
+        };
 
         $scopeWhere = '1=1';
         $scopeParams = [
@@ -82,14 +164,19 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             $scopeParams['company_id'] = (int) ($profile['company_id'] ?? 0);
         }
 
+        $openShiftFilter = $scopeShiftId > 0 ? ' AND s.id = :scope_shift_id' : '';
+
         $openStmt = $pdo->prepare(
             'SELECT us.id, us.work_date, s.id AS shift_id, s.start_time, s.end_time, s.kind AS shift_kind, d.id AS department_id
              FROM user_shifts us
              INNER JOIN shifts s ON s.id = us.shift_id
              INNER JOIN departments d ON d.id = s.department_id
-             WHERE ' . $scopeWhere . ' AND us.work_date BETWEEN :range_start AND :range_end AND us.user_id IS NULL AND us.status = "open" AND s.kind = "work"
+             WHERE ' . $scopeWhere . ' AND us.work_date BETWEEN :range_start AND :range_end AND us.user_id IS NULL AND us.status = "open" AND s.kind = "work"' . $openShiftFilter . '
              ORDER BY us.work_date ASC, s.start_time ASC, us.id ASC'
         );
+        if ($scopeShiftId > 0) {
+            $scopeParams['scope_shift_id'] = $scopeShiftId;
+        }
         $openStmt->execute($scopeParams);
         $openRows = $openStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -142,6 +229,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             'UPDATE user_shifts SET user_id = :user_id, status = "assigned", updated_at = CURRENT_TIMESTAMP WHERE id = :id'
         );
         $assignedCount = 0;
+        $skippedByRules = 0;
         foreach ($openRows as $openRow) {
             $slotDate = (string) ($openRow['work_date'] ?? '');
             $slotDepartmentId = (int) ($openRow['department_id'] ?? 0);
@@ -167,6 +255,10 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                     continue;
                 }
                 if (!empty($dayBusy[$uid][$slotDate])) {
+                    continue;
+                }
+                if ($isBlockedByRule($uid, $slotDate)) {
+                    $skippedByRules++;
                     continue;
                 }
                 $monthHours = (float) ($hoursByUserMonth[$uid][$slotMonth] ?? 0.0);
@@ -197,6 +289,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             'ok' => true,
             'assigned_count' => $assignedCount,
             'open_remaining' => max(count($openRows) - $assignedCount, 0),
+            'skipped_by_rules' => $skippedByRules,
         ]);
     }
 
