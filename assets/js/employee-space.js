@@ -1,5 +1,9 @@
 (() => {
   const form = document.querySelector('[data-employee-signature-form]');
+  const modal = document.querySelector('[data-attendance-modal]');
+  const openButton = document.querySelector('[data-attendance-modal-open]');
+  const closeButtons = Array.from(document.querySelectorAll('[data-attendance-modal-close]'));
+  const scrollButtons = Array.from(document.querySelectorAll('[data-scroll-target]'));
   if (!form) return;
 
   const canvas = form.querySelector('[data-signature-canvas]');
@@ -14,8 +18,13 @@
   let drawing = false;
   let hasStroke = false;
   let activePointerId = null;
+  let isModalOpen = modal ? !modal.hidden : true;
 
   function resizeCanvasForDevicePixelRatio() {
+    if (modal && modal.hidden) {
+      return;
+    }
+
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     const cssWidth = canvas.clientWidth || canvas.width;
     const cssHeight = canvas.clientHeight || canvas.height;
@@ -93,6 +102,28 @@
     drawPadBackground();
   }
 
+  function openModal() {
+    if (!modal) return;
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+    isModalOpen = true;
+    window.requestAnimationFrame(() => {
+      resizeCanvasForDevicePixelRatio();
+      const firstField = form.querySelector('select, input, button, textarea');
+      if (firstField) {
+        firstField.focus();
+      }
+    });
+  }
+
+  function closeModal() {
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.classList.remove('modal-open');
+    isModalOpen = false;
+    clearSignature();
+  }
+
   canvas.addEventListener('pointerdown', beginStroke, { passive: false });
   canvas.addEventListener('pointermove', drawStroke, { passive: false });
   canvas.addEventListener('pointerup', endStroke);
@@ -105,6 +136,45 @@
       clearSignature();
     });
   }
+
+  if (openButton && modal) {
+    openButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      openModal();
+    });
+  }
+
+  closeButtons.forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      closeModal();
+    });
+  });
+
+  if (modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && isModalOpen && modal && !modal.hidden) {
+      closeModal();
+    }
+  });
+
+  scrollButtons.forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      const targetId = button.getAttribute('data-scroll-target') || '';
+      const target = targetId ? document.getElementById(targetId) : null;
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
 
   form.addEventListener('submit', (event) => {
     if (!hasStroke) {
@@ -119,6 +189,8 @@
     dataInput.value = canvas.toDataURL('image/png');
   });
 
-  resizeCanvasForDevicePixelRatio();
+  if (!modal || !modal.hidden) {
+    resizeCanvasForDevicePixelRatio();
+  }
   window.addEventListener('resize', resizeCanvasForDevicePixelRatio);
 })();

@@ -53,6 +53,27 @@ function e(mixed $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
+function appTimezoneName(): string
+{
+    return 'Europe/Rome';
+}
+
+function appTimezone(): DateTimeZone
+{
+    static $timezone = null;
+
+    if (!$timezone instanceof DateTimeZone) {
+        $timezone = new DateTimeZone(appTimezoneName());
+    }
+
+    return $timezone;
+}
+
+function appNow(): DateTimeImmutable
+{
+    return new DateTimeImmutable('now', appTimezone());
+}
+
 /**
  * Sends a JSON response and stops execution.
  */

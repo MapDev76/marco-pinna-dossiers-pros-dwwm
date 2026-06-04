@@ -31,8 +31,11 @@ $user = currentUser();
 $role = $user['role'] ?? 'employee';
 $profile = $userModel->profileWithRelations((int) $user['id']) ?? [];
 
-if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_assign_open', 'clear_assignments_scope', 'record_attendance_signature'], true)) {
-    if (!in_array($role, ['admin', 'department_manager'], true)) {
+if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_assign_open', 'clear_assignments_scope', 'record_attendance_signature', 'update_attendance', 'cancel_attendance'], true)) {
+    $allowedRoles = in_array($action, ['record_attendance_signature', 'update_attendance', 'cancel_attendance'], true)
+        ? ['super_admin', 'admin', 'department_manager']
+        : ['admin', 'department_manager'];
+    if (!in_array($role, $allowedRoles, true)) {
         jsonResponse(['success' => false, 'error' => 'Unauthorized'], 403);
     }
 
@@ -42,7 +45,102 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
     $workDate = trim((string) ($input['work_date'] ?? ''));
     $status = trim((string) ($input['status'] ?? 'assigned'));
 
+    $attendanceScopeWhere = '1=1';
+    $attendanceScopeParams = [];
+    if ($role === 'department_manager') {
+        $attendanceScopeWhere = 'd.id = :department_id';
+        $attendanceScopeParams['department_id'] = (int) ($profile['department_id'] ?? 0);
+    } elseif ($role === 'admin') {
+        $attendanceScopeWhere = 'd.company_id = :company_id';
+        $attendanceScopeParams['company_id'] = (int) ($profile['company_id'] ?? 0);
+    }
+
+    $normalizeTimeOrNull = static function ($rawValue): ?string {
+        $value = trim((string) $rawValue);
+        if ($value === '') {
+            return null;
+        }
+        if (preg_match('/^\d{2}:\d{2}$/', $value)) {
+            return $value . ':00';
+        }
+        if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $value)) {
+            return $value;
+        }
+
+        return null;
+    };
+
+    if ($action === 'update_attendance' || $action === 'cancel_attendance') {
+        $attendanceId = (int) ($input['attendance_id'] ?? 0);
+        if ($attendanceId <= 0) {
+            jsonResponse(['success' => false, 'error' => 'attendance_id is required'], 400);
+        }
+
+        $attendanceLookup = $pdo->prepare(
+            'SELECT a.id, a.user_id, a.user_shift_id, d.id AS department_id, d.company_id
+             FROM attendances a
+             LEFT JOIN user_shifts us ON us.id = a.user_shift_id
+             LEFT JOIN shifts s ON s.id = us.shift_id
+             LEFT JOIN departments d ON d.id = s.department_id
+             WHERE a.id = :attendance_id
+               AND ' . $attendanceScopeWhere . '
+             LIMIT 1'
+        );
+        $attendanceLookup->execute(array_merge([
+            'attendance_id' => $attendanceId,
+        ], $attendanceScopeParams));
+        $attendanceRow = $attendanceLookup->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        if (!$attendanceRow) {
+            jsonResponse(['success' => false, 'error' => 'Attendance not found or out of scope'], 404);
+        }
+
+        if ($action === 'cancel_attendance') {
+            $deleteAttendance = $pdo->prepare('DELETE FROM attendances WHERE id = :attendance_id LIMIT 1');
+            $deleteAttendance->execute(['attendance_id' => $attendanceId]);
+
+            jsonResponse([
+                'success' => true,
+                'ok' => true,
+                'attendance_id' => $attendanceId,
+            ]);
+        }
+
+        $attendanceStatus = trim((string) ($input['attendance_status'] ?? 'present'));
+        if (!in_array($attendanceStatus, ['present', 'absent', 'late', 'early_departure'], true)) {
+            jsonResponse(['success' => false, 'error' => 'Invalid attendance status'], 400);
+        }
+
+        $checkInTime = $normalizeTimeOrNull($input['check_in_time'] ?? '');
+        $checkOutTime = $normalizeTimeOrNull($input['check_out_time'] ?? '');
+
+        $updateAttendance = $pdo->prepare(
+            'UPDATE attendances
+             SET status = :status,
+                 check_in_time = :check_in_time,
+                 check_out_time = :check_out_time,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = :attendance_id'
+        );
+        $updateAttendance->execute([
+            'status' => $attendanceStatus,
+            'check_in_time' => $checkInTime,
+            'check_out_time' => $checkOutTime,
+            'attendance_id' => $attendanceId,
+        ]);
+
+        jsonResponse([
+            'success' => true,
+            'ok' => true,
+            'attendance_id' => $attendanceId,
+            'status' => $attendanceStatus,
+            'check_in_time' => $checkInTime,
+            'check_out_time' => $checkOutTime,
+        ]);
+    }
+
     if ($action === 'record_attendance_signature') {
+        $currentAppTime = appNow()->format('H:i:s');
         $targetUserId = (int) ($input['user_id'] ?? 0);
         $targetUserShiftId = (int) ($input['user_shift_id'] ?? 0);
         $signatureData = trim((string) ($input['signature_data'] ?? ''));
@@ -55,16 +153,6 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             jsonResponse(['success' => false, 'error' => 'user_id, user_shift_id and signature_data are required'], 400);
         }
 
-        $scopeWhere = '1=1';
-        $scopeParams = [];
-        if ($role === 'department_manager') {
-            $scopeWhere = 'd.id = :department_id';
-            $scopeParams['department_id'] = (int) ($profile['department_id'] ?? 0);
-        } elseif ($role === 'admin') {
-            $scopeWhere = 'd.company_id = :company_id';
-            $scopeParams['company_id'] = (int) ($profile['company_id'] ?? 0);
-        }
-
         $assignmentLookup = $pdo->prepare(
             'SELECT us.id, us.user_id, us.work_date, us.shift_id, d.id AS department_id
              FROM user_shifts us
@@ -72,13 +160,13 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
              INNER JOIN departments d ON d.id = s.department_id
              WHERE us.id = :user_shift_id
                AND us.user_id = :user_id
-               AND ' . $scopeWhere . '
+               AND ' . $attendanceScopeWhere . '
              LIMIT 1'
         );
         $assignmentLookup->execute(array_merge([
             'user_shift_id' => $targetUserShiftId,
             'user_id' => $targetUserId,
-        ], $scopeParams));
+        ], $attendanceScopeParams));
         $assignment = $assignmentLookup->fetch(PDO::FETCH_ASSOC) ?: null;
 
         if (!$assignment) {
@@ -121,25 +209,27 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                 'UPDATE attendances
                  SET status = :status,
                      digital_signature_id = :digital_signature_id,
-                     check_in_time = COALESCE(check_in_time, CURRENT_TIME),
+                     check_in_time = COALESCE(check_in_time, :check_in_time),
                      updated_at = CURRENT_TIMESTAMP
                  WHERE id = :id'
             );
             $updateAttendance->execute([
                 'status' => $attendanceStatus,
                 'digital_signature_id' => $digitalSignatureId,
+                'check_in_time' => $currentAppTime,
                 'id' => $attendanceId,
             ]);
         } else {
             $insertAttendance = $pdo->prepare(
                 'INSERT INTO attendances (user_id, user_shift_id, digital_signature_id, work_date, check_in_time, status)
-                 VALUES (:user_id, :user_shift_id, :digital_signature_id, :work_date, CURRENT_TIME, :status)'
+                 VALUES (:user_id, :user_shift_id, :digital_signature_id, :work_date, :check_in_time, :status)'
             );
             $insertAttendance->execute([
                 'user_id' => $targetUserId,
                 'user_shift_id' => $targetUserShiftId,
                 'digital_signature_id' => $digitalSignatureId,
                 'work_date' => $workDate,
+                'check_in_time' => $currentAppTime,
                 'status' => $attendanceStatus,
             ]);
             $attendanceId = (int) $pdo->lastInsertId();

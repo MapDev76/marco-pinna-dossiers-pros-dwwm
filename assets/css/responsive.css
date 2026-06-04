@@ -689,6 +689,47 @@
     .editable-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .route-my-space .content {
+        width: calc(100% - 18px);
+        max-width: none;
+        margin: 82px auto 12px;
+        max-height: none;
+        padding: 0.85rem;
+    }
+
+    .route-my-space .content > * {
+        text-align: left;
+    }
+
+    .employee-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-staff-bar,
+    .employee-shift-stage-head,
+    .employee-shift-stage-summary,
+    .employee-upcoming-head,
+    .employee-card-head,
+    .employee-attendance-dialog-head {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .employee-staff-status {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .employee-shift-stage-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-upcoming-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 @media (max-width: 760px) {
@@ -755,6 +796,43 @@
         width: 48px;
         height: 48px;
     }
+
+    .employee-staff-bar {
+        grid-template-columns: 1fr;
+        justify-items: start;
+    }
+
+    .employee-staff-avatar {
+        width: 46px;
+        height: 46px;
+    }
+
+    .employee-staff-meta strong {
+        font-size: 1.15rem;
+    }
+
+    .employee-shift-stage-card,
+    .employee-upcoming-shell,
+    .employee-detail-card,
+    .employee-attendance-dialog {
+        padding: 0.9rem;
+        border-radius: 22px;
+    }
+
+    .employee-stage-pill,
+    .employee-upcoming-badge,
+    .employee-metric-pill {
+        min-height: 34px;
+        font-size: 0.84rem;
+    }
+
+    .employee-shift-stage-time {
+        font-size: 1rem;
+    }
+
+    .employee-attendance-modal {
+        padding: 0.5rem;
+    }
 }
 
 @media (max-width: 560px) {
@@ -766,6 +844,22 @@
     .route-login .content {
         margin: 72px auto 8px;
         padding: 0.9rem;
+    }
+
+    .route-my-space .content {
+        width: calc(100% - 10px);
+        margin: 74px auto 8px;
+        padding: 0.55rem;
+        border-radius: 24px;
+    }
+
+    .employee-shift-stage-action {
+        min-height: 52px;
+        font-size: 0.95rem;
+    }
+
+    .employee-signature-pad-shell canvas {
+        height: 160px;
     }
 
     .feature-input {

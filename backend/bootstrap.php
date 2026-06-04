@@ -4,6 +4,8 @@
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/db.php';
 
+date_default_timezone_set(appTimezoneName());
+
 /**
  * Starts the session early so controllers and views can safely use flash data and auth helpers.
  */

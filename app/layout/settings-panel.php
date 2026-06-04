@@ -948,6 +948,27 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     ?>
                 </script>
 
+                <script type="application/json" data-attendance-record-catalog>
+                    <?php
+                        $attendanceRecordCatalog = array_map(static function (array $attendance): array {
+                            return [
+                                'id' => (int) ($attendance['id'] ?? 0),
+                                'user_id' => (int) ($attendance['user_id'] ?? 0),
+                                'user_shift_id' => (int) ($attendance['user_shift_id'] ?? 0),
+                                'user_name' => (string) ($attendance['user_name'] ?? ''),
+                                'department_name' => (string) ($attendance['department_name'] ?? ''),
+                                'shift_name' => (string) ($attendance['shift_name'] ?? ''),
+                                'work_date' => (string) ($attendance['work_date'] ?? ''),
+                                'status' => (string) ($attendance['status'] ?? 'present'),
+                                'check_in_time' => (string) ($attendance['check_in_time'] ?? ''),
+                                'check_out_time' => (string) ($attendance['check_out_time'] ?? ''),
+                                'digital_signature_id' => (int) ($attendance['digital_signature_id'] ?? 0),
+                            ];
+                        }, $attendances);
+                        echo json_encode($attendanceRecordCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    ?>
+                </script>
+
                 <div class="settings-assignment-employee-modal" data-attendance-employee-modal hidden>
                     <div class="settings-assignment-employee-window">
                         <header class="settings-assignment-employee-window-head">
@@ -990,6 +1011,43 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     </div>
                 </div>
 
+                <div class="settings-assignment-employee-modal" data-attendance-record-modal hidden>
+                    <div class="settings-assignment-employee-window">
+                        <header class="settings-assignment-employee-window-head">
+                            <div>
+                                <h4 data-attendance-record-title>Edit attendance</h4>
+                                <p class="crud-modal-subtitle" data-attendance-record-subtitle>Update attendance status and times or cancel the registration.</p>
+                            </div>
+                            <button type="button" class="dashboard-modal-close" data-attendance-record-close aria-label="Close attendance edit modal">&times;</button>
+                        </header>
+
+                        <div class="settings-assignment-employee-window-grid">
+                            <section class="settings-analytics-card">
+                                <label class="settings-field">Attendance status
+                                    <select data-attendance-record-status>
+                                        <option value="present">Present</option>
+                                        <option value="late">Late</option>
+                                        <option value="absent">Absent</option>
+                                        <option value="early_departure">Early departure</option>
+                                    </select>
+                                </label>
+                                <div class="settings-assignment-modal-range-row">
+                                    <label class="settings-field">Check-in time
+                                        <input type="time" data-attendance-record-checkin>
+                                    </label>
+                                    <label class="settings-field">Check-out time
+                                        <input type="time" data-attendance-record-checkout>
+                                    </label>
+                                </div>
+                                <div class="settings-inline-actions">
+                                    <button type="button" class="admin-action-link" data-attendance-record-save>Save changes</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-attendance-record-cancel-registration>Cancel attendance</button>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="settings-list-wrap">
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-assignment">
                         <strong>Date</strong>
@@ -1012,7 +1070,25 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <span><?php echo e($attendance['shift_name'] ?? '--'); ?></span>
                                     <span><?php echo e(ucfirst((string) ($attendance['status'] ?? 'present'))); ?></span>
                                     <span><?php echo e($attendance['check_in_time'] ?? '--'); ?></span>
-                                    <span><?php echo !empty($attendance['digital_signature_id']) ? 'Signed' : 'Missing'; ?></span>
+                                    <div class="settings-inline-actions settings-inline-actions-compact">
+                                        <span><?php echo !empty($attendance['digital_signature_id']) ? 'Signed' : 'Missing'; ?></span>
+                                        <button
+                                            type="button"
+                                            class="admin-action-link admin-action-link-secondary"
+                                            data-attendance-record-edit
+                                            data-attendance-id="<?php echo (int) ($attendance['id'] ?? 0); ?>"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="admin-action-link admin-action-link-secondary"
+                                            data-attendance-record-delete
+                                            data-attendance-id="<?php echo (int) ($attendance['id'] ?? 0); ?>"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             </article>
                         <?php endforeach; ?>

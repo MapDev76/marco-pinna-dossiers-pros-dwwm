@@ -23,7 +23,7 @@ $pdo = getPDO();
 $pageTitle = 'My Employee Space';
 $viewFile = __DIR__ . '/../../public/views/employee/space.php';
 $error = null;
-$todayDate = date('Y-m-d');
+$todayDate = appNow()->format('Y-m-d');
 
 $normalizeIp = static function (?string $ip): string {
     $raw = trim((string) $ip);
@@ -80,7 +80,9 @@ try {
 $companySignatureIpSelect = $hasCompanySignatureIpColumn ? 'c.signature_ip' : 'NULL AS signature_ip';
 
 $signaturePolicyStatement = $pdo->prepare(
-    'SELECT ' . $companySignatureIpSelect . '
+    'SELECT ' . $companySignatureIpSelect . ',
+            d.name AS department_name,
+            c.name AS company_name
      FROM users u
      LEFT JOIN departments d ON d.id = u.department_id
      LEFT JOIN companies c ON c.id = d.company_id
@@ -88,18 +90,37 @@ $signaturePolicyStatement = $pdo->prepare(
      LIMIT 1'
 );
 $signaturePolicyStatement->execute(['user_id' => (int) $currentUser['id']]);
-$requiredSignatureIpRaw = (string) ($signaturePolicyStatement->fetchColumn() ?: '');
+$profileRow = $signaturePolicyStatement->fetch(PDO::FETCH_ASSOC) ?: [];
+$requiredSignatureIpRaw = (string) ($profileRow['signature_ip'] ?? '');
 $requiredSignatureIp = $normalizeIp($requiredSignatureIpRaw);
 $isSignatureIpRestricted = $requiredSignatureIp !== '';
 $isCurrentNetworkAuthorized = !$isSignatureIpRestricted || ($clientIp !== '' && $clientIp === $requiredSignatureIp);
 
+$employeeDisplayName = trim((string) (($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')));
+if ($employeeDisplayName === '') {
+    $employeeDisplayName = (string) ($currentUser['email'] ?? 'Employee');
+}
+$employeeDepartmentName = trim((string) ($profileRow['department_name'] ?? ''));
+$employeeCompanyName = trim((string) ($profileRow['company_name'] ?? 'StaffEase Pro'));
+
 $shiftsStatement = $pdo->prepare(
-    'SELECT us.id, us.work_date, us.status, s.name AS shift_name, s.start_time, s.end_time, d.name AS department_name
+    'SELECT us.id,
+            us.work_date,
+            us.status AS assignment_status,
+            s.name AS shift_name,
+            s.start_time,
+            s.end_time,
+            d.name AS department_name,
+            a.id AS attendance_id,
+            a.status AS attendance_status,
+            a.check_in_time,
+            a.check_out_time
      FROM user_shifts us
      INNER JOIN shifts s ON s.id = us.shift_id
      INNER JOIN departments d ON d.id = s.department_id
+     LEFT JOIN attendances a ON a.user_shift_id = us.id AND a.user_id = us.user_id
      WHERE us.user_id = :user_id
-     ORDER BY us.work_date DESC, us.id DESC'
+     ORDER BY us.work_date DESC, s.start_time ASC, us.id DESC'
 );
 $shiftsStatement->execute(['user_id' => $currentUser['id']]);
 $shifts = $shiftsStatement->fetchAll();
@@ -124,11 +145,97 @@ $attendancesStatement = $pdo->prepare(
 $attendancesStatement->execute(['user_id' => $currentUser['id']]);
 $attendances = $attendancesStatement->fetchAll();
 
-$todaySignableShifts = array_values(array_filter(
-    $shifts,
-    static fn (array $shift): bool => (string) ($shift['work_date'] ?? '') === date('Y-m-d')
-        && in_array((string) ($shift['status'] ?? 'assigned'), ['assigned', 'in_progress', 'completed'], true)
-));
+$buildShiftDateTime = static function (string $workDate, ?string $timeValue) use ($todayDate): ?DateTimeImmutable {
+    $normalizedTime = trim((string) $timeValue);
+    if ($workDate === '' || $normalizedTime === '') {
+        return null;
+    }
+
+    try {
+        return new DateTimeImmutable($workDate . ' ' . $normalizedTime);
+    } catch (Throwable $e) {
+        return null;
+    }
+};
+
+$now = appNow();
+$todaySignableShifts = [];
+$todayTimelineShifts = [];
+$upcomingShifts = [];
+$currentShiftCard = null;
+
+foreach ($shifts as &$shift) {
+    $workDate = (string) ($shift['work_date'] ?? '');
+    $assignmentStatus = (string) ($shift['assignment_status'] ?? 'assigned');
+    $startAt = $buildShiftDateTime($workDate, (string) ($shift['start_time'] ?? ''));
+    $endAt = $buildShiftDateTime($workDate, (string) ($shift['end_time'] ?? ''));
+    if ($startAt !== null && $endAt !== null && $endAt <= $startAt) {
+        $endAt = $endAt->modify('+1 day');
+    }
+
+    $opensAt = $startAt?->modify('-5 minutes');
+    $hasAttendance = (int) ($shift['attendance_id'] ?? 0) > 0 && trim((string) ($shift['check_in_time'] ?? '')) !== '';
+    $isCancelled = $assignmentStatus === 'cancelled';
+    $isSignWindowOpen = !$isCancelled
+        && !$hasAttendance
+        && $opensAt !== null
+        && $endAt !== null
+        && $now >= $opensAt
+        && $now <= $endAt;
+    $isBeforeWindow = !$isCancelled && !$hasAttendance && $opensAt !== null && $now < $opensAt;
+    $isPastWindow = !$isCancelled && !$hasAttendance && $endAt !== null && $now > $endAt;
+
+    $minutesUntilOpen = null;
+    if ($isBeforeWindow && $opensAt !== null) {
+        $minutesUntilOpen = max(0, (int) ceil(($opensAt->getTimestamp() - $now->getTimestamp()) / 60));
+    }
+
+    $shift['status'] = $assignmentStatus;
+    $shift['attendance_recorded'] = $hasAttendance;
+    $shift['attendance_label'] = $hasAttendance ? 'Attendance already recorded' : ($shift['attendance_status'] ?? '');
+    $shift['starts_at_iso'] = $startAt?->format(DateTimeInterface::ATOM) ?? null;
+    $shift['ends_at_iso'] = $endAt?->format(DateTimeInterface::ATOM) ?? null;
+    $shift['sign_open_at_iso'] = $opensAt?->format(DateTimeInterface::ATOM) ?? null;
+    $shift['is_sign_window_open'] = $isSignWindowOpen;
+    $shift['is_before_window'] = $isBeforeWindow;
+    $shift['is_past_window'] = $isPastWindow;
+    $shift['minutes_until_open'] = $minutesUntilOpen;
+
+    if ($workDate >= $todayDate && !$isCancelled) {
+        $upcomingShifts[] = $shift;
+    }
+
+    if ($workDate === $todayDate && in_array($assignmentStatus, ['assigned', 'in_progress', 'completed'], true)) {
+        $todayTimelineShifts[] = $shift;
+        if ($isSignWindowOpen) {
+            $todaySignableShifts[] = $shift;
+            if ($currentShiftCard === null) {
+                $currentShiftCard = $shift;
+            }
+        } elseif ($currentShiftCard === null && ($startAt !== null && $endAt !== null) && $now <= $endAt) {
+            $currentShiftCard = $shift;
+        }
+    }
+}
+unset($shift);
+
+usort($upcomingShifts, static function (array $left, array $right): int {
+    $leftStamp = strtotime((string) ($left['work_date'] ?? '') . ' ' . (string) ($left['start_time'] ?? '00:00:00')) ?: 0;
+    $rightStamp = strtotime((string) ($right['work_date'] ?? '') . ' ' . (string) ($right['start_time'] ?? '00:00:00')) ?: 0;
+    return $leftStamp <=> $rightStamp;
+});
+
+$upcomingShifts = array_slice($upcomingShifts, 0, 6);
+
+if ($currentShiftCard === null && !empty($todayTimelineShifts)) {
+    $currentShiftCard = $todayTimelineShifts[0];
+}
+
+$employeeUiState = [
+    'server_time' => $now->format(DateTimeInterface::ATOM),
+    'can_sign_now' => !empty($todaySignableShifts) && $isCurrentNetworkAuthorized,
+    'has_shift_today' => !empty($todayTimelineShifts),
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -142,7 +249,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Please draw your signature before confirming attendance.';
         } else {
             $shiftCheck = $pdo->prepare(
-                'SELECT us.id, us.work_date, ' . $companySignatureIpSelect . '
+                'SELECT us.id,
+                        us.work_date,
+                        s.start_time,
+                        s.end_time,
+                        ' . $companySignatureIpSelect . '
                  FROM user_shifts us
                  INNER JOIN shifts s ON s.id = us.shift_id
                  INNER JOIN departments d ON d.id = s.department_id
@@ -163,6 +274,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($shiftRequiredIp !== '' && $clientIp !== $shiftRequiredIp) {
                     $error = 'Attendance signature allowed only from company Wi-Fi IP: ' . $shiftRequiredIp . '.';
                 }
+
+                $shiftStartAt = $buildShiftDateTime((string) ($assignedShift['work_date'] ?? ''), (string) ($assignedShift['start_time'] ?? ''));
+                $shiftEndAt = $buildShiftDateTime((string) ($assignedShift['work_date'] ?? ''), (string) ($assignedShift['end_time'] ?? ''));
+                if ($shiftStartAt !== null && $shiftEndAt !== null && $shiftEndAt <= $shiftStartAt) {
+                    $shiftEndAt = $shiftEndAt->modify('+1 day');
+                }
+
+                if ($error === null && $shiftStartAt !== null && $shiftEndAt !== null) {
+                    $signWindowStart = $shiftStartAt->modify('-5 minutes');
+                    if ($now < $signWindowStart) {
+                        $error = 'Attendance signing opens 5 minutes before your shift starts.';
+                    } elseif ($now > $shiftEndAt) {
+                        $error = 'Attendance signing is no longer available after shift end.';
+                    }
+                }
             }
 
             if ($error === null) {
@@ -177,44 +303,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $digitalSignatureId = (int) $pdo->lastInsertId();
 
-                $attendanceCheck = $pdo->prepare('SELECT id FROM attendances WHERE user_id = :user_id AND user_shift_id = :user_shift_id AND work_date = :work_date LIMIT 1');
+                $attendanceCheck = $pdo->prepare('SELECT id, check_in_time FROM attendances WHERE user_id = :user_id AND user_shift_id = :user_shift_id AND work_date = :work_date LIMIT 1');
                 $attendanceCheck->execute([
                     'user_id' => $currentUser['id'],
                     'user_shift_id' => $userShiftId,
                     'work_date' => $todayDate,
                 ]);
-                $existingAttendanceId = $attendanceCheck->fetchColumn();
+                $existingAttendance = $attendanceCheck->fetch(PDO::FETCH_ASSOC) ?: null;
+                $existingAttendanceId = (int) ($existingAttendance['id'] ?? 0);
 
-                if ($existingAttendanceId) {
+                if ($existingAttendanceId > 0 && trim((string) ($existingAttendance['check_in_time'] ?? '')) !== '') {
+                    $error = 'Attendance already recorded for this shift. Ask your manager if it needs to be updated.';
+                }
+
+                if ($error === null && $existingAttendanceId > 0) {
                     $updateAttendance = $pdo->prepare(
                         'UPDATE attendances
                          SET status = :status,
                              digital_signature_id = :digital_signature_id,
-                             check_in_time = COALESCE(check_in_time, CURRENT_TIME),
+                             check_in_time = COALESCE(check_in_time, :check_in_time),
                              updated_at = CURRENT_TIMESTAMP
                          WHERE id = :id'
                     );
                     $updateAttendance->execute([
                         'status' => 'present',
                         'digital_signature_id' => $digitalSignatureId,
+                        'check_in_time' => $now->format('H:i:s'),
                         'id' => (int) $existingAttendanceId,
                     ]);
-                } else {
+                } elseif ($error === null) {
                     $insertAttendance = $pdo->prepare(
                         'INSERT INTO attendances (user_id, user_shift_id, digital_signature_id, work_date, check_in_time, status)
-                         VALUES (:user_id, :user_shift_id, :digital_signature_id, :work_date, CURRENT_TIME, :status)'
+                         VALUES (:user_id, :user_shift_id, :digital_signature_id, :work_date, :check_in_time, :status)'
                     );
                     $insertAttendance->execute([
                         'user_id' => $currentUser['id'],
                         'user_shift_id' => $userShiftId,
                         'digital_signature_id' => $digitalSignatureId,
                         'work_date' => $todayDate,
+                        'check_in_time' => $now->format('H:i:s'),
                         'status' => 'present',
                     ]);
                 }
 
-                setFlash('success', 'Attendance recorded with touchscreen signature.');
-                redirectTo('my-space');
+                if ($error === null) {
+                    setFlash('success', 'Attendance recorded with touchscreen signature.');
+                    redirectTo('my-space');
+                }
             }
         }
     }
