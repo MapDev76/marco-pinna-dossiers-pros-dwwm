@@ -996,16 +996,17 @@ body.sidebar-expanded .app-sidebar {
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
+    flex-wrap: wrap;
 }
 
 .calendar-event-slot-btn {
     border: 1px solid rgba(157, 121, 16, 0.24);
     border-radius: 999px;
-    padding: 0.28rem 0.55rem;
+    padding: 0.22rem 0.44rem;
     background: rgba(255, 255, 255, 0.98);
     color: var(--color-text);
     font: inherit;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: var(--font-weight-bold);
     cursor: pointer;
 }
@@ -1051,7 +1052,7 @@ body.sidebar-expanded .app-sidebar {
     max-height: calc(100vh - 1.2rem);
     overflow: auto;
     display: grid;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
     gap: 0.75rem;
     padding: 0.95rem;
     border-radius: 16px;
@@ -1129,7 +1130,7 @@ body.sidebar-expanded .app-sidebar {
 
 .calendar-day-fullscreen-summary-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.45rem;
 }
 
@@ -1185,7 +1186,7 @@ body.sidebar-expanded .app-sidebar {
 
 .calendar-day-fullscreen-manual-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.45rem;
 }
 
@@ -1292,9 +1293,11 @@ body.sidebar-expanded .app-sidebar {
 
 .calendar-day-fullscreen-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 0.65rem;
     align-content: start;
+    overflow: auto;
+    min-height: 0;
 }
 
 @media (max-width: 820px) {

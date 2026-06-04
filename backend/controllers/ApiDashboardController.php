@@ -44,6 +44,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
     $shiftId = (int) ($input['shift_id'] ?? 0);
     $workDate = trim((string) ($input['work_date'] ?? ''));
     $status = trim((string) ($input['status'] ?? 'assigned'));
+    $forceOverride = !empty($input['force_override']);
 
     $attendanceScopeWhere = '1=1';
     $attendanceScopeParams = [];
@@ -725,9 +726,45 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
 
     if ($action === 'assign_shift') {
         $conflict = $validateSingleShiftPerDay($pdo, $assignmentUserId, $workDate);
-        if ($conflict !== null) {
+        if ($conflict !== null && !$forceOverride) {
             jsonResponse(['success' => false, 'error' => $conflict], 400);
         }
+
+        if ($conflict !== null && $forceOverride) {
+            $existingByDay = $pdo->prepare(
+                'SELECT id
+                 FROM user_shifts
+                 WHERE user_id = :user_id
+                   AND work_date = :work_date
+                   AND status <> "cancelled"
+                 ORDER BY id ASC
+                 LIMIT 1'
+            );
+            $existingByDay->execute([
+                'user_id' => $assignmentUserId,
+                'work_date' => $workDate,
+            ]);
+            $existingByDayId = (int) ($existingByDay->fetchColumn() ?: 0);
+            if ($existingByDayId > 0) {
+                $forceUpdate = $pdo->prepare(
+                    'UPDATE user_shifts
+                     SET shift_id = :shift_id,
+                         user_id = :user_id,
+                         status = :status,
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE id = :id'
+                );
+                $forceUpdate->execute([
+                    'shift_id' => $shiftId,
+                    'user_id' => $assignmentUserId,
+                    'status' => $status ?: 'assigned',
+                    'id' => $existingByDayId,
+                ]);
+                $assignmentId = $existingByDayId;
+            }
+        }
+
+        if (!isset($assignmentId) || (int) $assignmentId <= 0) {
 
         $openExisting = $pdo->prepare(
             'SELECT id FROM user_shifts WHERE shift_id = :shift_id AND work_date = :work_date AND user_id IS NULL LIMIT 1'
@@ -770,6 +807,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                 'status' => $status,
             ]);
             $assignmentId = (int) $pdo->lastInsertId();
+        }
         }
     } else {
         if ($assignmentId <= 0) {

@@ -85,6 +85,10 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                     } else {
                         $users = $activeDept['users'] ?? [];
                         $shifts = $activeDept['shifts'] ?? [];
+                        $workShifts = array_values(array_filter($shifts, static function ($shift): bool {
+                            $kind = strtolower((string) ($shift['kind'] ?? 'work'));
+                            return $kind === 'work';
+                        }));
                         $activeDeptIcon = $activeDept['icon'] ?? '🏷️';
                         $activeDeptColor = $activeDept['color'] ?? '#b98b12';
                         ?>
@@ -108,7 +112,7 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                         <div>
                             <div class="dashboard-sidebar-group-title"><span>⏱</span> Shifts</div>
                             <div class="dashboard-sidebar-chip-group">
-                                <?php if (!empty($shifts)): foreach ($shifts as $shift): ?>
+                                <?php if (!empty($workShifts)): foreach ($workShifts as $shift): ?>
                                     <?php $shiftIcon = $shift['icon'] ?? '🕒'; ?>
                                     <?php $shiftColor = $shift['color'] ?? '#2f6fed'; ?>
                                     <button type="button" class="dashboard-sidebar-shift-chip" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" style="--shift-chip-color: <?php echo e($shiftColor); ?>;">
@@ -116,7 +120,7 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                                         <span><?php echo e($shift['name'] ?? 'Shift'); ?></span>
                                     </button>
                                 <?php endforeach; else: ?>
-                                    <div class="dashboard-sidebar-planner-placeholder">No shifts configured.</div>
+                                    <div class="dashboard-sidebar-planner-placeholder">No work shifts configured.</div>
                                 <?php endif; ?>
                             </div>
                         </div>

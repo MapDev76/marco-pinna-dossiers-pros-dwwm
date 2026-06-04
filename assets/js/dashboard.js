@@ -801,7 +801,8 @@
       const department = getDepartmentById(departmentId);
       if (!department) return;
       state.activeDepartmentId = Number(department.id);
-      const firstShift = (department.shifts || [])[0] || null;
+      const workShifts = (department.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+      const firstShift = workShifts[0] || (department.shifts || [])[0] || null;
       state.activeShiftId = firstShift ? Number(firstShift.id) : 0;
       const nextUser = (department.users || []).find((user) => Number(user.id) === Number(state.activeUserId));
       state.activeUserId = nextUser ? Number(nextUser.id) : 0;
@@ -886,7 +887,7 @@
         return { title: 'Calendar', totalShifts: 0, assignedShifts: 0, freeShifts: 0 };
       }
 
-      const shifts = activeDepartment.shifts || [];
+      const shifts = (activeDepartment.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
       const visibleDateKeys = new Set(getVisibleDateKeys());
       const departmentAssignments = events.filter((event) => Number(event.department_id) === Number(activeDepartment.id));
       const assignedShifts = departmentAssignments.filter((event) => {
@@ -989,6 +990,10 @@
 
       const users = activeDepartment.users || [];
       const shifts = activeDepartment.shifts || [];
+      const workShifts = shifts.filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+      if (workShifts.length > 0 && !workShifts.some((shift) => Number(shift.id) === Number(state.activeShiftId))) {
+        state.activeShiftId = Number(workShifts[0].id || 0);
+      }
       const deptName = activeDepartment.name || 'Department';
       const deptIcon = (activeDepartment.icon || '').toString().trim() || '🏷️';
       const deptColor = (activeDepartment.color || '#b98b12').toString();
@@ -1019,12 +1024,12 @@
         <div>
           <div class="dashboard-sidebar-group-title"><span>⏱</span> Shifts</div>
           <div class="dashboard-sidebar-chip-group">
-            ${shifts.length ? shifts.map((shift) => `
+            ${workShifts.length ? workShifts.map((shift) => `
               <button type="button" class="dashboard-sidebar-shift-chip ${Number(shift.id) === Number(state.activeShiftId) ? 'is-active' : ''}" data-shift-id="${shift.id}" style="--shift-chip-color:${(shift.color || '#2f6fed')}">
                 <span class="dashboard-sidebar-shift-icon">${shift.icon || '🕒'}</span>
                 <span>${shift.name || 'Shift'} ${formatShiftTime(shift)}</span>
               </button>
-            `).join('') : '<div class="dashboard-sidebar-planner-placeholder">No shifts configured.</div>'}
+            `).join('') : '<div class="dashboard-sidebar-planner-placeholder">No work shifts configured.</div>'}
           </div>
         </div>
       `;
@@ -1176,6 +1181,7 @@
         isUserAvailableForDate,
         getUserAvailabilityStatus,
         getActiveUser: getActiveUserForCalendar,
+        getActiveShift,
         getAbsenceTemplateShiftId,
       });
     }

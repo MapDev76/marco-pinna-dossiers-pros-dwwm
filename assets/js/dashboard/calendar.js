@@ -380,6 +380,7 @@
     var titleFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     var assignShift = typeof options.assignShift === 'function' ? options.assignShift : null;
     var getActiveUser = typeof options.getActiveUser === 'function' ? options.getActiveUser : null;
+    var getActiveShift = typeof options.getActiveShift === 'function' ? options.getActiveShift : null;
     var getAbsenceTemplateShiftId = typeof options.getAbsenceTemplateShiftId === 'function' ? options.getAbsenceTemplateShiftId : null;
     var isUserAvailableForDate = typeof options.isUserAvailableForDate === 'function' ? options.isUserAvailableForDate : null;
     var getUserAvailabilityStatus = typeof options.getUserAvailabilityStatus === 'function' ? options.getUserAvailabilityStatus : null;
@@ -641,10 +642,44 @@
               shift_id: assignShiftId,
               work_date: assignDate,
               status: 'assigned',
+              force_override: true,
             });
             notifySuccess('Absence assigned successfully.');
           } catch (error) {
             notifyError((error && error.message) || 'Unable to assign absence template.');
+          }
+        })();
+        return;
+      }
+
+      var manualForceWorkButton = event.target.closest('[data-calendar-day-force-work]');
+      if (manualForceWorkButton) {
+        event.preventDefault();
+        if (!assignShift) {
+          notifyError('Assignment service not available.');
+          return;
+        }
+
+        var forceUserId = Number(manualForceWorkButton.getAttribute('data-user-id') || 0);
+        var forceShiftId = Number(manualForceWorkButton.getAttribute('data-shift-id') || 0);
+        var forceDate = String(manualForceWorkButton.getAttribute('data-date') || '');
+        if (!forceUserId || !forceShiftId || !forceDate) {
+          notifyError('Missing force assignment context.');
+          return;
+        }
+
+        (async function () {
+          try {
+            await assignShift({
+              user_id: forceUserId,
+              shift_id: forceShiftId,
+              work_date: forceDate,
+              status: 'assigned',
+              force_override: true,
+            });
+            notifySuccess('Work shift assigned successfully.');
+          } catch (error) {
+            notifyError((error && error.message) || 'Unable to force work assignment.');
           }
         })();
         return;
@@ -679,11 +714,13 @@
     var isUserAvailableForDate = options.isUserAvailableForDate;
     var getUserAvailabilityStatus = options.getUserAvailabilityStatus;
     var getActiveUser = options.getActiveUser;
+    var getActiveShift = options.getActiveShift;
     var getAbsenceTemplateShiftId = options.getAbsenceTemplateShiftId;
     var bulkAssignModal = createBulkAssignModal(assignShift, events, isUserAvailableForDate);
     var dayFullscreenModal = createDayFullscreenModal(events, toLocalDate, openDate, {
       assignShift: assignShift,
       getActiveUser: getActiveUser,
+      getActiveShift: getActiveShift,
       getAbsenceTemplateShiftId: getAbsenceTemplateShiftId,
       isUserAvailableForDate: isUserAvailableForDate,
       getUserAvailabilityStatus: getUserAvailabilityStatus,
@@ -800,6 +837,72 @@
         slotToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
         return;
       }
+
+        var slotSetAbsenceButton = event.target.closest('[data-calendar-slot-set-absence]');
+        if (slotSetAbsenceButton) {
+          event.preventDefault();
+          var absenceKind = String(slotSetAbsenceButton.getAttribute('data-calendar-slot-set-absence') || '').toLowerCase();
+          var absenceUserId = Number(slotSetAbsenceButton.getAttribute('data-user-id') || 0);
+          var absenceDate = String(slotSetAbsenceButton.getAttribute('data-work-date') || '');
+          var absenceShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId(absenceKind) || 0) : 0;
+          if (!absenceShiftId || !absenceUserId || !absenceDate || typeof assignShift !== 'function') {
+            notifyError('Missing absence assignment context.');
+            return;
+          }
+          if (isPastDateKey(absenceDate)) {
+            notifyError('Past days are locked and cannot be edited.');
+            return;
+          }
+
+          (async function () {
+            try {
+              await assignShift({
+                user_id: absenceUserId,
+                shift_id: absenceShiftId,
+                work_date: absenceDate,
+                status: 'assigned',
+                force_override: true,
+              });
+              notifySuccess('Absence forced successfully.');
+            } catch (error) {
+              notifyError((error && error.message) || 'Unable to force absence assignment.');
+            }
+          })();
+          return;
+        }
+
+        var slotForceWorkButton = event.target.closest('[data-calendar-slot-force-active-shift]');
+        if (slotForceWorkButton) {
+          event.preventDefault();
+          var activeShift = getActiveShift ? (getActiveShift() || null) : null;
+          var activeWorkShiftId = Number(activeShift && String(activeShift.kind || '').toLowerCase() === 'work' ? (activeShift.id || 0) : 0);
+          var forceUserId = Number(slotForceWorkButton.getAttribute('data-user-id') || 0);
+          var forceDate = String(slotForceWorkButton.getAttribute('data-work-date') || '');
+          if (!activeWorkShiftId || !forceUserId || !forceDate || typeof assignShift !== 'function') {
+            notifyError('Select a work shift in sidebar before forcing work assignment.');
+            return;
+          }
+          if (isPastDateKey(forceDate)) {
+            notifyError('Past days are locked and cannot be edited.');
+            return;
+          }
+
+          (async function () {
+            try {
+              await assignShift({
+                user_id: forceUserId,
+                shift_id: activeWorkShiftId,
+                work_date: forceDate,
+                status: 'assigned',
+                force_override: true,
+              });
+              notifySuccess('Work shift forced successfully.');
+            } catch (error) {
+              notifyError((error && error.message) || 'Unable to force work shift assignment.');
+            }
+          })();
+          return;
+        }
 
       var assignOtherDatesButton = event.target.closest('[data-calendar-assign-other-dates]');
       if (assignOtherDatesButton) {
