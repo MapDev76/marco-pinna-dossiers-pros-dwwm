@@ -359,15 +359,18 @@
     };
   }
 
-  function createDayFullscreenModal(events, toLocalDate, openDate) {
+  function createDayFullscreenModal(events, toLocalDate, openDate, options) {
+    options = options || {};
     var host = document.createElement('div');
     host.className = 'calendar-day-fullscreen-overlay';
     host.hidden = true;
-    host.innerHTML = '\n      <section class="calendar-day-fullscreen-modal" role="dialog" aria-modal="true" aria-label="Day assignments">\n        <header class="calendar-day-fullscreen-head">\n          <div>\n            <p class="calendar-day-fullscreen-kicker">Daily overview</p>\n            <h3 data-calendar-day-fullscreen-title></h3>\n          </div>\n          <div class="calendar-day-fullscreen-head-actions">\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-prev>Previous day</button>\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-next>Next day</button>\n            <button type="button" class="calendar-day-fullscreen-close" data-calendar-day-fullscreen-close aria-label="Close">×</button>\n          </div>\n        </header>\n        <section class="calendar-day-fullscreen-unavailable" data-calendar-day-fullscreen-unavailable></section>\n        <div class="calendar-day-fullscreen-list" data-calendar-day-fullscreen-list></div>\n      </section>\n    ';
+    host.innerHTML = '\n      <section class="calendar-day-fullscreen-modal" role="dialog" aria-modal="true" aria-label="Day assignments">\n        <header class="calendar-day-fullscreen-head">\n          <div>\n            <p class="calendar-day-fullscreen-kicker">Daily overview</p>\n            <h3 data-calendar-day-fullscreen-title></h3>\n          </div>\n          <div class="calendar-day-fullscreen-head-actions">\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-prev>Previous day</button>\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-next>Next day</button>\n            <button type="button" class="calendar-day-fullscreen-close" data-calendar-day-fullscreen-close aria-label="Close">×</button>\n          </div>\n        </header>\n        <section class="calendar-day-fullscreen-summary" data-calendar-day-fullscreen-summary></section>\n        <section class="calendar-day-fullscreen-manual" data-calendar-day-fullscreen-manual></section>\n        <section class="calendar-day-fullscreen-unavailable" data-calendar-day-fullscreen-unavailable></section>\n        <div class="calendar-day-fullscreen-list" data-calendar-day-fullscreen-list></div>\n      </section>\n    ';
 
     document.body.appendChild(host);
 
     var titleNode = host.querySelector('[data-calendar-day-fullscreen-title]');
+    var summaryNode = host.querySelector('[data-calendar-day-fullscreen-summary]');
+    var manualNode = host.querySelector('[data-calendar-day-fullscreen-manual]');
     var listNode = host.querySelector('[data-calendar-day-fullscreen-list]');
     var unavailableNode = host.querySelector('[data-calendar-day-fullscreen-unavailable]');
     var closeButton = host.querySelector('[data-calendar-day-fullscreen-close]');
@@ -375,6 +378,12 @@
     var nextButton = host.querySelector('[data-calendar-day-fullscreen-next]');
     var panel = host.querySelector('.calendar-day-fullscreen-modal');
     var titleFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    var assignShift = typeof options.assignShift === 'function' ? options.assignShift : null;
+    var getActiveUser = typeof options.getActiveUser === 'function' ? options.getActiveUser : null;
+    var getAbsenceTemplateShiftId = typeof options.getAbsenceTemplateShiftId === 'function' ? options.getAbsenceTemplateShiftId : null;
+    var isUserAvailableForDate = typeof options.isUserAvailableForDate === 'function' ? options.isUserAvailableForDate : null;
+    var getUserAvailabilityStatus = typeof options.getUserAvailabilityStatus === 'function' ? options.getUserAvailabilityStatus : null;
+    var attendances = Array.isArray(options.attendances) ? options.attendances : [];
     var state = {
       currentDate: '',
     };
@@ -426,6 +435,14 @@
       return y + '-' + m + '-' + d;
     }
 
+    function todayKey() {
+      var now = new Date();
+      var y = String(now.getFullYear());
+      var m = String(now.getMonth() + 1).padStart(2, '0');
+      var d = String(now.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+
     function getUnavailableByReason(dayEvents) {
       var reasonMap = {
         rest: [],
@@ -462,6 +479,63 @@
       return reasonMap;
     }
 
+    function renderSummary(dayEvents, groups, unavailable, dateValue) {
+      if (!summaryNode) return;
+
+      var assignedUsers = new Set();
+      dayEvents.forEach(function (event) {
+        var userId = Number(event.user_id || 0);
+        if (userId > 0) assignedUsers.add(userId);
+      });
+
+      var openShifts = groups.filter(function (group) {
+        return (group.employees || []).length === 0;
+      }).length;
+
+      var dayAttendances = attendances.filter(function (item) {
+        return String(item.work_date || '') === String(dateValue || '');
+      });
+      var lateCount = dayAttendances.filter(function (item) { return String(item.status || '').toLowerCase() === 'late'; }).length;
+      var absentCount = dayAttendances.filter(function (item) { return String(item.status || '').toLowerCase() === 'absent'; }).length;
+
+      summaryNode.innerHTML = '\n        <div class="calendar-day-fullscreen-summary-grid">\n          <article class="calendar-day-fullscreen-summary-card"><span>Total shifts</span><strong>' + groups.length + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Assigned employees</span><strong>' + assignedUsers.size + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Open shifts</span><strong>' + openShifts + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Rest / Vacation / Sick</span><strong>' + unavailable.rest.length + ' / ' + unavailable.vacation.length + ' / ' + unavailable.sick.length + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Late attendances</span><strong>' + lateCount + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Absent attendances</span><strong>' + absentCount + '</strong></article>\n        </div>\n      ';
+    }
+
+    function renderManualAssignment(dateValue) {
+      if (!manualNode) return;
+
+      var selectedUser = getActiveUser ? (getActiveUser() || null) : null;
+      var selectedUserId = Number(selectedUser && selectedUser.id ? selectedUser.id : 0);
+      var selectedUserName = String(selectedUser && selectedUser.name ? selectedUser.name : '').trim();
+
+      if (!selectedUserId) {
+        manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">Select an employee from the sidebar to assign Rest, Vacation or Sick leave for this date.</p>';
+        return;
+      }
+
+      if (String(dateValue || '') < todayKey()) {
+        manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">Past dates are locked and cannot be edited.</p>';
+        return;
+      }
+
+      var restShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('rest') || 0) : 0;
+      var vacationShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('vacation') || 0) : 0;
+      var sickShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('sick') || 0) : 0;
+      if (!restShiftId || !vacationShiftId || !sickShiftId) {
+        manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">Absence templates are not available for this department.</p>';
+        return;
+      }
+
+      var isAvailable = isUserAvailableForDate ? !!isUserAvailableForDate(selectedUserId, dateValue) : true;
+      var unavailableReason = '';
+      if (!isAvailable && getUserAvailabilityStatus) {
+        unavailableReason = String((getUserAvailabilityStatus(selectedUserId, dateValue) || {}).reason || 'Employee already has an assignment on this date.');
+      }
+      var disabledAttr = isAvailable ? '' : ' disabled';
+
+      manualNode.innerHTML = '\n        <div class="calendar-day-fullscreen-manual-head">\n          <strong>Manual absence assignment</strong>\n          <span>' + (selectedUserName || ('Employee #' + selectedUserId)) + ' • ' + dateValue + '</span>\n        </div>\n        <div class="calendar-day-fullscreen-manual-actions">\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="rest" data-user-id="' + selectedUserId + '" data-shift-id="' + restShiftId + '" data-date="' + dateValue + '"' + disabledAttr + '>💤 Assign rest day</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="vacation" data-user-id="' + selectedUserId + '" data-shift-id="' + vacationShiftId + '" data-date="' + dateValue + '"' + disabledAttr + '>🏖 Assign vacation</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="sick" data-user-id="' + selectedUserId + '" data-shift-id="' + sickShiftId + '" data-date="' + dateValue + '"' + disabledAttr + '>🤒 Assign sick leave</button>\n        </div>\n        ' + (!isAvailable ? ('<p class="calendar-day-fullscreen-manual-note">' + unavailableReason + '</p>') : '') + '\n      ';
+    }
+
     function openModal(dateValue) {
       var normalizedDate = String(dateValue || '').trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) return;
@@ -473,6 +547,10 @@
       var groups = Array.from(groupByShift(dayEvents).values()).sort(function (a, b) {
         return String(a.startTime || '').localeCompare(String(b.startTime || ''));
       });
+      var unavailable = getUnavailableByReason(dayEvents);
+
+      renderSummary(dayEvents, groups, unavailable, normalizedDate);
+      renderManualAssignment(normalizedDate);
 
       if (titleNode) {
         titleNode.textContent = toDateLabel(normalizedDate);
@@ -486,7 +564,7 @@
             var employees = group.employees.length
               ? group.employees
               : ['Open shift'];
-            return '\n              <article class="calendar-day-fullscreen-shift" style="--fullscreen-shift-color:' + group.shiftColor + '">\n                <div class="calendar-day-fullscreen-shift-head">\n                  <span class="calendar-day-fullscreen-shift-title">' + group.shiftIcon + ' ' + group.shiftName + '</span>\n                  <span class="calendar-day-fullscreen-shift-time">' + formatShiftTime(group) + '</span>\n                </div>\n                <ul class="calendar-day-fullscreen-employees">' + employees.map(function (name) {
+            return '\n              <article class="calendar-day-fullscreen-shift" style="--fullscreen-shift-color:' + group.shiftColor + '">\n                <div class="calendar-day-fullscreen-shift-head">\n                  <span class="calendar-day-fullscreen-shift-title">' + group.shiftName + '</span>\n                  <span class="calendar-day-fullscreen-shift-time">' + formatShiftTime(group) + '</span>\n                </div>\n                <ul class="calendar-day-fullscreen-employees">' + employees.map(function (name) {
                   return '<li>' + name + '</li>';
                 }).join('') + '</ul>\n              </article>\n            ';
           }).join('');
@@ -494,14 +572,13 @@
       }
 
       if (unavailableNode) {
-        var unavailable = getUnavailableByReason(dayEvents);
         var hasUnavailable = unavailable.rest.length || unavailable.vacation.length || unavailable.sick.length;
         if (!hasUnavailable) {
           unavailableNode.innerHTML = '';
           unavailableNode.hidden = true;
         } else {
           unavailableNode.hidden = false;
-          unavailableNode.innerHTML = '\n            <div class="calendar-day-fullscreen-unavailable-head">Unavailable employees</div>\n            <div class="calendar-day-fullscreen-unavailable-grid">\n              <section class="calendar-day-fullscreen-unavailable-card is-rest">\n                <h4>Rest day</h4>\n                ' + (unavailable.rest.length ? ('<ul>' + unavailable.rest.map(function (name) { return '<li>' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-vacation">\n                <h4>Vacation</h4>\n                ' + (unavailable.vacation.length ? ('<ul>' + unavailable.vacation.map(function (name) { return '<li>' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-sick">\n                <h4>Sick</h4>\n                ' + (unavailable.sick.length ? ('<ul>' + unavailable.sick.map(function (name) { return '<li>' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n            </div>\n          ';
+          unavailableNode.innerHTML = '\n            <div class="calendar-day-fullscreen-unavailable-head">Unavailable employees</div>\n            <div class="calendar-day-fullscreen-unavailable-grid">\n              <section class="calendar-day-fullscreen-unavailable-card is-rest">\n                <h4>💤 Rest day</h4>\n                ' + (unavailable.rest.length ? ('<ul>' + unavailable.rest.map(function (name) { return '<li>💤 ' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-vacation">\n                <h4>🏖 Vacation / Holidays</h4>\n                ' + (unavailable.vacation.length ? ('<ul>' + unavailable.vacation.map(function (name) { return '<li>🏖 ' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-sick">\n                <h4>🤒 Sick leave</h4>\n                ' + (unavailable.sick.length ? ('<ul>' + unavailable.sick.map(function (name) { return '<li>🤒 ' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n            </div>\n          ';
         }
       }
 
@@ -541,6 +618,38 @@
     }
 
     host.addEventListener('click', function (event) {
+      var manualAssignButton = event.target.closest('[data-calendar-day-absence-assign]');
+      if (manualAssignButton) {
+        event.preventDefault();
+        if (!assignShift) {
+          notifyError('Assignment service not available.');
+          return;
+        }
+
+        var assignUserId = Number(manualAssignButton.getAttribute('data-user-id') || 0);
+        var assignShiftId = Number(manualAssignButton.getAttribute('data-shift-id') || 0);
+        var assignDate = String(manualAssignButton.getAttribute('data-date') || '');
+        if (!assignUserId || !assignShiftId || !assignDate) {
+          notifyError('Missing assignment context.');
+          return;
+        }
+
+        (async function () {
+          try {
+            await assignShift({
+              user_id: assignUserId,
+              shift_id: assignShiftId,
+              work_date: assignDate,
+              status: 'assigned',
+            });
+            notifySuccess('Absence assigned successfully.');
+          } catch (error) {
+            notifyError((error && error.message) || 'Unable to assign absence template.');
+          }
+        })();
+        return;
+      }
+
       if (event.target === host) {
         closeModal();
       }
@@ -561,6 +670,7 @@
   function initCalendarInteractions(options) {
     var calendarShell = options.calendarShell;
     var events = options.events || [];
+    var attendances = options.attendances || [];
     var state = options.state || {};
     var toLocalDate = options.toLocalDate;
     var openDate = options.openDate;
@@ -568,8 +678,17 @@
     var assignShift = options.assignShift;
     var isUserAvailableForDate = options.isUserAvailableForDate;
     var getUserAvailabilityStatus = options.getUserAvailabilityStatus;
+    var getActiveUser = options.getActiveUser;
+    var getAbsenceTemplateShiftId = options.getAbsenceTemplateShiftId;
     var bulkAssignModal = createBulkAssignModal(assignShift, events, isUserAvailableForDate);
-    var dayFullscreenModal = createDayFullscreenModal(events, toLocalDate, openDate);
+    var dayFullscreenModal = createDayFullscreenModal(events, toLocalDate, openDate, {
+      assignShift: assignShift,
+      getActiveUser: getActiveUser,
+      getAbsenceTemplateShiftId: getAbsenceTemplateShiftId,
+      isUserAvailableForDate: isUserAvailableForDate,
+      getUserAvailabilityStatus: getUserAvailabilityStatus,
+      attendances: attendances,
+    });
 
     var toDateKey = function (dateObj) {
       var y = String(dateObj.getFullYear());

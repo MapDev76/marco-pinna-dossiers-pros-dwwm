@@ -140,7 +140,8 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
     }
 
     if ($action === 'record_attendance_signature') {
-        $currentAppTime = appNow()->format('H:i:s');
+        $currentAppNow = appNow();
+        $currentAppTime = $currentAppNow->format('H:i:s');
         $targetUserId = (int) ($input['user_id'] ?? 0);
         $targetUserShiftId = (int) ($input['user_shift_id'] ?? 0);
         $signatureData = trim((string) ($input['signature_data'] ?? ''));
@@ -154,7 +155,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         }
 
         $assignmentLookup = $pdo->prepare(
-            'SELECT us.id, us.user_id, us.work_date, us.shift_id, d.id AS department_id
+            'SELECT us.id, us.user_id, us.work_date, us.shift_id, s.start_time, d.id AS department_id
              FROM user_shifts us
              INNER JOIN shifts s ON s.id = us.shift_id
              INNER JOIN departments d ON d.id = s.department_id
@@ -176,6 +177,18 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         $workDate = (string) ($assignment['work_date'] ?? '');
         if ($workDate === '' || $workDate > date('Y-m-d')) {
             jsonResponse(['success' => false, 'error' => 'Attendance cannot be recorded for future dates'], 400);
+        }
+
+        $shiftStartTime = trim((string) ($assignment['start_time'] ?? ''));
+        if ($attendanceStatus === 'present' && $workDate === $currentAppNow->format('Y-m-d') && $shiftStartTime !== '') {
+            try {
+                $shiftStartAt = new DateTimeImmutable($workDate . ' ' . $shiftStartTime, appTimezone());
+                if ($currentAppNow > $shiftStartAt) {
+                    $attendanceStatus = 'late';
+                }
+            } catch (Throwable $e) {
+                // Keep requested status when shift time cannot be parsed.
+            }
         }
 
         $insertSignature = $pdo->prepare(

@@ -236,3 +236,91 @@ function ensureSchedulerSchema(PDO $pdo): void
 
     $initialized = true;
 }
+
+function absenceShiftTemplateDefinitions(): array
+{
+    return [
+        'rest' => [
+            'name' => 'Rest day',
+            'icon' => '💤',
+            'color' => '#9ca3af',
+            'description' => 'System template for rest day assignment.',
+            'start_time' => '00:00:00',
+            'end_time' => '23:59:00',
+        ],
+        'vacation' => [
+            'name' => 'Vacation',
+            'icon' => '🏖',
+            'color' => '#9ca3af',
+            'description' => 'System template for vacation assignment.',
+            'start_time' => '00:00:00',
+            'end_time' => '23:59:00',
+        ],
+        'sick' => [
+            'name' => 'Sick leave',
+            'icon' => '🤒',
+            'color' => '#9ca3af',
+            'description' => 'System template for sick leave assignment.',
+            'start_time' => '00:00:00',
+            'end_time' => '23:59:00',
+        ],
+    ];
+}
+
+function ensureDepartmentAbsenceShiftTemplates(PDO $pdo, int $departmentId): array
+{
+    if ($departmentId <= 0) {
+        return [];
+    }
+
+    $templates = absenceShiftTemplateDefinitions();
+    $idsByKind = [];
+
+    $lookup = $pdo->prepare(
+        'SELECT id
+         FROM shifts
+         WHERE department_id = :department_id
+           AND kind = :kind
+         ORDER BY id ASC
+         LIMIT 1'
+    );
+
+    $insert = $pdo->prepare(
+        'INSERT INTO shifts (department_id, name, icon, color, description, kind, start_time, end_time)
+         VALUES (:department_id, :name, :icon, :color, :description, :kind, :start_time, :end_time)'
+    );
+
+    foreach ($templates as $kind => $template) {
+        $lookup->execute([
+            'department_id' => $departmentId,
+            'kind' => $kind,
+        ]);
+
+        $existingId = (int) ($lookup->fetchColumn() ?: 0);
+        if ($existingId > 0) {
+            $idsByKind[$kind] = $existingId;
+            continue;
+        }
+
+        $insert->execute([
+            'department_id' => $departmentId,
+            'name' => (string) ($template['name'] ?? ucfirst($kind)),
+            'icon' => (string) ($template['icon'] ?? ''),
+            'color' => (string) ($template['color'] ?? '#9ca3af'),
+            'description' => (string) ($template['description'] ?? ''),
+            'kind' => $kind,
+            'start_time' => (string) ($template['start_time'] ?? '00:00:00'),
+            'end_time' => (string) ($template['end_time'] ?? '23:59:00'),
+        ]);
+        $idsByKind[$kind] = (int) $pdo->lastInsertId();
+    }
+
+    return $idsByKind;
+}
+
+function ensureAbsenceShiftTemplatesForDepartments(PDO $pdo, array $departmentIds): void
+{
+    foreach ($departmentIds as $departmentId) {
+        ensureDepartmentAbsenceShiftTemplates($pdo, (int) $departmentId);
+    }
+}

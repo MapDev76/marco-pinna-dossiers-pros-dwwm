@@ -1062,16 +1062,34 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="crud-empty-state">No attendance records available.</div>
                     <?php else: ?>
                         <?php foreach (array_slice($attendances, 0, 250) as $attendance): ?>
+                            <?php
+                                $attendanceStatusRaw = strtolower(trim((string) ($attendance['status'] ?? 'present')));
+                                $checkInTimeRaw = trim((string) ($attendance['check_in_time'] ?? ''));
+                                $shiftStartTimeRaw = trim((string) ($attendance['shift_start_time'] ?? ''));
+                                $isLateCheckIn = $attendanceStatusRaw === 'late';
+                                if (!$isLateCheckIn && $checkInTimeRaw !== '' && $shiftStartTimeRaw !== '') {
+                                    $isLateCheckIn = strtotime('1970-01-01 ' . $checkInTimeRaw) > strtotime('1970-01-01 ' . $shiftStartTimeRaw);
+                                }
+                                $displayAttendanceStatus = $isLateCheckIn ? 'Late' : ucfirst($attendanceStatusRaw !== '' ? $attendanceStatusRaw : 'present');
+                            ?>
                             <article class="settings-list-item-wrap">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-assignment">
                                     <strong><?php echo e($attendance['work_date'] ?? ''); ?></strong>
                                     <span><?php echo e($attendance['user_name'] ?? '--'); ?></span>
                                     <span><?php echo e($attendance['department_name'] ?? '--'); ?></span>
                                     <span><?php echo e($attendance['shift_name'] ?? '--'); ?></span>
-                                    <span><?php echo e(ucfirst((string) ($attendance['status'] ?? 'present'))); ?></span>
+                                    <span><?php echo e($displayAttendanceStatus); ?></span>
                                     <span><?php echo e($attendance['check_in_time'] ?? '--'); ?></span>
                                     <div class="settings-inline-actions settings-inline-actions-compact">
-                                        <span><?php echo !empty($attendance['digital_signature_id']) ? 'Signed' : 'Missing'; ?></span>
+                                        <span>
+                                            <?php
+                                                if (!empty($attendance['digital_signature_id'])) {
+                                                    echo $isLateCheckIn ? 'Signed (Late)' : 'Signed';
+                                                } else {
+                                                    echo 'Missing';
+                                                }
+                                            ?>
+                                        </span>
                                         <button
                                             type="button"
                                             class="admin-action-link admin-action-link-secondary"
@@ -1464,11 +1482,17 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="crud-empty-state">No shifts available.</div>
                     <?php else: ?>
                         <?php foreach ($shifts as $shift): ?>
+                            <?php $isSystemShiftTemplate = in_array(strtolower((string) ($shift['kind'] ?? 'work')), ['rest', 'vacation', 'sick'], true); ?>
                             <article class="settings-list-item-wrap" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-shift">
                                     <strong><?php echo e($shift['name'] ?? 'Shift'); ?></strong>
                                     <span><?php echo e($shift['department_name'] ?? ''); ?></span>
-                                    <span><?php echo e($shift['description'] ?? '--'); ?></span>
+                                    <span>
+                                        <?php echo e($shift['description'] ?? '--'); ?>
+                                        <?php if ($isSystemShiftTemplate): ?>
+                                            <br><small>System template (read-only)</small>
+                                        <?php endif; ?>
+                                    </span>
                                     <span><?php echo e(($shift['start_time'] ?? '--:--') . ' - ' . ($shift['end_time'] ?? '--:--')); ?></span>
                                     <span><?php echo e($shift['icon'] ?? '🕒'); ?></span>
                                     <span class="settings-color-display" style="--choice-color: <?php echo e($shift['color'] ?? '#2f6fed'); ?>;">
@@ -1476,60 +1500,66 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <span><?php echo e($pickerColorLabel((string) ($shift['color'] ?? '#2f6fed'))); ?></span>
                                     </span>
                                     <div class="settings-inline-actions">
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-shift-edit" aria-label="Edit shift" title="Edit shift">✎</button>
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-shift-delete" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" aria-label="Delete shift" title="Delete shift">🗑</button>
+                                        <?php if ($isSystemShiftTemplate): ?>
+                                            <span class="admin-action-link admin-action-link-secondary" aria-label="System template" title="System template">Locked</span>
+                                        <?php else: ?>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-shift-edit" aria-label="Edit shift" title="Edit shift">✎</button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-shift-delete" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" aria-label="Delete shift" title="Delete shift">🗑</button>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
-                                <div class="settings-edit-drawer" hidden>
-                                    <div class="settings-list-cols settings-list-cols-shift-edit">
-                                        <label class="settings-field">Name<input data-field="name" type="text" value="<?php echo e($shift['name'] ?? 'Shift'); ?>"></label>
-                                        <label class="settings-field">Icon
-                                            <div class="settings-picker-stack">
-                                                <div class="settings-picker-row">
-                                                    <input data-field="icon" type="text" value="<?php echo e($shift['icon'] ?? ($shiftIconCatalog[0] ?? '🕒')); ?>" readonly>
-                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
-                                                </div>
-                                                <div class="settings-picker-popover" data-picker-popover="icon" hidden>
-                                                    <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
-                                                        <?php foreach ($shiftIconCatalog as $icon): ?>
-                                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
-                                                                <span aria-hidden="true"><?php echo e($icon); ?></span>
-                                                            </button>
-                                                        <?php endforeach; ?>
+                                <?php if (!$isSystemShiftTemplate): ?>
+                                    <div class="settings-edit-drawer" hidden>
+                                        <div class="settings-list-cols settings-list-cols-shift-edit">
+                                            <label class="settings-field">Name<input data-field="name" type="text" value="<?php echo e($shift['name'] ?? 'Shift'); ?>"></label>
+                                            <label class="settings-field">Icon
+                                                <div class="settings-picker-stack">
+                                                    <div class="settings-picker-row">
+                                                        <input data-field="icon" type="text" value="<?php echo e($shift['icon'] ?? ($shiftIconCatalog[0] ?? '🕒')); ?>" readonly>
+                                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                                    </div>
+                                                    <div class="settings-picker-popover" data-picker-popover="icon" hidden>
+                                                        <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
+                                                            <?php foreach ($shiftIconCatalog as $icon): ?>
+                                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                                                    <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                                                </button>
+                                                            <?php endforeach; ?>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </label>
-                                        <label class="settings-field">Color
-                                            <div class="settings-picker-stack">
-                                                <div class="settings-picker-row">
-                                                    <input data-field="color" type="hidden" value="<?php echo e($shift['color'] ?? '#2f6fed'); ?>">
-                                                    <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: <?php echo e($shift['color'] ?? '#2f6fed'); ?>;">
-                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
-                                                </div>
-                                                <div class="settings-picker-popover" data-picker-popover="color" hidden>
-                                                    <div class="settings-choice-grid" data-choice-field="color">
-                                                        <?php foreach ($pickerColorCatalog as $color): ?>
-                                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
-                                                                <span class="settings-color-swatch" aria-hidden="true"></span>
-                                                                <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
-                                                            </button>
-                                                        <?php endforeach; ?>
+                                            </label>
+                                            <label class="settings-field">Color
+                                                <div class="settings-picker-stack">
+                                                    <div class="settings-picker-row">
+                                                        <input data-field="color" type="hidden" value="<?php echo e($shift['color'] ?? '#2f6fed'); ?>">
+                                                        <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: <?php echo e($shift['color'] ?? '#2f6fed'); ?>;">
+                                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                                    </div>
+                                                    <div class="settings-picker-popover" data-picker-popover="color" hidden>
+                                                        <div class="settings-choice-grid" data-choice-field="color">
+                                                            <?php foreach ($pickerColorCatalog as $color): ?>
+                                                                <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
+                                                                    <span class="settings-color-swatch" aria-hidden="true"></span>
+                                                                    <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
+                                                                </button>
+                                                            <?php endforeach; ?>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                            </label>
+                                            <label class="settings-field settings-field-wide">Description
+                                                <input data-field="description" type="text" value="<?php echo e($shift['description'] ?? ''); ?>" placeholder="Shift notes">
+                                            </label>
+                                            <label class="settings-field">Start<input data-field="start_time" type="time" value="<?php echo e($shift['start_time'] ?? ''); ?>"></label>
+                                            <label class="settings-field">End<input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>"></label>
+                                            <div class="settings-inline-actions">
+                                                <button type="button" class="admin-action-link settings-shift-save" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">Save</button>
+                                                <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-cancel">Cancel</button>
                                             </div>
-                                        </label>
-                                        <label class="settings-field settings-field-wide">Description
-                                            <input data-field="description" type="text" value="<?php echo e($shift['description'] ?? ''); ?>" placeholder="Shift notes">
-                                        </label>
-                                        <label class="settings-field">Start<input data-field="start_time" type="time" value="<?php echo e($shift['start_time'] ?? ''); ?>"></label>
-                                        <label class="settings-field">End<input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>"></label>
-                                        <div class="settings-inline-actions">
-                                            <button type="button" class="admin-action-link settings-shift-save" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">Save</button>
-                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-cancel">Cancel</button>
                                         </div>
                                     </div>
-                                </div>
+                                <?php endif; ?>
                             </article>
                         <?php endforeach; ?>
                     <?php endif; ?>

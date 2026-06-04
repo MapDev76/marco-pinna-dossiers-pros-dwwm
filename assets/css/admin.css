@@ -607,6 +607,18 @@
     background: #edfdf2;
 }
 
+.employee-upcoming-badge.is-vacation {
+    border-color: rgba(107, 114, 128, 0.55);
+    color: #4b5563;
+    background: rgba(229, 231, 235, 0.92);
+}
+
+.employee-upcoming-badge.is-sick {
+    border-color: rgba(107, 114, 128, 0.55);
+    color: #4b5563;
+    background: rgba(229, 231, 235, 0.92);
+}
+
 .employee-shift-stage-summary {
     align-items: flex-start;
 }
@@ -730,6 +742,16 @@
     color: #111827;
 }
 
+.employee-upcoming-item.is-work {
+    border-left: 6px solid var(--employee-shift-color, #b58e14);
+    background: #ffffff;
+}
+
+.employee-upcoming-item.is-non-work {
+    border-color: rgba(107, 114, 128, 0.35);
+    background: rgba(243, 244, 246, 0.9);
+}
+
 .employee-upcoming-item strong,
 .employee-upcoming-item span,
 .employee-upcoming-item small {
@@ -755,7 +777,7 @@
 
 .employee-detail-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.9rem;
 }
 

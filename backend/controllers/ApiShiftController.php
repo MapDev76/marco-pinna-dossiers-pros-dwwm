@@ -14,6 +14,11 @@ $raw = file_get_contents('php://input');
 $input = json_decode($raw, true) ?: $_POST;
 $action = $input['action'] ?? ($_GET['action'] ?? 'list');
 
+$isProtectedTemplate = static function (?array $shiftRow): bool {
+    $kind = strtolower(trim((string) ($shiftRow['kind'] ?? 'work')));
+    return in_array($kind, ['rest', 'vacation', 'sick'], true);
+};
+
 try {
     switch ($action) {
         case 'list':
@@ -91,6 +96,13 @@ try {
         case 'update':
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
+            $existingShift = $shiftModel->findById($id);
+            if (!$existingShift) {
+                jsonResponse(['ok' => false, 'error' => 'Shift not found'], 404);
+            }
+            if ($isProtectedTemplate($existingShift)) {
+                jsonResponse(['ok' => false, 'error' => 'System absence templates cannot be modified.'], 400);
+            }
             $shiftModel->update($id, $input);
             jsonResponse(['ok' => true]);
             break;
@@ -98,6 +110,13 @@ try {
         case 'delete':
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
+            $existingShift = $shiftModel->findById($id);
+            if (!$existingShift) {
+                jsonResponse(['ok' => false, 'error' => 'Shift not found'], 404);
+            }
+            if ($isProtectedTemplate($existingShift)) {
+                jsonResponse(['ok' => false, 'error' => 'System absence templates cannot be deleted.'], 400);
+            }
             $shiftModel->delete($id);
             jsonResponse(['ok' => true]);
             break;

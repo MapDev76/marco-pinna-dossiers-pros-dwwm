@@ -110,6 +110,26 @@ $resolvePreferredDepartmentId = static function (array $departmentRows, string $
     return isset($departmentRows[0]['id']) ? (int) $departmentRows[0]['id'] : null;
 };
 
+$resolvePreferredShiftId = static function (array $shiftRows, ?int $preferredDepartmentId = null): ?int {
+    foreach ($shiftRows as $shiftRow) {
+        if ($preferredDepartmentId !== null && (int) ($shiftRow['department_id'] ?? 0) !== (int) $preferredDepartmentId) {
+            continue;
+        }
+        if (strtolower((string) ($shiftRow['kind'] ?? 'work')) === 'work') {
+            return (int) ($shiftRow['id'] ?? 0);
+        }
+    }
+
+    foreach ($shiftRows as $shiftRow) {
+        if ($preferredDepartmentId !== null && (int) ($shiftRow['department_id'] ?? 0) !== (int) $preferredDepartmentId) {
+            continue;
+        }
+        return (int) ($shiftRow['id'] ?? 0);
+    }
+
+    return isset($shiftRows[0]['id']) ? (int) $shiftRows[0]['id'] : null;
+};
+
 $plannerCompanyId = null;
 if ($role === 'super_admin') {
     $requestedCompanyId = (int) ($_GET['settings_company_id'] ?? 0);
@@ -144,6 +164,7 @@ if ($role === 'super_admin') {
         $departmentRows = $departmentModel->byCompanyId($plannerCompanyId);
         $userRows = $userModel->companyUsersByCompanyId($plannerCompanyId);
         $departmentIds = array_values(array_map(static fn (array $department): int => (int) $department['id'], $departmentRows));
+        ensureAbsenceShiftTemplatesForDepartments($pdo, $departmentIds);
         $shiftRows = [];
         if (!empty($departmentIds)) {
             $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
@@ -199,7 +220,7 @@ if ($role === 'super_admin') {
             'signature_ip' => $companySignatureIp,
         ];
         $dashboardPlannerData['active_department_id'] = $departmentRows[0]['id'] ?? null;
-        $dashboardPlannerData['active_shift_id'] = $shiftRows[0]['id'] ?? null;
+        $dashboardPlannerData['active_shift_id'] = $resolvePreferredShiftId($shiftRows, isset($departmentRows[0]['id']) ? (int) $departmentRows[0]['id'] : null);
 
         $calendarStatement = $pdo->prepare(
             'SELECT us.id AS assignment_id,
@@ -242,6 +263,8 @@ if ($role === 'super_admin') {
                     CONCAT(u.first_name, " ", u.last_name) AS user_name,
                     us.shift_id,
                     s.name AS shift_name,
+                    s.start_time AS shift_start_time,
+                    s.end_time AS shift_end_time,
                     d.id AS department_id,
                     d.name AS department_name,
                     ds.signature_date
@@ -264,6 +287,7 @@ if ($role === 'admin' && $companyId !== null) {
     $departmentRows = $departmentModel->byCompanyId($companyId);
     $userRows = $userModel->companyUsersByCompanyId($companyId);
     $departmentIds = array_values(array_map(static fn (array $department): int => (int) $department['id'], $departmentRows));
+    ensureAbsenceShiftTemplatesForDepartments($pdo, $departmentIds);
     $shiftRows = [];
     if (!empty($departmentIds)) {
         $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
@@ -324,14 +348,7 @@ if ($role === 'admin' && $companyId !== null) {
     ));
     $adminActiveDepartmentId = $resolvePreferredDepartmentId($departmentRows, 'reception');
     $dashboardPlannerData['active_department_id'] = $adminActiveDepartmentId;
-    $preferredShift = null;
-    foreach ($shiftRows as $shiftRow) {
-        if ((int) ($shiftRow['department_id'] ?? 0) === (int) ($adminActiveDepartmentId ?? 0)) {
-            $preferredShift = $shiftRow;
-            break;
-        }
-    }
-    $dashboardPlannerData['active_shift_id'] = $preferredShift['id'] ?? ($shiftRows[0]['id'] ?? null);
+    $dashboardPlannerData['active_shift_id'] = $resolvePreferredShiftId($shiftRows, $adminActiveDepartmentId !== null ? (int) $adminActiveDepartmentId : null);
     $calendarStatement = $pdo->prepare(
         'SELECT us.id AS assignment_id,
                 us.work_date,
@@ -374,6 +391,8 @@ if ($role === 'admin' && $companyId !== null) {
                 CONCAT(u.first_name, " ", u.last_name) AS user_name,
                 us.shift_id,
                 s.name AS shift_name,
+                s.start_time AS shift_start_time,
+                s.end_time AS shift_end_time,
                 d.id AS department_id,
                 d.name AS department_name,
                 ds.signature_date
@@ -422,6 +441,8 @@ if ($role === 'department_manager' && $departmentId !== null) {
     $teamRows = $userModel->teamByDepartmentId($departmentId);
     $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
 
+    ensureDepartmentAbsenceShiftTemplates($pdo, (int) $departmentId);
+
     $shiftStatement = $pdo->prepare(
         'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.department_id = :department_id ORDER BY s.start_time ASC, s.id ASC'
     );
@@ -455,7 +476,7 @@ if ($role === 'department_manager' && $departmentId !== null) {
         static fn (array $company): bool => (int) ($company['id'] ?? 0) === (int) ($companyId ?? 0)
     ));
     $dashboardPlannerData['active_department_id'] = $departmentId;
-    $dashboardPlannerData['active_shift_id'] = $shiftRows[0]['id'] ?? null;
+    $dashboardPlannerData['active_shift_id'] = $resolvePreferredShiftId($shiftRows, (int) $departmentId);
     $calendarStatement = $pdo->prepare(
         'SELECT us.id AS assignment_id,
                 us.work_date,
@@ -498,6 +519,8 @@ if ($role === 'department_manager' && $departmentId !== null) {
                 CONCAT(u.first_name, " ", u.last_name) AS user_name,
                 us.shift_id,
                 s.name AS shift_name,
+                s.start_time AS shift_start_time,
+                s.end_time AS shift_end_time,
                 d.id AS department_id,
                 d.name AS department_name,
                 ds.signature_date

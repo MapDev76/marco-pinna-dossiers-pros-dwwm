@@ -672,6 +672,7 @@
     const monthLabelFormatter = new Intl.DateTimeFormat('en-US', { month: 'long' });
 
     const rawAssignments = Array.isArray(plannerData.assignments) ? plannerData.assignments : [];
+    const attendances = Array.isArray(plannerData.attendances) ? plannerData.attendances : [];
     const departments = Array.isArray(plannerData.departments) ? plannerData.departments : [];
     const calendarToday = toLocalDate(plannerData.today || (calendarShell ? calendarShell.getAttribute('data-calendar-today') : ''));
     const events = rawAssignments.map((item) => ({ ...item }));
@@ -705,6 +706,23 @@
     const getActiveUsers = () => (getActiveDepartment()?.users || []);
     const getActiveShift = () => getActiveShifts().find((shift) => Number(shift.id) === Number(state.activeShiftId)) || getActiveShifts()[0] || null;
     const getActiveUser = () => getActiveUsers().find((user) => Number(user.id) === Number(state.activeUserId)) || null;
+    const getActiveUserForCalendar = () => {
+      const user = getActiveUser();
+      if (!user) {
+        return null;
+      }
+      const fullName = String((user.first_name || '') + ' ' + (user.last_name || '')).trim();
+      return {
+        id: Number(user.id || 0),
+        name: fullName || String(user.email || 'Employee'),
+      };
+    };
+    const getAbsenceTemplateShiftId = (kind) => {
+      const targetKind = String(kind || '').toLowerCase();
+      if (!targetKind) return 0;
+      const match = getActiveShifts().find((shift) => String(shift?.kind || '').toLowerCase() === targetKind);
+      return Number(match?.id || 0);
+    };
     const getUserAvailabilityStatus = (userId, slotDate) => {
       const normalizedUserId = Number(userId || 0);
       const normalizedDate = String(slotDate || '').trim();
@@ -1149,6 +1167,7 @@
       window.DashboardCalendar.init({
         calendarShell,
         events,
+        attendances,
         state,
         toLocalDate,
         openDate,
@@ -1156,6 +1175,8 @@
         assignShift,
         isUserAvailableForDate,
         getUserAvailabilityStatus,
+        getActiveUser: getActiveUserForCalendar,
+        getAbsenceTemplateShiftId,
       });
     }
 

@@ -54,6 +54,7 @@ try {
                 'description' => $input['description'] ?? null,
                 'head_user_id' => $input['head_user_id'] ?? null,
             ]);
+            ensureDepartmentAbsenceShiftTemplates($pdo, $id);
             $dept = $deptModel->findById($id);
             jsonResponse(['ok' => true, 'department' => $dept]);
             break;

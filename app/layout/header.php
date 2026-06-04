@@ -112,13 +112,15 @@ if ($route === 'home') {
             'alt' => 'Print',
         ];
     } else {
-        $rightIcons[] = [
-            'type' => 'link',
-            'href' => appUrl($role === 'employee' ? 'my-space' : 'dashboard'),
-            'title' => $role === 'employee' ? 'My space' : 'Dashboard',
-            'icon' => 'setting.svg',
-            'alt' => $role === 'employee' ? 'My space' : 'Dashboard',
-        ];
+        if ($role !== 'employee') {
+            $rightIcons[] = [
+                'type' => 'link',
+                'href' => appUrl('dashboard'),
+                'title' => 'Dashboard',
+                'icon' => 'setting.svg',
+                'alt' => 'Dashboard',
+            ];
+        }
     }
     $rightIcons[] = [
         'type' => 'link',

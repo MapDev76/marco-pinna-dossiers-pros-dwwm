@@ -1,11 +1,10 @@
-<!-- Employee space: mobile-first personal area for shifts, attendance and requests. -->
+<!-- Employee space: mobile-first personal area for shifts and attendance. -->
 <?php
 $shifts = $shifts ?? [];
 $todaySignableShifts = $todaySignableShifts ?? [];
 $todayTimelineShifts = $todayTimelineShifts ?? [];
 $upcomingShifts = $upcomingShifts ?? [];
 $currentShiftCard = $currentShiftCard ?? null;
-$requests = $requests ?? [];
 $attendances = $attendances ?? [];
 $requiredSignatureIp = trim((string) ($requiredSignatureIp ?? ''));
 $clientIp = trim((string) ($clientIp ?? ''));
@@ -15,13 +14,6 @@ $employeeDisplayName = trim((string) ($employeeDisplayName ?? 'Employee'));
 $employeeDepartmentName = trim((string) ($employeeDepartmentName ?? 'Department'));
 $employeeCompanyName = trim((string) ($employeeCompanyName ?? 'StaffEase Pro'));
 $employeeUiState = isset($employeeUiState) && is_array($employeeUiState) ? $employeeUiState : [];
-$requestTypeLabels = [
-    'shift_coverage' => 'Shift coverage',
-    'leave' => 'Leave',
-    'permission' => 'Permission',
-    'document_signature' => 'Document signature',
-    'notification' => 'Notification',
-];
 $statusLabels = [
     'assigned' => 'Assigned',
     'completed' => 'Completed',
@@ -36,6 +28,20 @@ $statusLabels = [
     'rejected' => 'Rejected',
     'read' => 'Read',
     'unread' => 'Unread',
+];
+$shiftKindLabels = [
+    'work' => 'Work shift',
+    'overtime' => 'Overtime',
+    'rest' => 'Rest day',
+    'vacation' => 'Vacation',
+    'sick' => 'Sick leave',
+];
+$shiftKindIcons = [
+    'work' => '',
+    'overtime' => '',
+    'rest' => '💤',
+    'vacation' => '🏖',
+    'sick' => '🤒',
 ];
 $formatLongDate = static function (?string $dateValue): string {
     if (empty($dateValue)) {
@@ -71,7 +77,20 @@ $primaryActionDisabled = true;
 $primaryActionNote = 'No assigned shift available for today.';
 
 if (is_array($primaryShift)) {
-    if (!empty($primaryShift['attendance_recorded'])) {
+    $primaryShiftKind = strtolower(trim((string) ($primaryShift['shift_kind'] ?? 'work')));
+    if ($primaryShiftKind === 'rest') {
+        $primaryShiftStatusText = 'Rest day scheduled';
+        $primaryActionLabel = 'Rest day';
+        $primaryActionNote = 'No attendance signature is required for a rest day.';
+    } elseif ($primaryShiftKind === 'vacation') {
+        $primaryShiftStatusText = 'Vacation day';
+        $primaryActionLabel = 'Vacation';
+        $primaryActionNote = 'No attendance signature is required during vacation.';
+    } elseif ($primaryShiftKind === 'sick') {
+        $primaryShiftStatusText = 'Sick leave day';
+        $primaryActionLabel = 'Sick leave';
+        $primaryActionNote = 'No attendance signature is required during sick leave.';
+    } elseif (!empty($primaryShift['attendance_recorded'])) {
         $primaryShiftStatusText = 'Attendance already signed';
         $primaryActionLabel = 'Already checked in';
         $primaryActionNote = 'Your attendance for this shift is already registered.';
@@ -127,7 +146,13 @@ if (is_array($primaryShift)) {
                     <h1>Schedule shift today</h1>
                 </div>
                 <?php if (is_array($primaryShift)): ?>
-                    <span class="employee-stage-pill"><?php echo e($primaryShift['shift_name'] ?? 'Shift'); ?></span>
+                    <?php
+                        $primaryKind = strtolower(trim((string) ($primaryShift['shift_kind'] ?? 'work')));
+                        $primaryKindIcon = $shiftKindIcons[$primaryKind] ?? '';
+                        $primaryShiftName = trim((string) ($primaryShift['shift_name'] ?? 'Shift'));
+                        $primaryPillText = $primaryKindIcon !== '' ? ($primaryKindIcon . ' ' . $primaryShiftName) : $primaryShiftName;
+                    ?>
+                    <span class="employee-stage-pill"><?php echo e($primaryPillText); ?></span>
                 <?php else: ?>
                     <span class="employee-stage-pill is-muted">No shift</span>
                 <?php endif; ?>
@@ -185,7 +210,7 @@ if (is_array($primaryShift)) {
 
     <section class="employee-upcoming-shell" id="employee-next-shifts">
         <div class="employee-upcoming-head">
-            <h2>Next shift</h2>
+            <h2>Next shifts</h2>
             <span><?php echo count($upcomingShifts); ?> planned</span>
         </div>
         <div class="employee-upcoming-list">
@@ -194,20 +219,39 @@ if (is_array($primaryShift)) {
             <?php endif; ?>
             <?php foreach ($upcomingShifts as $shift): ?>
                 <?php
+                    $shiftKind = strtolower(trim((string) ($shift['shift_kind'] ?? 'work')));
+                    $shiftKindLabel = $shiftKindLabels[$shiftKind] ?? 'Shift';
+                    $shiftKindIcon = $shiftKindIcons[$shiftKind] ?? '';
+                    $isNonWorkShift = in_array($shiftKind, ['rest', 'vacation', 'sick'], true);
                     $shiftBadge = $shift['shift_name'] ?? 'Shift';
+                    $shiftBadgeClass = '';
                     if (($shift['status'] ?? '') === 'cancelled') {
                         $shiftBadge = 'Cancelled';
+                        $shiftBadgeClass = 'is-rest';
+                    } elseif ($shiftKind === 'rest') {
+                        $shiftBadge = '💤 Rest day';
+                        $shiftBadgeClass = 'is-rest';
+                    } elseif ($shiftKind === 'vacation') {
+                        $shiftBadge = '🏖 Vacation';
+                        $shiftBadgeClass = 'is-vacation';
+                    } elseif ($shiftKind === 'sick') {
+                        $shiftBadge = '🤒 Sick leave';
+                        $shiftBadgeClass = 'is-sick';
                     } elseif (!empty($shift['attendance_recorded'])) {
                         $shiftBadge = 'Signed';
+                        $shiftBadgeClass = 'is-signed';
                     }
+                    $shiftCardClass = $isNonWorkShift ? 'is-non-work' : 'is-work';
+                    $shiftColor = trim((string) ($shift['shift_color'] ?? '#b58e14'));
                 ?>
-                <article class="employee-upcoming-item">
+                <article class="employee-upcoming-item <?php echo e($shiftCardClass); ?>" <?php if (!$isNonWorkShift): ?>style="--employee-shift-color: <?php echo e($shiftColor); ?>;"<?php endif; ?>>
                     <div>
                         <strong><?php echo e($formatLongDate($shift['work_date'] ?? null)); ?></strong>
                         <span><?php echo e($formatTimeRange($shift)); ?></span>
                         <small><?php echo e($shift['department_name'] ?? 'Department'); ?></small>
+                        <small><?php echo e(($shiftKindIcon !== '' ? ($shiftKindIcon . ' ') : '') . $shiftKindLabel); ?></small>
                     </div>
-                    <span class="employee-upcoming-badge <?php echo !empty($shift['attendance_recorded']) ? 'is-signed' : (($shift['status'] ?? '') === 'cancelled' ? 'is-rest' : ''); ?>"><?php echo e($shiftBadge); ?></span>
+                    <span class="employee-upcoming-badge <?php echo e($shiftBadgeClass); ?>"><?php echo e($shiftBadge); ?></span>
                 </article>
             <?php endforeach; ?>
         </div>
@@ -251,65 +295,6 @@ if (is_array($primaryShift)) {
             </div>
         </article>
 
-        <article class="admin-card employee-detail-card">
-            <div class="employee-card-head">
-                <div>
-                    <span class="employee-stage-eyebrow">Requests</span>
-                    <h2>Create a request</h2>
-                </div>
-                <span class="employee-metric-pill"><?php echo count($requests); ?> total</span>
-            </div>
-            <form method="post" class="admin-form admin-form-grid employee-request-form">
-                <input type="hidden" name="action" value="create_request">
-                <label>
-                    <span>Type</span>
-                    <select name="type" required>
-                        <option value="">Select</option>
-                        <option value="shift_coverage">Shift coverage</option>
-                        <option value="leave">Leave</option>
-                        <option value="permission">Permission</option>
-                        <option value="document_signature">Document signature</option>
-                        <option value="notification">Notification</option>
-                    </select>
-                </label>
-                <label>
-                    <span>Title</span>
-                    <input type="text" name="title" placeholder="Request summary">
-                </label>
-                <label class="span-2">
-                    <span>Message</span>
-                    <textarea name="message" rows="4" required></textarea>
-                </label>
-                <div class="form-actions span-2">
-                    <button type="submit">Submit request</button>
-                </div>
-            </form>
-            <div class="table-wrap employee-table-wrap">
-                <table class="admin-table employee-table-compact">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Title</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($requests)): ?>
-                            <tr><td colspan="4">No requests created.</td></tr>
-                        <?php endif; ?>
-                        <?php foreach (array_slice($requests, 0, 6) as $request): ?>
-                            <tr>
-                                <td><?php echo e($requestTypeLabels[$request['type']] ?? $request['type']); ?></td>
-                                <td><?php echo e($request['title'] ?? '-'); ?></td>
-                                <td><?php echo e($statusLabels[$request['status']] ?? $request['status']); ?></td>
-                                <td><?php echo e($request['created_at']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </article>
     </section>
 
     <div class="employee-attendance-modal" data-attendance-modal hidden>

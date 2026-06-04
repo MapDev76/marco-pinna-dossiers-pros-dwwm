@@ -108,6 +108,9 @@ $shiftsStatement = $pdo->prepare(
             us.work_date,
             us.status AS assignment_status,
             s.name AS shift_name,
+            s.kind AS shift_kind,
+            s.icon AS shift_icon,
+            s.color AS shift_color,
             s.start_time,
             s.end_time,
             d.name AS department_name,
@@ -124,15 +127,6 @@ $shiftsStatement = $pdo->prepare(
 );
 $shiftsStatement->execute(['user_id' => $currentUser['id']]);
 $shifts = $shiftsStatement->fetchAll();
-
-$requestsStatement = $pdo->prepare(
-    'SELECT id, type, title, message, status, created_at
-     FROM requests
-     WHERE user_id = :user_id
-     ORDER BY created_at DESC, id DESC'
-);
-$requestsStatement->execute(['user_id' => $currentUser['id']]);
-$requests = $requestsStatement->fetchAll();
 
 $attendancesStatement = $pdo->prepare(
     'SELECT a.id, a.work_date, a.status, a.check_in_time, a.check_out_time, s.name AS shift_name
@@ -167,6 +161,15 @@ $currentShiftCard = null;
 foreach ($shifts as &$shift) {
     $workDate = (string) ($shift['work_date'] ?? '');
     $assignmentStatus = (string) ($shift['assignment_status'] ?? 'assigned');
+    $shiftKind = strtolower(trim((string) ($shift['shift_kind'] ?? 'work')));
+    if (!in_array($shiftKind, ['work', 'rest', 'vacation', 'sick', 'overtime'], true)) {
+        $shiftKind = 'work';
+    }
+    $shiftColor = trim((string) ($shift['shift_color'] ?? ''));
+    if (!preg_match('/^#[0-9a-fA-F]{3,8}$/', $shiftColor)) {
+        $shiftColor = '#b58e14';
+    }
+    $isWorkShift = $shiftKind === 'work' || $shiftKind === 'overtime';
     $startAt = $buildShiftDateTime($workDate, (string) ($shift['start_time'] ?? ''));
     $endAt = $buildShiftDateTime($workDate, (string) ($shift['end_time'] ?? ''));
     if ($startAt !== null && $endAt !== null && $endAt <= $startAt) {
@@ -176,14 +179,15 @@ foreach ($shifts as &$shift) {
     $opensAt = $startAt?->modify('-5 minutes');
     $hasAttendance = (int) ($shift['attendance_id'] ?? 0) > 0 && trim((string) ($shift['check_in_time'] ?? '')) !== '';
     $isCancelled = $assignmentStatus === 'cancelled';
-    $isSignWindowOpen = !$isCancelled
+    $isSignWindowOpen = $isWorkShift
+        && !$isCancelled
         && !$hasAttendance
         && $opensAt !== null
         && $endAt !== null
         && $now >= $opensAt
         && $now <= $endAt;
-    $isBeforeWindow = !$isCancelled && !$hasAttendance && $opensAt !== null && $now < $opensAt;
-    $isPastWindow = !$isCancelled && !$hasAttendance && $endAt !== null && $now > $endAt;
+    $isBeforeWindow = $isWorkShift && !$isCancelled && !$hasAttendance && $opensAt !== null && $now < $opensAt;
+    $isPastWindow = $isWorkShift && !$isCancelled && !$hasAttendance && $endAt !== null && $now > $endAt;
 
     $minutesUntilOpen = null;
     if ($isBeforeWindow && $opensAt !== null) {
@@ -191,6 +195,8 @@ foreach ($shifts as &$shift) {
     }
 
     $shift['status'] = $assignmentStatus;
+    $shift['shift_kind'] = $shiftKind;
+    $shift['shift_color'] = $shiftColor;
     $shift['attendance_recorded'] = $hasAttendance;
     $shift['attendance_label'] = $hasAttendance ? 'Attendance already recorded' : ($shift['attendance_status'] ?? '');
     $shift['starts_at_iso'] = $startAt?->format(DateTimeInterface::ATOM) ?? null;
@@ -207,7 +213,7 @@ foreach ($shifts as &$shift) {
 
     if ($workDate === $todayDate && in_array($assignmentStatus, ['assigned', 'in_progress', 'completed'], true)) {
         $todayTimelineShifts[] = $shift;
-        if ($isSignWindowOpen) {
+        if ($isWorkShift && $isSignWindowOpen) {
             $todaySignableShifts[] = $shift;
             if ($currentShiftCard === null) {
                 $currentShiftCard = $shift;
@@ -243,6 +249,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'sign_attendance') {
         $userShiftId = (int) ($_POST['user_shift_id'] ?? 0);
         $signatureData = trim((string) ($_POST['signature_data'] ?? ''));
+        $shiftStartAt = null;
+        $isLateCheckIn = false;
         if ($userShiftId <= 0) {
             $error = 'Please select a valid shift.';
         } elseif ($signatureData === '') {
@@ -251,6 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $shiftCheck = $pdo->prepare(
                 'SELECT us.id,
                         us.work_date,
+                    s.kind AS shift_kind,
                         s.start_time,
                         s.end_time,
                         ' . $companySignatureIpSelect . '
@@ -269,6 +278,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'Unauthorized shift.';
             } elseif ((string) ($assignedShift['work_date'] ?? '') !== $todayDate) {
                 $error = 'You can only sign attendance for today\'s shift.';
+            } elseif (!in_array(strtolower(trim((string) ($assignedShift['shift_kind'] ?? 'work'))), ['work', 'overtime'], true)) {
+                $error = 'Attendance signing is available only for working shifts.';
             } else {
                 $shiftRequiredIp = $normalizeIp((string) ($assignedShift['signature_ip'] ?? ''));
                 if ($shiftRequiredIp !== '' && $clientIp !== $shiftRequiredIp) {
@@ -289,9 +300,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $error = 'Attendance signing is no longer available after shift end.';
                     }
                 }
+
+                if ($error === null && $shiftStartAt !== null && $now > $shiftStartAt) {
+                    $isLateCheckIn = true;
+                }
             }
 
             if ($error === null) {
+                $attendanceStatus = $isLateCheckIn ? 'late' : 'present';
                 $insertSignature = $pdo->prepare(
                     'INSERT INTO digital_signatures (user_id, signature_type, signature_data)
                      VALUES (:user_id, :signature_type, :signature_data)'
@@ -326,7 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          WHERE id = :id'
                     );
                     $updateAttendance->execute([
-                        'status' => 'present',
+                        'status' => $attendanceStatus,
                         'digital_signature_id' => $digitalSignatureId,
                         'check_in_time' => $now->format('H:i:s'),
                         'id' => (int) $existingAttendanceId,
@@ -342,40 +358,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'digital_signature_id' => $digitalSignatureId,
                         'work_date' => $todayDate,
                         'check_in_time' => $now->format('H:i:s'),
-                        'status' => 'present',
+                        'status' => $attendanceStatus,
                     ]);
                 }
 
                 if ($error === null) {
-                    setFlash('success', 'Attendance recorded with touchscreen signature.');
+                    if ($isLateCheckIn) {
+                        setFlash('success', 'Attendance recorded. You checked in late after scheduled start time.');
+                    } else {
+                        setFlash('success', 'Attendance recorded with touchscreen signature.');
+                    }
                     redirectTo('my-space');
                 }
             }
         }
     }
 
-    if ($action === 'create_request') {
-        $type = trim((string) ($_POST['type'] ?? ''));
-        $title = trim((string) ($_POST['title'] ?? ''));
-        $message = trim((string) ($_POST['message'] ?? ''));
-
-        if ($type === '' || $message === '') {
-            $error = 'Type and message are required.';
-        } else {
-            $requestInsert = $pdo->prepare(
-                'INSERT INTO requests (user_id, type, title, message, status)
-                 VALUES (:user_id, :type, :title, :message, :status)'
-            );
-            $requestInsert->execute([
-                'user_id' => $currentUser['id'],
-                'type' => $type,
-                'title' => $title !== '' ? $title : null,
-                'message' => $message,
-                'status' => 'pending',
-            ]);
-
-            setFlash('success', 'Request sent.');
-            redirectTo('my-space');
-        }
-    }
 }
