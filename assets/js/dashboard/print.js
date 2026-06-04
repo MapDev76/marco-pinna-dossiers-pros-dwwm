@@ -353,21 +353,63 @@
     var modal = document.getElementById('modal-print');
     if (!modal) return;
 
+    var shellNode = modal.querySelector('[data-print-shell]');
     var contentNode = modal.querySelector('[data-print-content]');
     var metaNode = modal.querySelector('[data-print-meta]');
     var feedbackNode = modal.querySelector('[data-print-feedback]');
     var refreshButton = modal.querySelector('[data-print-refresh]');
+    var previewButton = modal.querySelector('[data-print-preview]');
     var downloadButton = modal.querySelector('[data-print-download-csv]');
     var saveDocumentButton = modal.querySelector('[data-print-save-document]');
     var printButton = modal.querySelector('[data-print-trigger]');
 
     var currentRender = null;
+    var previewEnabled = false;
 
     function setFeedback(message, isError) {
       if (!feedbackNode) return;
       feedbackNode.textContent = message || '';
       feedbackNode.classList.toggle('is-error', !!isError);
       feedbackNode.classList.toggle('is-success', !!message && !isError);
+    }
+
+    function fitPreviewToA4() {
+      if (!previewEnabled || !contentNode) return;
+      var frame = contentNode.querySelector('[data-print-fit-frame]');
+      var fitContent = contentNode.querySelector('[data-print-fit-content]');
+      if (!frame || !fitContent) return;
+
+      fitContent.style.transform = 'scale(1)';
+      fitContent.style.left = '0px';
+      fitContent.style.top = '0px';
+
+      var frameWidth = frame.clientWidth;
+      var frameHeight = frame.clientHeight;
+      var contentWidth = fitContent.scrollWidth || fitContent.offsetWidth || 1;
+      var contentHeight = fitContent.scrollHeight || fitContent.offsetHeight || 1;
+      if (!frameWidth || !frameHeight || !contentWidth || !contentHeight) return;
+
+      var scale = Math.min(frameWidth / contentWidth, frameHeight / contentHeight, 1);
+      var offsetX = Math.max(0, (frameWidth - (contentWidth * scale)) / 2);
+      var offsetY = Math.max(0, (frameHeight - (contentHeight * scale)) / 2);
+
+      fitContent.style.left = offsetX + 'px';
+      fitContent.style.top = offsetY + 'px';
+      fitContent.style.transform = 'scale(' + scale.toFixed(4) + ')';
+    }
+
+    function setPreviewState(nextState) {
+      previewEnabled = !!nextState;
+      if (shellNode) {
+        shellNode.classList.toggle('is-preview-active', previewEnabled);
+      }
+      if (previewButton) {
+        previewButton.classList.toggle('is-active', previewEnabled);
+        previewButton.textContent = previewEnabled ? 'Hide Preview' : 'Preview A4';
+      }
+      if (previewEnabled) {
+        setFeedback('A4 preview enabled. Planning is scaled to fit one A4 page.', false);
+      }
     }
 
     function renderPlanning() {
@@ -409,11 +451,26 @@
       }
 
       if (contentNode) {
-        contentNode.innerHTML =
+        var printableBody =
           renderMonthTable(currentMonthSection) +
           '<section class="dashboard-print-shifts-legend"><h4>Shift legend</h4>' + buildShiftLegend(department) + '</section>';
+
+        if (previewEnabled) {
+          contentNode.innerHTML =
+            '<section class="dashboard-print-a4-sheet" data-print-a4-sheet>' +
+              '<div class="dashboard-print-fit-frame" data-print-fit-frame>' +
+                '<div class="dashboard-print-fit-content" data-print-fit-content>' + printableBody + '</div>' +
+              '</div>' +
+            '</section>';
+        } else {
+          contentNode.innerHTML = printableBody;
+        }
       }
-      setFeedback('', false);
+      if (previewEnabled) {
+        window.requestAnimationFrame(fitPreviewToA4);
+      } else {
+        setFeedback('', false);
+      }
     }
 
     function buildCombinedCsv() {
@@ -427,6 +484,13 @@
 
     if (refreshButton) {
       refreshButton.addEventListener('click', function () {
+        renderPlanning();
+      });
+    }
+
+    if (previewButton) {
+      previewButton.addEventListener('click', function () {
+        setPreviewState(!previewEnabled);
         renderPlanning();
       });
     }
@@ -493,8 +557,23 @@
           notifyError('No planning data available to print.');
           return;
         }
-        document.body.classList.add('print-planning-mode');
-        window.print();
+
+        var runPrint = function () {
+          document.body.classList.add('print-planning-mode');
+          window.print();
+        };
+
+        if (!previewEnabled) {
+          setPreviewState(true);
+          renderPlanning();
+          window.setTimeout(runPrint, 80);
+          return;
+        }
+
+        window.requestAnimationFrame(function () {
+          fitPreviewToA4();
+          runPrint();
+        });
       });
     }
 
@@ -504,6 +583,12 @@
 
     modal.addEventListener('modal:open', function () {
       renderPlanning();
+    });
+
+    window.addEventListener('resize', function () {
+      if (!modal.hidden && previewEnabled) {
+        window.requestAnimationFrame(fitPreviewToA4);
+      }
     });
 
     document.addEventListener('dashboard:planner-updated', function () {

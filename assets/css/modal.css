@@ -320,6 +320,33 @@
     gap: 0.8rem;
 }
 
+.dashboard-print-a4-sheet {
+    width: 100%;
+    max-width: 1122px;
+    margin: 0 auto;
+    padding: 0.4rem;
+    border-radius: 14px;
+    border: 1px dashed rgba(157, 121, 16, 0.25);
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.dashboard-print-fit-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 297 / 210;
+    overflow: hidden;
+    background: #fff;
+    border-radius: 10px;
+}
+
+.dashboard-print-fit-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+    will-change: transform;
+}
+
 .dashboard-print-legend {
     display: inline-flex;
     align-items: center;
@@ -475,6 +502,11 @@
 }
 
 @media print {
+    @page {
+        size: A4 landscape;
+        margin: 6mm;
+    }
+
     body.print-planning-mode * {
         visibility: hidden !important;
     }
@@ -507,8 +539,96 @@
 
     body.print-planning-mode #modal-print .dashboard-modal-close,
     body.print-planning-mode #modal-print .dashboard-print-actions,
-    body.print-planning-mode #modal-print .dashboard-print-feedback {
+    body.print-planning-mode #modal-print .dashboard-print-feedback,
+    body.print-planning-mode #modal-print .dashboard-print-subtitle {
         display: none !important;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-head {
+        margin-bottom: 3mm;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-head h2 {
+        font-size: 12pt;
+        margin: 0;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-meta {
+        margin: 0 0 2.5mm;
+        font-size: 8pt;
+        gap: 2mm;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-content {
+        margin-top: 0;
+        gap: 0;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-a4-sheet {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: #fff;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-fit-frame {
+        width: 100%;
+        height: 182mm;
+        aspect-ratio: auto;
+        border-radius: 0;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-page {
+        border: 0;
+        border-radius: 0;
+        padding: 0.18rem;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-page h3 {
+        margin: 0 0 0.2rem;
+        font-size: 8pt;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-grid {
+        font-size: 7pt;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-grid th,
+    body.print-planning-mode #modal-print .dashboard-print-grid td {
+        padding: 0.06rem 0.08rem;
+        min-width: 18px;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-grid .employee-col,
+    body.print-planning-mode #modal-print .dashboard-print-grid tbody th {
+        min-width: 86px;
+        max-width: 106px;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-shifts-legend {
+        margin-top: 0.18rem;
+        padding: 0.16rem;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-shifts-legend h4 {
+        margin-bottom: 0.1rem;
+        font-size: 7pt;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-legend-item {
+        padding: 0.1rem 0.2rem;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-legend-item strong {
+        font-size: 6pt;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-legend-item small {
+        font-size: 5.8pt;
     }
 
 }
