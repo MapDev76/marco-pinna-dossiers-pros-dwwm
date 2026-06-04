@@ -84,6 +84,7 @@ $dashboardPlannerData = [
     'departments' => [],
     'users' => [],
     'shifts' => [],
+    'attendances' => [],
     'company' => [
         'id' => $companyId,
         'name' => $profile['company_name'] ?? ($currentUser['company_name'] ?? ''),
@@ -228,6 +229,33 @@ if ($role === 'super_admin') {
         );
         $calendarStatement->execute(['company_id' => $plannerCompanyId]);
         $dashboardPlannerData['assignments'] = $calendarStatement->fetchAll();
+
+        $attendanceStatement = $pdo->prepare(
+            'SELECT a.id,
+                    a.user_id,
+                    a.user_shift_id,
+                    a.digital_signature_id,
+                    a.work_date,
+                    a.check_in_time,
+                    a.check_out_time,
+                    a.status,
+                    CONCAT(u.first_name, " ", u.last_name) AS user_name,
+                    us.shift_id,
+                    s.name AS shift_name,
+                    d.id AS department_id,
+                    d.name AS department_name,
+                    ds.signature_date
+             FROM attendances a
+             INNER JOIN users u ON u.id = a.user_id
+             LEFT JOIN user_shifts us ON us.id = a.user_shift_id
+             LEFT JOIN shifts s ON s.id = us.shift_id
+             LEFT JOIN departments d ON d.id = s.department_id
+             LEFT JOIN digital_signatures ds ON ds.id = a.digital_signature_id
+             WHERE d.company_id = :company_id
+             ORDER BY a.work_date DESC, a.id DESC'
+        );
+        $attendanceStatement->execute(['company_id' => $plannerCompanyId]);
+        $dashboardPlannerData['attendances'] = $attendanceStatement->fetchAll();
     }
 }
 
@@ -333,6 +361,33 @@ if ($role === 'admin' && $companyId !== null) {
     $calendarStatement->execute(['company_id' => $companyId]);
     $dashboardCalendarEvents = $calendarStatement->fetchAll();
     $dashboardPlannerData['assignments'] = $dashboardCalendarEvents;
+
+    $attendanceStatement = $pdo->prepare(
+        'SELECT a.id,
+                a.user_id,
+                a.user_shift_id,
+                a.digital_signature_id,
+                a.work_date,
+                a.check_in_time,
+                a.check_out_time,
+                a.status,
+                CONCAT(u.first_name, " ", u.last_name) AS user_name,
+                us.shift_id,
+                s.name AS shift_name,
+                d.id AS department_id,
+                d.name AS department_name,
+                ds.signature_date
+         FROM attendances a
+         INNER JOIN users u ON u.id = a.user_id
+         LEFT JOIN user_shifts us ON us.id = a.user_shift_id
+         LEFT JOIN shifts s ON s.id = us.shift_id
+         LEFT JOIN departments d ON d.id = s.department_id
+         LEFT JOIN digital_signatures ds ON ds.id = a.digital_signature_id
+         WHERE d.company_id = :company_id
+         ORDER BY a.work_date DESC, a.id DESC'
+    );
+    $attendanceStatement->execute(['company_id' => $companyId]);
+    $dashboardPlannerData['attendances'] = $attendanceStatement->fetchAll();
 }
 
 if ($role === 'department_manager' && $departmentId !== null) {
@@ -430,6 +485,33 @@ if ($role === 'department_manager' && $departmentId !== null) {
     $calendarStatement->execute(['department_id' => $departmentId]);
     $dashboardCalendarEvents = $calendarStatement->fetchAll();
     $dashboardPlannerData['assignments'] = $dashboardCalendarEvents;
+
+    $attendanceStatement = $pdo->prepare(
+        'SELECT a.id,
+                a.user_id,
+                a.user_shift_id,
+                a.digital_signature_id,
+                a.work_date,
+                a.check_in_time,
+                a.check_out_time,
+                a.status,
+                CONCAT(u.first_name, " ", u.last_name) AS user_name,
+                us.shift_id,
+                s.name AS shift_name,
+                d.id AS department_id,
+                d.name AS department_name,
+                ds.signature_date
+         FROM attendances a
+         INNER JOIN users u ON u.id = a.user_id
+         LEFT JOIN user_shifts us ON us.id = a.user_shift_id
+         LEFT JOIN shifts s ON s.id = us.shift_id
+         LEFT JOIN departments d ON d.id = s.department_id
+         LEFT JOIN digital_signatures ds ON ds.id = a.digital_signature_id
+         WHERE d.id = :department_id
+         ORDER BY a.work_date DESC, a.id DESC'
+    );
+    $attendanceStatement->execute(['department_id' => $departmentId]);
+    $dashboardPlannerData['attendances'] = $attendanceStatement->fetchAll();
 }
 
 $stats = [

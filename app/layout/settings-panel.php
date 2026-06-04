@@ -28,6 +28,7 @@ if ($currentRole === 'admin') {
 }
 $shifts = is_array($planner['shifts'] ?? null) ? $planner['shifts'] : [];
 $assignments = is_array($planner['assignments'] ?? null) ? $planner['assignments'] : [];
+$attendances = is_array($planner['attendances'] ?? null) ? $planner['attendances'] : [];
 $roleLabels = [
     'super_admin' => 'Super Admin',
     'admin' => 'Admin',
@@ -357,6 +358,23 @@ $openAssignmentsCount = count(array_filter(
     static fn(array $assignment): bool => (int) ($assignment['user_id'] ?? 0) <= 0 || (($assignment['status'] ?? '') === 'open')
 ));
 
+$attendanceByUser = [];
+foreach ($visibleUsers as $attendanceUser) {
+    $attendanceByUser[(int) ($attendanceUser['id'] ?? 0)] = 0;
+}
+foreach ($attendances as $attendanceRow) {
+    $attendanceUserId = (int) ($attendanceRow['user_id'] ?? 0);
+    if ($attendanceUserId > 0 && isset($attendanceByUser[$attendanceUserId])) {
+        $attendanceByUser[$attendanceUserId]++;
+    }
+}
+
+$attendanceAssignableShifts = array_values(array_filter(
+    $assignmentsCurrentMonth,
+    static fn(array $assignment): bool => (int) ($assignment['user_id'] ?? 0) > 0
+        && !in_array((string) ($assignment['status'] ?? ''), ['cancelled', 'open'], true)
+));
+
 $departmentCreateHeadUsers = array_values(array_filter(
     $visibleUsers,
     static fn(array $u): bool => ((int) ($u['company_id'] ?? 0) === $scopeCompanyId) && ((int) ($u['department_id'] ?? 0) === 0)
@@ -416,6 +434,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
             <?php endif; ?>
             <button type="button" class="settings-tab" data-settings-tab="shifts">Shifts</button>
             <button type="button" class="settings-tab" data-settings-tab="assignments">Assignments</button>
+            <button type="button" class="settings-tab" data-settings-tab="attendances">Attendances</button>
         </div>
 
         <div class="crud-modal-body settings-modal-body">
@@ -825,6 +844,182 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
             </section>
 
+            <section class="crud-panel settings-panel" data-settings-panel="attendances" hidden>
+                <div class="settings-panel-head">
+                    <div>
+                        <h3>Attendances</h3>
+                        <p class="crud-modal-subtitle">Manage attendance signatures and presence registration by department and employee.</p>
+                    </div>
+                    <div class="settings-pill-row">
+                        <span class="settings-pill"><?php echo count($attendances); ?> records</span>
+                    </div>
+                </div>
+
+                <?php if (in_array($currentRole, ['super_admin', 'admin'], true) && $scopeCompanyId > 0): ?>
+                    <div class="settings-list-item-wrap settings-company-ip-wrap">
+                        <div class="settings-list-row settings-company-ip-row">
+                            <div>
+                                <strong>Authorized Wi-Fi IP for attendance signature</strong>
+                                <p class="crud-modal-subtitle">Leave empty to allow attendance signature from any network. If set, signatures are accepted only from this IP.</p>
+                            </div>
+                            <div class="settings-company-ip-controls">
+                                <input
+                                    type="text"
+                                    value="<?php echo e($scopeCompanySignatureIp); ?>"
+                                    placeholder="Example: 192.168.1.120"
+                                    data-company-signature-ip
+                                    data-company-id="<?php echo (int) $scopeCompanyId; ?>"
+                                >
+                                <button type="button" class="admin-action-link" data-company-signature-ip-save>Save Wi-Fi IP</button>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <section class="settings-analytics-card settings-assignment-employee-index" data-attendance-employee-index>
+                    <div class="settings-assignment-employee-index-head">
+                        <h4>Employees by Department</h4>
+                        <p class="crud-modal-subtitle">Open an employee profile, choose an assigned shift, and register attendance with digital signature.</p>
+                    </div>
+                    <?php if (empty($visibleUsers)): ?>
+                        <div class="crud-empty-state">No users available for attendance management.</div>
+                    <?php else: ?>
+                        <?php
+                            $attendanceUsersByDepartment = [];
+                            foreach ($visibleUsers as $attendanceUserItem) {
+                                $attendanceDepartmentName = (string) ($attendanceUserItem['department_name'] ?? 'Unassigned');
+                                if ($attendanceDepartmentName === '') {
+                                    $attendanceDepartmentName = 'Unassigned';
+                                }
+                                if (!isset($attendanceUsersByDepartment[$attendanceDepartmentName])) {
+                                    $attendanceUsersByDepartment[$attendanceDepartmentName] = [];
+                                }
+                                $attendanceUsersByDepartment[$attendanceDepartmentName][] = $attendanceUserItem;
+                            }
+                            ksort($attendanceUsersByDepartment);
+                        ?>
+                        <?php foreach ($attendanceUsersByDepartment as $attendanceDepartmentLabel => $attendanceDepartmentUsers): ?>
+                            <section class="settings-assignment-employee-group">
+                                <div class="settings-assignment-employee-group-title">Dept: <?php echo e($attendanceDepartmentLabel); ?></div>
+                                <div class="settings-assignment-employee-list">
+                                    <?php foreach ($attendanceDepartmentUsers as $attendanceUserItem): ?>
+                                        <?php
+                                            $attendanceUserId = (int) ($attendanceUserItem['id'] ?? 0);
+                                            $attendanceUserName = trim((string) (($attendanceUserItem['first_name'] ?? '') . ' ' . ($attendanceUserItem['last_name'] ?? '')));
+                                            if ($attendanceUserName === '') {
+                                                $attendanceUserName = (string) ($attendanceUserItem['email'] ?? ('User #' . $attendanceUserId));
+                                            }
+                                            $attendanceCount = (int) ($attendanceByUser[$attendanceUserId] ?? 0);
+                                        ?>
+                                        <button
+                                            type="button"
+                                            class="settings-assignment-employee-item"
+                                            data-attendance-employee-open
+                                            data-user-id="<?php echo $attendanceUserId; ?>"
+                                            data-user-name="<?php echo e($attendanceUserName); ?>"
+                                            data-user-department-name="<?php echo e($attendanceDepartmentLabel); ?>"
+                                        >
+                                            <strong><?php echo e($attendanceUserName); ?></strong>
+                                            <span><?php echo e($attendanceUserItem['email'] ?? ''); ?></span>
+                                            <small>Attendance records: <?php echo $attendanceCount; ?></small>
+                                        </button>
+                                    <?php endforeach; ?>
+                                </div>
+                            </section>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </section>
+
+                <script type="application/json" data-attendance-assignment-catalog>
+                    <?php
+                        $attendanceAssignmentCatalog = array_map(static function (array $assignment): array {
+                            return [
+                                'assignment_id' => (int) ($assignment['assignment_id'] ?? 0),
+                                'user_id' => (int) ($assignment['user_id'] ?? 0),
+                                'user_name' => (string) ($assignment['user_name'] ?? ''),
+                                'work_date' => (string) ($assignment['work_date'] ?? ''),
+                                'shift_id' => (int) ($assignment['shift_id'] ?? 0),
+                                'shift_name' => (string) ($assignment['shift_name'] ?? 'Shift'),
+                                'department_name' => (string) ($assignment['department_name'] ?? 'Department'),
+                                'status' => (string) ($assignment['status'] ?? 'assigned'),
+                            ];
+                        }, $attendanceAssignableShifts);
+                        echo json_encode($attendanceAssignmentCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    ?>
+                </script>
+
+                <div class="settings-assignment-employee-modal" data-attendance-employee-modal hidden>
+                    <div class="settings-assignment-employee-window">
+                        <header class="settings-assignment-employee-window-head">
+                            <div>
+                                <h4 data-attendance-modal-title>Attendance signature</h4>
+                                <p class="crud-modal-subtitle" data-attendance-modal-subtitle>Select shift and sign to record attendance.</p>
+                            </div>
+                            <button type="button" class="dashboard-modal-close" data-attendance-employee-close aria-label="Close attendance modal">&times;</button>
+                        </header>
+
+                        <div class="settings-assignment-employee-window-grid">
+                            <section class="settings-analytics-card">
+                                <label class="settings-field">Assigned shift
+                                    <select data-attendance-modal-user-shift>
+                                        <option value="">Select assigned shift</option>
+                                    </select>
+                                </label>
+                                <label class="settings-field">Attendance status
+                                    <select data-attendance-modal-status>
+                                        <option value="present">Present</option>
+                                        <option value="late">Late</option>
+                                        <option value="absent">Absent</option>
+                                        <option value="early_departure">Early departure</option>
+                                    </select>
+                                </label>
+                                <div class="employee-signature-pad-shell">
+                                    <span>Digital signature</span>
+                                    <canvas width="520" height="180" data-attendance-signature-canvas aria-label="Attendance signature pad"></canvas>
+                                    <small class="employee-signature-error" data-attendance-signature-error></small>
+                                    <div class="employee-signature-pad-actions">
+                                        <button type="button" class="admin-action-link admin-action-link-secondary" data-attendance-signature-clear>Clear signature</button>
+                                        <small>Use touch, stylus, or mouse to sign.</small>
+                                    </div>
+                                </div>
+                                <div class="settings-inline-actions">
+                                    <button type="button" class="admin-action-link" data-attendance-signature-save>Record attendance</button>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-list-wrap">
+                    <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-assignment">
+                        <strong>Date</strong>
+                        <span>Employee</span>
+                        <span>Department</span>
+                        <span>Shift</span>
+                        <span>Status</span>
+                        <span>Check-in</span>
+                        <span>Signature</span>
+                    </div>
+                    <?php if (empty($attendances)): ?>
+                        <div class="crud-empty-state">No attendance records available.</div>
+                    <?php else: ?>
+                        <?php foreach (array_slice($attendances, 0, 250) as $attendance): ?>
+                            <article class="settings-list-item-wrap">
+                                <div class="settings-list-row settings-list-cols settings-list-cols-assignment">
+                                    <strong><?php echo e($attendance['work_date'] ?? ''); ?></strong>
+                                    <span><?php echo e($attendance['user_name'] ?? '--'); ?></span>
+                                    <span><?php echo e($attendance['department_name'] ?? '--'); ?></span>
+                                    <span><?php echo e($attendance['shift_name'] ?? '--'); ?></span>
+                                    <span><?php echo e(ucfirst((string) ($attendance['status'] ?? 'present'))); ?></span>
+                                    <span><?php echo e($attendance['check_in_time'] ?? '--'); ?></span>
+                                    <span><?php echo !empty($attendance['digital_signature_id']) ? 'Signed' : 'Missing'; ?></span>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </section>
+
             <?php if ($currentRole !== 'department_manager'): ?>
             <section class="crud-panel settings-panel" data-settings-panel="departments" hidden>
                 <div class="settings-panel-head">
@@ -1002,27 +1197,6 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <span class="settings-pill"><?php echo count($visibleUsers); ?> users</span>
                     </div>
                 </div>
-
-                <?php if (in_array($currentRole, ['super_admin', 'admin'], true) && $scopeCompanyId > 0): ?>
-                    <div class="settings-list-item-wrap settings-company-ip-wrap">
-                        <div class="settings-list-row settings-company-ip-row">
-                            <div>
-                                <strong>Authorized Wi-Fi IP for attendance signature</strong>
-                                <p class="crud-modal-subtitle">Leave empty to allow attendance signature from any network. If set, employees can sign only from this IP.</p>
-                            </div>
-                            <div class="settings-company-ip-controls">
-                                <input
-                                    type="text"
-                                    value="<?php echo e($scopeCompanySignatureIp); ?>"
-                                    placeholder="Example: 192.168.1.120"
-                                    data-company-signature-ip
-                                    data-company-id="<?php echo (int) $scopeCompanyId; ?>"
-                                >
-                                <button type="button" class="admin-action-link" data-company-signature-ip-save>Save Wi-Fi IP</button>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
 
                 <div class="settings-list-head settings-create-row" data-user-create-row>
                     <div class="settings-list-cols settings-list-cols-user-create">

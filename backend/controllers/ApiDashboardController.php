@@ -31,7 +31,7 @@ $user = currentUser();
 $role = $user['role'] ?? 'employee';
 $profile = $userModel->profileWithRelations((int) $user['id']) ?? [];
 
-if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_assign_open', 'clear_assignments_scope'], true)) {
+if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_assign_open', 'clear_assignments_scope', 'record_attendance_signature'], true)) {
     if (!in_array($role, ['admin', 'department_manager'], true)) {
         jsonResponse(['success' => false, 'error' => 'Unauthorized'], 403);
     }
@@ -41,6 +41,119 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
     $shiftId = (int) ($input['shift_id'] ?? 0);
     $workDate = trim((string) ($input['work_date'] ?? ''));
     $status = trim((string) ($input['status'] ?? 'assigned'));
+
+    if ($action === 'record_attendance_signature') {
+        $targetUserId = (int) ($input['user_id'] ?? 0);
+        $targetUserShiftId = (int) ($input['user_shift_id'] ?? 0);
+        $signatureData = trim((string) ($input['signature_data'] ?? ''));
+        $attendanceStatus = trim((string) ($input['attendance_status'] ?? 'present'));
+        if (!in_array($attendanceStatus, ['present', 'absent', 'late', 'early_departure'], true)) {
+            $attendanceStatus = 'present';
+        }
+
+        if ($targetUserId <= 0 || $targetUserShiftId <= 0 || $signatureData === '') {
+            jsonResponse(['success' => false, 'error' => 'user_id, user_shift_id and signature_data are required'], 400);
+        }
+
+        $scopeWhere = '1=1';
+        $scopeParams = [];
+        if ($role === 'department_manager') {
+            $scopeWhere = 'd.id = :department_id';
+            $scopeParams['department_id'] = (int) ($profile['department_id'] ?? 0);
+        } elseif ($role === 'admin') {
+            $scopeWhere = 'd.company_id = :company_id';
+            $scopeParams['company_id'] = (int) ($profile['company_id'] ?? 0);
+        }
+
+        $assignmentLookup = $pdo->prepare(
+            'SELECT us.id, us.user_id, us.work_date, us.shift_id, d.id AS department_id
+             FROM user_shifts us
+             INNER JOIN shifts s ON s.id = us.shift_id
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE us.id = :user_shift_id
+               AND us.user_id = :user_id
+               AND ' . $scopeWhere . '
+             LIMIT 1'
+        );
+        $assignmentLookup->execute(array_merge([
+            'user_shift_id' => $targetUserShiftId,
+            'user_id' => $targetUserId,
+        ], $scopeParams));
+        $assignment = $assignmentLookup->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        if (!$assignment) {
+            jsonResponse(['success' => false, 'error' => 'Assignment not found or out of scope'], 404);
+        }
+
+        $workDate = (string) ($assignment['work_date'] ?? '');
+        if ($workDate === '' || $workDate > date('Y-m-d')) {
+            jsonResponse(['success' => false, 'error' => 'Attendance cannot be recorded for future dates'], 400);
+        }
+
+        $insertSignature = $pdo->prepare(
+            'INSERT INTO digital_signatures (user_id, signature_type, signature_data)
+             VALUES (:user_id, :signature_type, :signature_data)'
+        );
+        $insertSignature->execute([
+            'user_id' => $targetUserId,
+            'signature_type' => 'touchscreen',
+            'signature_data' => $signatureData,
+        ]);
+        $digitalSignatureId = (int) $pdo->lastInsertId();
+
+        $attendanceLookup = $pdo->prepare(
+            'SELECT id
+             FROM attendances
+             WHERE user_id = :user_id
+               AND user_shift_id = :user_shift_id
+               AND work_date = :work_date
+             LIMIT 1'
+        );
+        $attendanceLookup->execute([
+            'user_id' => $targetUserId,
+            'user_shift_id' => $targetUserShiftId,
+            'work_date' => $workDate,
+        ]);
+        $attendanceId = (int) ($attendanceLookup->fetchColumn() ?: 0);
+
+        if ($attendanceId > 0) {
+            $updateAttendance = $pdo->prepare(
+                'UPDATE attendances
+                 SET status = :status,
+                     digital_signature_id = :digital_signature_id,
+                     check_in_time = COALESCE(check_in_time, CURRENT_TIME),
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :id'
+            );
+            $updateAttendance->execute([
+                'status' => $attendanceStatus,
+                'digital_signature_id' => $digitalSignatureId,
+                'id' => $attendanceId,
+            ]);
+        } else {
+            $insertAttendance = $pdo->prepare(
+                'INSERT INTO attendances (user_id, user_shift_id, digital_signature_id, work_date, check_in_time, status)
+                 VALUES (:user_id, :user_shift_id, :digital_signature_id, :work_date, CURRENT_TIME, :status)'
+            );
+            $insertAttendance->execute([
+                'user_id' => $targetUserId,
+                'user_shift_id' => $targetUserShiftId,
+                'digital_signature_id' => $digitalSignatureId,
+                'work_date' => $workDate,
+                'status' => $attendanceStatus,
+            ]);
+            $attendanceId = (int) $pdo->lastInsertId();
+        }
+
+        jsonResponse([
+            'success' => true,
+            'ok' => true,
+            'attendance_id' => $attendanceId,
+            'digital_signature_id' => $digitalSignatureId,
+            'work_date' => $workDate,
+            'status' => $attendanceStatus,
+        ]);
+    }
 
     $validateSingleShiftPerDay = static function (PDO $pdo, int $targetUserId, string $targetDate, int $excludeAssignmentId = 0): ?string {
         if ($targetUserId <= 0 || $targetDate === '') {

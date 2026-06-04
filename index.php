@@ -133,6 +133,7 @@ require $viewFile;
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/assignments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/assignments.js'); ?>"></script>
+<script src="<?php echo $basePath; ?>/assets/js/dashboard/attendances.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/attendances.js'); ?>"></script>
 <?php endif; ?>
 
 <?php if ($isMySpaceRoute && isLoggedIn()): ?>
