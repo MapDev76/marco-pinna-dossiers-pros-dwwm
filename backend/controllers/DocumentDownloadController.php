@@ -14,17 +14,18 @@ if (!isLoggedIn()) {
 }
 
 $pdo = getPDO();
+ensureDocumentStorageSchema($pdo);
 $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 $documentId = (int) ($_GET['id'] ?? 0);
 
 if ($documentId <= 0) {
     setFlash('error', 'Document not found.');
-    redirectTo('dashboard');
+    redirectTo($role === 'employee' ? 'my-space' : 'dashboard');
 }
 
 $statement = $pdo->prepare(
-    'SELECT d.id, d.user_id, d.file_name, d.file_path, u.department_id, dep.company_id
+    'SELECT d.id, d.user_id, d.file_name, d.file_path, d.file_blob, d.file_mime_type, u.department_id, dep.company_id
      FROM documents d
      INNER JOIN users u ON u.id = d.user_id
      LEFT JOIN departments dep ON dep.id = u.department_id
@@ -36,7 +37,7 @@ $document = $statement->fetch(PDO::FETCH_ASSOC);
 
 if (!$document) {
     setFlash('error', 'Document not found.');
-    redirectTo('dashboard');
+    redirectTo($role === 'employee' ? 'my-space' : 'dashboard');
 }
 
 $currentUserId = (int) $currentUser['id'];
@@ -51,11 +52,24 @@ if ($role === 'super_admin') {
     $allowed = true;
 } elseif ((int) $document['user_id'] === $currentUserId) {
     $allowed = true;
+} elseif ($role === 'employee') {
+    $recipientLookup = $pdo->prepare(
+        'SELECT id
+         FROM requests
+         WHERE recipient_id = :recipient_id
+           AND document_id = :document_id
+         LIMIT 1'
+    );
+    $recipientLookup->execute([
+        'recipient_id' => $currentUserId,
+        'document_id' => $documentId,
+    ]);
+    $allowed = (bool) $recipientLookup->fetchColumn();
 }
 
 if (!$allowed) {
     setFlash('error', 'Access denied.');
-    redirectTo('dashboard');
+    redirectTo($role === 'employee' ? 'my-space' : 'dashboard');
 }
 
 $filePath = trim((string) ($document['file_path'] ?? ''));
@@ -75,16 +89,29 @@ foreach ($candidatePaths as $candidatePath) {
     }
 }
 
-if ($resolvedPath === null) {
-    setFlash('error', 'File not available.');
-    redirectTo('dashboard', ['modal' => 'documents']);
+$downloadName = basename((string) ($document['file_name'] ?? ($resolvedPath !== null ? basename($resolvedPath) : 'document.bin')));
+
+if ($resolvedPath !== null) {
+    $mimeType = mime_content_type($resolvedPath) ?: 'application/octet-stream';
+    header('Content-Type: ' . $mimeType);
+    header('Content-Length: ' . (string) filesize($resolvedPath));
+    header('Content-Disposition: attachment; filename="' . str_replace('"', '', $downloadName) . '"');
+    readfile($resolvedPath);
+    exit;
 }
 
-$downloadName = basename((string) ($document['file_name'] ?? basename($resolvedPath)));
-$mimeType = mime_content_type($resolvedPath) ?: 'application/octet-stream';
+$blobContent = $document['file_blob'] ?? null;
+if (is_string($blobContent) && $blobContent !== '') {
+    $mimeType = trim((string) ($document['file_mime_type'] ?? '')) ?: 'application/octet-stream';
+    header('Content-Type: ' . $mimeType);
+    header('Content-Length: ' . (string) strlen($blobContent));
+    header('Content-Disposition: attachment; filename="' . str_replace('"', '', $downloadName) . '"');
+    echo $blobContent;
+    exit;
+}
 
-header('Content-Type: ' . $mimeType);
-header('Content-Length: ' . (string) filesize($resolvedPath));
-header('Content-Disposition: attachment; filename="' . str_replace('"', '', $downloadName) . '"');
-readfile($resolvedPath);
-exit;
+setFlash('error', 'File not available.');
+if ($role === 'employee') {
+    redirectTo('my-space');
+}
+redirectTo('dashboard', ['modal' => 'documents']);

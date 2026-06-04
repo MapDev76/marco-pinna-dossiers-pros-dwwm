@@ -24,6 +24,7 @@ $action = $input['action'] ?? ($_GET['action'] ?? 'view');
 
 $pdo = getPDO();
 ensureSchedulerSchema($pdo);
+ensureDocumentStorageSchema($pdo);
 $userModel = new UserModel($pdo);
 $companyModel = new CompanyModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
@@ -93,14 +94,16 @@ if ($action === 'save_planning_document') {
     }
 
     $insertDocument = $pdo->prepare(
-        'INSERT INTO documents (user_id, document_type, file_name, file_path, status)
-         VALUES (:user_id, :document_type, :file_name, :file_path, :status)'
+        'INSERT INTO documents (user_id, document_type, file_name, file_path, file_blob, file_mime_type, status)
+         VALUES (:user_id, :document_type, :file_name, :file_path, :file_blob, :file_mime_type, :status)'
     );
     $insertDocument->execute([
         'user_id' => (int) ($user['id'] ?? 0),
         'document_type' => 'other',
         'file_name' => $safeBaseName,
         'file_path' => $relativePath,
+        'file_blob' => $decoded,
+        'file_mime_type' => 'text/csv; charset=utf-8',
         'status' => 'valid',
     ]);
 

@@ -112,6 +112,15 @@ if ($route === 'home') {
             'alt' => 'Print',
         ];
     } else {
+        if ($role === 'employee') {
+            $rightIcons[] = [
+                'type' => 'link',
+                'href' => appUrl('my-space') . '#employee-received-documents',
+                'title' => 'Documents',
+                'icon' => 'document.svg',
+                'alt' => 'Documents',
+            ];
+        }
         if ($role !== 'employee') {
             $rightIcons[] = [
                 'type' => 'link',

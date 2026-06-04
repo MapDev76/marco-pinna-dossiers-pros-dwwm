@@ -749,10 +749,13 @@ if ($role === 'employee') {
          INNER JOIN users u ON u.id = r.user_id
          LEFT JOIN users ru ON ru.id = r.recipient_id
          LEFT JOIN documents doc ON doc.id = r.document_id
-         WHERE r.user_id = :user_id OR r.recipient_id = :user_id
+         WHERE r.user_id = :user_id_sender OR r.recipient_id = :user_id_recipient
          ORDER BY r.created_at DESC, r.id DESC'
     );
-    $modalMessages->execute(['user_id' => $currentUser['id']]);
+    $modalMessages->execute([
+        'user_id_sender' => $currentUser['id'],
+        'user_id_recipient' => $currentUser['id'],
+    ]);
     $modalMessages = $modalMessages->fetchAll();
 }
 

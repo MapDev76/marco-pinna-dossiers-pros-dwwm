@@ -237,6 +237,28 @@ function ensureSchedulerSchema(PDO $pdo): void
     $initialized = true;
 }
 
+function ensureDocumentStorageSchema(PDO $pdo): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+
+    try {
+        $pdo->exec('ALTER TABLE documents ADD COLUMN file_blob LONGBLOB NULL AFTER file_path');
+    } catch (Throwable $e) {
+        // Column already exists.
+    }
+
+    try {
+        $pdo->exec('ALTER TABLE documents ADD COLUMN file_mime_type VARCHAR(100) NULL AFTER file_blob');
+    } catch (Throwable $e) {
+        // Column already exists.
+    }
+
+    $initialized = true;
+}
+
 function absenceShiftTemplateDefinitions(): array
 {
     return [

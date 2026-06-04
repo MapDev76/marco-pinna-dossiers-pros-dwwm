@@ -259,7 +259,7 @@ if (is_array($primaryShift)) {
     </section>
 
     <section class="employee-detail-grid">
-        <article class="admin-card employee-detail-card">
+        <article class="admin-card employee-detail-card" id="employee-received-documents">
             <div class="employee-card-head">
                 <div>
                     <span class="employee-stage-eyebrow">Attendances</span>
@@ -326,8 +326,10 @@ if (is_array($primaryShift)) {
                                 <td><?php echo e((string) ($documentMessage['sender_name'] ?? '-')); ?></td>
                                 <td><?php echo e((string) ($documentMessage['file_name'] ?? 'Document')); ?></td>
                                 <td>
-                                    <?php if (!empty($documentMessage['document_id'])): ?>
+                                    <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
                                         <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id']]); ?>">Download</a>
+                                    <?php elseif (!empty($documentMessage['document_id'])): ?>
+                                        <span class="employee-status-chip">File not available</span>
                                     <?php else: ?>
                                         -
                                     <?php endif; ?>

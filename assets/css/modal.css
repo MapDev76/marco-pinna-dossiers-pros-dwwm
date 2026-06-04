@@ -252,7 +252,7 @@
 .dashboard-schedule-modal,
 .dashboard-documents-modal,
 .dashboard-print-modal {
-    width: min(1180px, calc(100vw - 36px));
+    width: min(1340px, calc(100vw - 24px));
 }
 
 .dashboard-print-shell {
@@ -337,6 +337,11 @@
     overflow: hidden;
     background: #fff;
     border-radius: 10px;
+}
+
+.dashboard-print-a4-sheet .dashboard-print-grid {
+    width: 100%;
+    min-width: 0;
 }
 
 .dashboard-print-fit-content {
@@ -545,7 +550,7 @@
     }
 
     body.print-planning-mode #modal-print .dashboard-print-head {
-        margin-bottom: 3mm;
+        margin-bottom: 1.8mm;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-head h2 {
@@ -554,8 +559,8 @@
     }
 
     body.print-planning-mode #modal-print .dashboard-print-meta {
-        margin: 0 0 2.5mm;
-        font-size: 8pt;
+        margin: 0 0 1.8mm;
+        font-size: 7.2pt;
         gap: 2mm;
     }
 
@@ -577,7 +582,7 @@
 
     body.print-planning-mode #modal-print .dashboard-print-fit-frame {
         width: 100%;
-        height: 182mm;
+        height: 194mm;
         aspect-ratio: auto;
         border-radius: 0;
     }
@@ -594,24 +599,31 @@
     }
 
     body.print-planning-mode #modal-print .dashboard-print-grid {
-        font-size: 7pt;
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+        font-size: 8pt;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-grid th,
     body.print-planning-mode #modal-print .dashboard-print-grid td {
-        padding: 0.06rem 0.08rem;
-        min-width: 18px;
+        padding: 0.08rem 0.1rem;
+        min-width: 0;
+        white-space: normal;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-grid .employee-col,
     body.print-planning-mode #modal-print .dashboard-print-grid tbody th {
-        min-width: 86px;
-        max-width: 106px;
+        position: static;
+        width: 15%;
+        min-width: 92px;
+        max-width: 120px;
+        font-size: 8pt;
+        line-height: 1.1;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-shifts-legend {
-        margin-top: 0.18rem;
-        padding: 0.16rem;
+        display: none;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-shifts-legend h4 {

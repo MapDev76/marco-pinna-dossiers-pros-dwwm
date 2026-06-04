@@ -20,6 +20,8 @@ if (!isLoggedIn()) {
             <div class="dashboard-print-actions">
                 <button type="button" class="dashboard-sidebar-control-button" data-print-refresh>Refresh</button>
                 <button type="button" class="dashboard-sidebar-control-button" data-print-preview>Preview A4</button>
+                <button type="button" class="dashboard-sidebar-control-button" data-print-export-excel>Export Excel</button>
+                <button type="button" class="dashboard-sidebar-control-button" data-print-export-pdf>Export PDF</button>
                 <button type="button" class="dashboard-sidebar-control-button" data-print-download-csv>Save CSV</button>
                 <button type="button" class="dashboard-sidebar-control-button" data-print-save-document>Save to Documents</button>
                 <button type="button" class="dashboard-sidebar-control-button is-active" data-print-trigger>Print</button>

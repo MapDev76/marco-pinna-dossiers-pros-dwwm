@@ -20,6 +20,7 @@ if (($currentUser['role'] ?? null) !== 'employee') {
 }
 
 $pdo = getPDO();
+ensureDocumentStorageSchema($pdo);
 $pageTitle = 'My Employee Space';
 $viewFile = __DIR__ . '/../../public/views/employee/space.php';
 $error = null;
@@ -148,6 +149,8 @@ $incomingDocumentsStatement = $pdo->prepare(
                         r.created_at,
                         d.id AS document_id,
                         d.file_name,
+            d.file_path,
+            (d.file_blob IS NOT NULL) AS has_db_content,
                         d.upload_date,
                         CONCAT(sender.first_name, " ", sender.last_name) AS sender_name
          FROM requests r
@@ -160,6 +163,33 @@ $incomingDocumentsStatement = $pdo->prepare(
 );
 $incomingDocumentsStatement->execute(['user_id' => (int) $currentUser['id']]);
 $incomingDocuments = $incomingDocumentsStatement->fetchAll(PDO::FETCH_ASSOC);
+
+$resolveStoredDocumentPath = static function (array $row): ?string {
+    $filePath = trim((string) ($row['file_path'] ?? ''));
+    if ($filePath === '') {
+        return null;
+    }
+
+    $candidates = [
+        $filePath,
+        __DIR__ . '/../../' . ltrim($filePath, '/'),
+        __DIR__ . '/../../public/' . ltrim($filePath, '/'),
+    ];
+
+    foreach ($candidates as $candidate) {
+        if (is_string($candidate) && $candidate !== '' && is_file($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return null;
+};
+
+foreach ($incomingDocuments as &$incomingDocument) {
+    $hasDbContent = !empty($incomingDocument['has_db_content']);
+    $incomingDocument['is_download_available'] = $hasDbContent || ($resolveStoredDocumentPath($incomingDocument) !== null);
+}
+unset($incomingDocument);
 
 $buildShiftDateTime = static function (string $workDate, ?string $timeValue) use ($todayDate): ?DateTimeImmutable {
     $normalizedTime = trim((string) $timeValue);
