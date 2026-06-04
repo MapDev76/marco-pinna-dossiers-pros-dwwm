@@ -19,7 +19,6 @@ if (!in_array($role, ['super_admin', 'admin'], true)) {
     redirectTo('dashboard');
 }
 
-$scopeCompanyId = null;
 if ($role === 'admin') {
     $scopeStatement = $pdo->prepare(
         'SELECT d.company_id

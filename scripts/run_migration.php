@@ -14,7 +14,7 @@ if (!in_array($action, ['up', 'down'], true) || !$name) {
     exit(1);
 }
 
-$dir = __DIR__ . '/migrations';
+$dir = __DIR__ . '/../db/migrations';
 $file = $dir . '/' . $name . '.' . ($action === 'up' ? 'up.sql' : 'down.sql');
 
 if (!file_exists($file)) {
@@ -35,7 +35,9 @@ try {
     $pdo->commit();
     echo "Migration {$action} applied: {$name}\n";
 } catch (Throwable $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     echo "Migration failed: " . $e->getMessage() . PHP_EOL;
     exit(1);
 }

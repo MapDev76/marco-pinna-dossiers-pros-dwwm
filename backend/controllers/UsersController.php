@@ -3,7 +3,6 @@
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
-require_once __DIR__ . '/../models/CompanyModel.php';
 
 // This controller only handles modal-based CRUD submissions and returns the user to the users modal.
 if (!isLoggedIn()) {
@@ -22,7 +21,6 @@ if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
 $pdo = getPDO();
 $userModel = new UserModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
-$companyModel = new CompanyModel($pdo);
 $profile = $userModel->profileWithRelations((int) $currentUser['id']) ?? [];
 $scopeCompanyId = isset($profile['company_id']) ? (int) $profile['company_id'] : null;
 $scopeDepartmentId = isset($profile['department_id']) ? (int) $profile['department_id'] : null;

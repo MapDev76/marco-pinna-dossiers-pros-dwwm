@@ -337,7 +337,33 @@ if ($role === 'admin' && $companyId !== null) {
 
 if ($role === 'department_manager' && $departmentId !== null) {
     $dashboardCalendarScopeLabel = trim((string) (($profile['department_name'] ?? 'Department') . ' calendar'));
-    $departmentRows = $departmentModel->byCompanyId($companyId ?? 0);
+    $departmentRows = [];
+    if ((int) $departmentId > 0) {
+        $companyDepartmentRows = $departmentModel->byCompanyId((int) ($companyId ?? 0));
+        foreach ($companyDepartmentRows as $departmentRow) {
+            if ((int) ($departmentRow['id'] ?? 0) === (int) $departmentId) {
+                $departmentRows[] = $departmentRow;
+                break;
+            }
+        }
+
+        if (empty($departmentRows)) {
+            $fallbackDepartment = $departmentModel->findById((int) $departmentId);
+            if ($fallbackDepartment) {
+                $departmentRows[] = [
+                    'id' => (int) ($fallbackDepartment['id'] ?? $departmentId),
+                    'company_id' => (int) ($fallbackDepartment['company_id'] ?? ($companyId ?? 0)),
+                    'name' => (string) ($fallbackDepartment['name'] ?? ''),
+                    'icon' => $fallbackDepartment['icon'] ?? null,
+                    'color' => $fallbackDepartment['color'] ?? null,
+                    'description' => (string) ($fallbackDepartment['description'] ?? ''),
+                    'head_user_id' => (int) ($fallbackDepartment['head_user_id'] ?? 0),
+                    'head_user_name' => '',
+                ];
+            }
+        }
+    }
+
     $teamRows = $userModel->teamByDepartmentId($departmentId);
     $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
 
@@ -558,7 +584,14 @@ if ($role === 'admin' && $companyId !== null) {
 
 if ($role === 'department_manager' && $departmentId !== null) {
     $modalUsers = $userModel->teamByDepartmentId($departmentId);
-    $modalDepartments = $departmentModel->byCompanyId($companyId ?? 0);
+    $modalDepartments = [];
+    $companyDepartmentRows = $departmentModel->byCompanyId($companyId ?? 0);
+    foreach ($companyDepartmentRows as $departmentRow) {
+        if ((int) ($departmentRow['id'] ?? 0) === (int) $departmentId) {
+            $modalDepartments[] = $departmentRow;
+            break;
+        }
+    }
     $modalDocuments = $pdo->prepare(
         'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.status, d.upload_date,
                 u.first_name, u.last_name, dep.company_id, dep.name AS department_name

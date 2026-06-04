@@ -2,7 +2,6 @@
 
 require_once __DIR__ . '/../models/DepartmentModel.php';
 require_once __DIR__ . '/../models/UserModel.php';
-require_once __DIR__ . '/../models/CompanyModel.php';
 
 // This controller keeps department CRUD inside the modal flow and updates the head user role when needed.
 if (!isLoggedIn()) {
@@ -13,7 +12,6 @@ if (!isLoggedIn()) {
 $pdo = getPDO();
 $userModel = new UserModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
-$companyModel = new CompanyModel($pdo);
 $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 
