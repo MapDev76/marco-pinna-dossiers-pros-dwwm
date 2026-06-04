@@ -333,15 +333,38 @@ $modalCurrentRole = currentUser()['role'] ?? 'employee';
                     <article class="company-card company-card--stacked">
                         <div class="company-card-head">
                             <div class="company-card-title"><?php echo e($document['file_name'] ?? 'Document'); ?></div>
-                            <div class="company-card-meta"><?php echo e(($document['first_name'] ?? '') . ' ' . ($document['last_name'] ?? '')); ?></div>
+                            <div class="company-card-meta"><?php echo e(($document['first_name'] ?? '') . ' ' . ($document['last_name'] ?? '')); ?> • <?php echo e($document['upload_date'] ?? ''); ?></div>
                         </div>
                         <div class="company-card-actions company-card-actions--inline">
                             <span class="company-card-chip"><?php echo e($document['document_type'] ?? 'other'); ?></span>
                             <span class="company-card-chip"><?php echo e($document['status'] ?? 'pending'); ?></span>
+                            <button type="button"
+                                    class="company-card-action"
+                                    title="Attach and send to employees"
+                                    data-document-send-id="<?php echo (int) ($document['id'] ?? 0); ?>"
+                                    data-document-send-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
+                                <span aria-hidden="true">✉</span>
+                            </button>
+                            <button type="button"
+                                    class="company-card-action"
+                                    title="Attach and send to all department employees"
+                                    data-document-send-all-id="<?php echo (int) ($document['id'] ?? 0); ?>"
+                                    data-document-send-all-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
+                                <span aria-hidden="true">📨</span>
+                            </button>
                             <?php if (!empty($document['file_path'])): ?>
                                 <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $document['id']]); ?>" title="Download document">
                                     <span aria-hidden="true">⬇</span>
                                 </a>
+                            <?php endif; ?>
+                            <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
+                                <button type="button"
+                                        class="company-card-action is-danger"
+                                        title="Delete document"
+                                        data-document-delete-id="<?php echo (int) ($document['id'] ?? 0); ?>"
+                                        data-document-delete-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
+                                    <span aria-hidden="true">×</span>
+                                </button>
                             <?php endif; ?>
                         </div>
                     </article>
@@ -394,7 +417,9 @@ $modalCurrentRole = currentUser()['role'] ?? 'employee';
                     Recipients
                     <select name="recipient_ids[]" id="crud-message-recipient-ids" multiple size="6" required>
                         <?php foreach (($dashboardModalUsers ?? []) as $user): ?>
-                            <option value="<?php echo (int) $user['id']; ?>">
+                            <option value="<?php echo (int) $user['id']; ?>"
+                                    data-role="<?php echo e($user['role'] ?? ''); ?>"
+                                    data-department-id="<?php echo (int) ($user['department_id'] ?? 0); ?>">
                                 <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>
                             </option>
                         <?php endforeach; ?>

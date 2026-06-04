@@ -61,6 +61,7 @@ require __DIR__ . '/app/layout/header.php';
 <?php endif; ?>
 <?php require __DIR__ . '/app/layout/settings-panel.php'; ?>
 <?php require __DIR__ . '/app/layout/schedule.php'; ?>
+<?php require __DIR__ . '/app/layout/print-modal.php'; ?>
 <?php endif; ?>
 
 <main class="<?php echo $isCompactDashboard ? 'dashboard-content' : 'content' . ($isDashboardRoute ? ' content-dashboard' : ''); ?>">
@@ -120,6 +121,11 @@ require $viewFile;
                 apiDashboard: '<?php echo appUrl('api-dashboard'); ?>',
                 apiShifts: '<?php echo appUrl('api-shifts'); ?>'
         };
+        window.DashboardCurrentUser = <?php echo json_encode([
+                'id' => (int) (currentUser()['id'] ?? 0),
+                'name' => trim((string) ((currentUser()['first_name'] ?? '') . ' ' . (currentUser()['last_name'] ?? ''))),
+                'role' => (string) (currentUser()['role'] ?? ''),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
         window.DashboardPlannerData = <?php echo json_encode($dashboardPlannerData ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/sidebar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/sidebar.js'); ?>"></script>
@@ -134,6 +140,7 @@ require $viewFile;
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/assignments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/assignments.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/attendances.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/attendances.js'); ?>"></script>
+<script src="<?php echo $basePath; ?>/assets/js/dashboard/print.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/print.js'); ?>"></script>
 <?php endif; ?>
 
 <?php if ($isMySpaceRoute && isLoggedIn()): ?>

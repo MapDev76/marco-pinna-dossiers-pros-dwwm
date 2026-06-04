@@ -31,6 +31,147 @@ $user = currentUser();
 $role = $user['role'] ?? 'employee';
 $profile = $userModel->profileWithRelations((int) $user['id']) ?? [];
 
+if ($action === 'save_planning_document') {
+    if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+        jsonResponse(['success' => false, 'error' => 'Unauthorized'], 403);
+    }
+
+    $departmentId = (int) ($input['department_id'] ?? 0);
+    $monthStart = trim((string) ($input['month_start'] ?? ''));
+    $fileName = trim((string) ($input['file_name'] ?? 'planning.csv'));
+    $csvContentB64 = trim((string) ($input['csv_content_b64'] ?? ''));
+
+    if ($departmentId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $monthStart) || $csvContentB64 === '') {
+        jsonResponse(['success' => false, 'error' => 'department_id, month_start and csv_content_b64 are required'], 400);
+    }
+
+    $departmentLookup = $pdo->prepare('SELECT id, company_id FROM departments WHERE id = :id LIMIT 1');
+    $departmentLookup->execute(['id' => $departmentId]);
+    $departmentRow = $departmentLookup->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$departmentRow) {
+        jsonResponse(['success' => false, 'error' => 'Department not found'], 404);
+    }
+
+    if ($role === 'department_manager' && (int) ($profile['department_id'] ?? 0) !== $departmentId) {
+        jsonResponse(['success' => false, 'error' => 'Department out of scope'], 403);
+    }
+    if ($role === 'admin' && (int) ($profile['company_id'] ?? 0) !== (int) ($departmentRow['company_id'] ?? 0)) {
+        jsonResponse(['success' => false, 'error' => 'Department out of scope'], 403);
+    }
+
+    $decoded = base64_decode($csvContentB64, true);
+    if (!is_string($decoded) || $decoded === '') {
+        jsonResponse(['success' => false, 'error' => 'Invalid CSV payload'], 400);
+    }
+    if (strlen($decoded) > 5 * 1024 * 1024) {
+        jsonResponse(['success' => false, 'error' => 'CSV payload too large'], 400);
+    }
+
+    $safeBaseName = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $fileName) ?: 'planning.csv';
+    if (!str_ends_with(strtolower($safeBaseName), '.csv')) {
+        $safeBaseName .= '.csv';
+    }
+
+    $relativeDir = 'uploads/planning';
+    $absoluteDir = __DIR__ . '/../../public/' . $relativeDir;
+    if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0775, true) && !is_dir($absoluteDir)) {
+        jsonResponse(['success' => false, 'error' => 'Unable to prepare storage directory'], 500);
+    }
+
+    try {
+        $suffix = bin2hex(random_bytes(4));
+    } catch (Throwable $e) {
+        $suffix = substr(sha1((string) microtime(true)), 0, 8);
+    }
+
+    $storedName = date('Ymd-His') . '-' . $suffix . '-' . $safeBaseName;
+    $relativePath = $relativeDir . '/' . $storedName;
+    $absolutePath = $absoluteDir . '/' . $storedName;
+
+    if (file_put_contents($absolutePath, $decoded) === false) {
+        jsonResponse(['success' => false, 'error' => 'Unable to save file'], 500);
+    }
+
+    $insertDocument = $pdo->prepare(
+        'INSERT INTO documents (user_id, document_type, file_name, file_path, status)
+         VALUES (:user_id, :document_type, :file_name, :file_path, :status)'
+    );
+    $insertDocument->execute([
+        'user_id' => (int) ($user['id'] ?? 0),
+        'document_type' => 'other',
+        'file_name' => $safeBaseName,
+        'file_path' => $relativePath,
+        'status' => 'valid',
+    ]);
+
+    $documentId = (int) $pdo->lastInsertId();
+
+    jsonResponse([
+        'success' => true,
+        'ok' => true,
+        'document_id' => $documentId,
+        'file_name' => $safeBaseName,
+        'file_path' => $relativePath,
+        'download_url' => appUrl('document-download', ['id' => $documentId]),
+    ]);
+}
+
+if ($action === 'delete_document') {
+    if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+        jsonResponse(['success' => false, 'error' => 'Unauthorized'], 403);
+    }
+
+    $documentId = (int) ($input['document_id'] ?? 0);
+    if ($documentId <= 0) {
+        jsonResponse(['success' => false, 'error' => 'document_id is required'], 400);
+    }
+
+    $lookup = $pdo->prepare(
+        'SELECT d.id, d.file_path, u.department_id, dep.company_id
+         FROM documents d
+         INNER JOIN users u ON u.id = d.user_id
+         LEFT JOIN departments dep ON dep.id = u.department_id
+         WHERE d.id = :id
+         LIMIT 1'
+    );
+    $lookup->execute(['id' => $documentId]);
+    $documentRow = $lookup->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$documentRow) {
+        jsonResponse(['success' => false, 'error' => 'Document not found'], 404);
+    }
+
+    if ($role === 'admin' && (int) ($profile['company_id'] ?? 0) !== (int) ($documentRow['company_id'] ?? 0)) {
+        jsonResponse(['success' => false, 'error' => 'Document out of scope'], 403);
+    }
+    if ($role === 'department_manager' && (int) ($profile['department_id'] ?? 0) !== (int) ($documentRow['department_id'] ?? 0)) {
+        jsonResponse(['success' => false, 'error' => 'Document out of scope'], 403);
+    }
+
+    $filePath = trim((string) ($documentRow['file_path'] ?? ''));
+    if ($filePath !== '') {
+        $candidates = [
+            $filePath,
+            __DIR__ . '/../../' . ltrim($filePath, '/'),
+            __DIR__ . '/../../public/' . ltrim($filePath, '/'),
+        ];
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && $candidate !== '' && is_file($candidate)) {
+                @unlink($candidate);
+                break;
+            }
+        }
+    }
+
+    $delete = $pdo->prepare('DELETE FROM documents WHERE id = :id LIMIT 1');
+    $delete->execute(['id' => $documentId]);
+
+    jsonResponse([
+        'success' => true,
+        'ok' => true,
+        'document_id' => $documentId,
+    ]);
+}
+
 if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_assign_open', 'clear_assignments_scope', 'record_attendance_signature', 'update_attendance', 'cancel_attendance'], true)) {
     $allowedRoles = in_array($action, ['record_attendance_signature', 'update_attendance', 'cancel_attendance'], true)
         ? ['super_admin', 'admin', 'department_manager']

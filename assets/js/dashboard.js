@@ -16,6 +16,7 @@
   const apiCompanies = config.apiCompanies;
   const apiDepartments = config.apiDepartments;
   const apiUsers = config.apiUsers;
+  const apiDashboard = config.apiDashboard;
 
   /**
    * setupModals
@@ -25,6 +26,20 @@
    * injected into the element with id `crud-modal-body`.
    */
   (function setupModals(){
+    const feedback = window.DashboardFeedback;
+    const notifyError = (message) => {
+      if (feedback?.error) {
+        feedback.error('Oops!', message);
+        return;
+      }
+      console.error(message);
+    };
+    const notifySuccess = (message) => {
+      if (feedback?.success) {
+        feedback.success('Done', message);
+      }
+    };
+
     const overlay = document.getElementById('dashboard-overlay');
     const modals = document.querySelectorAll('.dashboard-modal, .crud-modal');
     const openButtons = document.querySelectorAll('[data-modal-target]');
@@ -35,6 +50,27 @@
     const crudBody = document.getElementById('crud-modal-body');
     let lastFocusedElement = null;
     let activeModal = null;
+    let requestedMessageDocument = null;
+
+    const plannerData = window.DashboardPlannerData || {};
+    const currentUser = window.DashboardCurrentUser || {};
+
+    const collectDepartmentEmployeeIds = (recipientSelect) => {
+      if (!recipientSelect) return [];
+      const selectedDepartmentId = Number(plannerData.active_department_id || currentUser.department_id || 0);
+      const fallbackToAnyDepartment = selectedDepartmentId <= 0;
+
+      return Array.from(recipientSelect.options || [])
+        .filter((option) => {
+          if (!option || !option.value) return false;
+          const role = String(option.getAttribute('data-role') || '').toLowerCase();
+          const departmentId = Number(option.getAttribute('data-department-id') || 0);
+          if (role !== 'employee') return false;
+          return fallbackToAnyDepartment ? departmentId > 0 : departmentId === selectedDepartmentId;
+        })
+        .map((option) => Number(option.value))
+        .filter((id) => Number.isInteger(id) && id > 0);
+    };
 
     const focusableSelector = [
       'a[href]',
@@ -86,6 +122,109 @@
     const setModalContent = (entity) => {
       if (!crudBody) return;
       if (entity === 'documents') {
+        const removeDocumentCard = (card) => {
+          if (!card || !card.parentElement) return;
+          card.remove();
+          const remaining = crudBody.querySelectorAll('.company-card').length;
+          if (remaining === 0) {
+            const grid = crudBody.querySelector('.company-grid');
+            if (grid) {
+              grid.innerHTML = '<div class="crud-empty-state">No documents available.</div>';
+            }
+          }
+        };
+
+        crudBody.querySelectorAll('[data-document-send-id]').forEach((button) => {
+          button.addEventListener('click', () => {
+            requestedMessageDocument = {
+              id: Number(button.getAttribute('data-document-send-id') || 0),
+              name: String(button.getAttribute('data-document-send-name') || 'Document').trim(),
+              recipientIds: [],
+            };
+
+            const messageTrigger = document.querySelector('[data-modal-entity="messages"]');
+            if (messageTrigger && typeof messageTrigger.click === 'function') {
+              messageTrigger.click();
+              return;
+            }
+
+            const template = document.getElementById('crud-template-messages');
+            if (template && crudBody) {
+              if (crudTitle) crudTitle.textContent = 'Messages';
+              if (crudSubtitle) crudSubtitle.textContent = 'Create requests or notifications and send them to selected users.';
+              crudBody.innerHTML = template.innerHTML;
+              setModalContent('messages');
+            }
+          });
+        });
+
+        crudBody.querySelectorAll('[data-document-send-all-id]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const template = document.getElementById('crud-template-messages');
+            const recipientProbe = template ? template.content.querySelector('#crud-message-recipient-ids') : null;
+            const recipientIds = collectDepartmentEmployeeIds(recipientProbe);
+            if (recipientIds.length === 0) {
+              notifyError('No employees found in the selected department.');
+              return;
+            }
+
+            requestedMessageDocument = {
+              id: Number(button.getAttribute('data-document-send-all-id') || 0),
+              name: String(button.getAttribute('data-document-send-all-name') || 'Document').trim(),
+              recipientIds,
+            };
+
+            const messageTrigger = document.querySelector('[data-modal-entity="messages"]');
+            if (messageTrigger && typeof messageTrigger.click === 'function') {
+              messageTrigger.click();
+              return;
+            }
+
+            if (template && crudBody) {
+              if (crudTitle) crudTitle.textContent = 'Messages';
+              if (crudSubtitle) crudSubtitle.textContent = 'Create requests or notifications and send them to selected users.';
+              crudBody.innerHTML = template.innerHTML;
+              setModalContent('messages');
+            }
+          });
+        });
+
+        crudBody.querySelectorAll('[data-document-delete-id]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
+              notifyError('Dashboard API is not available.');
+              return;
+            }
+
+            const documentId = Number(button.getAttribute('data-document-delete-id') || 0);
+            const documentName = String(button.getAttribute('data-document-delete-name') || 'document');
+            if (!documentId) {
+              notifyError('Invalid document id.');
+              return;
+            }
+
+            if (!window.confirm('Delete document "' + documentName + '"? This action cannot be undone.')) {
+              return;
+            }
+
+            button.disabled = true;
+            try {
+              const response = await window.AppAPI.postJSON(apiDashboard, {
+                action: 'delete_document',
+                document_id: documentId,
+              });
+              if (!response || response.ok === false || response.success === false) {
+                throw new Error((response && (response.error || response.message)) || 'Unable to delete document.');
+              }
+              removeDocumentCard(button.closest('.company-card'));
+              notifySuccess('Document deleted successfully.');
+            } catch (error) {
+              notifyError((error && error.message) || 'Unable to delete document.');
+            } finally {
+              button.disabled = false;
+            }
+          });
+        });
         return;
       }
 
@@ -120,6 +259,34 @@
           syncKind();
         };
 
+        const applyRequestedDocument = () => {
+          if (!requestedMessageDocument || !documentId) return;
+          const requestedId = Number(requestedMessageDocument.id || 0);
+          if (requestedId > 0) {
+            documentId.value = String(requestedId);
+            if (messageTitle && !messageTitle.value) {
+              messageTitle.value = 'Planning document: ' + (requestedMessageDocument.name || 'Document');
+            }
+            if (messageBody && !messageBody.value) {
+              messageBody.value = 'Please review the attached planning document.';
+            }
+            if (messageKind) {
+              messageKind.value = 'notification';
+              syncKind();
+            }
+
+            if (recipients) {
+              const wanted = new Set((requestedMessageDocument.recipientIds || []).map((id) => Number(id)));
+              if (wanted.size > 0) {
+                Array.from(recipients.options).forEach((option) => {
+                  option.selected = wanted.has(Number(option.value || 0));
+                });
+              }
+            }
+          }
+          requestedMessageDocument = null;
+        };
+
         if (messageKind) {
           messageKind.addEventListener('change', syncKind);
         }
@@ -127,6 +294,7 @@
         if (resetMessage) resetMessage.addEventListener('click', resetMessageForm);
         syncKind();
         resetMessageForm();
+        applyRequestedDocument();
         return;
       }
 
@@ -691,6 +859,24 @@
       draggingAssignmentId: null,
     };
 
+    const publishPlannerRuntime = () => {
+      window.DashboardPlannerRuntime = {
+        getState: () => ({
+          mode: state.mode,
+          focusDate: new Date(state.focusDate),
+          selectedDate: new Date(state.selectedDate),
+          activeDepartmentId: Number(state.activeDepartmentId || 0),
+          activeShiftId: Number(state.activeShiftId || 0),
+          activeUserId: Number(state.activeUserId || 0),
+          activeUserName: String(state.activeUserName || ''),
+          calendarExpanded: !!state.calendarExpanded,
+        }),
+        getDepartments: () => (departments || []).slice(),
+        getEvents: () => (events || []).slice(),
+      };
+      document.dispatchEvent(new CustomEvent('dashboard:planner-updated'));
+    };
+
     const eventDateKey = (event) => event.work_date || '';
     const eventsByDate = () => events.reduce((map, event) => {
       const key = eventDateKey(event);
@@ -970,6 +1156,7 @@
       if (calendarRenderer && typeof calendarRenderer.renderCalendar === 'function') {
         calendarRenderer.renderCalendar();
       }
+      publishPlannerRuntime();
     };
 
     const syncPlannerSelection = () => {
@@ -1202,5 +1389,6 @@
 
     renderSidebarPlanner();
     renderCalendar();
+    publishPlannerRuntime();
   })();
 })();

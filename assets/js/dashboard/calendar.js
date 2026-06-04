@@ -527,14 +527,12 @@
         return;
       }
 
-      var isAvailable = isUserAvailableForDate ? !!isUserAvailableForDate(selectedUserId, dateValue) : true;
-      var unavailableReason = '';
-      if (!isAvailable && getUserAvailabilityStatus) {
-        unavailableReason = String((getUserAvailabilityStatus(selectedUserId, dateValue) || {}).reason || 'Employee already has an assignment on this date.');
-      }
-      var disabledAttr = isAvailable ? '' : ' disabled';
+      var activeShift = getActiveShift ? (getActiveShift() || null) : null;
+      var activeShiftKind = String(activeShift && activeShift.kind ? activeShift.kind : '').toLowerCase();
+      var activeWorkShiftId = activeShift && activeShiftKind === 'work' ? Number(activeShift.id || 0) : 0;
+      var activeWorkShiftName = activeShift && activeShiftKind === 'work' ? String(activeShift.name || 'Selected shift') : 'Selected shift';
 
-      manualNode.innerHTML = '\n        <div class="calendar-day-fullscreen-manual-head">\n          <strong>Manual absence assignment</strong>\n          <span>' + (selectedUserName || ('Employee #' + selectedUserId)) + ' • ' + dateValue + '</span>\n        </div>\n        <div class="calendar-day-fullscreen-manual-actions">\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="rest" data-user-id="' + selectedUserId + '" data-shift-id="' + restShiftId + '" data-date="' + dateValue + '"' + disabledAttr + '>💤 Assign rest day</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="vacation" data-user-id="' + selectedUserId + '" data-shift-id="' + vacationShiftId + '" data-date="' + dateValue + '"' + disabledAttr + '>🏖 Assign vacation</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="sick" data-user-id="' + selectedUserId + '" data-shift-id="' + sickShiftId + '" data-date="' + dateValue + '"' + disabledAttr + '>🤒 Assign sick leave</button>\n        </div>\n        ' + (!isAvailable ? ('<p class="calendar-day-fullscreen-manual-note">' + unavailableReason + '</p>') : '') + '\n      ';
+      manualNode.innerHTML = '\n        <div class="calendar-day-fullscreen-manual-head">\n          <strong>Manual force assignment</strong>\n          <span>' + (selectedUserName || ('Employee #' + selectedUserId)) + ' • ' + dateValue + '</span>\n        </div>\n        <div class="calendar-day-fullscreen-manual-actions">\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="rest" data-user-id="' + selectedUserId + '" data-shift-id="' + restShiftId + '" data-date="' + dateValue + '">💤 Rest</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="vacation" data-user-id="' + selectedUserId + '" data-shift-id="' + vacationShiftId + '" data-date="' + dateValue + '">🏖 Vacation</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="sick" data-user-id="' + selectedUserId + '" data-shift-id="' + sickShiftId + '" data-date="' + dateValue + '">🤒 Sick</button>\n          ' + (activeWorkShiftId > 0 ? ('<button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-force-work="1" data-user-id="' + selectedUserId + '" data-shift-id="' + activeWorkShiftId + '" data-date="' + dateValue + '">⏱ Work: ' + activeWorkShiftName + '</button>') : '<span class="calendar-day-fullscreen-manual-note">Select a work shift in sidebar to force work assignment.</span>') + '\n        </div>\n        <p class="calendar-day-fullscreen-manual-note">Manual actions force assignment even if personal settings mark user unavailable.</p>\n      ';
     }
 
     function openModal(dateValue) {

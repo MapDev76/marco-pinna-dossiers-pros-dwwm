@@ -6,6 +6,7 @@ $todayTimelineShifts = $todayTimelineShifts ?? [];
 $upcomingShifts = $upcomingShifts ?? [];
 $currentShiftCard = $currentShiftCard ?? null;
 $attendances = $attendances ?? [];
+$incomingDocuments = $incomingDocuments ?? [];
 $requiredSignatureIp = trim((string) ($requiredSignatureIp ?? ''));
 $clientIp = trim((string) ($clientIp ?? ''));
 $isSignatureIpRestricted = (bool) ($isSignatureIpRestricted ?? false);
@@ -288,6 +289,49 @@ if (is_array($primaryShift)) {
                                 <td><?php echo e($statusLabels[$attendance['status']] ?? $attendance['status']); ?></td>
                                 <td><?php echo e($attendance['check_in_time'] ?? '-'); ?></td>
                                 <td><?php echo e($attendance['check_out_time'] ?? '-'); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="admin-card employee-detail-card">
+            <div class="employee-card-head">
+                <div>
+                    <span class="employee-stage-eyebrow">Documents</span>
+                    <h2>Received documents</h2>
+                </div>
+                <span class="employee-metric-pill"><?php echo count($incomingDocuments); ?> files</span>
+            </div>
+            <div class="table-wrap employee-table-wrap">
+                <table class="admin-table employee-table-compact">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Title</th>
+                            <th>Sender</th>
+                            <th>Document</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($incomingDocuments)): ?>
+                            <tr><td colspan="5">No documents received yet.</td></tr>
+                        <?php endif; ?>
+                        <?php foreach ($incomingDocuments as $documentMessage): ?>
+                            <tr>
+                                <td><?php echo e((string) ($documentMessage['created_at'] ?? '')); ?></td>
+                                <td><?php echo e((string) ($documentMessage['title'] ?? 'Document notification')); ?></td>
+                                <td><?php echo e((string) ($documentMessage['sender_name'] ?? '-')); ?></td>
+                                <td><?php echo e((string) ($documentMessage['file_name'] ?? 'Document')); ?></td>
+                                <td>
+                                    <?php if (!empty($documentMessage['document_id'])): ?>
+                                        <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id']]); ?>">Download</a>
+                                    <?php else: ?>
+                                        -
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

@@ -139,6 +139,28 @@ $attendancesStatement = $pdo->prepare(
 $attendancesStatement->execute(['user_id' => $currentUser['id']]);
 $attendances = $attendancesStatement->fetchAll();
 
+$incomingDocumentsStatement = $pdo->prepare(
+        'SELECT r.id,
+                        r.title,
+                        r.message,
+                        r.type,
+                        r.status,
+                        r.created_at,
+                        d.id AS document_id,
+                        d.file_name,
+                        d.upload_date,
+                        CONCAT(sender.first_name, " ", sender.last_name) AS sender_name
+         FROM requests r
+         INNER JOIN documents d ON d.id = r.document_id
+         INNER JOIN users sender ON sender.id = r.user_id
+         WHERE r.recipient_id = :user_id
+             AND r.document_id IS NOT NULL
+             AND r.type IN ("notification", "document_signature")
+         ORDER BY r.created_at DESC, r.id DESC'
+);
+$incomingDocumentsStatement->execute(['user_id' => (int) $currentUser['id']]);
+$incomingDocuments = $incomingDocumentsStatement->fetchAll(PDO::FETCH_ASSOC);
+
 $buildShiftDateTime = static function (string $workDate, ?string $timeValue) use ($todayDate): ?DateTimeImmutable {
     $normalizedTime = trim((string) $timeValue);
     if ($workDate === '' || $normalizedTime === '') {
