@@ -1,5 +1,5 @@
--- Schéma principal de la base de données StaffEase Pro.
--- Ce fichier crée la base, les tables et quelques données de démonstration.
+-- Main StaffEase Pro database schema.
+-- This file creates the database and the core tables.
 CREATE DATABASE IF NOT EXISTS staff_ease_pro
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;

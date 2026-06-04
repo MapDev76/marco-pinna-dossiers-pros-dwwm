@@ -215,7 +215,7 @@ try {
             $userId = (int) ($input['user_id'] ?? 0);
             $departmentId = (int) ($input['department_id'] ?? 0);
             if ($userId <= 0 || $departmentId <= 0) jsonResponse(['ok' => false, 'error' => 'user_id and department_id required'], 400);
-            // Définir le rôle et le département
+            // Set the user role and department assignment.
             $userModel->update($userId, ['department_id' => $departmentId, 'first_name' => $userModel->findById($userId)['first_name'], 'last_name' => $userModel->findById($userId)['last_name'], 'email' => $userModel->findById($userId)['email'], 'phone' => $userModel->findById($userId)['phone'], 'role' => 'department_manager', 'status' => 'active']);
             jsonResponse(['ok' => true]);
             break;

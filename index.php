@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/backend/bootstrap.php';
 
-// Point d'entrée frontal : lit la route, charge le contrôleur ou la vue, puis affiche la mise en page commune.
+// Front controller entry point: resolves route, loads controller/view, then renders shared layout.
 $route = $_GET['route'] ?? 'home';
 $targetFile = require __DIR__ . '/app/router.php';
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
@@ -40,7 +40,7 @@ $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time())
 <!DOCTYPE html>
 <html lang="en">
 <head>
-        <!-- Métadonnées de base et feuille de style principale -->
+        <!-- Base metadata and main stylesheet -->
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title><?php echo e($pageTitle); ?></title>
@@ -51,7 +51,7 @@ $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time())
 <body class="<?php echo e(implode(' ', $bodyClasses)); ?>">
 
 <?php
-// En-tête partagé utilisé par toutes les pages.
+// Shared header used by all pages.
 require __DIR__ . '/app/layout/header.php';
 ?>
 
@@ -101,7 +101,7 @@ require __DIR__ . '/app/layout/header.php';
 <?php endif; ?>
 
 <?php
-// Vue finale déterminée par le routeur.
+// Final view resolved by the router.
 require $viewFile;
 ?>
 </main>

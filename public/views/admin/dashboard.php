@@ -153,11 +153,3 @@ $requestTypeLabels = [
     </div>
 </div>
 
-<template id="crud-template-placeholder">
-    <div class="crud-panel">
-        <h3>Common CRUD shell</h3>
-        <p>This modal is shared by every dashboard action. We will adapt its content per entity in the next step.</p>
-        <div class="crud-empty-state">No CRUD template has been connected for this element yet.</div>
-    </div>
-</template>
-

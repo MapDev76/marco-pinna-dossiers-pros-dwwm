@@ -141,7 +141,7 @@ try {
                 }
             }
 
-            // Vérifier que la colonne existe
+            // Ensure the column exists before update.
             $colStmt = $pdo->query("SHOW COLUMNS FROM companies LIKE 'signature_ip'");
             $has = $colStmt->fetch();
             if (!$has) {

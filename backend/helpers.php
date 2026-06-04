@@ -130,9 +130,9 @@ function isLoggedIn(): bool
 }
 
 /**
- * Middlewares d'accès
- * Vérifie que l'utilisateur est connecté et possède un rôle spécifique.
- * Redirige vers la page de connexion ou le tableau de bord si les conditions ne sont pas remplies.
+ * Access middleware helpers.
+ * Ensure the user is authenticated and has the expected role.
+ * Redirect to login or dashboard when requirements are not met.
  */
 
 /**

@@ -1,6 +1,6 @@
--- Migration minimale pour les installations anciennes.
--- Pourquoi: certaines bases de données historiques n'avaient pas encore la colonne `head_user_id`.
--- Cette migration rend le schéma cohérent avec `db/schema.sql` sans logique de correction au runtime.
+-- Minimal migration for legacy installations.
+-- Why: some historical databases did not include the `head_user_id` column yet.
+-- This migration keeps the schema aligned with `db/schema.sql` without runtime patch logic.
 
 SET @column_exists := (
     SELECT COUNT(*)
