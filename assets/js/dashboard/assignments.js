@@ -54,7 +54,7 @@
       feedback.error('Oops!', message);
       return;
     }
-    alert(message);
+    console.error(message);
   }
 
   function notifySuccess(message) {
@@ -980,7 +980,14 @@
     const shiftLabel = document.querySelector('[data-auto-assign-shift]')?.selectedOptions?.[0]?.textContent?.trim() || 'selected shifts';
     const rangeLabel = rangeStart && rangeEnd ? `${rangeStart} to ${rangeEnd}` : 'the selected range';
 
-    if (!window.confirm(`Unassign all employees for ${scopeShiftId > 0 ? shiftLabel : 'all work shifts'} in ${rangeLabel}?`)) {
+    const canClear = feedback?.confirm
+      ? await feedback.confirm(`Unassign all employees for ${scopeShiftId > 0 ? shiftLabel : 'all work shifts'} in ${rangeLabel}?`, 'Confirm action')
+      : false;
+
+    if (!canClear) {
+      if (!feedback?.confirm) {
+        notifyError('Confirmation dialog is not available.');
+      }
       return;
     }
 

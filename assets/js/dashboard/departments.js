@@ -8,7 +8,7 @@
       feedback.error('Oops!', message);
       return;
     }
-    alert(message);
+    console.error(message);
   }
 
   function notifySuccess(message) {
@@ -217,7 +217,11 @@
     const id = parseInt(card.dataset.departmentId || '0', 10) || 0;
     const companyId = parseInt(card.dataset.companyId || '0', 10) || 0;
     if (!id) return;
-    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this department?','Confirm deletion') : confirm('Delete this department?');
+    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this department?', 'Confirm deletion') : false;
+    if (!feedback?.confirm) {
+      notifyError('Confirmation dialog is not available.');
+      return;
+    }
     if (!canDelete) return;
 
     try {

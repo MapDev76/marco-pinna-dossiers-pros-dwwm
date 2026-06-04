@@ -16,7 +16,7 @@
       feedback.error('Oops!', message);
       return;
     }
-    alert(message);
+    console.error(message);
   }
 
   function initCalendarDnd(options) {

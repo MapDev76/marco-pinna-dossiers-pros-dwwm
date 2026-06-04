@@ -33,7 +33,7 @@
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'flash-close';
-    closeBtn.setAttribute('aria-label', 'Chiudi messaggio');
+    closeBtn.setAttribute('aria-label', 'Close message');
     closeBtn.type = 'button';
     closeBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
 

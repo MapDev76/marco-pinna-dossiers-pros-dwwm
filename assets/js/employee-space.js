@@ -4,6 +4,7 @@
 
   const canvas = form.querySelector('[data-signature-canvas]');
   const dataInput = form.querySelector('[data-signature-data]');
+  const errorNode = form.querySelector('[data-signature-error]');
   const clearBtn = form.querySelector('[data-signature-clear]');
   if (!canvas || !dataInput) return;
 
@@ -88,6 +89,7 @@
   function clearSignature() {
     hasStroke = false;
     dataInput.value = '';
+    if (errorNode) errorNode.textContent = '';
     drawPadBackground();
   }
 
@@ -107,10 +109,13 @@
   form.addEventListener('submit', (event) => {
     if (!hasStroke) {
       event.preventDefault();
-      alert('Please draw your signature before confirming attendance.');
+      if (errorNode) {
+        errorNode.textContent = 'Please draw your signature before confirming attendance.';
+      }
       return;
     }
 
+    if (errorNode) errorNode.textContent = '';
     dataInput.value = canvas.toDataURL('image/png');
   });
 

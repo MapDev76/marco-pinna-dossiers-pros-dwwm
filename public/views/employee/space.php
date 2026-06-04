@@ -76,6 +76,7 @@ $statusLabels = [
             <div class="employee-signature-pad-shell">
                 <span>Touchscreen signature</span>
                 <canvas width="520" height="180" data-signature-canvas aria-label="Signature pad"></canvas>
+                <small class="employee-signature-error" data-signature-error></small>
                 <div class="employee-signature-pad-actions">
                     <button type="button" class="admin-action-link admin-action-link-secondary" data-signature-clear>Clear signature</button>
                     <small>Sign with finger on mobile or mouse/stylus on desktop.</small>
@@ -147,10 +148,10 @@ $statusLabels = [
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Quart</th>
-                        <th>Statut</th>
-                        <th>Entrée</th>
-                        <th>Sortie</th>
+                        <th>Shift</th>
+                        <th>Status</th>
+                        <th>Check-in</th>
+                        <th>Check-out</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -178,9 +179,9 @@ $statusLabels = [
                 <thead>
                     <tr>
                         <th>Type</th>
-                        <th>Titre</th>
+                        <th>Title</th>
                         <th>Message</th>
-                        <th>Statut</th>
+                        <th>Status</th>
                         <th>Date</th>
                     </tr>
                 </thead>

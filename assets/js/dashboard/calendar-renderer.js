@@ -110,7 +110,7 @@
       var isSidebarAssignableTarget = isSidebarAssignCandidate && availabilityStatus.available;
       var sidebarUnavailableReason = (!availabilityStatus.available && availabilityStatus.reason)
         ? String(availabilityStatus.reason)
-        : 'Non disponibile.';
+        : 'Unavailable.';
       var employeeSlot = '';
 
       if (assignedEmployees.length > 0) {

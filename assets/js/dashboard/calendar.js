@@ -15,7 +15,7 @@
       feedback.error('Oops!', message);
       return;
     }
-    window.alert(message);
+    console.error(message);
   }
 
   function notifySuccess(message) {

@@ -1,5 +1,20 @@
 (() => {
   const apiUrl = window.DashboardConfig?.apiUsers;
+  const feedback = window.DashboardFeedback;
+
+  function notifyError(message) {
+    if (feedback?.error) {
+      feedback.error('Oops!', message);
+      return;
+    }
+    console.error(message);
+  }
+
+  function notifySuccess(message) {
+    if (feedback?.success) {
+      feedback.success('Done', message);
+    }
+  }
 
   function isRolesPanelActive() {
     const panel = document.querySelector('.settings-panel[data-settings-panel="roles"]');
@@ -50,13 +65,18 @@
     try {
       const res = await AppAPI.users.update(apiUrl, payload);
       if (res?.ok) {
-        location.reload();
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('roles', 'Done', 'Role updated successfully.');
+        } else {
+          notifySuccess('Role updated successfully.');
+          location.reload();
+        }
       } else {
-        alert('Save failed: ' + (res?.error || 'unknown'));
+        notifyError('Save failed: ' + (res?.error || 'unknown'));
       }
     } catch (e) {
       console.error(e);
-      alert('Error saving role');
+      notifyError('Error saving role.');
     }
   }
 

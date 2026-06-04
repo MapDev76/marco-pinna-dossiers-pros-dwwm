@@ -496,6 +496,12 @@
     border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
+.employee-signature-error {
+    min-height: 1rem;
+    color: #b91c1c;
+    font-weight: 600;
+}
+
 .employee-signature-pad-actions {
     display: flex;
     align-items: center;

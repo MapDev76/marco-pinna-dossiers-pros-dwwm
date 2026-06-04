@@ -503,6 +503,27 @@
    */
   (function setupCompanyActions(){
     if (!window.AppAPI) return;
+    const feedback = window.DashboardFeedback;
+    const notifyError = (message) => {
+      if (feedback?.error) {
+        feedback.error('Oops!', message);
+        return;
+      }
+      console.error(message);
+    };
+    const notifySuccess = (message) => {
+      if (feedback?.success) {
+        feedback.success('Done', message);
+      }
+    };
+    const confirmAction = async (message) => {
+      if (feedback?.confirm) {
+        return feedback.confirm(message, 'Confirm action');
+      }
+      notifyError('Confirmation dialog is not available.');
+      return false;
+    };
+
     document.querySelectorAll('.dashboard-directory-card').forEach(card => {
       const companyId = card.getAttribute('data-company-id');
       if (!companyId) return;
@@ -514,58 +535,58 @@
               const ip = prompt('Signature IP address (leave blank to remove):');
               if (ip === null) return;
               const j = await AppAPI.companies.setSignatureIp(apiCompanies, companyId, ip);
-              if (!j.ok) alert('Error: ' + (j.error || 'unknown')); else alert('IP updated');
+              if (!j.ok) notifyError('Error: ' + (j.error || 'unknown')); else notifySuccess('Company Wi-Fi IP updated.');
               return;
             }
 
             if (action === 'delete') {
-              if (!confirm('Confirm deletion of this company?')) return;
+              if (!await confirmAction('Confirm deletion of this company?')) return;
               const j = await AppAPI.companies.delete(apiCompanies, companyId);
-              if (!j.ok) alert('Error: ' + (j.error || 'unknown')); else location.reload();
+              if (!j.ok) notifyError('Error: ' + (j.error || 'unknown')); else location.reload();
               return;
             }
 
             if (action === 'manage-departments') {
               const j = await AppAPI.departments.list(apiDepartments, companyId);
-              if (!j.ok) { alert('Error: ' + (j.error || 'unknown')); return; }
+              if (!j.ok) { notifyError('Error: ' + (j.error || 'unknown')); return; }
               const list = j.departments.map(d => `${d.id}: ${d.name}`).join('\n') || 'No departments';
               const cmd = prompt('Departments:\n' + list + '\n\nTo create: type a new name. To delete: del:<id>');
               if (!cmd) return;
               if (cmd.startsWith('del:')) {
                 const id = cmd.split(':')[1];
                 const jr = await AppAPI.departments.delete(apiDepartments, id);
-                if (!jr.ok) alert('Error: ' + (jr.error || 'unknown')); else location.reload();
+                if (!jr.ok) notifyError('Error: ' + (jr.error || 'unknown')); else location.reload();
               } else {
                 const jr = await AppAPI.departments.create(apiDepartments, companyId, cmd);
-                if (!jr.ok) alert('Error: ' + (jr.error || 'unknown')); else location.reload();
+                if (!jr.ok) notifyError('Error: ' + (jr.error || 'unknown')); else location.reload();
               }
               return;
             }
 
             if (action === 'manage-employees') {
               const j = await AppAPI.users.listByCompany(apiUsers, companyId);
-              if (!j.ok) { alert('Error: ' + (j.error || 'unknown')); return; }
+              if (!j.ok) { notifyError('Error: ' + (j.error || 'unknown')); return; }
               const list = j.users.map(u => `${u.id}: ${u.first_name} ${u.last_name} (${u.role})`).join('\n') || 'No employees';
               const cmd = prompt('Employees:\n' + list + '\n\nTo create: new:First Last,email,role. To delete: del:<id>');
               if (!cmd) return;
               if (cmd.startsWith('del:')) {
                 const id = cmd.split(':')[1];
                 const jr = await AppAPI.users.delete(apiUsers, id);
-                if (!jr.ok) alert('Error: ' + (jr.error || 'unknown')); else location.reload();
+                if (!jr.ok) notifyError('Error: ' + (jr.error || 'unknown')); else location.reload();
               } else if (cmd.startsWith('new:')) {
                 const payload = cmd.substring(4).split(',');
                 const name = payload[0] || ''; const email = payload[1] || ''; const role = payload[2] || 'employee';
                 const names = name.split(' '); const first = names.shift(); const last = names.join(' ') || '';
                 const jr = await AppAPI.users.create(apiUsers, { department_id: null, first_name: first, last_name: last, email, role });
-                if (!jr.ok) alert('Error: ' + (jr.error || 'unknown')); else location.reload();
+                if (!jr.ok) notifyError('Error: ' + (jr.error || 'unknown')); else location.reload();
               }
               return;
             }
 
-            if (action === 'assign-head') { alert('Use the Manage Employees flow and assign-head through the future UI.'); return; }
-            if (action === 'edit') { alert('Edit company — UI not implemented yet.'); return; }
+            if (action === 'assign-head') { notifyError('Use the Manage Employees flow and assign-head through the next UI step.'); return; }
+            if (action === 'edit') { notifyError('Edit company UI is not implemented yet.'); return; }
 
-          } catch (err) { alert('Network error: ' + err.message); }
+          } catch (err) { notifyError('Network error: ' + err.message); }
         });
       });
     });
@@ -699,15 +720,15 @@
       if (assignedOnDate) {
         const assignedKind = String(assignedOnDate.shift_kind || 'work').toLowerCase();
         if (assignedKind === 'rest') {
-          return { available: false, reason: 'Non disponibile: rest day.' };
+          return { available: false, reason: 'Unavailable: rest day.' };
         }
         if (assignedKind === 'sick') {
-          return { available: false, reason: 'Non disponibile: malattia.' };
+          return { available: false, reason: 'Unavailable: sick leave.' };
         }
         if (assignedKind === 'vacation') {
-          return { available: false, reason: 'Non disponibile: vacanza.' };
+          return { available: false, reason: 'Unavailable: vacation.' };
         }
-        return { available: false, reason: 'Non disponibile: impiegato gia assegnato per questo giorno.' };
+        return { available: false, reason: 'Unavailable: employee already assigned for this day.' };
       }
 
       const rules = loadAssignmentRules();
@@ -733,24 +754,24 @@
       if (specialMatch) {
         const reason = String(specialMatch.reason || 'special').toLowerCase();
         if (reason === 'rest') {
-          return { available: false, reason: 'Non disponibile: rest day.' };
+          return { available: false, reason: 'Unavailable: rest day.' };
         }
         if (reason === 'sick') {
-          return { available: false, reason: 'Non disponibile: malattia.' };
+          return { available: false, reason: 'Unavailable: sick leave.' };
         }
         if (reason === 'vacation') {
-          return { available: false, reason: 'Non disponibile: vacanza.' };
+          return { available: false, reason: 'Unavailable: vacation.' };
         }
         if (reason === 'leave') {
-          return { available: false, reason: 'Non disponibile: ferie.' };
+          return { available: false, reason: 'Unavailable: leave.' };
         }
-        return { available: false, reason: 'Non disponibile.' };
+        return { available: false, reason: 'Unavailable.' };
       }
 
       const offWeekdays = Array.isArray(rule.off_weekdays) ? rule.off_weekdays.map((value) => Number(value)) : [];
       const weekday = new Date(`${normalizedDate}T12:00:00`).getDay();
       if (offWeekdays.includes(weekday)) {
-        return { available: false, reason: 'Non disponibile: rest day.' };
+        return { available: false, reason: 'Unavailable: rest day.' };
       }
 
       return { available: true, reason: '' };

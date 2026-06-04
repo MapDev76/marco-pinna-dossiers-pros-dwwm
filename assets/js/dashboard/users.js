@@ -8,7 +8,7 @@
       feedback.error('Oops!', message);
       return;
     }
-    alert(message);
+    console.error(message);
   }
 
   function notifySuccess(message) {
@@ -113,7 +113,11 @@
   async function deleteUser(card) {
     if (!card) return;
     const id = parseInt(card.dataset.userId || '0', 10); if (!id) return;
-    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this user?','Confirm deletion') : confirm('Delete this user?');
+    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this user?', 'Confirm deletion') : false;
+    if (!feedback?.confirm) {
+      notifyError('Confirmation dialog is not available.');
+      return;
+    }
     if (!canDelete) return;
     try {
       const res = await AppAPI.users.delete(apiUrl, id);

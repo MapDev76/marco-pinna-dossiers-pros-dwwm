@@ -6,7 +6,7 @@
       feedback.error('Oops!', message);
       return;
     }
-    alert(message);
+    console.error(message);
   }
 
   function notifySuccess(message) {
@@ -244,7 +244,11 @@
     if (!row) return;
     const id = parseInt(row.dataset.shiftId || '0', 10) || 0;
     if (!id) return;
-    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this shift?','Confirm deletion') : confirm('Delete this shift?');
+    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this shift?', 'Confirm deletion') : false;
+    if (!feedback?.confirm) {
+      notifyError('Confirmation dialog is not available.');
+      return;
+    }
     if (!canDelete) return;
     try {
       const res = await AppAPI.shifts.delete(window.DashboardConfig.apiShifts, id);
