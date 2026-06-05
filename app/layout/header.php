@@ -81,7 +81,7 @@ if ($route === 'home') {
     ];
 } elseif ($currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
-    if ($role !== 'employee') {
+    if ($role !== 'employee' && $role !== 'admin') {
         $rightIcons[] = [
             'type' => 'link',
             'href' => appUrl('home'),
@@ -128,13 +128,6 @@ if ($route === 'home') {
         if ($role === 'employee') {
             $rightIcons[] = [
                 'type' => 'link',
-                'href' => appUrl('my-space') . '#employee-received-documents',
-                'title' => 'Documents',
-                'icon' => 'document.svg',
-                'alt' => 'Documents',
-            ];
-            $rightIcons[] = [
-                'type' => 'link',
                 'href' => appUrl('my-space', ['print' => 'documents']) . '#employee-received-documents',
                 'title' => 'Print documents',
                 'icon' => 'print-outline.svg',
@@ -145,19 +138,30 @@ if ($route === 'home') {
             $rightIcons[] = [
                 'type' => 'link',
                 'href' => appUrl('dashboard'),
-                'title' => 'Dashboard',
-                'icon' => 'setting.svg',
+                'title' => $route === 'my-space' ? 'Back to dashboard' : 'Dashboard',
+                'icon' => $route === 'my-space' ? 'home.svg' : 'setting.svg',
                 'alt' => 'Dashboard',
             ];
 
             if (in_array($role, ['admin', 'department_manager'], true)) {
-                $rightIcons[] = [
-                    'type' => 'link',
-                    'href' => appUrl('my-space'),
-                    'title' => 'My attendance',
-                    'icon' => 'home.svg',
-                    'alt' => 'My attendance',
-                ];
+                if ($route !== 'my-space') {
+                    $rightIcons[] = [
+                        'type' => 'link',
+                        'href' => appUrl('my-space'),
+                        'title' => 'My attendance',
+                        'icon' => 'home.svg',
+                        'alt' => 'My attendance',
+                    ];
+                }
+                if ($route === 'my-space') {
+                    $rightIcons[] = [
+                        'type' => 'link',
+                        'href' => appUrl('my-space', ['print' => 'documents']) . '#employee-received-documents',
+                        'title' => 'Print documents',
+                        'icon' => 'print-outline.svg',
+                        'alt' => 'Print documents',
+                    ];
+                }
             }
         }
     }
