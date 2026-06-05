@@ -81,15 +81,6 @@ if ($route === 'home') {
     ];
 } elseif ($currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
-    if ($role !== 'employee' && $role !== 'admin') {
-        $rightIcons[] = [
-            'type' => 'link',
-            'href' => appUrl('home'),
-            'title' => 'Home',
-            'icon' => 'home.svg',
-            'alt' => 'Home',
-        ];
-    }
     if ($route === 'dashboard') {
         $rightIcons[] = [
             'type' => 'button',
