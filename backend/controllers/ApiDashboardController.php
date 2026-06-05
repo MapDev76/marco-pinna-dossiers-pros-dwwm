@@ -95,26 +95,6 @@ if ($action === 'save_planning_document' || $action === 'save_dashboard_document
         }
     }
 
-    $relativeDir = $documentMode === 'attendance' ? 'uploads/attendance' : 'uploads/planning';
-    $absoluteDir = __DIR__ . '/../../public/' . $relativeDir;
-    if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0775, true) && !is_dir($absoluteDir)) {
-        jsonResponse(['success' => false, 'error' => 'Unable to prepare storage directory'], 500);
-    }
-
-    try {
-        $suffix = bin2hex(random_bytes(4));
-    } catch (Throwable $e) {
-        $suffix = substr(sha1((string) microtime(true)), 0, 8);
-    }
-
-    $storedName = date('Ymd-His') . '-' . $suffix . '-' . $safeBaseName;
-    $relativePath = $relativeDir . '/' . $storedName;
-    $absolutePath = $absoluteDir . '/' . $storedName;
-
-    if (file_put_contents($absolutePath, $decoded) === false) {
-        jsonResponse(['success' => false, 'error' => 'Unable to save file'], 500);
-    }
-
     $insertDocument = $pdo->prepare(
         'INSERT INTO documents (user_id, document_type, file_name, file_path, file_blob, file_mime_type, status)
          VALUES (:user_id, :document_type, :file_name, :file_path, :file_blob, :file_mime_type, :status)'
@@ -123,7 +103,7 @@ if ($action === 'save_planning_document' || $action === 'save_dashboard_document
         'user_id' => (int) ($user['id'] ?? 0),
         'document_type' => 'other',
         'file_name' => $safeBaseName,
-        'file_path' => $relativePath,
+        'file_path' => null,
         'file_blob' => $decoded,
         'file_mime_type' => $fileMimeType,
         'status' => 'valid',
@@ -136,7 +116,7 @@ if ($action === 'save_planning_document' || $action === 'save_dashboard_document
         'ok' => true,
         'document_id' => $documentId,
         'file_name' => $safeBaseName,
-        'file_path' => $relativePath,
+        'file_path' => null,
         'download_url' => appUrl('document-download', ['id' => $documentId]),
     ]);
 }
