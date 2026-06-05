@@ -9,7 +9,7 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
 
 $userModel = new UserModel(getPDO());
-$pageTitle = 'StaffEase Pro - Login';
+$pageTitle = t('auth.page_title');
 $viewFile = __DIR__ . '/../../public/views/auth/login.php';
 $loginEmail = trim($_POST['email'] ?? '');
 $loginError = null;
@@ -24,7 +24,7 @@ if (($_GET['route'] ?? 'login') === 'logout') {
 
     session_destroy();
     session_start();
-    setFlash('success', 'You have been logged out successfully.');
+    setFlash('success', t('auth.logout_success'));
     redirectTo('login');
 }
 
@@ -36,12 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = (string) ($_POST['password'] ?? '');
 
     if ($loginEmail === '' || $password === '') {
-        $loginError = 'Please enter your email and password.';
+        $loginError = t('auth.empty_fields');
     } else {
         $user = $userModel->findByEmail($loginEmail);
 
         if (!$user || $user['status'] !== 'active' || !password_verify($password, $user['password'])) {
-            $loginError = 'Invalid credentials or access denied.';
+            $loginError = t('auth.invalid_credentials');
         } else {
             $_SESSION['auth_user'] = [
                 'id' => (int) $user['id'],
@@ -52,15 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'department_id' => $user['department_id'],
             ];
 
-            $welcomeLabel = match ($user['role']) {
-                'super_admin' => 'Super Admin',
-                'admin' => 'Admin',
-                'department_manager' => 'Department Manager',
-                'employee' => 'Employee',
-                default => 'User',
-            };
-
-            setFlash('success', 'Login successful. Welcome ' . $welcomeLabel . '.');
+            $roleLabel = t('roles.' . (string) ($user['role'] ?? 'employee'));
+            setFlash('success', t('auth.login_success', ['role' => $roleLabel]));
             if (($user['role'] ?? '') === 'employee') {
                 redirectTo('my-space');
             }

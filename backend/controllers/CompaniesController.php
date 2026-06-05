@@ -5,7 +5,7 @@ require_once __DIR__ . '/../models/CompanyModel.php';
 
 // This controller handles modal-based CRUD submissions for companies.
 if (!isLoggedIn()) {
-    setFlash('error', 'Please log in to continue.');
+    setFlash('error', t('common.login_required'));
     redirectTo('login');
 }
 
@@ -15,7 +15,7 @@ $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 
 if (!in_array($role, ['super_admin', 'admin'], true)) {
-    setFlash('error', 'Access denied.');
+    setFlash('error', t('common.access_denied'));
     redirectTo('dashboard');
 }
 
@@ -31,7 +31,7 @@ if ($role === 'admin') {
     $scopeCompanyId = (int) ($scopeStatement->fetchColumn() ?: 0) ?: null;
 }
 
-$pageTitle = 'Companies Management';
+$pageTitle = t('common.companies') . ' - ' . t('common.management');
 
 /**
  * Redirects back to the dashboard companies modal after a CRUD action.

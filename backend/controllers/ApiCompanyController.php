@@ -11,14 +11,14 @@ require_once __DIR__ . '/../models/CompanyModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 
 if (!isLoggedIn()) {
-    jsonResponse(['error' => 'Unauthorized'], 403);
+            jsonResponse(['error' => t('common.unauthorized')], 403);
 }
 
 $profile = currentUser();
 $isSuperAdmin = isSuperAdmin();
 $isAdmin = (($profile['role'] ?? '') === 'admin');
 if (!$isSuperAdmin && !$isAdmin) {
-    jsonResponse(['error' => 'Unauthorized'], 403);
+            jsonResponse(['error' => t('common.unauthorized')], 403);
 }
 
 $pdo = getPDO();

@@ -30,16 +30,16 @@ $shifts = is_array($planner['shifts'] ?? null) ? $planner['shifts'] : [];
 $assignments = is_array($planner['assignments'] ?? null) ? $planner['assignments'] : [];
 $attendances = is_array($planner['attendances'] ?? null) ? $planner['attendances'] : [];
 $roleLabels = [
-    'super_admin' => 'Super Admin',
-    'admin' => 'Admin',
-    'department_manager' => 'Department Manager',
-    'employee' => 'Employee',
+    'super_admin' => t('roles.super_admin'),
+    'admin' => t('roles.admin'),
+    'department_manager' => t('roles.department_manager'),
+    'employee' => t('roles.employee'),
 ];
 $roleCatalog = [
-    ['key' => 'super_admin', 'label' => 'Super Admin', 'color' => '#1f2937', 'icon' => '🛡️'],
-    ['key' => 'admin', 'label' => 'Admin', 'color' => '#b98b12', 'icon' => '⚙'],
-    ['key' => 'department_manager', 'label' => 'Department Manager', 'color' => '#2f6fed', 'icon' => '👔'],
-    ['key' => 'employee', 'label' => 'Employee', 'color' => '#5b6472', 'icon' => '👤'],
+    ['key' => 'super_admin', 'label' => t('roles.super_admin'), 'color' => '#1f2937', 'icon' => '🛡️'],
+    ['key' => 'admin', 'label' => t('roles.admin'), 'color' => '#b98b12', 'icon' => '⚙'],
+    ['key' => 'department_manager', 'label' => t('roles.department_manager'), 'color' => '#2f6fed', 'icon' => '👔'],
+    ['key' => 'employee', 'label' => t('roles.employee'), 'color' => '#5b6472', 'icon' => '👤'],
 ];
 $companyTypeRaw = (string) ($plannerCompany['type'] ?? ($currentUser['company_type'] ?? ''));
 if ($companyTypeRaw === '' && $scopeCompanyId > 0 && !empty($scopeCompanies)) {
@@ -382,28 +382,28 @@ $departmentCreateHeadUsers = array_values(array_filter(
 ?>
 <section class="dashboard-modal dashboard-settings-modal" id="modal-settings" hidden>
     <div class="crud-modal-card">
-        <button type="button" class="dashboard-modal-close" data-modal-close aria-label="Close settings">&times;</button>
+        <button type="button" class="dashboard-modal-close" data-modal-close aria-label="<?php echo e(t('settings.close')); ?>">&times;</button>
 
         <div class="crud-modal-head settings-modal-head">
             <div>
-                <h2 id="settings-modal-title">Management settings</h2>
-                <p id="settings-modal-subtitle" class="crud-modal-subtitle">Open a rubric and edit departments, users, roles, shifts or assignments.</p>
+                <h2 id="settings-modal-title"><?php echo e(t('settings.title')); ?></h2>
+                <p id="settings-modal-subtitle" class="crud-modal-subtitle"><?php echo e(t('settings.subtitle')); ?></p>
             </div>
             <div class="settings-summary settings-summary--compact">
                 <div class="settings-summary-card">
-                    <span class="settings-summary-label">Company</span>
+                    <span class="settings-summary-label"><?php echo e(t('settings.company')); ?></span>
                     <strong><?php echo e($scopeCompanyName); ?></strong>
                 </div>
                 <div class="settings-summary-card">
-                    <span class="settings-summary-label">Departments</span>
+                    <span class="settings-summary-label"><?php echo e(t('settings.departments')); ?></span>
                     <strong><?php echo count($departments); ?></strong>
                 </div>
                 <div class="settings-summary-card">
-                    <span class="settings-summary-label">Users</span>
+                    <span class="settings-summary-label"><?php echo e(t('settings.users')); ?></span>
                     <strong><?php echo count($visibleUsers); ?></strong>
                 </div>
                 <div class="settings-summary-card">
-                    <span class="settings-summary-label">Shifts</span>
+                    <span class="settings-summary-label"><?php echo e(t('settings.shifts')); ?></span>
                     <strong><?php echo count($shifts); ?></strong>
                 </div>
             </div>
@@ -414,7 +414,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <input type="hidden" name="modal" value="settings">
                     <input type="hidden" name="settings_tab" value="" data-settings-tab-input>
                     <label class="settings-field">
-                        Company in settings
+                        <?php echo e(t('settings.company_in_settings')); ?>
                         <select name="settings_company_id" data-settings-company-select>
                             <?php foreach ($scopeCompanies as $company): ?>
                                 <option value="<?php echo (int) ($company['id'] ?? 0); ?>" <?php echo ((int) ($company['id'] ?? 0) === $scopeCompanyId) ? 'selected' : ''; ?>>
@@ -427,14 +427,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
             <?php endif; ?>
         </div>
 
-        <div class="settings-tabs" role="tablist" aria-label="Management rubrics">
-            <button type="button" class="settings-tab" data-settings-tab="users">Users</button>
+        <div class="settings-tabs" role="tablist" aria-label="<?php echo e(t('settings.management_rubrics')); ?>">
+            <button type="button" class="settings-tab" data-settings-tab="users"><?php echo e(t('settings.users')); ?></button>
             <?php if ($currentRole !== 'department_manager'): ?>
-                <button type="button" class="settings-tab" data-settings-tab="departments">Departments</button>
+                <button type="button" class="settings-tab" data-settings-tab="departments"><?php echo e(t('settings.departments')); ?></button>
             <?php endif; ?>
-            <button type="button" class="settings-tab" data-settings-tab="shifts">Shifts</button>
-            <button type="button" class="settings-tab" data-settings-tab="assignments">Assignments</button>
-            <button type="button" class="settings-tab" data-settings-tab="attendances">Attendances</button>
+            <button type="button" class="settings-tab" data-settings-tab="shifts"><?php echo e(t('settings.shifts')); ?></button>
+            <button type="button" class="settings-tab" data-settings-tab="assignments"><?php echo e(t('settings.assignments')); ?></button>
+            <button type="button" class="settings-tab" data-settings-tab="attendances"><?php echo e(t('settings.attendances')); ?></button>
         </div>
 
         <div class="crud-modal-body settings-modal-body">
@@ -478,39 +478,39 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 ?>
                 <div class="settings-panel-head">
                     <div>
-                        <h3>Assignments</h3>
-                        <p class="crud-modal-subtitle">Planner assignments with operational insights for admin decisions (Current Month).</p>
+                        <h3><?php echo e(t('settings.assignments_head')); ?></h3>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.assignments_subtitle')); ?></p>
                     </div>
                 </div>
 
                 <div class="settings-create-row settings-auto-assign-row">
                     <div class="settings-list-cols settings-list-cols-shift-create">
-                        <label class="settings-field">Auto assign shift
+                            <label class="settings-field"><?php echo e(t('settings.auto_assign_shift')); ?>
                             <select data-auto-assign-shift>
-                                <option value="0">All open work shifts</option>
+                                <option value="0"><?php echo e(t('settings.all_open_work_shifts')); ?></option>
                                 <?php foreach ($shifts as $shift): ?>
                                     <option value="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(($shift['icon'] ?? '🕒') . ' ' . ($shift['name'] ?? 'Shift')); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
-                        <label class="settings-field">From date<input data-auto-assign-range-start type="date" value="<?php echo e($autoAssignDefaultStart); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
-                        <label class="settings-field">To date<input data-auto-assign-range-end type="date" value="<?php echo e($autoAssignDefaultEnd); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
-                        <label class="settings-field">Minimum employees / shift / day<input data-auto-assign-min-employees type="number" min="0" step="1" value="1"></label>
-                        <label class="settings-field">Maximum employees / shift / day<input data-auto-assign-max-employees type="number" min="1" step="1" value="3"></label>
+                        <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-auto-assign-range-start type="date" value="<?php echo e($autoAssignDefaultStart); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
+                        <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-auto-assign-range-end type="date" value="<?php echo e($autoAssignDefaultEnd); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
+                        <label class="settings-field"><?php echo e(t('settings.minimum_employees')); ?><input data-auto-assign-min-employees type="number" min="0" step="1" value="1"></label>
+                        <label class="settings-field"><?php echo e(t('settings.maximum_employees')); ?><input data-auto-assign-max-employees type="number" min="1" step="1" value="3"></label>
                         <div class="settings-inline-actions">
-                            <button type="button" class="admin-action-link" data-auto-assign-open>Auto assign open</button>
-                            <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-clear>Clear assigned shifts</button>
+                            <button type="button" class="admin-action-link" data-auto-assign-open><?php echo e(t('settings.auto_assign_open')); ?></button>
+                            <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-clear><?php echo e(t('settings.clear_assigned_shifts')); ?></button>
                         </div>
                     </div>
                 </div>
 
                 <section class="settings-analytics-card settings-assignment-employee-index" data-assignment-employee-index>
                     <div class="settings-assignment-employee-index-head">
-                        <h4>Employees</h4>
-                        <p class="crud-modal-subtitle">Select an employee to open all individual data, assigned shifts and availability rules.</p>
+                        <h4><?php echo e(t('settings.employees')); ?></h4>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.select_employee_hint')); ?></p>
                     </div>
                     <?php if (empty($visibleUsers)): ?>
-                        <div class="crud-empty-state">No active employees available.</div>
+                        <div class="crud-empty-state"><?php echo e(t('settings.no_active_employees')); ?></div>
                     <?php else: ?>
                         <?php
                             $departmentNameById = [];
@@ -521,9 +521,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             $usersByDepartment = [];
                             foreach ($visibleUsers as $employeeItem) {
                                 $employeeDepartmentId = (int) ($employeeItem['department_id'] ?? 0);
-                                $employeeDepartmentName = (string) ($employeeItem['department_name'] ?? ($departmentNameById[$employeeDepartmentId] ?? 'Unassigned'));
+                                $employeeDepartmentName = (string) ($employeeItem['department_name'] ?? ($departmentNameById[$employeeDepartmentId] ?? t('settings.unassigned')));
                                 if ($employeeDepartmentName === '') {
-                                    $employeeDepartmentName = 'Unassigned';
+                                    $employeeDepartmentName = t('settings.unassigned');
                                 }
                                 if (!isset($usersByDepartment[$employeeDepartmentName])) {
                                     $usersByDepartment[$employeeDepartmentName] = [];
@@ -558,10 +558,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             <strong><?php echo e($employeeName); ?></strong>
                                             <span><?php echo e($employeeItem['email'] ?? ''); ?></span>
                                             <small>
-                                                Assigned: <?php echo (int) ($employeeStat['assigned'] ?? 0); ?>
-                                                • Sick: <?php echo (int) ($employeeStat['sick'] ?? 0); ?>
-                                                • Vacation: <?php echo (int) ($employeeStat['vacation'] ?? 0); ?>
-                                                • Rest: <?php echo (int) ($employeeStat['rest'] ?? 0); ?>
+                                                <?php echo e(t('settings.assigned')); ?>: <?php echo (int) ($employeeStat['assigned'] ?? 0); ?>
+                                                • <?php echo e(t('settings.sick')); ?>: <?php echo (int) ($employeeStat['sick'] ?? 0); ?>
+                                                • <?php echo e(t('settings.vacation')); ?>: <?php echo (int) ($employeeStat['vacation'] ?? 0); ?>
+                                                • <?php echo e(t('settings.rest')); ?>: <?php echo (int) ($employeeStat['rest'] ?? 0); ?>
                                             </small>
                                         </button>
                                     <?php endforeach; ?>
@@ -593,31 +593,31 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <div class="settings-assignment-employee-window">
                         <header class="settings-assignment-employee-window-head">
                             <div>
-                                <h4 data-assignment-modal-title>Employee details</h4>
-                                <p class="crud-modal-subtitle" data-assignment-modal-subtitle>Assigned shifts, absences and availability rules.</p>
+                                <h4 data-assignment-modal-title><?php echo e(t('settings.employee_details')); ?></h4>
+                                <p class="crud-modal-subtitle" data-assignment-modal-subtitle><?php echo e(t('settings.assigned_shifts_hint')); ?></p>
                             </div>
-                            <button type="button" class="dashboard-modal-close" data-assignment-employee-close aria-label="Close employee details">&times;</button>
+                            <button type="button" class="dashboard-modal-close" data-assignment-employee-close aria-label="<?php echo e(t('settings.close')); ?>">&times;</button>
                         </header>
                         <div class="settings-assignment-employee-window-grid">
                             <section class="settings-analytics-card">
-                                <h5>Availability Rules</h5>
-                                <p class="crud-modal-subtitle">Set weekly rest days and unavailable dates for the current month.</p>
+                                <h5><?php echo e(t('settings.availability_rules')); ?></h5>
+                                <p class="crud-modal-subtitle"><?php echo e(t('settings.weekly_rest_and_dates')); ?></p>
                                 <div class="settings-auto-rule-weekdays" data-assignment-modal-weekdays></div>
                                 <div class="settings-auto-rule-specials">
-                                    <label class="settings-field">Unavailable day<input type="date" data-assignment-modal-special-date></label>
-                                    <label class="settings-field">Reason
+                                    <label class="settings-field"><?php echo e(t('settings.unavailable_day')); ?><input type="date" data-assignment-modal-special-date></label>
+                                    <label class="settings-field"><?php echo e(t('settings.reason')); ?>
                                         <select data-assignment-modal-special-reason>
-                                            <option value="rest">Weekly rest</option>
-                                            <option value="leave">Leave</option>
-                                            <option value="vacation">Vacation</option>
-                                            <option value="sick">Sick leave</option>
-                                            <option value="special">Special day</option>
+                                            <option value="rest"><?php echo e(t('settings.weekly_rest')); ?></option>
+                                            <option value="leave"><?php echo e(t('crud.request_leave')); ?></option>
+                                            <option value="vacation"><?php echo e(t('settings.vacation')); ?></option>
+                                            <option value="sick"><?php echo e(t('settings.sick')); ?></option>
+                                            <option value="special"><?php echo e(t('settings.special_day')); ?></option>
                                         </select>
                                     </label>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special>Add date</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special><?php echo e(t('settings.add_date')); ?></button>
                                 </div>
                                 <div class="settings-assignment-modal-range-row">
-                                    <label class="settings-field">From date<input type="date" data-assignment-modal-special-from></label>
+                                    <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input type="date" data-assignment-modal-special-from></label>
                                     <label class="settings-field">To date<input type="date" data-assignment-modal-special-to></label>
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special-range>Add range</button>
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rules-reset>Reset rules</button>

@@ -3,7 +3,7 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/ShiftModel.php';
 
 if (!isLoggedIn() || !in_array((currentUser()['role'] ?? ''), ['super_admin', 'admin', 'department_manager'], true)) {
-    jsonResponse(['error' => 'Unauthorized'], 403);
+            jsonResponse(['error' => t('common.unauthorized')], 403);
 }
 
 $pdo = getPDO();
@@ -27,7 +27,7 @@ try {
                 $rows = $shiftModel->byDepartmentId($departmentId);
                 jsonResponse(['ok' => true, 'shifts' => $rows]);
             }
-            jsonResponse(['ok' => false, 'error' => 'department_id required'], 400);
+            jsonResponse(['ok' => false, 'error' => t('common.department_required')], 400);
             break;
 
         case 'create':

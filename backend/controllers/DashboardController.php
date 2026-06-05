@@ -13,7 +13,7 @@ require_once __DIR__ . '/../models/CompanyModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
 
 if (!isLoggedIn()) {
-    setFlash('error', 'Please log in to continue.');
+    setFlash('error', t('common.login_required'));
     redirectTo('login');
 }
 
@@ -28,13 +28,13 @@ $role = $currentUser['role'] ?? 'employee';
 $profile = $userModel->profileWithRelations((int) $currentUser['id']) ?? [];
 
 $roleLabels = [
-    'super_admin' => 'Super Admin',
-    'admin' => 'Administrator',
-    'department_manager' => 'Department Manager',
-    'employee' => 'Employee',
+    'super_admin' => t('roles.super_admin'),
+    'admin' => t('roles.admin'),
+    'department_manager' => t('roles.department_manager'),
+    'employee' => t('roles.employee'),
 ];
 
-$dashboardSidebarRoleLabel = $roleLabels[$role] ?? 'User';
+$dashboardSidebarRoleLabel = $roleLabels[$role] ?? t('roles.employee');
 
 $dashboardSidebarSections = [];
 
@@ -67,11 +67,11 @@ if ($role === 'admin' && (int) ($companyId ?? 0) <= 0) {
 }
 
 $pageTitle = match ($role) {
-    'super_admin' => 'Super Admin Dashboard',
-    'admin' => 'Admin Dashboard',
-    'department_manager' => 'Department Manager Dashboard',
-    'employee' => 'Employee Dashboard',
-    default => 'Dashboard',
+    'super_admin' => t('common.dashboard') . ' - ' . t('roles.super_admin'),
+    'admin' => t('common.dashboard') . ' - ' . t('roles.admin'),
+    'department_manager' => t('common.dashboard') . ' - ' . t('roles.department_manager'),
+    'employee' => t('common.dashboard') . ' - ' . t('roles.employee'),
+    default => t('common.dashboard'),
 };
 
 $viewFile = __DIR__ . '/../../public/views/admin/dashboard.php';

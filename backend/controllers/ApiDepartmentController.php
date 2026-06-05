@@ -15,7 +15,7 @@ $isSuperAdmin = $role === 'super_admin';
 $isAdmin = $role === 'admin';
 
 if (!isLoggedIn() || (!$isSuperAdmin && !$isAdmin)) {
-    jsonResponse(['error' => 'Unauthorized'], 403);
+            jsonResponse(['error' => t('common.unauthorized')], 403);
 }
 
 $pdo = getPDO();

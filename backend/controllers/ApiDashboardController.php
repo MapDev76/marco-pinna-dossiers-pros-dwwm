@@ -34,7 +34,7 @@ $profile = $userModel->profileWithRelations((int) $user['id']) ?? [];
 
 if ($action === 'save_planning_document' || $action === 'save_dashboard_document') {
     if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
-        jsonResponse(['success' => false, 'error' => 'Unauthorized'], 403);
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
     }
 
     $departmentId = (int) ($input['department_id'] ?? 0);
@@ -123,7 +123,7 @@ if ($action === 'save_planning_document' || $action === 'save_dashboard_document
 
 if ($action === 'delete_document') {
     if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
-        jsonResponse(['success' => false, 'error' => 'Unauthorized'], 403);
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
     }
 
     $documentId = (int) ($input['document_id'] ?? 0);
@@ -182,7 +182,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         ? ['super_admin', 'admin', 'department_manager']
         : ['admin', 'department_manager'];
     if (!in_array($role, $allowedRoles, true)) {
-        jsonResponse(['success' => false, 'error' => 'Unauthorized'], 403);
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
     }
 
     $assignmentId = (int) ($input['assignment_id'] ?? 0);

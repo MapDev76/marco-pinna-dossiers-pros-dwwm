@@ -9,7 +9,7 @@
  * headers.
  */
 if (!isLoggedIn()) {
-    setFlash('error', 'Please log in to continue.');
+    setFlash('error', t('common.login_required'));
     redirectTo('login');
 }
 
@@ -20,7 +20,7 @@ $role = $currentUser['role'] ?? 'employee';
 $documentId = (int) ($_GET['id'] ?? 0);
 
 if ($documentId <= 0) {
-    setFlash('error', 'Document not found.');
+    setFlash('error', t('common.document_not_found'));
     redirectTo($role === 'employee' ? 'my-space' : 'dashboard');
 }
 
@@ -36,7 +36,7 @@ $statement->execute(['id' => $documentId]);
 $document = $statement->fetch(PDO::FETCH_ASSOC);
 
 if (!$document) {
-    setFlash('error', 'Document not found.');
+    setFlash('error', t('common.document_not_found'));
     redirectTo($role === 'employee' ? 'my-space' : 'dashboard');
 }
 
@@ -68,7 +68,7 @@ if ($role === 'super_admin') {
 }
 
 if (!$allowed) {
-    setFlash('error', 'Access denied.');
+    setFlash('error', t('common.access_denied'));
     redirectTo($role === 'employee' ? 'my-space' : 'dashboard');
 }
 
@@ -110,7 +110,7 @@ if (is_string($blobContent) && $blobContent !== '') {
     exit;
 }
 
-setFlash('error', 'File not available.');
+setFlash('error', t('common.file_not_available'));
 if ($role === 'employee') {
     redirectTo('my-space');
 }

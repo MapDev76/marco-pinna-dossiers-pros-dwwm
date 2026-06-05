@@ -17,7 +17,7 @@ $isSuperAdmin = $currentRole === 'super_admin';
 $isAdmin = $currentRole === 'admin';
 
 if (!isLoggedIn() || (!$isSuperAdmin && !$isAdmin)) {
-    jsonResponse(['error' => 'Unauthorized'], 403);
+            jsonResponse(['error' => t('common.unauthorized')], 403);
 }
 
 $pdo = getPDO();
@@ -214,7 +214,7 @@ try {
         case 'assign_head':
             $userId = (int) ($input['user_id'] ?? 0);
             $departmentId = (int) ($input['department_id'] ?? 0);
-            if ($userId <= 0 || $departmentId <= 0) jsonResponse(['ok' => false, 'error' => 'user_id and department_id required'], 400);
+            if ($userId <= 0 || $departmentId <= 0) jsonResponse(['ok' => false, 'error' => t('common.user_department_required')], 400);
             // Set the user role and department assignment.
             $userModel->update($userId, ['department_id' => $departmentId, 'first_name' => $userModel->findById($userId)['first_name'], 'last_name' => $userModel->findById($userId)['last_name'], 'email' => $userModel->findById($userId)['email'], 'phone' => $userModel->findById($userId)['phone'], 'role' => 'department_manager', 'status' => 'active']);
             jsonResponse(['ok' => true]);

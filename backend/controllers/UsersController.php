@@ -6,7 +6,7 @@ require_once __DIR__ . '/../models/DepartmentModel.php';
 
 // This controller only handles modal-based CRUD submissions and returns the user to the users modal.
 if (!isLoggedIn()) {
-    setFlash('error', 'Please log in to continue.');
+    setFlash('error', t('common.login_required'));
     redirectTo('login');
 }
 
@@ -14,7 +14,7 @@ $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 
 if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
-    setFlash('error', 'Access denied.');
+    setFlash('error', t('common.access_denied'));
     redirectTo('dashboard');
 }
 
@@ -27,7 +27,7 @@ $scopeDepartmentId = isset($profile['department_id']) ? (int) $profile['departme
 $defaultReceptionDepartment = $departmentModel->findByNameAndCompanyId('Reception', $scopeCompanyId);
 $defaultReceptionDepartmentId = isset($defaultReceptionDepartment['id']) ? (int) $defaultReceptionDepartment['id'] : null;
 
-$pageTitle = 'Users Management';
+$pageTitle = t('common.users') . ' - ' . t('common.management');
 
 /**
  * Redirects back to the dashboard users modal after a CRUD action.
@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setFlash('error', 'Invalid status.');
         usersModalRedirect();
     } elseif ($payload['role'] === 'super_admin' && $payload['department_id'] !== null) {
-        setFlash('error', 'A Super Admin must not be linked to any department.');
+        setFlash('error', t('common.super_admin_no_department'));
         usersModalRedirect();
     } elseif ($payload['role'] === 'admin' && $payload['department_id'] === null) {
         setFlash('error', 'An Admin must be linked to a department.');

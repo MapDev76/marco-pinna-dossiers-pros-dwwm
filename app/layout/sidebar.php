@@ -10,13 +10,22 @@ if (!isset($dashboardSidebarSections) || !is_array($dashboardSidebarSections)) {
     return;
 }
 
-$sidebarRoleLabel = $dashboardSidebarRoleLabel ?? 'User';
+$sidebarRoleLabel = $dashboardSidebarRoleLabel ?? t('roles.employee');
 $currentSidebarUser = currentUser();
 $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
+
+$sidebarTitleMap = [
+    'Management' => t('common.management'),
+    'Departments' => t('common.departments_panel'),
+    'Employees' => t('common.employees'),
+    'Shifts' => t('common.shifts'),
+    'Section' => t('common.section'),
+    'Action' => t('common.action'),
+];
 ?>
-<aside id="dashboard-sidebar" class="app-sidebar" aria-label="Dashboard sidebar navigation">
+<aside id="dashboard-sidebar" class="app-sidebar" aria-label="<?php echo e(t('common.dashboard')); ?> <?php echo e(t('common.quick_actions')); ?>">
     <div class="dashboard-sidebar-shell">
-        <button type="button" class="dashboard-sidebar-handle" data-sidebar-hover-handle aria-label="Apri sidebar">
+        <button type="button" class="dashboard-sidebar-handle" data-sidebar-hover-handle aria-label="<?php echo e(t('common.quick_actions')); ?>">
             <span aria-hidden="true">›</span>
         </button>
         <div class="dashboard-sidebar-scroll">
@@ -26,23 +35,25 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
 
         <?php foreach ($dashboardSidebarSections as $section): ?>
             <section class="dashboard-sidebar-group">
-                <?php if (isset($section['title']) && trim($section['title']) === 'Management'): ?>
-                    <div class="dashboard-sidebar-group-title"><span><?php echo e($section['icon'] ?? '•'); ?></span> <?php echo e($section['title']); ?></div>
+                <?php $sectionTitle = trim((string) ($section['title'] ?? '')); ?>
+                <?php $isManagementSection = in_array($sectionTitle, ['Management', t('common.management')], true); ?>
+                <?php if ($isManagementSection): ?>
+                    <div class="dashboard-sidebar-group-title"><span><?php echo e($section['icon'] ?? '•'); ?></span> <?php echo e(t('common.management')); ?></div>
                     <div>
-                        <button type="button" class="dashboard-sidebar-link management-toggle" aria-expanded="false">Management</button>
+                        <button type="button" class="dashboard-sidebar-link management-toggle" aria-expanded="false"><?php echo e(t('common.management')); ?></button>
                         <div class="dashboard-management-list" hidden>
                             <?php foreach (($section['buttons'] ?? []) as $button): ?>
                                 <button type="button" class="dashboard-sidebar-link <?php echo !empty($button['variant']) ? 'is-' . e($button['variant']) : ''; ?>" data-modal-target="<?php echo e($button['target'] ?? ''); ?>" data-modal-entity="<?php echo e($button['entity'] ?? ''); ?>" data-modal-title="<?php echo e($button['title'] ?? ($button['label'] ?? '')); ?>">
-                                    <?php echo e($button['label'] ?? 'Action'); ?>
+                                    <?php echo e($button['label'] ?? t('common.action')); ?>
                                 </button>
                             <?php endforeach; ?>
                         </div>
                     </div>
                 <?php else: ?>
-                    <p class="dashboard-sidebar-group-title"><span><?php echo e($section['icon'] ?? '•'); ?></span> <?php echo e($section['title'] ?? 'Section'); ?></p>
+                    <p class="dashboard-sidebar-group-title"><span><?php echo e($section['icon'] ?? '•'); ?></span> <?php echo e($sidebarTitleMap[$sectionTitle] ?? ($sectionTitle !== '' ? $sectionTitle : t('common.section'))); ?></p>
                     <?php foreach (($section['buttons'] ?? []) as $button): ?>
                         <button type="button" class="dashboard-sidebar-link <?php echo !empty($button['variant']) ? 'is-' . e($button['variant']) : ''; ?>" data-modal-target="<?php echo e($button['target'] ?? ''); ?>" data-modal-entity="<?php echo e($button['entity'] ?? ''); ?>" data-modal-title="<?php echo e($button['title'] ?? ($button['label'] ?? '')); ?>">
-                            <?php echo e($button['label'] ?? 'Action'); ?>
+                            <?php echo e($button['label'] ?? t('common.action')); ?>
                         </button>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -52,7 +63,7 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
         <?php if (in_array($sidebarRole, ['admin', 'department_manager'], true)): ?>
             <section class="dashboard-sidebar-group dashboard-sidebar-departments-panel">
                 <button type="button" class="dashboard-sidebar-group-title dashboard-sidebar-department-toggle" data-sidebar-department-toggle aria-expanded="false">
-                    <span>📁</span> Departments
+                    <span>📁</span> <?php echo e(t('common.departments_panel')); ?>
                 </button>
                 <div class="dashboard-sidebar-current-department" data-sidebar-current-department></div>
                 <div>
@@ -68,7 +79,7 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                                 data-planner-department-icon="<?php echo e($deptIcon); ?>"
                                 data-planner-department-color="<?php echo e($deptColor); ?>">
                                 <span style="color: <?php echo e($deptColor); ?>;"><?php echo e($deptIcon); ?></span>
-                                <span><?php echo e($department['name'] ?? 'Department'); ?></span>
+                                <span><?php echo e($department['name'] ?? t('common.department')); ?></span>
                             </button>
                         <?php endforeach; ?>
                     </div>
@@ -81,7 +92,7 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                         if ((int) ($d['id'] ?? 0) === $activeDeptId) { $activeDept = $d; break; }
                     }
                     if (!$activeDept) {
-                        echo '<div class="dashboard-sidebar-planner-placeholder">Select a department to show employees and shifts.</div>';
+                        echo '<div class="dashboard-sidebar-planner-placeholder">' . e(t('common.select_department_to_show')) . '</div>';
                     } else {
                         $users = $activeDept['users'] ?? [];
                         $shifts = $activeDept['shifts'] ?? [];
@@ -93,34 +104,34 @@ $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
                         $activeDeptColor = $activeDept['color'] ?? '#b98b12';
                         ?>
                         <div class="dashboard-sidebar-planner-title">
-                            <span style="color: <?php echo e($activeDeptColor); ?>;"><?php echo e($activeDeptIcon); ?> <?php echo e($activeDept['name'] ?? 'Department'); ?></span>
-                            <span><?php echo count($users); ?> staff</span>
+                            <span style="color: <?php echo e($activeDeptColor); ?>;"><?php echo e($activeDeptIcon); ?> <?php echo e($activeDept['name'] ?? t('common.department')); ?></span>
+                            <span><?php echo count($users); ?> <?php echo e(t('common.staff')); ?></span>
                         </div>
                         <div class="dashboard-sidebar-planner-description"><?php echo e($activeDept['description'] ?? ''); ?></div>
                         <div>
-                            <div class="dashboard-sidebar-group-title"><span>👤</span> Employees</div>
+                            <div class="dashboard-sidebar-group-title"><span>👤</span> <?php echo e(t('common.employees')); ?></div>
                             <div class="dashboard-sidebar-chip-group">
                                 <?php if (!empty($users)): foreach ($users as $user): ?>
-                                    <button type="button" class="dashboard-sidebar-user-chip" draggable="true" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>" data-user-name="<?php echo e(trim((($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')))); ?>" title="Trascina sul calendario">
+                                    <button type="button" class="dashboard-sidebar-user-chip" draggable="true" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>" data-user-name="<?php echo e(trim((($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')))); ?>" title="<?php echo e(t('common.drag_to_calendar')); ?>">
                                         <?php echo e(trim((($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')))); ?>
                                     </button>
                                 <?php endforeach; else: ?>
-                                    <div class="dashboard-sidebar-planner-placeholder">No employees in this department.</div>
+                                    <div class="dashboard-sidebar-planner-placeholder"><?php echo e(t('common.no_employees_in_department')); ?></div>
                                 <?php endif; ?>
                             </div>
                         </div>
                         <div>
-                            <div class="dashboard-sidebar-group-title"><span>⏱</span> Shifts</div>
+                            <div class="dashboard-sidebar-group-title"><span>⏱</span> <?php echo e(t('common.shifts')); ?></div>
                             <div class="dashboard-sidebar-chip-group">
                                 <?php if (!empty($workShifts)): foreach ($workShifts as $shift): ?>
                                     <?php $shiftIcon = $shift['icon'] ?? '🕒'; ?>
                                     <?php $shiftColor = $shift['color'] ?? '#2f6fed'; ?>
                                     <button type="button" class="dashboard-sidebar-shift-chip" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" style="--shift-chip-color: <?php echo e($shiftColor); ?>;">
                                         <span class="dashboard-sidebar-shift-icon"><?php echo e($shiftIcon); ?></span>
-                                        <span><?php echo e($shift['name'] ?? 'Shift'); ?></span>
+                                        <span><?php echo e($shift['name'] ?? t('common.shift')); ?></span>
                                     </button>
                                 <?php endforeach; else: ?>
-                                    <div class="dashboard-sidebar-planner-placeholder">No work shifts configured.</div>
+                                    <div class="dashboard-sidebar-planner-placeholder"><?php echo e(t('common.no_work_shifts_configured')); ?></div>
                                 <?php endif; ?>
                             </div>
                         </div>

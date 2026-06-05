@@ -21,6 +21,7 @@ $isDashboardRoute = $route === 'dashboard';
 $isHomeRoute = $route === 'home';
 $isLoginRoute = $route === 'login';
 $isMySpaceRoute = $route === 'my-space';
+$locale = appLocale();
 $isCompactDashboard = $isDashboardRoute && isLoggedIn() && in_array((currentUser()['role'] ?? ''), ['admin', 'department_manager'], true);
 $bodyClasses = [];
 if ($isDashboardRoute) {
@@ -38,7 +39,7 @@ if ($isMySpaceRoute) {
 $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time());
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo e($locale); ?>">
 <head>
         <!-- Base metadata and main stylesheet -->
         <meta charset="UTF-8">
@@ -68,7 +69,7 @@ require __DIR__ . '/app/layout/header.php';
 <?php if ($flashSuccess !== null): ?>
                 <div id="flash-backdrop-success" class="flash-backdrop"></div>
                 <div id="flash-success" class="flash flash-success" role="alert" aria-live="assertive">
-                        <button class="flash-close" aria-label="close message">
+                        <button class="flash-close" aria-label="<?php echo e(t('common.close_message')); ?>">
                                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.29 9.18 12 2.88 5.71 4.29 4.29 10.59 10.59 17.89 4.29z"/></svg>
                         </button>
                                 <span class="flash-icon" aria-hidden="true">
@@ -79,7 +80,7 @@ require __DIR__ . '/app/layout/header.php';
                                         </svg>
                                 </span>
                         <div class="flash-body">
-                                <div class="flash-title">Done</div>
+                                <div class="flash-title"><?php echo e(t('common.done')); ?></div>
                                 <p><?php echo e($flashSuccess); ?></p>
                         </div>
                 </div>
@@ -88,14 +89,14 @@ require __DIR__ . '/app/layout/header.php';
 <?php if ($flashError !== null): ?>
                 <div id="flash-backdrop-error" class="flash-backdrop"></div>
                 <div id="flash-error" class="flash flash-error" role="alert" aria-live="assertive">
-                        <button class="flash-close" aria-label="Close message">
+                        <button class="flash-close" aria-label="<?php echo e(t('common.close_message')); ?>">
                                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.29 9.18 12 2.88 5.71 4.29 4.29 10.59 10.59 17.89 4.29z"/></svg>
                         </button>
                         <span class="flash-icon" aria-hidden="true">
                                 <img src="<?php echo $basePath; ?>/assets/icons/Icon%20alert.png" alt="" />
                         </span>
                         <div class="flash-body">
-                                <div class="flash-title">Oops!</div>
+                                <div class="flash-title"><?php echo e(t('common.oops')); ?></div>
                                 <p><?php echo e($flashError); ?></p>
                         </div>
                 </div>

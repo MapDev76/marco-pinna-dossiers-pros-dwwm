@@ -26,6 +26,115 @@ function appBasePath(): string
     return rtrim($scriptDir, '/');
 }
 
+function appSupportedLocales(): array
+{
+    return ['fr', 'en'];
+}
+
+function appDefaultLocale(): string
+{
+    return 'fr';
+}
+
+function appLocale(): string
+{
+    static $resolved = null;
+    if (is_string($resolved) && $resolved !== '') {
+        return $resolved;
+    }
+
+    startAppSession();
+
+    $supported = appSupportedLocales();
+    $requested = strtolower(trim((string) ($_GET['lang'] ?? '')));
+    if ($requested !== '' && in_array($requested, $supported, true)) {
+        $_SESSION['app_locale'] = $requested;
+    }
+
+    $sessionLocale = strtolower(trim((string) ($_SESSION['app_locale'] ?? '')));
+    if ($sessionLocale !== '' && in_array($sessionLocale, $supported, true)) {
+        $resolved = $sessionLocale;
+        return $resolved;
+    }
+
+    $resolved = appDefaultLocale();
+    $_SESSION['app_locale'] = $resolved;
+
+    return $resolved;
+}
+
+function appCurrentUrl(array $overrides = []): string
+{
+    $query = $_GET;
+    if (!isset($query['route'])) {
+        $query['route'] = $_GET['route'] ?? 'home';
+    }
+
+    foreach ($overrides as $key => $value) {
+        if ($value === null) {
+            unset($query[$key]);
+            continue;
+        }
+        $query[$key] = $value;
+    }
+
+    $basePath = appBasePath();
+    return ($basePath === '' ? '' : $basePath) . '/?' . http_build_query($query);
+}
+
+function appTranslations(string $locale): array
+{
+    static $cache = [];
+    if (isset($cache[$locale])) {
+        return $cache[$locale];
+    }
+
+    $file = __DIR__ . '/../config/lang/' . $locale . '.php';
+    if (!is_file($file)) {
+        $cache[$locale] = [];
+        return $cache[$locale];
+    }
+
+    $loaded = require $file;
+    $cache[$locale] = is_array($loaded) ? $loaded : [];
+    return $cache[$locale];
+}
+
+function t(string $key, array $replace = [], ?string $locale = null): string
+{
+    $locale = $locale ?: appLocale();
+    $fallbackLocale = appDefaultLocale();
+
+    $resolve = static function (array $source, string $path): ?string {
+        $node = $source;
+        foreach (explode('.', $path) as $segment) {
+            if (!is_array($node) || !array_key_exists($segment, $node)) {
+                return null;
+            }
+            $node = $node[$segment];
+        }
+        return is_string($node) ? $node : null;
+    };
+
+    $value = $resolve(appTranslations($locale), $key);
+    if ($value === null && $locale !== $fallbackLocale) {
+        $value = $resolve(appTranslations($fallbackLocale), $key);
+    }
+    if ($value === null) {
+        return $key;
+    }
+
+    if (!empty($replace)) {
+        $pairs = [];
+        foreach ($replace as $replaceKey => $replaceValue) {
+            $pairs['{' . $replaceKey . '}'] = (string) $replaceValue;
+        }
+        $value = strtr($value, $pairs);
+    }
+
+    return $value;
+}
+
 /**
  * Returns a full application URL for the given route and query string.
  */

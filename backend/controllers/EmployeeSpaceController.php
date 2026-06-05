@@ -9,7 +9,7 @@
 require_once __DIR__ . '/../bootstrap.php';
 
 if (!isLoggedIn()) {
-    setFlash('error', 'Please log in to continue.');
+    setFlash('error', t('common.login_required'));
     redirectTo('login');
 }
 
@@ -328,7 +328,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $assignedShift = $shiftCheck->fetch();
 
             if (!$assignedShift) {
-                $error = 'Unauthorized shift.';
+                $error = t('common.unauthorized_shift');
             } elseif ((string) ($assignedShift['work_date'] ?? '') !== $todayDate) {
                 $error = 'You can only sign attendance for today\'s shift.';
             } elseif (!in_array(strtolower(trim((string) ($assignedShift['shift_kind'] ?? 'work'))), ['work', 'overtime'], true)) {

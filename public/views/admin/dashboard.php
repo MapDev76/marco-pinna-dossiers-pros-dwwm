@@ -5,22 +5,22 @@ $role = $currentUser['role'] ?? 'employee';
 $profile = $profile ?? [];
 $moduleRows = $moduleRows ?? [];
 $roleLabels = [
-    'super_admin' => 'Super Admin',
-    'admin' => 'Admin',
-    'department_manager' => 'Department Manager',
-    'employee' => 'Employee',
+    'super_admin' => t('roles.super_admin'),
+    'admin' => t('roles.admin'),
+    'department_manager' => t('roles.department_manager'),
+    'employee' => t('roles.employee'),
 ];
 $requestStatusLabels = [
-    'pending' => 'Pending',
-    'approved' => 'Approved',
-    'rejected' => 'Rejected',
+    'pending' => t('employee.status_pending', ['fallback' => 'Pending']),
+    'approved' => t('employee.status_approved', ['fallback' => 'Approved']),
+    'rejected' => t('employee.status_rejected', ['fallback' => 'Rejected']),
 ];
 $requestTypeLabels = [
-    'notification' => 'Notification',
-    'leave' => 'Leave',
-    'shift_change' => 'Shift change',
-    'other' => 'Other',
-    'admin_note' => 'Admin note',
+    'notification' => t('common.notification', ['fallback' => 'Notification']),
+    'leave' => t('common.leave', ['fallback' => 'Leave']),
+    'shift_change' => t('common.shift_change', ['fallback' => 'Shift change']),
+    'other' => t('common.other', ['fallback' => 'Other']),
+    'admin_note' => t('common.admin_note', ['fallback' => 'Admin note']),
 ];
 
 ?>
@@ -28,7 +28,7 @@ $requestTypeLabels = [
 <div class="admin-shell dashboard-shell">
     <div class="admin-hero">
             <?php if (($currentUser['role'] ?? '') === 'super_admin'): ?>
-            <h1><?php echo e($pageTitle ?? 'Dashboard'); ?></h1>
+            <h1><?php echo e($pageTitle ?? t('common.dashboard')); ?></h1>
         <?php endif; ?>
         <!-- No welcome message or titles for non-super users per design -->
     </div>
@@ -38,15 +38,15 @@ $requestTypeLabels = [
                 <div class="admin-grid">
                     <section class="admin-card admin-stat">
                         <span class="admin-stat-value"><?php echo e($stats['users'] ?? 0); ?></span>
-                        <span class="admin-stat-label">Users</span>
+                        <span class="admin-stat-label"><?php echo e(t('common.users')); ?></span>
                     </section>
                     <section class="admin-card admin-stat">
                         <span class="admin-stat-value"><?php echo e($stats['companies'] ?? 0); ?></span>
-                        <span class="admin-stat-label">Companies</span>
+                        <span class="admin-stat-label"><?php echo e(t('common.companies')); ?></span>
                     </section>
                     <section class="admin-card admin-stat">
                         <span class="admin-stat-value"><?php echo e($stats['departments'] ?? 0); ?></span>
-                        <span class="admin-stat-label">Departments</span>
+                        <span class="admin-stat-label"><?php echo e(t('common.departments')); ?></span>
                     </section>
                 </div>
 
@@ -54,7 +54,7 @@ $requestTypeLabels = [
 
                     <div class="dashboard-company-grid">
                         <?php if (empty($moduleRows['company_directory'] ?? [])): ?>
-                            <p>No companies to display.</p>
+                            <p><?php echo e(t('common.no_companies_to_display')); ?></p>
                         <?php endif; ?>
 
                         <?php foreach (($moduleRows['company_directory'] ?? []) as $company): ?>
@@ -70,14 +70,14 @@ $requestTypeLabels = [
                                 </div>
 
                                 <div class="dashboard-company-metrics">
-                                    <div><span>Users</span><strong><?php echo e($company['users_count'] ?? 0); ?></strong></div>
-                                    <div><span>Departments</span><strong><?php echo e($company['departments_count'] ?? 0); ?></strong></div>
-                                    <div><span>Signature IP</span><strong><?php echo e($company['signature_ip'] ?: '-'); ?></strong></div>
+                                    <div><span><?php echo e(t('common.users')); ?></span><strong><?php echo e($company['users_count'] ?? 0); ?></strong></div>
+                                    <div><span><?php echo e(t('common.departments')); ?></span><strong><?php echo e($company['departments_count'] ?? 0); ?></strong></div>
+                                    <div><span><?php echo e(t('common.signature_ip')); ?></span><strong><?php echo e($company['signature_ip'] ?: '-'); ?></strong></div>
                                 </div>
 
-                                <p><strong>Admins:</strong> <?php echo e(empty($company['admins']) ? 'None' : implode(', ', $company['admins'])); ?></p>
-                                <p><strong>Department heads:</strong> <?php echo e(empty($company['heads']) ? 'None' : implode(', ', $company['heads'])); ?></p>
-                                <p><strong>Departments:</strong> <?php echo e(empty($company['departments']) ? 'None' : implode(', ', $company['departments'])); ?></p>
+                                <p><strong><?php echo e(t('common.admins')); ?>:</strong> <?php echo e(empty($company['admins']) ? t('common.none') : implode(', ', $company['admins'])); ?></p>
+                                <p><strong><?php echo e(t('common.department_heads')); ?>:</strong> <?php echo e(empty($company['heads']) ? t('common.none') : implode(', ', $company['heads'])); ?></p>
+                                <p><strong><?php echo e(t('common.departments')); ?>:</strong> <?php echo e(empty($company['departments']) ? t('common.none') : implode(', ', $company['departments'])); ?></p>
                             </article>
                         <?php endforeach; ?>
                     </div>
@@ -86,24 +86,24 @@ $requestTypeLabels = [
                 <section class="admin-card dashboard-calendar-shell">
                     <div class="dashboard-calendar-navigator overlay" id="dashboard-calendar-navigator" aria-hidden="true">
                         <div class="dashboard-calendar-navigator-top">
-                            <button type="button" class="dashboard-calendar-navigator-close" data-calendar-navigator-toggle aria-label="Toggle calendar navigator">⌃</button>
+                            <button type="button" class="dashboard-calendar-navigator-close" data-calendar-navigator-toggle aria-label="<?php echo e(t('common.calendar')); ?>">⌃</button>
                             <input type="text" class="dashboard-calendar-navigator-range" value="<?php echo e(date('d/m/y')); ?> - <?php echo e(date('d/m/y')); ?>" readonly data-calendar-range-display>
                         </div>
                         <div class="dashboard-calendar-navigator-modes">
-                            <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="week">7 days</button>
-                            <button type="button" class="dashboard-calendar-navigator-pill is-active" data-calendar-mode="fortnight">15 days</button>
-                            <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="month">1 month</button>
+                            <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="week"><?php echo e(t('common.seven_days')); ?></button>
+                            <button type="button" class="dashboard-calendar-navigator-pill is-active" data-calendar-mode="fortnight"><?php echo e(t('common.fifteen_days')); ?></button>
+                            <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="month"><?php echo e(t('common.one_month')); ?></button>
                         </div>
                         <div class="dashboard-calendar-navigator-actions">
                             <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="prev">‹</button>
-                            <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="today" aria-label="Go to today">today</button>
+                            <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="today" aria-label="<?php echo e(t('common.today')); ?>"><?php echo e(t('common.today')); ?></button>
                             <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="next">›</button>
                         </div>
                     </div>
 
                     <div class="dashboard-calendar-headline">
                         <div>
-                            <h2 class="dashboard-calendar-title" data-calendar-title><?php echo e($dashboardCalendarScopeLabel ?? 'Calendar'); ?></h2>
+                            <h2 class="dashboard-calendar-title" data-calendar-title><?php echo e($dashboardCalendarScopeLabel ?? t('common.calendar')); ?></h2>
                             <p class="dashboard-calendar-title-meta" data-calendar-stats><?php echo e(date('d M Y')); ?></p>
                         </div>
                     </div>
@@ -120,21 +120,21 @@ $requestTypeLabels = [
                 </section>
             <?php else: ?>
                 <section class="admin-card">
-                    <h2>My shifts</h2>
+                    <h2><?php echo e(t('common.my_shifts')); ?></h2>
                     <div class="table-wrap">
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Shift</th>
-                                    <th>Department</th>
-                                    <th>Status</th>
+                                    <th><?php echo e(t('common.date', ['fallback' => 'Date'])); ?></th>
+                                    <th><?php echo e(t('common.shift')); ?></th>
+                                    <th><?php echo e(t('common.department')); ?></th>
+                                    <th><?php echo e(t('common.status')); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($moduleRows['shifts'] ?? [])): ?>
                                     <tr>
-                                        <td colspan="4">No shifts available right now.</td>
+                                        <td colspan="4"><?php echo e(t('common.no_shifts_available')); ?></td>
                                     </tr>
                                 <?php endif; ?>
                                 <?php foreach (($moduleRows['shifts'] ?? []) as $shift): ?>

@@ -14,6 +14,7 @@
  */
 $route = $route ?? ($_GET['route'] ?? 'home');
 $currentUser = currentUser();
+$locale = appLocale();
 $isPublicPage = in_array($route, ['home', 'login'], true);
 $currentRole = $currentUser['role'] ?? null;
 $basePath = $basePath ?? (function () {
@@ -29,11 +30,11 @@ if (!$isPublicPage && $currentUser !== null) {
 
     if ($role === 'super_admin') {
         $headerLeft = [
-            'title' => 'StaffEase Pro',
-            'subtitle' => trim('Super Admin - ' . $displayLabel),
+            'title' => t('common.app_name'),
+            'subtitle' => trim(t('roles.super_admin') . ' - ' . $displayLabel),
         ];
     } else {
-        $companyName = 'StaffEase Pro';
+        $companyName = t('common.app_name');
 
         if (!empty($currentUser['department_id'])) {
             try {
@@ -57,7 +58,7 @@ if (!$isPublicPage && $currentUser !== null) {
 
         $headerLeft = [
             'title' => $displayLabel,
-            'subtitle' => trim($companyName . ' - ' . ucfirst((string) $role)),
+            'subtitle' => trim($companyName . ' - ' . t('roles.' . (string) $role)),
         ];
     }
 }
@@ -67,52 +68,52 @@ if ($route === 'home') {
     $rightIcons[] = [
         'type' => 'link',
         'href' => appUrl('login'),
-        'title' => 'Login',
+        'title' => t('common.login'),
         'icon' => 'log-in.svg',
-        'alt' => 'Login',
+        'alt' => t('common.login'),
     ];
 } elseif ($route === 'login') {
     $rightIcons[] = [
         'type' => 'link',
         'href' => appUrl('home'),
-        'title' => 'Home',
+        'title' => t('common.home'),
         'icon' => 'home.svg',
-        'alt' => 'Home',
+        'alt' => t('common.home'),
     ];
 } elseif ($currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
     if ($route === 'dashboard') {
         $rightIcons[] = [
             'type' => 'button',
-            'title' => 'Settings',
+            'title' => t('common.settings'),
             'target' => 'modal-settings',
             'entity' => 'settings',
             'icon' => 'setting.svg',
-            'alt' => 'Settings',
+            'alt' => t('common.settings'),
         ];
         $rightIcons[] = [
             'type' => 'button',
-            'title' => 'Documents',
+            'title' => t('common.documents'),
             'target' => 'crud-modal',
             'entity' => 'documents',
             'icon' => 'document.svg',
-            'alt' => 'Documents',
+            'alt' => t('common.documents'),
         ];
         $rightIcons[] = [
             'type' => 'button',
-            'title' => 'Print',
+            'title' => t('common.print'),
             'target' => 'modal-print',
             'icon' => 'print-outline.svg',
-            'alt' => 'Print',
+            'alt' => t('common.print'),
         ];
 
         if (in_array($role, ['admin', 'department_manager'], true)) {
             $rightIcons[] = [
                 'type' => 'link',
                 'href' => appUrl('my-space'),
-                'title' => 'My attendance',
+                'title' => t('common.my_attendance'),
                 'icon' => 'home.svg',
-                'alt' => 'My attendance',
+                'alt' => t('common.my_attendance'),
             ];
         }
     } else {
@@ -120,18 +121,18 @@ if ($route === 'home') {
             $rightIcons[] = [
                 'type' => 'link',
                 'href' => appUrl('my-space', ['print' => 'documents']) . '#employee-received-documents',
-                'title' => 'Print documents',
+                'title' => t('common.print_documents'),
                 'icon' => 'print-outline.svg',
-                'alt' => 'Print documents',
+                'alt' => t('common.print_documents'),
             ];
         }
         if ($role !== 'employee') {
             $rightIcons[] = [
                 'type' => 'link',
                 'href' => appUrl('dashboard'),
-                'title' => $route === 'my-space' ? 'Back to dashboard' : 'Dashboard',
+                'title' => $route === 'my-space' ? t('common.back_to_dashboard') : t('common.dashboard'),
                 'icon' => $route === 'my-space' ? 'home.svg' : 'setting.svg',
-                'alt' => 'Dashboard',
+                'alt' => t('common.dashboard'),
             ];
 
             if (in_array($role, ['admin', 'department_manager'], true)) {
@@ -139,18 +140,18 @@ if ($route === 'home') {
                     $rightIcons[] = [
                         'type' => 'link',
                         'href' => appUrl('my-space'),
-                        'title' => 'My attendance',
+                        'title' => t('common.my_attendance'),
                         'icon' => 'home.svg',
-                        'alt' => 'My attendance',
+                        'alt' => t('common.my_attendance'),
                     ];
                 }
                 if ($route === 'my-space') {
                     $rightIcons[] = [
                         'type' => 'link',
                         'href' => appUrl('my-space', ['print' => 'documents']) . '#employee-received-documents',
-                        'title' => 'Print documents',
+                        'title' => t('common.print_documents'),
                         'icon' => 'print-outline.svg',
-                        'alt' => 'Print documents',
+                        'alt' => t('common.print_documents'),
                     ];
                 }
             }
@@ -159,9 +160,9 @@ if ($route === 'home') {
     $rightIcons[] = [
         'type' => 'link',
         'href' => appUrl('logout'),
-        'title' => 'Logout',
+        'title' => t('common.logout'),
         'icon' => 'logout.svg',
-        'alt' => 'Logout',
+        'alt' => t('common.logout'),
     ];
 }
 ?>
@@ -186,13 +187,13 @@ if ($route === 'home') {
                     } else {
                         echo appUrl('dashboard');
                     }
-                ?>" class="site-brand-link" aria-label="StaffEase Pro">
-                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="StaffEase Pro" class="site-brand-logo">
+                ?>" class="site-brand-link" aria-label="<?php echo e(t('common.app_name')); ?>">
+                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="<?php echo e(t('common.app_name')); ?>" class="site-brand-logo">
                 </a>
             </div>
 
             <div class="site-navbar-right">
-                <div class="site-icon-group" role="toolbar" aria-label="Quick actions">
+                <div class="site-icon-group" role="toolbar" aria-label="<?php echo e(t('common.quick_actions')); ?>">
                     <?php foreach ($rightIcons as $iconItem): ?>
                         <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
                             <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>"<?php if (($iconItem['toggle'] ?? '') === 'calendar-navigator'): ?> data-calendar-navigator-toggle="true" aria-controls="dashboard-calendar-navigator" aria-expanded="false"<?php else: ?> data-modal-target="<?php echo e($iconItem['target']); ?>"<?php if (!empty($iconItem['entity'])): ?> data-modal-entity="<?php echo e($iconItem['entity']); ?>"<?php endif; ?><?php endif; ?>>
@@ -212,6 +213,10 @@ if ($route === 'home') {
                             </a>
                         <?php endif; ?>
                     <?php endforeach; ?>
+                </div>
+                <div class="site-lang-switch" aria-label="<?php echo e(t('common.language')); ?>">
+                    <a href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" class="site-lang-link <?php echo $locale === 'fr' ? 'is-active' : ''; ?>">FR</a>
+                    <a href="<?php echo e(appCurrentUrl(['lang' => 'en'])); ?>" class="site-lang-link <?php echo $locale === 'en' ? 'is-active' : ''; ?>">EN</a>
                 </div>
             </div>
         </div>
