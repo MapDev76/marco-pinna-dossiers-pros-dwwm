@@ -32,18 +32,33 @@ $user = currentUser();
 $role = $user['role'] ?? 'employee';
 $profile = $userModel->profileWithRelations((int) $user['id']) ?? [];
 
-if ($action === 'save_planning_document') {
+if ($action === 'save_planning_document' || $action === 'save_dashboard_document') {
     if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
         jsonResponse(['success' => false, 'error' => 'Unauthorized'], 403);
     }
 
     $departmentId = (int) ($input['department_id'] ?? 0);
     $monthStart = trim((string) ($input['month_start'] ?? ''));
-    $fileName = trim((string) ($input['file_name'] ?? 'planning.csv'));
-    $csvContentB64 = trim((string) ($input['csv_content_b64'] ?? ''));
+    $documentMode = trim((string) ($input['document_mode'] ?? 'planning'));
+    if (!in_array($documentMode, ['planning', 'attendance'], true)) {
+        $documentMode = 'planning';
+    }
 
-    if ($departmentId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $monthStart) || $csvContentB64 === '') {
-        jsonResponse(['success' => false, 'error' => 'department_id, month_start and csv_content_b64 are required'], 400);
+    $defaultName = $documentMode === 'attendance' ? 'attendance-signatures.html' : 'planning.csv';
+    $fileName = trim((string) ($input['file_name'] ?? $defaultName));
+    $fileContentB64 = trim((string) ($input['file_content_b64'] ?? ''));
+    if ($fileContentB64 === '') {
+        $fileContentB64 = trim((string) ($input['csv_content_b64'] ?? ''));
+    }
+    $fileMimeType = trim((string) ($input['file_mime_type'] ?? ''));
+    if ($fileMimeType === '') {
+        $fileMimeType = $documentMode === 'attendance'
+            ? 'text/html; charset=utf-8'
+            : 'text/csv; charset=utf-8';
+    }
+
+    if ($departmentId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $monthStart) || $fileContentB64 === '') {
+        jsonResponse(['success' => false, 'error' => 'department_id, month_start and file_content_b64 are required'], 400);
     }
 
     $departmentLookup = $pdo->prepare('SELECT id, company_id FROM departments WHERE id = :id LIMIT 1');
@@ -60,20 +75,27 @@ if ($action === 'save_planning_document') {
         jsonResponse(['success' => false, 'error' => 'Department out of scope'], 403);
     }
 
-    $decoded = base64_decode($csvContentB64, true);
+    $decoded = base64_decode($fileContentB64, true);
     if (!is_string($decoded) || $decoded === '') {
-        jsonResponse(['success' => false, 'error' => 'Invalid CSV payload'], 400);
+        jsonResponse(['success' => false, 'error' => 'Invalid file payload'], 400);
     }
     if (strlen($decoded) > 5 * 1024 * 1024) {
-        jsonResponse(['success' => false, 'error' => 'CSV payload too large'], 400);
+        jsonResponse(['success' => false, 'error' => 'File payload too large'], 400);
     }
 
     $safeBaseName = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $fileName) ?: 'planning.csv';
-    if (!str_ends_with(strtolower($safeBaseName), '.csv')) {
-        $safeBaseName .= '.csv';
+    $lowerSafeBaseName = strtolower($safeBaseName);
+    if ($documentMode === 'attendance') {
+        if (!str_ends_with($lowerSafeBaseName, '.html') && !str_ends_with($lowerSafeBaseName, '.htm')) {
+            $safeBaseName .= '.html';
+        }
+    } else {
+        if (!str_ends_with($lowerSafeBaseName, '.csv')) {
+            $safeBaseName .= '.csv';
+        }
     }
 
-    $relativeDir = 'uploads/planning';
+    $relativeDir = $documentMode === 'attendance' ? 'uploads/attendance' : 'uploads/planning';
     $absoluteDir = __DIR__ . '/../../public/' . $relativeDir;
     if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0775, true) && !is_dir($absoluteDir)) {
         jsonResponse(['success' => false, 'error' => 'Unable to prepare storage directory'], 500);
@@ -103,7 +125,7 @@ if ($action === 'save_planning_document') {
         'file_name' => $safeBaseName,
         'file_path' => $relativePath,
         'file_blob' => $decoded,
-        'file_mime_type' => 'text/csv; charset=utf-8',
+        'file_mime_type' => $fileMimeType,
         'status' => 'valid',
     ]);
 

@@ -19,6 +19,13 @@ if (!isLoggedIn()) {
             </div>
             <div class="dashboard-print-actions">
                 <button type="button" class="dashboard-sidebar-control-button" data-print-refresh>Refresh</button>
+                <select class="dashboard-sidebar-control-button" data-print-document-type>
+                    <option value="planning">Planning</option>
+                    <option value="attendance">Signatures / attendance</option>
+                </select>
+                <select class="dashboard-sidebar-control-button" data-print-layout>
+                    <option value="a4-single">A4 single page</option>
+                </select>
                 <button type="button" class="dashboard-sidebar-control-button" data-print-preview>Preview A4</button>
                 <button type="button" class="dashboard-sidebar-control-button" data-print-export-excel>Export Excel</button>
                 <button type="button" class="dashboard-sidebar-control-button" data-print-export-pdf>Export PDF</button>

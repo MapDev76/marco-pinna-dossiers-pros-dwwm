@@ -899,6 +899,32 @@
     gap: 0.6rem;
 }
 
+@media print {
+    body.employee-documents-print-mode .site-header,
+    body.employee-documents-print-mode .employee-staff-bar,
+    body.employee-documents-print-mode .employee-shift-stage,
+    body.employee-documents-print-mode .employee-network-status-grid,
+    body.employee-documents-print-mode .employee-upcoming-shell,
+    body.employee-documents-print-mode #employee-attendance-records,
+    body.employee-documents-print-mode .employee-attendance-modal {
+        display: none !important;
+    }
+
+    body.employee-documents-print-mode .route-my-space .content {
+        width: 100%;
+        max-height: none;
+        padding: 0;
+        background: #fff;
+    }
+
+    body.employee-documents-print-mode #employee-received-documents {
+        box-shadow: none;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+    }
+}
+
 .settings-assignment-employee-window-head h4 {
     margin: 0;
 }

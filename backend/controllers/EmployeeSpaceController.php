@@ -2,7 +2,7 @@
 /**
  * Employee space controller.
  *
- * Displays the personal area for users with the `employee` role. Handles
+ * Displays the personal area for users. Handles
  * attendance signing and personal requests. Attendance signing can be
  * restricted by company Wi-Fi IP when configured by admin/super admin.
  */
@@ -14,14 +14,15 @@ if (!isLoggedIn()) {
 }
 
 $currentUser = currentUser();
-if (($currentUser['role'] ?? null) !== 'employee') {
-    setFlash('error', 'Access restricted to employees.');
+$allowedRoles = ['employee', 'admin', 'department_manager'];
+if (!in_array((string) ($currentUser['role'] ?? ''), $allowedRoles, true)) {
+    setFlash('error', 'Access restricted.');
     redirectTo('dashboard');
 }
 
 $pdo = getPDO();
 ensureDocumentStorageSchema($pdo);
-$pageTitle = 'My Employee Space';
+$pageTitle = 'My Staff Space';
 $viewFile = __DIR__ . '/../../public/views/employee/space.php';
 $error = null;
 $todayDate = appNow()->format('Y-m-d');

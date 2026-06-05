@@ -267,7 +267,8 @@ if ($role === 'super_admin') {
                     s.end_time AS shift_end_time,
                     d.id AS department_id,
                     d.name AS department_name,
-                    ds.signature_date
+                    ds.signature_date,
+                    ds.signature_data
              FROM attendances a
              INNER JOIN users u ON u.id = a.user_id
              LEFT JOIN user_shifts us ON us.id = a.user_shift_id
@@ -395,7 +396,8 @@ if ($role === 'admin' && $companyId !== null) {
                 s.end_time AS shift_end_time,
                 d.id AS department_id,
                 d.name AS department_name,
-                ds.signature_date
+                ds.signature_date,
+                ds.signature_data
          FROM attendances a
          INNER JOIN users u ON u.id = a.user_id
          LEFT JOIN user_shifts us ON us.id = a.user_shift_id
@@ -523,7 +525,8 @@ if ($role === 'department_manager' && $departmentId !== null) {
                 s.end_time AS shift_end_time,
                 d.id AS department_id,
                 d.name AS department_name,
-                ds.signature_date
+                ds.signature_date,
+                ds.signature_data
          FROM attendances a
          INNER JOIN users u ON u.id = a.user_id
          LEFT JOIN user_shifts us ON us.id = a.user_shift_id

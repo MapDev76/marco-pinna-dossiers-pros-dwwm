@@ -1,9 +1,26 @@
 (() => {
+  const params = new URLSearchParams(window.location.search);
+  const shouldPrintDocuments = params.get('print') === 'documents';
+  const documentsSection = document.getElementById('employee-received-documents');
   const form = document.querySelector('[data-employee-signature-form]');
   const modal = document.querySelector('[data-attendance-modal]');
   const openButton = document.querySelector('[data-attendance-modal-open]');
   const closeButtons = Array.from(document.querySelectorAll('[data-attendance-modal-close]'));
   const scrollButtons = Array.from(document.querySelectorAll('[data-scroll-target]'));
+
+  if (shouldPrintDocuments && documentsSection) {
+    document.body.classList.add('employee-documents-print-mode');
+    window.requestAnimationFrame(() => {
+      documentsSection.scrollIntoView({ behavior: 'auto', block: 'start' });
+      window.setTimeout(() => {
+        window.print();
+      }, 120);
+    });
+    window.addEventListener('afterprint', () => {
+      document.body.classList.remove('employee-documents-print-mode');
+    }, { once: true });
+  }
+
   if (!form) return;
 
   const canvas = form.querySelector('[data-signature-canvas]');

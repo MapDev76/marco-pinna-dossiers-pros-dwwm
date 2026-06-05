@@ -339,6 +339,17 @@
     border-radius: 10px;
 }
 
+.dashboard-print-a4-sheet.is-paged {
+    display: flex;
+    flex-direction: column;
+    min-height: 194mm;
+}
+
+.dashboard-print-a4-body {
+    flex: 1;
+    min-height: 0;
+}
+
 .dashboard-print-a4-sheet .dashboard-print-grid {
     width: 100%;
     min-width: 0;
@@ -365,6 +376,49 @@
     border-radius: 12px;
     background: rgba(255, 250, 235, 0.76);
     padding: 0.5rem;
+}
+
+.dashboard-print-sheet-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.45rem;
+    margin-top: 0.22rem;
+}
+
+.dashboard-print-sheet-footer-left {
+    display: grid;
+    gap: 0.2rem;
+    flex: 1;
+}
+
+.dashboard-print-sheet-footer-right {
+    margin-left: auto;
+    text-align: right;
+}
+
+.dashboard-print-sheet-footer-meta {
+    display: inline-block;
+    padding: 0.2rem 0.34rem;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.16);
+    background: rgba(255, 255, 255, 0.92);
+    font-size: 0.66rem;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.dashboard-print-employee-legend-item {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(0, 0, 0, 0.16);
+}
+
+.dashboard-print-employee-legend-item strong {
+    font-size: 0.72rem;
+}
+
+.dashboard-print-employee-legend-item small {
+    font-size: 0.56rem;
 }
 
 .dashboard-print-shifts-legend h4 {
@@ -468,6 +522,18 @@
     max-width: 220px;
 }
 
+.dashboard-print-attendance-grid td:last-child,
+.dashboard-print-attendance-grid th:last-child {
+    min-width: 92px;
+}
+
+.dashboard-print-signature-image {
+    max-width: 88px;
+    max-height: 26px;
+    object-fit: contain;
+    display: inline-block;
+}
+
 .dashboard-print-grid td.is-work {
     background: color-mix(in srgb, var(--print-shift-color, #16a34a) 20%, #ffffff 80%);
     border-color: color-mix(in srgb, var(--print-shift-color, #16a34a) 48%, #ffffff 52%);
@@ -484,6 +550,11 @@
 
 .dashboard-print-grid td.is-empty {
     color: #9ca3af;
+}
+
+.dashboard-print-grid td.is-icon-only {
+    font-size: 0.95rem;
+    line-height: 1;
 }
 
 .dashboard-print-grid td small {
@@ -509,7 +580,7 @@
 @media print {
     @page {
         size: A4 landscape;
-        margin: 6mm;
+        margin: 5mm 8mm;
     }
 
     body.print-planning-mode * {
@@ -550,7 +621,7 @@
     }
 
     body.print-planning-mode #modal-print .dashboard-print-head {
-        margin-bottom: 1.8mm;
+        margin-bottom: 0.8mm;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-head h2 {
@@ -559,7 +630,7 @@
     }
 
     body.print-planning-mode #modal-print .dashboard-print-meta {
-        margin: 0 0 1.8mm;
+        margin: 0 0 0.9mm;
         font-size: 7.2pt;
         gap: 2mm;
     }
@@ -582,7 +653,7 @@
 
     body.print-planning-mode #modal-print .dashboard-print-fit-frame {
         width: 100%;
-        height: 194mm;
+        height: 191mm;
         aspect-ratio: auto;
         border-radius: 0;
     }
@@ -590,7 +661,7 @@
     body.print-planning-mode #modal-print .dashboard-print-page {
         border: 0;
         border-radius: 0;
-        padding: 0.18rem;
+        padding: 0.08rem;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-page h3 {
@@ -602,12 +673,12 @@
         width: 100%;
         min-width: 0;
         table-layout: fixed;
-        font-size: 8pt;
+        font-size: 8.6pt;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-grid th,
     body.print-planning-mode #modal-print .dashboard-print-grid td {
-        padding: 0.08rem 0.1rem;
+        padding: 0.12rem 0.11rem;
         min-width: 0;
         white-space: normal;
     }
@@ -615,32 +686,72 @@
     body.print-planning-mode #modal-print .dashboard-print-grid .employee-col,
     body.print-planning-mode #modal-print .dashboard-print-grid tbody th {
         position: static;
-        width: 15%;
-        min-width: 92px;
-        max-width: 120px;
+        width: 10%;
+        min-width: 52px;
+        max-width: 82px;
         font-size: 8pt;
         line-height: 1.1;
     }
 
+    body.print-planning-mode #modal-print .dashboard-print-grid td.is-icon-only {
+        font-size: 10.2pt;
+        line-height: 1;
+        font-weight: 700;
+    }
+
     body.print-planning-mode #modal-print .dashboard-print-shifts-legend {
-        display: none;
+        margin-top: auto;
+        padding: 0.08rem 0.12rem;
+        border-style: solid;
+        border-width: 0.4pt;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-shifts-legend h4 {
-        margin-bottom: 0.1rem;
-        font-size: 7pt;
+        margin-bottom: 0.07rem;
+        font-size: 6.8pt;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-legend-list {
+        gap: 0.16rem;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-legend-item {
-        padding: 0.1rem 0.2rem;
+        padding: 0.04rem 0.11rem;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-legend-item strong {
-        font-size: 6pt;
+        font-size: 5.8pt;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-legend-item small {
-        font-size: 5.8pt;
+        font-size: 5.1pt;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-sheet-footer {
+        margin-top: 1mm;
+        gap: 1.4mm;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-sheet-footer-meta {
+        font-size: 6.2pt;
+        padding: 0.08rem 0.18rem;
+        border-width: 0.4pt;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-a4-sheet.is-paged {
+        min-height: 198mm;
+        break-after: page;
+        page-break-after: always;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-signature-image {
+        max-width: 84px;
+        max-height: 24px;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-a4-sheet.is-paged:last-child {
+        break-after: auto;
+        page-break-after: auto;
     }
 
 }

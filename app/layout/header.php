@@ -15,6 +15,7 @@
 $route = $route ?? ($_GET['route'] ?? 'home');
 $currentUser = currentUser();
 $isPublicPage = in_array($route, ['home', 'login'], true);
+$currentRole = $currentUser['role'] ?? null;
 $basePath = $basePath ?? (function () {
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
@@ -80,13 +81,15 @@ if ($route === 'home') {
     ];
 } elseif ($currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
-    $rightIcons[] = [
-        'type' => 'link',
-        'href' => appUrl('home'),
-        'title' => 'Home',
-        'icon' => 'home.svg',
-        'alt' => 'Home',
-    ];
+    if ($role !== 'employee') {
+        $rightIcons[] = [
+            'type' => 'link',
+            'href' => appUrl('home'),
+            'title' => 'Home',
+            'icon' => 'home.svg',
+            'alt' => 'Home',
+        ];
+    }
     if ($route === 'dashboard') {
         $rightIcons[] = [
             'type' => 'button',
@@ -111,6 +114,16 @@ if ($route === 'home') {
             'icon' => 'print-outline.svg',
             'alt' => 'Print',
         ];
+
+        if (in_array($role, ['admin', 'department_manager'], true)) {
+            $rightIcons[] = [
+                'type' => 'link',
+                'href' => appUrl('my-space'),
+                'title' => 'My attendance',
+                'icon' => 'home.svg',
+                'alt' => 'My attendance',
+            ];
+        }
     } else {
         if ($role === 'employee') {
             $rightIcons[] = [
@@ -119,6 +132,13 @@ if ($route === 'home') {
                 'title' => 'Documents',
                 'icon' => 'document.svg',
                 'alt' => 'Documents',
+            ];
+            $rightIcons[] = [
+                'type' => 'link',
+                'href' => appUrl('my-space', ['print' => 'documents']) . '#employee-received-documents',
+                'title' => 'Print documents',
+                'icon' => 'print-outline.svg',
+                'alt' => 'Print documents',
             ];
         }
         if ($role !== 'employee') {
@@ -129,6 +149,16 @@ if ($route === 'home') {
                 'icon' => 'setting.svg',
                 'alt' => 'Dashboard',
             ];
+
+            if (in_array($role, ['admin', 'department_manager'], true)) {
+                $rightIcons[] = [
+                    'type' => 'link',
+                    'href' => appUrl('my-space'),
+                    'title' => 'My attendance',
+                    'icon' => 'home.svg',
+                    'alt' => 'My attendance',
+                ];
+            }
         }
     }
     $rightIcons[] = [
@@ -153,7 +183,15 @@ if ($route === 'home') {
             </div>
 
             <div class="site-navbar-center">
-                <a href="<?php echo $isPublicPage ? appUrl('home') : appUrl('dashboard'); ?>" class="site-brand-link" aria-label="StaffEase Pro">
+                <a href="<?php
+                    if ($isPublicPage) {
+                        echo appUrl('home');
+                    } elseif ($currentRole === 'employee') {
+                        echo appUrl('my-space');
+                    } else {
+                        echo appUrl('dashboard');
+                    }
+                ?>" class="site-brand-link" aria-label="StaffEase Pro">
                     <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="StaffEase Pro" class="site-brand-logo">
                 </a>
             </div>

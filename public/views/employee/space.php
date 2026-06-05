@@ -259,7 +259,7 @@ if (is_array($primaryShift)) {
     </section>
 
     <section class="employee-detail-grid">
-        <article class="admin-card employee-detail-card" id="employee-received-documents">
+        <article class="admin-card employee-detail-card" id="employee-attendance-records">
             <div class="employee-card-head">
                 <div>
                     <span class="employee-stage-eyebrow">Attendances</span>
@@ -296,7 +296,7 @@ if (is_array($primaryShift)) {
             </div>
         </article>
 
-        <article class="admin-card employee-detail-card">
+        <article class="admin-card employee-detail-card" id="employee-received-documents">
             <div class="employee-card-head">
                 <div>
                     <span class="employee-stage-eyebrow">Documents</span>
