@@ -103,7 +103,7 @@ if ($action === 'save_planning_document' || $action === 'save_dashboard_document
         'user_id' => (int) ($user['id'] ?? 0),
         'document_type' => 'other',
         'file_name' => $safeBaseName,
-        'file_path' => null,
+        'file_path' => '',
         'file_blob' => $decoded,
         'file_mime_type' => $fileMimeType,
         'status' => 'valid',
@@ -116,7 +116,7 @@ if ($action === 'save_planning_document' || $action === 'save_dashboard_document
         'ok' => true,
         'document_id' => $documentId,
         'file_name' => $safeBaseName,
-        'file_path' => null,
+        'file_path' => '',
         'download_url' => appUrl('document-download', ['id' => $documentId]),
     ]);
 }
