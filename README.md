@@ -1,152 +1,181 @@
 # StaffEase Pro
 
-StaffEase Pro e una web app PHP/MySQL per la gestione di turni, presenze, richieste interne e pianificazione operativa.
+StaffEase Pro est une application web PHP/MySQL pour la gestion des shifts, des presences, des demandes internes, des documents et de la planification operationnelle.
 
-Questo README e scritto come documento di studio per:
+## Vue D Ensemble
 
-- preparare l'esposizione d'esame,
-- compilare dossier tecnici/funzionali,
-- ripassare architettura, regole di business e flussi per ruolo.
+L application suit une architecture server-rendered simple et lisible, avec un front controller unique, un routage centralise, des controllers dedies et des vues partagees. Le systeme est concu pour fonctionner correctement sur desktop et mobile, avec un dashboard modulaire et un espace employee separe.
 
-## 1) Obiettivo Del Progetto
+Objectifs fonctionnels principaux:
 
-Obiettivo principale: costruire una piattaforma semplice, leggibile e dimostrabile che copra un ciclo reale di workforce management.
+- gerer les company, departements, utilisateurs, shifts et documents;
+- assigner les shifts avec des regles de disponibilite et de couverture;
+- enregistrer les presences et les signatures numeriques;
+- gerer les demandes internes et les notifications;
+- maintenir une interface, des messages et des modales coherents;
+- supporter plusieurs langues avec fallback centralise.
 
-Punti chiave:
+## Stack Technologique
 
-- architettura chiara (front controller + routing + controller + model PDO),
-- interfaccia unica dashboard con modali coerenti,
-- regole di business esplicite (assegnazioni, disponibilita, timbratura, vincoli IP),
-- comportamento coerente su desktop e mobile.
+- Backend: PHP 8+ avec rendu server-side
+- Base de donnees: MySQL avec acces via PDO
+- Frontend: Vanilla JavaScript, HTML et CSS modulaire
+- API: endpoints JSON pour dashboard et CRUD
+- Environnement local: MAMP ou `php -S localhost:8000`
 
-## 2) Stack Tecnologico
+## Architecture
 
-- Backend: PHP (render server-side + endpoint JSON)
-- Database: MySQL (accesso via PDO)
-- Frontend: Vanilla JavaScript + CSS modulare
-- Ambiente locale: MAMP / `php -S localhost:8000`
+### Flux Principal
 
-## 3) Architettura Applicativa
+1. `index.php` recoit la route courante.
+2. `app/router.php` redirige la requete vers le controller ou la vue correcte.
+3. Le controller prepare les donnees et configure le layout.
+4. Les vues dans `public/views/` et les blocs partages dans `app/layout/` composent la page.
 
-### Entry Point E Routing
+### Couches Applicatives
 
-- `index.php`: front controller unico.
-- `app/router.php`: mappa `route` -> controller/view.
+- `backend/bootstrap.php`: bootstrap de l application
+- `backend/helpers.php`: helpers partages, traduction, utilitaires de session et URL
+- `backend/controllers/`: logique de page, actions CRUD et endpoints JSON
+- `backend/models/`: acces aux donnees via PDO
+- `app/layout/`: header, sidebar, modales, panneaux partages
+- `public/views/`: home, login, dashboard, espace employee et pages speciales
+- `config/`: configuration applicative, base de donnees, langues
+- `db/`: schema et migrations
+- `assets/`: CSS, JS, icones et images
 
-Flusso:
+### Entry Point Et Routing
 
-1. `index.php` legge `route`.
-2. Carica controller o vista tramite router.
-3. Renderizza layout condiviso (header, contenuto, modali/script condizionali).
+- `index.php`: front controller unique.
+- `app/router.php`: mappe `route` vers controllers, vues et layout.
+- `route=api-*`: requetes JSON pour dashboard et modules operationnels.
 
-### Struttura Directory
+## Structure Du Projet
 
-- `backend/`: bootstrap, helper, controller, model
-- `backend/controllers/`: logica pagina + API JSON
-- `backend/models/`: accesso dati PDO
-- `app/layout/`: blocchi UI condivisi
-- `assets/js/`: logica interattiva dashboard/employee
-- `assets/css/`: stile generale, admin, calendar, responsive
-- `public/views/`: pagine renderizzate per ruolo
-- `db/schema.sql`: schema completo
-- `db/migrations/`: migrazioni incrementali
+- `app/layout/`: composants UI partages
+- `assets/css/`: style general et responsive
+- `assets/js/`: logique interactive du dashboard, calendrier et espace employee
+- `backend/controllers/`: controllers pour auth, dashboard, company, departments, users, shifts et API
+- `backend/models/`: requetes et operations PDO
+- `config/lang/`: dictionnaires de traduction
+- `db/schema.sql`: schema complet de la base de donnees
+- `db/migrations/`: evolutions incrementales de la base de donnees
+- `public/views/`: pages rendues par route et role
 
-## 4) Ruoli E Permessi
+## Roles Et Permissions
 
-Ruoli supportati:
+Roles supportes:
 
 - `super_admin`
 - `admin`
 - `department_manager`
 - `employee`
 
-Scoping generale:
+Scope des donnees:
 
-- Super Admin: visione globale multi-company.
-- Admin: visione della propria company.
-- Department Manager: visione del proprio reparto.
-- Employee: solo spazio personale (`my-space`), solo propri turni e firma presenza.
+- `super_admin`: vision multi-company et selection de la company active.
+- `admin`: gestion de sa propre company.
+- `department_manager`: gestion de son propre departement.
+- `employee`: acces a son espace personnel avec shifts et presence.
 
-## 5) Funzionalita Principali
+## Fonctionnalites Principales
 
-### 5.1 Dashboard Unificata
+### Dashboard Unifie
 
-- Modulo dashboard unico con sezione settings e planner.
-- CRUD entities in shell comune per mantenere UX uniforme.
-- Feedback visuale unificato per successo/errore/conferma.
+- header contextuel avec actions rapides;
+- sidebar avec sections operationnelles;
+- modale CRUD commune pour company, utilisateurs, departements, documents et messages;
+- panneau settings pour une gestion approfondie;
+- feedback uniforme pour confirmations, erreurs et alertes.
 
-### 5.2 Gestione Company, Reparti, Utenti
+### Company, Departements Et Utilisateurs
 
-- Company directory con conteggi aggregati corretti.
-- Reparti con icona/colore e gestione responsabile reparto (`head_user_id`).
-- Utenti con ruoli, stato, appartenenza azienda/reparto.
+- annuaire company avec compteurs agreges;
+- departements lies a la company et responsable de departement;
+- utilisateurs avec role, statut, company et departement;
+- contrainte IP de la company configurable pour la signature de presence.
 
-### 5.3 Gestione Turni
+### Shifts Et Planning
 
-- Catalogo turni per reparto.
-- Attributi visuali (icona, colore, descrizione, orari).
-- Supporto planning su range date e visualizzazione su calendario.
+- catalogue de shifts avec icone, couleur, horaires et description;
+- planner calendrier avec vues temporelles;
+- affectations journalieres et details par departement;
+- support de l auto-assign avec limites minimales et maximales par shift/jour.
 
-### 5.4 Calendar Planner (Core)
+### Disponibilite Et Regles
 
-- Viste temporali: week / fortnight / month / year.
-- Overlay full-screen giornaliero con dettagli assegnazioni.
-- Navigazione giorno precedente/successivo.
-- Evidenza open slots e assegnazioni presenti.
+- jours hebdomadaires non disponibles par utilisateur;
+- dates speciales avec motif;
+- contraintes respectees dans auto-assign, drag and drop et settings;
+- statuts d absence: leave, vacation, sick et rest.
 
-### 5.5 Disponibilita Impiegati E Regole
+### Espace Employee
 
-- Regole individuali:
-  - giorni settimana non disponibili,
-  - date specifiche non disponibili (rest/vacation/sick/leave).
-- Le regole vengono rispettate in:
-  - auto-assegnazione,
-  - drag and drop,
-  - assegnazioni da pannello settings.
+- visualisation des shifts personnels;
+- signature de presence sur mobile;
+- signature numerique avec canvas touchscreen;
+- historisation dans `digital_signatures` et liaison a `attendances`.
 
-### 5.6 Auto-Assign Avanzato
+### Documents Et Messages
 
-Nuova logica (aggiornata):
+- bibliotheque de documents avec liste des fichiers disponibles;
+- envoi de documents aux employee ou a un departement entier;
+- messages de demande ou de notification;
+- selection de destinataires multiples;
+- telechargement et suppression de documents avec confirmation.
 
-- rimossi limiti mensili (ore/giorni),
-- introdotti:
-  - `Minimum employees / shift / day`
-  - `Maximum employees / shift / day`
-- algoritmo con priorita ai gruppi shift-giorno sotto copertura,
-- rispetto vincoli di disponibilita individuale,
-- output con `groups_below_min` quando il minimo non e raggiungibile.
+### Langues Et Localisation
 
-### 5.7 Presenze Con Firma Touchscreen
+- langue par defaut: francais;
+- anglais comme fallback;
+- helper `t()` pour recuperer les traductions;
+- traduction de header, dashboard, sidebar, modales, home, employee space et print modal.
 
-Spazio employee (`route=my-space`) mobile-first:
+## Modules UI Principaux
 
-- mostra solo turni personali,
-- firma presenza solo per turni del giorno corrente,
-- pad touchscreen (canvas) per firma,
-- firma salvata in `digital_signatures` e collegata a `attendances`.
+### `app/layout/header.php`
 
-### 5.8 Vincolo IP Wi-Fi Aziendale
+- barre superieure contextuelle;
+- quick actions pour home, login, dashboard, documents, print et settings;
+- adaptation selon les routes publiques et internes.
 
-In settings (Users tab), Super Admin/Admin puo impostare IP autorizzato della company:
+### `app/layout/sidebar.php`
 
-- campo vuoto -> firma consentita da qualsiasi rete,
-- campo valorizzato -> firma consentita solo da IP configurato.
+- navigation dashboard;
+- panneau planner et sections pour company, departements et utilisateurs;
+- visibilite conditionnee selon le role.
 
-Questa regola protegge la timbratura fuori sede.
+### `app/layout/crud-modal.php`
 
-### 5.9 Flash/Alert Unificati
+- shell commun du CRUD;
+- templates pour company, users, departments, documents et messages;
+- actions de creation, modification, suppression et envoi.
 
-- Messaggi utente consolidati in unico modulo stile.
-- Conferme eliminazioni/azioni critiche con stesso componente UI.
-- Testi utente standardizzati in inglese nell'interfaccia.
+### `app/layout/settings-panel.php`
 
-## 6) API JSON Principali
+- gestion de la company active;
+- onglets pour users, departments, shifts, assignments et attendances;
+- affectations automatiques;
+- detail employee avec regles de disponibilite.
 
-Dispatcher:
+### `app/layout/schedule.php`
+
+- modale demo pour le planning des shifts;
+- catalogue visuel des shifts, roles, departements, couverture et absences.
+
+### `app/layout/print-modal.php`
+
+- export et impression du planning;
+- selection de la vue et de la plage temporelle;
+- layout compatible impression.
+
+## API JSON Principales
+
+Dispatcher principal:
 
 - `backend/controllers/ApiDispatcher.php`
 
-Route:
+Routes principales:
 
 - `route=api-dashboard`
 - `route=api-companies`
@@ -154,23 +183,21 @@ Route:
 - `route=api-users`
 - `route=api-shifts`
 
-Esempi azioni importanti:
+Actions typiques:
 
 - `auto_assign_open`
 - `clear_assignments_scope`
 - `set_signature_ip`
-- CRUD utenti/reparti/turni
+- operations CRUD pour company, departements, utilisateurs, shifts et documents
 
-## 7) Database E Migrazioni
+## Base De Donnees Et Migrations
 
-File principali:
+Fichiers cles:
 
 - [db/schema.sql](db/schema.sql)
-- [db/migrations/20260528_add_departments_head_user_id.sql](db/migrations/20260528_add_departments_head_user_id.sql)
-- [db/migrations/20260601_add_icon_color.up.sql](db/migrations/20260601_add_icon_color.up.sql)
-- [db/migrations/20260601_add_icon_color.down.sql](db/migrations/20260601_add_icon_color.down.sql)
+- [db/migrations/](db/migrations)
 
-Tabelle chiave da conoscere per l'esame:
+Tables principales:
 
 - `companies`
 - `departments`
@@ -180,104 +207,59 @@ Tabelle chiave da conoscere per l'esame:
 - `attendances`
 - `digital_signatures`
 - `requests`
+- `documents`
 
-## 8) Flussi Operativi Per Ruolo (Workflow)
+## Configuration
+
+### Base De Donnees
+
+- configurer la connexion dans `config/database.php`;
+- importer `db/schema.sql`;
+- appliquer les migrations presentes dans `db/migrations/` si necessaire.
+
+### Langues
+
+- dictionnaires dans `config/lang/fr.php` et `config/lang/en.php`;
+- les textes communs passent par le helper `t()`;
+- le fallback evite les chaines manquantes dans l interface.
+
+## Flux Operationnels
 
 ### Super Admin
 
-1. Seleziona company in settings.
-2. Configura reparti, utenti, turni e policy IP.
-3. Verifica copertura globale tramite planner.
+1. Selectionne la company active.
+2. Configure departements, utilisateurs, shifts et policy IP.
+3. Verifie le planning et la couverture globale.
 
 ### Admin
 
-1. Gestisce utenti/reparti/turni della propria company.
-2. Imposta disponibilita individuali e lancia auto-assign.
-3. Controlla gruppi sotto minimo e corregge manualmente.
+1. Gere sa propre company.
+2. Maintient les donnees et les shifts.
+3. Lance l auto-assign et corrige les exceptions.
 
 ### Department Manager
 
-1. Visualizza il proprio reparto nel planner.
-2. Esegue aggiustamenti giornalieri sulle assegnazioni.
-3. Monitora richieste e disponibilita del team.
+1. Travaille sur son propre departement.
+2. Controle les affectations et la couverture.
+3. Surveille les demandes et disponibilites.
 
 ### Employee
 
-1. Accede a `my-space`.
-2. Visualizza solo turni personali.
-3. Firma presenza da mobile touchscreen.
-4. Invia richieste (leave/permission/coverage/document).
+1. Entre dans son espace personnel.
+2. Consulte uniquement ses propres shifts.
+3. Signe la presence quand prevu.
+4. Envoie des demandes operationnelles.
 
-## 9) Come E Stato Sviluppato (Metodologia)
+## Demarrage Rapide
 
-Approccio incrementale per feature verticali:
+1. Configure la base de donnees.
+2. Importe le schema.
+3. Demarre le serveur local avec `php -S localhost:8000`.
+4. Ouvre `http://localhost:8000/?route=login`.
 
-1. Definizione regola di business.
-2. Aggiornamento view/layout.
-3. Implementazione JS modulo dedicato.
-4. Aggiornamento controller/API + validazioni server-side.
-5. Verifica sintassi (`php -l`, `node --check`) e diagnostica editor.
-6. Test end-to-end su UI.
+## Notes De Maintenance
 
-Principi seguiti:
-
-- riduzione duplicazioni,
-- coerenza naming e UX,
-- fallback sicuri lato server,
-- compatibilita con schema legacy via migrazioni mirate.
-
-## 10) Pulizia Tecnica E Coerenza
-
-Durante la revisione sono stati eliminati elementi ridondanti/obsoleti e risolte discrepanze:
-
-- rimosso template placeholder duplicato che causava ID duplicati nel DOM,
-- consolidata documentazione nel presente README,
-- mantenuto solo codice effettivamente in uso nel flusso dashboard/employee.
-
-## 11) Script Di Presentazione (Pronto Esame)
-
-Sequenza consigliata (8-10 minuti):
-
-1. Architettura: `index.php` -> router -> controller -> view.
-2. Ruoli e scoping dati.
-3. Settings panel: company/reparti/utenti/turni.
-4. Planner calendario: overlay giorno + assegnazioni.
-5. Regole disponibilita impiegato.
-6. Auto-assign min/max per shift-giorno.
-7. Policy IP Wi-Fi aziendale.
-8. Login employee e firma touchscreen.
-9. Chiusura: benefici, limiti attuali, evoluzioni future.
-
-## 12) Limiti Attuali E Miglioramenti Futuri
-
-Limiti attuali:
-
-- niente framework di test automatico integrato,
-- alcune operazioni legacy possono essere ulteriormente semplificate,
-- logging funzionale migliorabile.
-
-Evoluzioni future:
-
-- test automatici API/UI,
-- reportistica avanzata presenze/copertura,
-- supporto reti CIDR per policy IP,
-- audit trail esteso sulle modifiche planner.
-
-## 13) Avvio Rapido
-
-1. Configura DB in `config/database.php`.
-2. Importa `db/schema.sql`.
-3. Applica migrazioni in `db/migrations/` se necessario.
-4. Avvia server:
-
-```bash
-php -S localhost:8000
-```
-
-5. Apri:
-
-- `http://localhost:8000/?route=login`
-
----
-
-Questo file puo essere usato direttamente come base per dossier tecnico, dossier funzionale e script di esposizione orale.
+- maintenir UI et textes coherents avec le systeme de traduction;
+- eviter les duplications de templates ou de modales;
+- conserver le front controller et le routing centralise comme point d entree unique;
+- mettre a jour README, layout et dictionnaires lors de l ajout de nouvelles fonctionnalites.

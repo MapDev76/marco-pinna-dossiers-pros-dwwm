@@ -10,7 +10,7 @@
  * - `$route` (string) : current route name, falls back to GET['route'] or 'home'
  * - `currentUser()` provides the authenticated user array when available
  *
- * Notes: keep UI strings in English for the exam presentation.
+ * Notes: keep UI strings consistent with the localization layer.
  */
 $route = $route ?? ($_GET['route'] ?? 'home');
 $currentUser = currentUser();
