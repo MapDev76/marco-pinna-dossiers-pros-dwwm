@@ -42,6 +42,30 @@
     return scope ? scope.querySelector('input[data-color-preview]') : null;
   }
 
+  function getIconPreviewInput(scope) {
+    return scope ? scope.querySelector('input[data-icon-preview]') : null;
+  }
+
+  function buildIconUrl(input, iconValue) {
+    if (!input || !iconValue || !/\.(svg|png|jpe?g|gif|webp|ico)$/i.test(iconValue)) return '';
+    const base = input.dataset.iconBase || '/assets/icons/';
+    return base + encodeURIComponent(iconValue);
+  }
+
+  function syncIconPreview(scope) {
+    const iconInput = getIconPreviewInput(scope);
+    if (!iconInput) return;
+    const iconValue = (iconInput.value || '').trim();
+    const iconUrl = buildIconUrl(iconInput, iconValue);
+    if (iconUrl) {
+      iconInput.style.setProperty('background-image', `url("${iconUrl}")`);
+      iconInput.title = iconValue;
+    } else {
+      iconInput.style.removeProperty('background-image');
+      iconInput.title = iconValue;
+    }
+  }
+
   function isShiftsPanelActive() {
     const panel = document.querySelector('.settings-panel[data-settings-panel="shifts"]');
     return !!panel && !panel.hidden;
@@ -105,6 +129,7 @@
         btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
       });
     });
+    syncIconPreview(scope);
   }
 
   function setChoiceValue(scope, field, value) {

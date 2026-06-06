@@ -24,6 +24,9 @@ $basePath = $basePath ?? (function () {
 
 $headerLeft = '';
 $leftMySpaceIcon = null;
+$wifiAuthorizationKnown = isset($isCurrentNetworkAuthorized);
+$showWifiStatus = $route === 'my-space' && $wifiAuthorizationKnown;
+$isWifiConnected = $showWifiStatus && (bool) ($isCurrentNetworkAuthorized ?? false);
 if (!$isPublicPage && $currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
     $displayName = trim((string) (($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')));
@@ -78,7 +81,7 @@ if (!$isPublicPage && $currentUser !== null) {
         $leftMySpaceIcon = [
             'href' => appUrl('my-space'),
             'title' => t('common.my_attendance'),
-            'icon' => 'home.svg',
+            'icon' => 'signature.svg',
             'alt' => t('common.my_attendance'),
         ];
     }
@@ -143,7 +146,7 @@ if ($route === 'home') {
                 'type' => 'link',
                 'href' => appUrl('dashboard'),
                 'title' => $route === 'my-space' ? t('common.back_to_dashboard') : t('common.dashboard'),
-                'icon' => $route === 'my-space' ? 'home.svg' : 'setting.svg',
+                'icon' => $route === 'my-space' ? 'clipboard-pen.svg' : 'setting.svg',
                 'alt' => t('common.dashboard'),
             ];
 
@@ -180,7 +183,14 @@ if ($route === 'home') {
                 <?php endif; ?>
                 <?php if (is_array($headerLeft)): ?>
                     <div class="site-header-meta">
-                        <div class="site-header-title"><?php echo e($headerLeft['title']); ?></div>
+                        <div class="site-header-title-row">
+                            <div class="site-header-title"><?php echo e($headerLeft['title']); ?></div>
+                            <?php if ($showWifiStatus): ?>
+                                <span class="site-wifi-status <?php echo $isWifiConnected ? 'is-connected' : 'is-blocked'; ?>" title="<?php echo e($isWifiConnected ? t('employee.status_connected') : t('employee.status_restricted_network')); ?>" aria-label="<?php echo e($isWifiConnected ? t('employee.status_connected') : t('employee.status_restricted_network')); ?>">
+                                    <img src="<?php echo $basePath; ?>/assets/icons/wifi-high.svg" alt="" aria-hidden="true" class="site-wifi-icon">
+                                </span>
+                            <?php endif; ?>
+                        </div>
                         <div class="site-header-subtitle"><?php echo e($headerLeft['subtitle']); ?></div>
                         <?php if (!empty($headerLeft['subtitle_role'])): ?>
                             <div class="site-header-subrole"><?php echo e($headerLeft['subtitle_role']); ?></div>

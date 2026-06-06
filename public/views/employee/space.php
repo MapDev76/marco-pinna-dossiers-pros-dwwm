@@ -9,6 +9,10 @@ $attendances = $attendances ?? [];
 $incomingDocuments = $incomingDocuments ?? [];
 $requiredSignatureIp = trim((string) ($requiredSignatureIp ?? ''));
 $clientIp = trim((string) ($clientIp ?? ''));
+$basePath = $basePath ?? (function () {
+    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
+})();
 $isSignatureIpRestricted = (bool) ($isSignatureIpRestricted ?? false);
 $isCurrentNetworkAuthorized = (bool) ($isCurrentNetworkAuthorized ?? true);
 $employeeDisplayName = trim((string) ($employeeDisplayName ?? t('employee.default_name')));
@@ -72,6 +76,23 @@ foreach (preg_split('/\s+/', $employeeDisplayName) as $part) {
 $employeeInitials = $employeeInitials !== '' ? substr($employeeInitials, 0, 2) : 'ST';
 $canSignNow = (bool) ($employeeUiState['can_sign_now'] ?? false);
 $primaryShift = is_array($currentShiftCard) ? $currentShiftCard : (!empty($todayTimelineShifts) ? $todayTimelineShifts[0] : null);
+$todayDateValue = isset($todayDate) && is_string($todayDate) ? $todayDate : date('Y-m-d');
+$todayCardDateLabel = $formatLongDate($todayDateValue);
+$todayCardShiftName = is_array($primaryShift)
+    ? trim((string) ($primaryShift['shift_name'] ?? t('employee.shift')))
+    : '--';
+$todayCardShiftTime = is_array($primaryShift)
+    ? $formatTimeRange($primaryShift)
+    : t('employee.time_not_available');
+$hasAssignedShiftToday = is_array($primaryShift)
+    && (int) ($primaryShift['id'] ?? 0) > 0
+    && trim((string) ($primaryShift['work_date'] ?? '')) === $todayDateValue;
+$defaultSignableShiftId = 0;
+if (!empty($todaySignableShifts)) {
+    $defaultSignableShiftId = (int) ($todaySignableShifts[0]['id'] ?? 0);
+} elseif (is_array($primaryShift)) {
+    $defaultSignableShiftId = (int) ($primaryShift['id'] ?? 0);
+}
 $primaryShiftStatusText = t('employee.state_no_shift_today');
 $primaryActionLabel = t('employee.action_checkin');
 $primaryActionDisabled = true;
@@ -123,41 +144,23 @@ if (is_array($primaryShift)) {
 }
 ?>
 <div class="admin-shell employee-space-shell">
-    <section class="employee-staff-bar" aria-label="<?php echo e(t('employee.staff_profile_summary', ['fallback' => 'Staff profile summary'])); ?>">
-        <div class="employee-staff-avatar"><?php echo e($employeeInitials); ?></div>
-        <div class="employee-staff-meta">
-            <strong><?php echo e($employeeDisplayName); ?></strong>
-            <span><?php echo e($employeeCompanyName); ?><?php if ($employeeDepartmentName !== ''): ?> • <?php echo e($employeeDepartmentName); ?><?php endif; ?></span>
-        </div>
-        <div class="employee-staff-status <?php echo $isCurrentNetworkAuthorized ? 'is-connected' : 'is-blocked'; ?>">
-            <span class="employee-staff-status-dot" aria-hidden="true"></span>
-            <?php echo $isCurrentNetworkAuthorized ? e(t('employee.status_connected')) : e(t('employee.status_restricted_network')); ?>
-        </div>
-    </section>
-
     <?php if (!empty($error)): ?>
         <div class="flash flash-error"><?php echo e($error); ?></div>
     <?php endif; ?>
 
     <section class="employee-shift-stage">
         <div class="employee-shift-stage-card">
-            <div class="employee-shift-stage-head">
-                <div>
-                    <span class="employee-stage-eyebrow"><?php echo e(t('employee.today')); ?></span>
-                    <h1><?php echo e(t('employee.schedule_today')); ?></h1>
-                </div>
-                <?php if (is_array($primaryShift)): ?>
-                    <?php
-                        $primaryKind = strtolower(trim((string) ($primaryShift['shift_kind'] ?? 'work')));
-                        $primaryKindIcon = $shiftKindIcons[$primaryKind] ?? '';
-                        $primaryShiftName = trim((string) ($primaryShift['shift_name'] ?? t('employee.shift')));
-                        $primaryPillText = $primaryKindIcon !== '' ? ($primaryKindIcon . ' ' . $primaryShiftName) : $primaryShiftName;
-                    ?>
+            <?php if (is_array($primaryShift)): ?>
+                <?php
+                    $primaryKind = strtolower(trim((string) ($primaryShift['shift_kind'] ?? 'work')));
+                    $primaryKindIcon = $shiftKindIcons[$primaryKind] ?? '';
+                    $primaryShiftName = trim((string) ($primaryShift['shift_name'] ?? t('employee.shift')));
+                    $primaryPillText = $primaryKindIcon !== '' ? ($primaryKindIcon . ' ' . $primaryShiftName) : $primaryShiftName;
+                ?>
+                <div class="employee-shift-stage-head">
                     <span class="employee-stage-pill"><?php echo e($primaryPillText); ?></span>
-                <?php else: ?>
-                    <span class="employee-stage-pill is-muted"><?php echo e(t('employee.no_shift')); ?></span>
-                <?php endif; ?>
-            </div>
+                </div>
+            <?php endif; ?>
 
             <?php if (is_array($primaryShift)): ?>
                 <div class="employee-shift-stage-summary">
@@ -168,21 +171,30 @@ if (is_array($primaryShift)) {
                     <div class="employee-shift-stage-time"><?php echo e($formatTimeRange($primaryShift)); ?></div>
                 </div>
                 <p class="employee-shift-stage-note"><?php echo e($primaryActionNote); ?></p>
-            <?php else: ?>
-                <div class="employee-shift-stage-summary">
-                    <div>
-                        <strong><?php echo e(t('employee.no_shift_scheduled')); ?></strong>
-                        <span><?php echo e(t('employee.check_back_later')); ?></span>
-                    </div>
-                </div>
             <?php endif; ?>
+
+            <div class="employee-shift-stage-meta-row" aria-label="<?php echo e(t('employee.staff_profile_summary', ['fallback' => 'Daily shift summary'])); ?>">
+                <div class="employee-shift-stage-meta-item">
+                    <img src="<?php echo $basePath; ?>/assets/icons/calendar-days.svg" alt="" aria-hidden="true" class="employee-shift-stage-meta-icon">
+                    <span><strong><?php echo e(t('employee.date')); ?>:</strong> <?php echo e($todayCardDateLabel); ?></span>
+                </div>
+                <div class="employee-shift-stage-meta-item">
+                    <img src="<?php echo $basePath; ?>/assets/icons/briefcase.svg" alt="" aria-hidden="true" class="employee-shift-stage-meta-icon">
+                    <span><strong><?php echo e(t('employee.today_assigned_shift')); ?>:</strong> <?php echo e($todayCardShiftName); ?></span>
+                </div>
+                <div class="employee-shift-stage-meta-item">
+                    <img src="<?php echo $basePath; ?>/assets/icons/clock.svg" alt="" aria-hidden="true" class="employee-shift-stage-meta-icon">
+                    <span><strong>Horaire:</strong> <?php echo e($todayCardShiftTime); ?></span>
+                </div>
+            </div>
 
             <div class="employee-shift-stage-actions">
                 <button
                     type="button"
                     class="employee-shift-stage-action <?php echo $primaryActionDisabled ? 'is-disabled' : 'is-ready'; ?>"
                     data-attendance-modal-open
-                    <?php echo $primaryActionDisabled ? 'disabled' : ''; ?>
+                    data-attendance-allowed="<?php echo (!$primaryActionDisabled && $hasAssignedShiftToday && $isCurrentNetworkAuthorized) ? 'true' : 'false'; ?>"
+                    aria-disabled="<?php echo $primaryActionDisabled ? 'true' : 'false'; ?>"
                 >
                     <?php echo e($primaryActionLabel); ?>
                 </button>
@@ -200,7 +212,11 @@ if (is_array($primaryShift)) {
     <section class="employee-network-status-grid">
         <div class="employee-network-status-card <?php echo $isCurrentNetworkAuthorized ? 'is-ok' : 'is-blocked'; ?>">
             <strong><?php echo e(t('employee.network_policy')); ?></strong>
-            <?php if ($isSignatureIpRestricted): ?>
+            <?php if (!$isCurrentNetworkAuthorized): ?>
+                <span class="employee-network-status-alert"><?php echo e(t('employee.network_blocked')); ?></span>
+                <span><?php echo e(t('employee.required_wifi_ip')); ?>: <?php echo e($requiredSignatureIp); ?></span>
+                <span><?php echo e(t('employee.detected_ip')); ?>: <?php echo e($clientIp !== '' ? $clientIp : t('employee.ip_not_detected')); ?></span>
+            <?php elseif ($isSignatureIpRestricted): ?>
                 <span><?php echo e(t('employee.required_wifi_ip')); ?>: <?php echo e($requiredSignatureIp); ?></span>
                 <span><?php echo e(t('employee.detected_ip')); ?>: <?php echo e($clientIp !== '' ? $clientIp : t('employee.ip_not_detected')); ?></span>
             <?php else: ?>
@@ -349,27 +365,15 @@ if (is_array($primaryShift)) {
                 <div>
                     <span class="employee-stage-eyebrow"><?php echo e(t('employee.attendance_label')); ?></span>
                     <h3 id="employee-attendance-title"><?php echo e(t('employee.digital_signature')); ?></h3>
-                    <p><?php echo e(t('employee.signature_prompt')); ?></p>
                 </div>
-                <button type="button" class="dashboard-modal-close" data-attendance-modal-close aria-label="<?php echo e(t('employee.close_attendance_dialog')); ?>">&times;</button>
             </div>
 
             <form method="post" class="admin-form employee-sign-form" data-employee-signature-form>
                 <input type="hidden" name="action" value="sign_attendance">
                 <input type="hidden" name="signature_data" value="" data-signature-data>
-
-                <label>
-                    <span><?php echo e(t('employee.today_assigned_shift')); ?></span>
-                    <select name="user_shift_id" required <?php echo empty($todaySignableShifts) ? 'disabled' : ''; ?>>
-                        <option value=""><?php echo e(t('employee.select')); ?></option>
-                        <?php foreach ($todaySignableShifts as $shift): ?>
-                            <option value="<?php echo (int) $shift['id']; ?>" <?php echo (is_array($primaryShift) && (int) ($primaryShift['id'] ?? 0) === (int) ($shift['id'] ?? 0)) ? 'selected' : ''; ?>><?php echo e(($shift['shift_name'] ?? t('employee.shift')) . ' - ' . ($shift['department_name'] ?? t('employee.default_department')) . ' - ' . $formatTimeRange($shift)); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
+                <input type="hidden" name="user_shift_id" value="<?php echo (int) $defaultSignableShiftId; ?>">
 
                 <div class="employee-signature-pad-shell">
-                    <span><?php echo e(t('employee.touchscreen_signature')); ?></span>
                     <canvas width="520" height="180" data-signature-canvas aria-label="<?php echo e(t('employee.digital_signature')); ?>"></canvas>
                     <small class="employee-signature-error" data-signature-error></small>
                     <div class="employee-signature-pad-actions">

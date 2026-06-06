@@ -177,6 +177,15 @@
         padding-right: 0.28rem;
     }
 
+    .settings-create-row .settings-list-cols.settings-list-cols-shift-create,
+    .settings-auto-assign-row .settings-list-cols.settings-list-cols-shift-create {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+
     .settings-shift-create-column {
         grid-template-columns: 1fr;
     }
@@ -195,6 +204,7 @@
 
     .settings-auto-assign-row .settings-inline-actions {
         flex-wrap: wrap;
+        justify-content: flex-start;
     }
 
     .settings-tabs {
@@ -693,7 +703,8 @@
     .route-my-space .content {
         width: calc(100% - 18px);
         max-width: none;
-        margin: 82px auto 12px;
+        margin: 68px auto 12px;
+        top: 0;
         max-height: none;
         padding: 0.85rem;
     }
@@ -723,6 +734,10 @@
     }
 
     .employee-shift-stage-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-shift-stage-meta-row {
         grid-template-columns: 1fr;
     }
 
@@ -772,6 +787,14 @@
     .site-navbar-right {
         width: auto;
         flex-basis: auto;
+        position: relative;
+        z-index: 3;
+    }
+
+    .site-navbar-center {
+        display: none;
+        z-index: 1;
+        pointer-events: none;
     }
 
     .site-header-title {
@@ -793,8 +816,35 @@
     }
 
     .site-brand-logo {
-        width: 56px;
-        height: 56px;
+        width: 42px;
+        height: 42px;
+        opacity: 0.9;
+    }
+
+    .site-lang-switch,
+    .site-lang-dropdown,
+    .site-lang-menu {
+        z-index: 3600;
+    }
+
+    .site-lang-menu {
+        position: fixed;
+        top: 74px;
+        right: 14px;
+        left: auto;
+        min-width: 118px;
+        width: max-content;
+        max-width: calc(100vw - 16px);
+        padding: 5px;
+        overflow: visible;
+    }
+
+    .site-lang-link {
+        min-width: 100%;
+        width: 100%;
+        box-sizing: border-box;
+        white-space: nowrap;
+        padding: 0 10px;
     }
 
     .employee-staff-bar {
@@ -831,7 +881,19 @@
     }
 
     .employee-attendance-modal {
-        padding: 0.5rem;
+        padding: 0;
+        align-items: stretch;
+        justify-items: stretch;
+    }
+
+    .employee-attendance-dialog {
+        width: 100vw;
+        max-width: 100vw;
+        min-height: 100vh;
+        border-radius: 0;
+        border: 0;
+        padding: 0.95rem;
+        box-sizing: border-box;
     }
 }
 
@@ -848,9 +910,14 @@
 
     .route-my-space .content {
         width: calc(100% - 10px);
-        margin: 74px auto 8px;
+        margin: 46px auto 8px;
+        top: 0;
         padding: 0.55rem;
         border-radius: 24px;
+    }
+
+    .employee-attendance-dialog {
+        padding: max(0.8rem, env(safe-area-inset-top)) 0.72rem max(0.8rem, env(safe-area-inset-bottom));
     }
 
     .employee-shift-stage-action {
@@ -933,5 +1000,46 @@
 
     .company-card-actions--inline {
         justify-content: flex-start;
+    }
+}
+
+@media (max-width: 760px) {
+    .route-my-space .content {
+        left: auto !important;
+        transform: none !important;
+        top: 0 !important;
+        margin: 50px auto 10px !important;
+    }
+
+    .employee-attendance-modal {
+        padding: 0 !important;
+        display: grid;
+        place-items: stretch;
+    }
+
+    .employee-attendance-modal .employee-attendance-dialog {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        min-height: 100dvh !important;
+        height: 100dvh !important;
+        border-radius: 0 !important;
+        border: 0 !important;
+        margin: 0 !important;
+        padding: max(0.72rem, env(safe-area-inset-top)) 0.45rem max(0.72rem, env(safe-area-inset-bottom));
+        box-sizing: border-box;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .employee-signature-pad-shell canvas {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: clamp(190px, 36vh, 300px);
+    }
+}
+
+@media (max-width: 560px) {
+    .route-my-space .content {
+        margin: 42px auto 8px !important;
     }
 }

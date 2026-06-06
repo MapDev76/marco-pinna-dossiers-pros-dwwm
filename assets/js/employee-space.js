@@ -8,6 +8,12 @@
   const closeButtons = Array.from(document.querySelectorAll('[data-attendance-modal-close]'));
   const scrollButtons = Array.from(document.querySelectorAll('[data-scroll-target]'));
 
+  // Keep the attendance modal at document root so its fixed positioning
+  // is not constrained by transformed/stacked content containers.
+  if (modal && modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
   if (shouldPrintDocuments && documentsSection) {
     document.body.classList.add('employee-documents-print-mode');
     window.requestAnimationFrame(() => {
@@ -122,11 +128,12 @@
   function openModal() {
     if (!modal) return;
     modal.hidden = false;
+    document.documentElement.classList.add('modal-open');
     document.body.classList.add('modal-open');
     isModalOpen = true;
     window.requestAnimationFrame(() => {
       resizeCanvasForDevicePixelRatio();
-      const firstField = form.querySelector('select, input, button, textarea');
+      const firstField = form.querySelector('select:not([disabled]), button:not([disabled]), textarea:not([disabled]), input:not([type="hidden"]):not([disabled])');
       if (firstField) {
         firstField.focus();
       }
@@ -136,6 +143,7 @@
   function closeModal() {
     if (!modal) return;
     modal.hidden = true;
+    document.documentElement.classList.remove('modal-open');
     document.body.classList.remove('modal-open');
     isModalOpen = false;
     clearSignature();
@@ -157,6 +165,11 @@
   if (openButton && modal) {
     openButton.addEventListener('click', (event) => {
       event.preventDefault();
+      const isAriaDisabled = String(openButton.getAttribute('aria-disabled') || '').toLowerCase() === 'true';
+      const isExplicitlyAllowed = String(openButton.getAttribute('data-attendance-allowed') || '').toLowerCase() === 'true';
+      if (isAriaDisabled || !isExplicitlyAllowed) {
+        return;
+      }
       openModal();
     });
   }

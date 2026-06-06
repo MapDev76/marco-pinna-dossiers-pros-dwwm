@@ -154,15 +154,15 @@
   function toRuleReasonLabel(reason) {
     switch (String(reason || 'special')) {
       case 'rest':
-        return 'Weekly rest';
+        return tr('Weekly rest', 'Repos hebdomadaire');
       case 'leave':
-        return 'Leave';
+        return tr('Leave', 'Conge');
       case 'vacation':
-        return 'Vacation';
+        return tr('Vacation', 'Vacances');
       case 'sick':
-        return 'Sick leave';
+        return tr('Sick leave', 'Conge maladie');
       default:
-        return 'Special day';
+        return tr('Special day', 'Jour special');
     }
   }
 
@@ -211,7 +211,7 @@
     wrap.innerHTML = list.map((item) => {
       const safeDate = String(item?.date || '');
       const safeReason = String(item?.reason || 'special');
-      return `<span class="settings-auto-rule-chip" data-date="${safeDate}" data-reason="${safeReason}">${safeDate} • ${toRuleReasonLabel(safeReason)}<button type="button" data-auto-rule-remove-special="${safeDate}" aria-label="Remove unavailable date">×</button></span>`;
+      return `<span class="settings-auto-rule-chip" data-date="${safeDate}" data-reason="${safeReason}">${safeDate} • ${toRuleReasonLabel(safeReason)}<button type="button" data-auto-rule-remove-special="${safeDate}" aria-label="${tr('Remove unavailable date', 'Supprimer la date indisponible')}">×</button></span>`;
     }).join('');
   }
 
@@ -353,7 +353,7 @@
         return `<option value="${id}">${icon} ${name}</option>`;
       })
       .join('');
-    employeeModalOpenShift.innerHTML = `<option value="0">All department shifts</option>${optionHtml}`;
+    employeeModalOpenShift.innerHTML = `<option value="0">Tous les postes du departement</option>${optionHtml}`;
     employeeModalOpenShift.value = employeeModalOpenShift.querySelector(`option[value="${currentValue}"]`) ? currentValue : '0';
   }
 
@@ -764,7 +764,7 @@
       employeeModalTitle.textContent = activeEmployeeUserName;
     }
     if (employeeModalSubtitle) {
-      employeeModalSubtitle.textContent = `Assigned: ${counts.assigned} • Sick: ${counts.sick} • Vacation: ${counts.vacation} • Rest: ${counts.rest}`;
+      employeeModalSubtitle.textContent = `${tr('Assigned', 'Assigne')}: ${counts.assigned} • ${tr('Sick', 'Maladie')}: ${counts.sick} • ${tr('Vacation', 'Vacances')}: ${counts.vacation} • ${tr('Rest', 'Repos')}: ${counts.rest}`;
     }
 
     renderEmployeeWeekdays(rule);

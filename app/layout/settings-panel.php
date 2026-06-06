@@ -71,19 +71,50 @@ if (
     $companyDomain = 'hospitality';
 }
 
-$departmentIconCatalogMap = [
-    'hospitality' => ['🛎️', '🧹', '🍽️', '🍸', '🚗', '🏊', '🧖', '🛏️', '🧳', '🎟️', '🍳', '🥐', '🍷', '🪟', '🌺', '🧴', '🧯', '🧰', '🗝️', '🪴', '🛗', '🧺', '🧼', '🪣', '📞', '🧻'],
-    'healthcare' => ['🏥', '🩺', '💉', '🧪', '🩻', '🧬', '🚑', '💊', '🫀', '🧫', '🧑‍⚕️', '🧑‍🔬', '🩹', '🧴', '🧯', '🛏️', '🧠', '📋', '🫁', '🦴', '🧻', '🧼', '⚕️', '🩸', '🧎', '🚪'],
-    'generic' => ['🏷️', '🧑‍💼', '🔧', '📦', '📁', '🛠️', '💼', '🧭', '📌', '🧾', '🧰', '📊', '🧑‍🏭', '🧑‍🎨', '🧪', '🛰️', '🔒', '📣', '📎', '🗂️', '🗄️', '🧮', '🖨️', '📬', '🛒', '📡'],
-];
-$shiftIconCatalogMap = [
-    'hospitality' => ['🌅', '☀️', '🌇', '🌙', '🛎️', '🍽️', '🧹', '🚗', '🛌', '🌴', '🏖️', '🧘', '☕', '🤒', '💤', '🍳', '🥐', '🍷', '🚪', '🧺', '🧽', '🧯', '🧳', '🗝️', '🛗', '🪴', '🧴', '🪣'],
-    'healthcare' => ['🩺', '💉', '🚑', '🏥', '🌙', '☀️', '🧪', '💊', '🛌', '🧘', '☕', '💤', '🤒', '🏖️', '🌴', '🧑‍⚕️', '🧑‍🔬', '🩹', '🧼', '🧯', '📋', '🫁', '🩸', '🦴', '⚕️', '🚪', '🧴', '🧻'],
-    'generic' => ['🕒', '☀️', '🌙', '🛠️', '📦', '👥', '🧭', '⚙️', '🛌', '💤', '🧘', '☕', '🌴', '🏖️', '🤒', '🧑‍💻', '📞', '📬', '🚚', '🧹', '🧯', '📈', '🖨️', '🧮', '📡', '🗂️', '🪛', '🔌'],
-];
+$iconDir = __DIR__ . '/../../assets/icons';
+$iconCatalog = [];
+if (is_dir($iconDir)) {
+    $entries = scandir($iconDir) ?: [];
+    foreach ($entries as $entry) {
+        if ($entry === '.' || $entry === '..') {
+            continue;
+        }
+        if (!preg_match('/\.(svg|png|jpe?g|gif|webp|ico)$/i', $entry)) {
+            continue;
+        }
+        $iconCatalog[] = $entry;
+    }
+}
+natsort($iconCatalog);
+$iconCatalog = array_values($iconCatalog);
+$preferredDefaultIcons = ['parasol.svg', 'setting.svg', 'calendar.svg', 'briefcase.svg', 'home.svg'];
+$defaultPickerIcon = 'parasol.svg';
+foreach ($preferredDefaultIcons as $preferredIcon) {
+    if (in_array($preferredIcon, $iconCatalog, true)) {
+        $defaultPickerIcon = $preferredIcon;
+        break;
+    }
+}
+if (empty($iconCatalog)) {
+    $defaultPickerIcon = 'parasol.svg';
+}
 
-$departmentIconCatalog = $departmentIconCatalogMap[$companyDomain] ?? $departmentIconCatalogMap['generic'];
-$shiftIconCatalog = $shiftIconCatalogMap[$companyDomain] ?? $shiftIconCatalogMap['generic'];
+$iconUrl = static function (string $icon) use ($basePath): string {
+    return $basePath . '/assets/icons/' . rawurlencode($icon);
+};
+
+$isIconAsset = static function (string $icon): bool {
+    return (bool) preg_match('/\.(svg|png|jpe?g|gif|webp|ico)$/i', $icon);
+};
+
+$iconLabel = static function (string $icon): string {
+    $name = pathinfo($icon, PATHINFO_FILENAME);
+    $name = str_replace(['-', '_'], ' ', $name);
+    return ucwords(trim($name));
+};
+
+$departmentIconCatalog = $iconCatalog;
+$shiftIconCatalog = $iconCatalog;
 $pickerColorCatalogMap = [
     '#b98b12' => 'Warm Amber',
     '#d97706' => 'Golden Hour',
@@ -215,7 +246,7 @@ foreach ($visibleDepartments as $department) {
     $departmentMetrics[$deptId] = [
         'department_id' => $deptId,
         'department_name' => (string) ($department['name'] ?? t('settings.department_default')),
-        'department_icon' => (string) ($department['icon'] ?? '🏷️'),
+        'department_icon' => (string) ($department['icon'] ?? $defaultPickerIcon),
         'department_color' => (string) ($department['color'] ?? '#b98b12'),
         'assignments' => 0,
         'active_assignments' => 0,
@@ -493,7 +524,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <select data-auto-assign-shift>
                                 <option value="0"><?php echo e(t('settings.all_open_work_shifts')); ?></option>
                                 <?php foreach ($shifts as $shift): ?>
-                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(($shift['icon'] ?? '🕒') . ' ' . ($shift['name'] ?? t('settings.shift_default'))); ?></option>
+                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(($shift['name'] ?? t('settings.shift_default'))); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
@@ -509,9 +540,11 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 title="<?php echo e(t('settings.auto_assign_open')); ?>"
                                 aria-label="<?php echo e(t('settings.auto_assign_open')); ?>"
                             >
-                                <img src="<?php echo $basePath; ?>/assets/icons/router.svg" alt="" aria-hidden="true" class="settings-icon-image">
+                                <img src="<?php echo $basePath; ?>/assets/icons/calendar-sync.svg" alt="" aria-hidden="true" class="settings-icon-image">
                             </button>
-                            <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-clear><?php echo e(t('settings.clear_assigned_shifts')); ?></button>
+                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon" data-auto-assign-clear title="<?php echo e(t('settings.clear_assigned_shifts')); ?>" aria-label="<?php echo e(t('settings.clear_assigned_shifts')); ?>">
+                                <img src="<?php echo $basePath; ?>/assets/icons/calendar-x.svg" alt="" aria-hidden="true" class="settings-icon-image">
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1144,14 +1177,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <label class="settings-field"><?php echo e(t('schedule.icon')); ?>
                             <div class="settings-picker-stack">
                                 <div class="settings-picker-row">
-                                    <input data-field="icon" type="text" value="<?php echo e($departmentIconCatalog[0] ?? '🏷️'); ?>" readonly>
+                                    <input data-field="icon" data-icon-preview data-icon-base="<?php echo e($basePath . '/assets/icons/'); ?>" type="text" value="<?php echo e($defaultPickerIcon); ?>" readonly>
                                     <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
                                 </div>
                                 <div class="settings-picker-popover" data-picker-popover="icon" hidden>
                                     <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
                                         <?php foreach ($departmentIconCatalog as $icon): ?>
-                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($icon); ?>">
-                                                <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($iconLabel((string) $icon)); ?>">
+                                                <img src="<?php echo e($iconUrl((string) $icon)); ?>" alt="" aria-hidden="true" class="settings-choice-icon-image">
                                             </button>
                                         <?php endforeach; ?>
                                     </div>
@@ -1212,7 +1245,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <article class="settings-list-item-wrap" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>" data-company-id="<?php echo (int) ($department['company_id'] ?? $scopeCompanyId); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-dept">
                                     <strong class="settings-dept-title">
-                                        <span class="settings-dept-title-icon" style="color: <?php echo e($department['color'] ?? '#b98b12'); ?>;"><?php echo e($department['icon'] ?? '🏷️'); ?></span>
+                                        <span class="settings-dept-title-icon" style="color: <?php echo e($department['color'] ?? '#b98b12'); ?>;">
+                                            <?php $deptIconValue = (string) ($department['icon'] ?? $defaultPickerIcon); ?>
+                                            <?php if ($isIconAsset($deptIconValue)): ?>
+                                                <img src="<?php echo e($iconUrl($deptIconValue)); ?>" alt="" aria-hidden="true" class="settings-icon-inline-image">
+                                            <?php else: ?>
+                                                <?php echo e($deptIconValue); ?>
+                                            <?php endif; ?>
+                                        </span>
                                         <span><?php echo e($department['name'] ?? t('settings.department_default')); ?></span>
                                     </strong>
                                     <span><?php echo e($department['company_name'] ?? $scopeCompanyName); ?></span>
@@ -1230,14 +1270,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <label class="settings-field"><?php echo e(t('schedule.icon')); ?>
                                             <div class="settings-picker-stack">
                                                 <div class="settings-picker-row">
-                                                    <input data-field="icon" type="text" value="<?php echo e($department['icon'] ?? ($departmentIconCatalog[0] ?? '🏷️')); ?>" readonly>
+                                                    <input data-field="icon" data-icon-preview data-icon-base="<?php echo e($basePath . '/assets/icons/'); ?>" type="text" value="<?php echo e($department['icon'] ?? $defaultPickerIcon); ?>" readonly>
                                                     <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
                                                 </div>
                                                 <div class="settings-picker-popover" data-picker-popover="icon" hidden>
                                                     <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
                                                         <?php foreach ($departmentIconCatalog as $icon): ?>
-                                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($icon); ?>">
-                                                                <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($iconLabel((string) $icon)); ?>">
+                                                                <img src="<?php echo e($iconUrl((string) $icon)); ?>" alt="" aria-hidden="true" class="settings-choice-icon-image">
                                                             </button>
                                                         <?php endforeach; ?>
                                                     </div>
@@ -1432,14 +1472,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <label class="settings-field"><?php echo e(t('schedule.icon')); ?>
                                 <div class="settings-picker-stack">
                                     <div class="settings-picker-row">
-                                        <input data-field="icon" type="text" value="<?php echo e($shiftIconCatalog[0] ?? '🕒'); ?>" readonly>
+                                        <input data-field="icon" data-icon-preview data-icon-base="<?php echo e($basePath . '/assets/icons/'); ?>" type="text" value="<?php echo e($defaultPickerIcon); ?>" readonly>
                                         <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
                                     </div>
                                     <div class="settings-picker-popover" data-picker-popover="icon" hidden>
                                         <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
                                             <?php foreach ($shiftIconCatalog as $icon): ?>
-                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($icon); ?>">
-                                                    <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($iconLabel((string) $icon)); ?>">
+                                                    <img src="<?php echo e($iconUrl((string) $icon)); ?>" alt="" aria-hidden="true" class="settings-choice-icon-image">
                                                 </button>
                                             <?php endforeach; ?>
                                         </div>
@@ -1506,7 +1546,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <?php endif; ?>
                                     </span>
                                     <span><?php echo e(($shift['start_time'] ?? '--:--') . ' - ' . ($shift['end_time'] ?? '--:--')); ?></span>
-                                    <span><?php echo e($shift['icon'] ?? '🕒'); ?></span>
+                                    <span>
+                                        <?php $shiftIconValue = (string) ($shift['icon'] ?? $defaultPickerIcon); ?>
+                                        <?php if ($isIconAsset($shiftIconValue)): ?>
+                                            <img src="<?php echo e($iconUrl($shiftIconValue)); ?>" alt="" aria-hidden="true" class="settings-icon-inline-image">
+                                        <?php else: ?>
+                                            <?php echo e($shiftIconValue); ?>
+                                        <?php endif; ?>
+                                    </span>
                                     <span class="settings-color-display" style="--choice-color: <?php echo e($shift['color'] ?? '#2f6fed'); ?>;">
                                         <span class="settings-color-swatch" aria-hidden="true"></span>
                                         <span><?php echo e($pickerColorLabel((string) ($shift['color'] ?? '#2f6fed'))); ?></span>
@@ -1527,14 +1574,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             <label class="settings-field">Icon
                                                 <div class="settings-picker-stack">
                                                     <div class="settings-picker-row">
-                                                        <input data-field="icon" type="text" value="<?php echo e($shift['icon'] ?? ($shiftIconCatalog[0] ?? '🕒')); ?>" readonly>
+                                                        <input data-field="icon" data-icon-preview data-icon-base="<?php echo e($basePath . '/assets/icons/'); ?>" type="text" value="<?php echo e($shift['icon'] ?? $defaultPickerIcon); ?>" readonly>
                                                         <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
                                                     </div>
                                                     <div class="settings-picker-popover" data-picker-popover="icon" hidden>
                                                         <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
                                                             <?php foreach ($shiftIconCatalog as $icon): ?>
-                                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($icon); ?>">
-                                                                    <span aria-hidden="true"><?php echo e($icon); ?></span>
+                                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($iconLabel((string) $icon)); ?>">
+                                                                    <img src="<?php echo e($iconUrl((string) $icon)); ?>" alt="" aria-hidden="true" class="settings-choice-icon-image">
                                                                 </button>
                                                             <?php endforeach; ?>
                                                         </div>

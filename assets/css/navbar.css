@@ -99,6 +99,48 @@
     color: var(--color-text);
 }
 
+.site-header-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.site-wifi-status {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    background: #f3f4f6;
+}
+
+.site-wifi-status.is-connected {
+    background: rgba(22, 163, 74, 0.16);
+    border-color: rgba(22, 163, 74, 0.42);
+}
+
+.site-wifi-status.is-blocked {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+.site-wifi-icon {
+    width: 13px;
+    height: 13px;
+    display: block;
+    filter: grayscale(1) brightness(0.5);
+}
+
+.site-wifi-status.is-connected .site-wifi-icon {
+    filter: invert(39%) sepia(59%) saturate(902%) hue-rotate(95deg) brightness(93%) contrast(92%);
+}
+
+.site-wifi-status.is-blocked .site-wifi-icon {
+    filter: invert(32%) sepia(87%) saturate(1559%) hue-rotate(333deg) brightness(94%) contrast(89%);
+}
+
 .site-header-subtitle {
     font-size: 0.78rem;
     font-weight: 600;
