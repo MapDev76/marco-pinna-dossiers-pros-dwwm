@@ -8,11 +8,11 @@
     /* Medium screens (tablets, small laptops) */
     .app-sidebar {
         position: fixed;
-        top: 76px;
+        top: 100px;
         left: 8px;
         width: 196px;
         margin: 0;
-        transform: translateX(calc(-100% + 18px));
+        transform: translateX(calc(-100% + 6px));
     }
 
     body.sidebar-expanded .app-sidebar {
@@ -21,7 +21,7 @@
 
     .route-dashboard .dashboard-content {
         position: fixed;
-        top: 76px;
+        top: 100px;
         left: 0;
         right: 0;
         bottom: 0;
@@ -351,7 +351,7 @@
         left: 6px;
         width: 178px;
         margin: 0;
-        transform: translateX(calc(-100% + 18px));
+        transform: translateX(calc(-100% + 6px));
     }
 
     .route-dashboard .dashboard-content {
@@ -793,8 +793,8 @@
     }
 
     .site-brand-logo {
-        width: 48px;
-        height: 48px;
+        width: 56px;
+        height: 56px;
     }
 
     .employee-staff-bar {

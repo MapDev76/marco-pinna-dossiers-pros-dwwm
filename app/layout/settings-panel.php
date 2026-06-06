@@ -6,6 +6,10 @@
  * shifts and assignments inside one modal shell.
  */
 $currentUser = currentUser();
+$basePath = $basePath ?? (function () {
+    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
+})();
 $planner = $dashboardPlannerData ?? [];
 $departments = is_array($planner['departments'] ?? null) ? $planner['departments'] : [];
 $users = is_array($planner['users'] ?? null) ? $planner['users'] : [];
@@ -498,7 +502,15 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <label class="settings-field"><?php echo e(t('settings.minimum_employees')); ?><input data-auto-assign-min-employees type="number" min="0" step="1" value="1"></label>
                         <label class="settings-field"><?php echo e(t('settings.maximum_employees')); ?><input data-auto-assign-max-employees type="number" min="1" step="1" value="3"></label>
                         <div class="settings-inline-actions">
-                            <button type="button" class="admin-action-link" data-auto-assign-open><?php echo e(t('settings.auto_assign_open')); ?></button>
+                            <button
+                                type="button"
+                                class="admin-action-link settings-action-icon"
+                                data-auto-assign-open
+                                title="<?php echo e(t('settings.auto_assign_open')); ?>"
+                                aria-label="<?php echo e(t('settings.auto_assign_open')); ?>"
+                            >
+                                <img src="<?php echo $basePath; ?>/assets/icons/router.svg" alt="" aria-hidden="true" class="settings-icon-image">
+                            </button>
                             <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-clear><?php echo e(t('settings.clear_assigned_shifts')); ?></button>
                         </div>
                     </div>

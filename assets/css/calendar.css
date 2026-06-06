@@ -4,7 +4,7 @@
 
 .route-dashboard .dashboard-content {
     position: fixed;
-    top: 86px;
+    top: 110px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -18,17 +18,17 @@
 }
 
 body.sidebar-expanded .route-dashboard .dashboard-content {
-    left: 198px;
-    width: calc(100% - 198px);
+    left: 0;
+    width: auto;
 }
 
 .app-sidebar {
     position: fixed;
-    top: 94px;
+    top: 118px;
     left: 10px;
     z-index: 950;
     width: 196px;
-    transform: translateX(calc(-100% + 18px));
+    transform: translateX(calc(-100% + 6px));
     transition: transform 180ms ease;
 }
 
@@ -131,8 +131,9 @@ body.sidebar-expanded .app-sidebar {
     margin-bottom: var(--spacing-md);
     padding: 0.48rem 0.38rem;
     border-radius: var(--border-radius-md);
-    background: rgba(255, 245, 213, 0.62);
-    border: 1px solid rgba(157, 121, 16, 0.16);
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(157, 121, 16, 0.42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96);
 }
 
 .dashboard-sidebar-group-title {
@@ -267,8 +268,9 @@ body.sidebar-expanded .app-sidebar {
     gap: 0.55rem;
     padding: 0.55rem;
     border-radius: var(--border-radius-md);
-    background: rgba(255, 245, 213, 0.52);
-    border: 1px solid rgba(157, 121, 16, 0.16);
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(157, 121, 16, 0.42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .dashboard-sidebar-planner-placeholder {
@@ -406,6 +408,15 @@ body.sidebar-expanded .app-sidebar {
     height: 100%;
     min-height: 0;
     overflow: hidden;
+    background: rgba(255, 255, 255, 0.98);
+    border-top: 1px solid rgba(255, 255, 255, 0.98);
+    border-left: 1px solid rgba(255, 255, 255, 0.96);
+    border-right: 4px solid rgba(0, 0, 0, 0.16);
+    border-bottom: 5px solid rgba(0, 0, 0, 0.22);
+    box-shadow:
+        0 16px 28px rgba(0, 0, 0, 0.16),
+        6px 8px 0 rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
 }
 
 .dashboard-calendar-headline {
@@ -431,8 +442,17 @@ body.sidebar-expanded .app-sidebar {
     width: 100%;
     display: grid;
     grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
     align-items: center;
     gap: 0.6rem;
+}
+
+.dashboard-calendar-range-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-self: start;
+    margin-inline-start: 0.7rem;
 }
 
 .dashboard-calendar-title-nav {
@@ -450,9 +470,12 @@ body.sidebar-expanded .app-sidebar {
 }
 
 .dashboard-calendar-headline .dashboard-calendar-title-meta {
-    margin: 0.3rem 0 0;
+    margin: 0;
     color: var(--color-text-light);
     font-size: 0.92rem;
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: center;
 }
 
 .dashboard-calendar-navigator-actions.is-inline {
@@ -507,9 +530,10 @@ body.sidebar-expanded .app-sidebar {
     text-align: center;
     font: inherit;
     font-weight: var(--font-weight-bold);
-    justify-self: start;
+    justify-self: auto;
+    margin-inline-start: 0;
     padding: 0 0.9rem;
-    cursor: pointer;
+    cursor: text;
 }
 
 .dashboard-calendar-range-picker-native {
@@ -525,14 +549,29 @@ body.sidebar-expanded .app-sidebar {
 @media (max-width: 1024px) {
     .dashboard-calendar-top-row {
         grid-template-columns: 1fr;
+        grid-template-rows: auto;
         justify-items: center;
         gap: 0.45rem;
     }
 
     .dashboard-calendar-navigator-range,
+    .dashboard-calendar-range-actions,
     .dashboard-calendar-title-nav,
-    .dashboard-calendar-navigator-actions.is-inline {
+    .dashboard-calendar-navigator-actions.is-inline,
+    .dashboard-calendar-headline .dashboard-calendar-title-meta {
         justify-self: center;
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    .dashboard-calendar-navigator-range {
+        margin-inline-start: 0;
+    }
+
+    .dashboard-calendar-range-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-inline-start: 0;
     }
 }
 
@@ -1187,7 +1226,7 @@ body.sidebar-expanded .app-sidebar {
 
 .calendar-day-fullscreen-nav:hover,
 .calendar-day-fullscreen-nav:focus-visible {
-    background: #fff8e6;
+    background: #efdbab;
     outline: none;
 }
 
@@ -1288,7 +1327,7 @@ body.sidebar-expanded .app-sidebar {
     padding: 0.65rem;
     border-radius: 12px;
     border: 1px solid rgba(157, 121, 16, 0.2);
-    background: rgba(255, 249, 231, 0.7);
+    background: rgba(225, 188, 103, 0.28);
 }
 
 .calendar-day-fullscreen-unavailable[hidden] {
@@ -1551,7 +1590,7 @@ body.sidebar-expanded .app-sidebar {
     border-radius: 999px;
     border: 1px solid rgba(157, 121, 16, 0.2);
     padding: 0.25rem 0.5rem;
-    background: rgba(255, 248, 221, 0.8);
+    background: rgba(225, 188, 103, 0.35);
     color: var(--color-text);
     font-size: 0.72rem;
     font-weight: var(--font-weight-bold);

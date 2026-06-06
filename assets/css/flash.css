@@ -80,6 +80,7 @@
     cursor: pointer;
 }
 .flash-close svg { width: 18px; height: 18px; }
+.flash-close img { width: 18px; height: 18px; display: block; }
 .flash-close:focus { outline: 2px solid rgba(0,0,0,0.08); border-radius: 6px; }
 
 /* Icon inside flash */

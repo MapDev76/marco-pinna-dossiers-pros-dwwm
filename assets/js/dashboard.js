@@ -1036,7 +1036,10 @@
       if (state.mode === 'year') return String(state.focusDate.getFullYear());
       if (state.mode === 'month') return monthYearFormatter.format(state.focusDate);
       if (state.mode === 'day') return fullDateFormatter.format(state.focusDate);
-      const start = state.mode === 'fortnight' ? state.focusDate : startOfWeek(state.focusDate);
+      const isSlidingWeek = state.mode === 'week' && state.navigationMode === 'day';
+      const start = state.mode === 'fortnight'
+        ? state.focusDate
+        : (isSlidingWeek ? state.focusDate : startOfWeek(state.focusDate));
       const end = state.mode === 'fortnight' ? addDays(start, 14) : addDays(start, 6);
       return `${shortDateFormatter.format(start)} - ${shortDateFormatter.format(end)}`;
     };
@@ -1057,7 +1060,7 @@
       if (state.mode === 'day') {
         return { start: state.selectedDate, end: state.selectedDate };
       }
-      const start = startOfWeek(state.focusDate);
+      const start = state.navigationMode === 'day' ? new Date(state.focusDate) : startOfWeek(state.focusDate);
       return { start, end: addDays(start, 6) };
     };
 
@@ -1132,8 +1135,8 @@
         }
         if (stats) {
           stats.textContent = isFr
-            ? `${counters.totalShifts} postes • ${counters.assignedShifts} attribues • ${counters.freeShifts} libres pour ${formatRangeLabel()}`
-            : `${counters.totalShifts} shifts • ${counters.assignedShifts} assigned • ${counters.freeShifts} free for ${formatRangeLabel()}`;
+            ? `${counters.totalShifts} postes • ${counters.assignedShifts} attribues • ${counters.freeShifts} libres`
+            : `${counters.totalShifts} shifts • ${counters.assignedShifts} assigned • ${counters.freeShifts} free`;
         }
       }
 
@@ -1348,53 +1351,103 @@
       const rangeInput = document.querySelector('[data-calendar-range-display]');
       if (!rangeInput) return;
 
-      let nativePicker = document.getElementById('dashboard-calendar-range-picker');
-      if (!nativePicker) {
-        nativePicker = document.createElement('input');
-        nativePicker.type = 'date';
-        nativePicker.id = 'dashboard-calendar-range-picker';
-        nativePicker.className = 'dashboard-calendar-range-picker-native';
-        nativePicker.setAttribute('aria-hidden', 'true');
-        nativePicker.tabIndex = -1;
-        document.body.appendChild(nativePicker);
-      }
+      const parseTypedDate = (rawValue) => {
+        const value = String(rawValue || '').trim();
+        if (!value) return null;
 
-      const applySelectedDate = (value) => {
-        if (!value) return;
-        const pickedDate = toLocalDate(value);
-        state.focusDate = new Date(pickedDate);
-        state.selectedDate = new Date(pickedDate);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          const isoDate = toLocalDate(value);
+          return Number.isNaN(isoDate.getTime()) ? null : isoDate;
+        }
+
+        const match = value.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2}|\d{4})$/);
+        if (!match) return null;
+
+        const day = Number(match[1]);
+        const month = Number(match[2]);
+        const year = Number(match[3].length === 2 ? `20${match[3]}` : match[3]);
+        if (!day || !month || !year) return null;
+        const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
+        if (Number.isNaN(parsed.getTime())) return null;
+        if (parsed.getDate() !== day || parsed.getMonth() !== month - 1 || parsed.getFullYear() !== year) return null;
+        return parsed;
+      };
+
+      const applyTypedRange = (rawInputValue) => {
+        const typed = String(rawInputValue || '').trim();
+        if (!typed) {
+          rangeInput.value = formatNavigatorRange();
+          return;
+        }
+
+        const parts = typed.includes(' - ') ? typed.split(' - ') : [typed];
+        const startDate = parseTypedDate(parts[0]);
+        const endDate = parts[1] ? parseTypedDate(parts[1]) : startDate;
+        if (!startDate || !endDate) {
+          rangeInput.value = formatNavigatorRange();
+          return;
+        }
+
+        const start = startDate <= endDate ? startDate : endDate;
+        const end = endDate >= startDate ? endDate : startDate;
+        const diffDays = Math.max(Math.round((end.getTime() - start.getTime()) / 86400000), 0);
+
+        state.focusDate = new Date(start);
+        state.selectedDate = new Date(start);
+
+        if (diffDays === 14) {
+          state.mode = 'fortnight';
+          state.navigationMode = 'fortnight';
+        } else if (diffDays >= 27 && diffDays <= 31) {
+          state.mode = 'month';
+          state.navigationMode = 'month';
+          state.focusDate = new Date(start.getFullYear(), start.getMonth(), 1, 12, 0, 0, 0);
+        } else if (diffDays === 6) {
+          state.mode = 'week';
+          state.navigationMode = 'day';
+        } else if (diffDays === 0) {
+          state.mode = 'week';
+          state.navigationMode = 'day';
+        } else {
+          state.mode = 'week';
+          state.navigationMode = 'day';
+        }
+
         renderCalendar();
       };
 
-      nativePicker.addEventListener('change', () => {
-        applySelectedDate(nativePicker.value);
+      rangeInput.readOnly = false;
+      rangeInput.setAttribute('inputmode', 'numeric');
+      rangeInput.setAttribute('spellcheck', 'false');
+      rangeInput.setAttribute('aria-label', tr('Type a date range for the calendar', 'Saisissez une plage de dates pour le calendrier'));
+
+      let previousRangeValue = rangeInput.value;
+
+      rangeInput.addEventListener('focus', () => {
+        previousRangeValue = rangeInput.value;
+        rangeInput.select();
       });
 
-      const openPicker = () => {
-        const sourceDate = state.focusDate instanceof Date ? state.focusDate : calendarToday;
-        nativePicker.value = dateKey(sourceDate);
-        if (typeof nativePicker.showPicker === 'function') {
-          try {
-            nativePicker.showPicker();
-            return;
-          } catch (_error) {
-            // Fallback for browsers that block showPicker in specific contexts.
-          }
-        }
-        nativePicker.click();
-      };
-
-      rangeInput.setAttribute('aria-label', tr('Choose a date for the calendar', 'Choisir une date pour le calendrier'));
-      rangeInput.addEventListener('click', (event) => {
-        event.preventDefault();
-        openPicker();
+      rangeInput.addEventListener('click', () => {
+        rangeInput.focus();
+        rangeInput.select();
       });
 
       rangeInput.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        openPicker();
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          applyTypedRange(rangeInput.value);
+          return;
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          rangeInput.value = previousRangeValue || formatNavigatorRange();
+          rangeInput.blur();
+        }
+      });
+
+      rangeInput.addEventListener('blur', () => {
+        applyTypedRange(rangeInput.value);
       });
     };
 

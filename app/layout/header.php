@@ -23,6 +23,7 @@ $basePath = $basePath ?? (function () {
 })();
 
 $headerLeft = '';
+$leftMySpaceIcon = null;
 if (!$isPublicPage && $currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
     $displayName = trim((string) (($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')));
@@ -65,7 +66,20 @@ if (!$isPublicPage && $currentUser !== null) {
 
         $headerLeft = [
             'title' => $displayLabel,
-            'subtitle' => trim($companyName . ' - ' . t('roles.' . (string) $role)),
+            'subtitle' => trim($companyName),
+            'subtitle_role' => trim(t('roles.' . (string) $role)),
+        ];
+    }
+}
+
+if (!$isPublicPage && $currentUser !== null) {
+    $role = $currentUser['role'] ?? 'employee';
+    if (in_array($role, ['admin', 'department_manager'], true)) {
+        $leftMySpaceIcon = [
+            'href' => appUrl('my-space'),
+            'title' => t('common.my_attendance'),
+            'icon' => 'home.svg',
+            'alt' => t('common.my_attendance'),
         ];
     }
 }
@@ -114,15 +128,6 @@ if ($route === 'home') {
             'alt' => t('common.print'),
         ];
 
-        if (in_array($role, ['admin', 'department_manager'], true)) {
-            $rightIcons[] = [
-                'type' => 'link',
-                'href' => appUrl('my-space'),
-                'title' => t('common.my_attendance'),
-                'icon' => 'home.svg',
-                'alt' => t('common.my_attendance'),
-            ];
-        }
     } else {
         if ($role === 'employee') {
             $rightIcons[] = [
@@ -143,15 +148,6 @@ if ($route === 'home') {
             ];
 
             if (in_array($role, ['admin', 'department_manager'], true)) {
-                if ($route !== 'my-space') {
-                    $rightIcons[] = [
-                        'type' => 'link',
-                        'href' => appUrl('my-space'),
-                        'title' => t('common.my_attendance'),
-                        'icon' => 'home.svg',
-                        'alt' => t('common.my_attendance'),
-                    ];
-                }
                 if ($route === 'my-space') {
                     $rightIcons[] = [
                         'type' => 'link',
@@ -177,10 +173,18 @@ if ($route === 'home') {
     <nav class="site-navbar" aria-label="Primary navigation">
         <div class="site-navbar-inner">
             <div class="site-navbar-left">
+                <?php if (is_array($leftMySpaceIcon)): ?>
+                    <a href="<?php echo e($leftMySpaceIcon['href']); ?>" class="site-icon-btn site-left-myspace-btn" title="<?php echo e($leftMySpaceIcon['title']); ?>">
+                        <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($leftMySpaceIcon['icon']); ?>" alt="<?php echo e($leftMySpaceIcon['alt']); ?>" class="site-icon">
+                    </a>
+                <?php endif; ?>
                 <?php if (is_array($headerLeft)): ?>
                     <div class="site-header-meta">
                         <div class="site-header-title"><?php echo e($headerLeft['title']); ?></div>
                         <div class="site-header-subtitle"><?php echo e($headerLeft['subtitle']); ?></div>
+                        <?php if (!empty($headerLeft['subtitle_role'])): ?>
+                            <div class="site-header-subrole"><?php echo e($headerLeft['subtitle_role']); ?></div>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -200,27 +204,6 @@ if ($route === 'home') {
             </div>
 
             <div class="site-navbar-right">
-                <div class="site-icon-group" role="toolbar" aria-label="<?php echo e(t('common.quick_actions')); ?>">
-                    <?php foreach ($rightIcons as $iconItem): ?>
-                        <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
-                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>"<?php if (($iconItem['toggle'] ?? '') === 'calendar-navigator'): ?> data-calendar-navigator-toggle="true" aria-controls="dashboard-calendar-navigator" aria-expanded="false"<?php else: ?> data-modal-target="<?php echo e($iconItem['target']); ?>"<?php if (!empty($iconItem['entity'])): ?> data-modal-entity="<?php echo e($iconItem['entity']); ?>"<?php endif; ?><?php endif; ?>>
-                                <?php if (!empty($iconItem['toggle'])): ?>
-                                    <svg class="site-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
-                                        <path d="M4 6h16" />
-                                        <path d="M4 12h16" />
-                                        <path d="M4 18h16" />
-                                    </svg>
-                                <?php else: ?>
-                                    <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
-                                <?php endif; ?>
-                            </button>
-                        <?php else: ?>
-                            <a href="<?php echo e($iconItem['href']); ?>" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>">
-                                <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
-                            </a>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </div>
                 <div class="site-lang-switch" aria-label="<?php echo e(t('common.language')); ?>">
                     <details class="site-lang-dropdown">
                         <summary class="site-icon-btn site-lang-trigger" title="<?php echo e(t('common.language')); ?>" aria-label="<?php echo e(t('common.language')); ?>">
@@ -231,6 +214,23 @@ if ($route === 'home') {
                             <a href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" class="site-lang-link <?php echo $locale === 'fr' ? 'is-active' : ''; ?>" role="menuitem">Francais</a>
                         </div>
                     </details>
+                </div>
+                <div class="site-icon-group" role="toolbar" aria-label="<?php echo e(t('common.quick_actions')); ?>">
+                    <?php foreach ($rightIcons as $iconItem): ?>
+                        <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
+                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>"<?php if (($iconItem['toggle'] ?? '') === 'calendar-navigator'): ?> data-calendar-navigator-toggle="true" aria-controls="dashboard-calendar-navigator" aria-expanded="false"<?php else: ?> data-modal-target="<?php echo e($iconItem['target']); ?>"<?php if (!empty($iconItem['entity'])): ?> data-modal-entity="<?php echo e($iconItem['entity']); ?>"<?php endif; ?><?php endif; ?>>
+                                <?php if (!empty($iconItem['toggle'])): ?>
+                                    <img src="<?php echo $basePath; ?>/assets/icons/menu.svg" alt="" class="site-icon" aria-hidden="true">
+                                <?php else: ?>
+                                    <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
+                                <?php endif; ?>
+                            </button>
+                        <?php else: ?>
+                            <a href="<?php echo e($iconItem['href']); ?>" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>">
+                                <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
+                            </a>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>

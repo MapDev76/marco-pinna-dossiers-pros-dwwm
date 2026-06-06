@@ -242,8 +242,12 @@
     top: 16px;
     right: 16px;
     float: none;
-    background: #2e2e2e;
-    color: #fff;
+    background: #ffffff;
+    color: #222222;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        0 4px 8px rgba(0, 0, 0, 0.1);
     z-index: 10002;
 }
 
@@ -374,7 +378,7 @@
 .dashboard-print-shifts-legend {
     border: 1px dashed rgba(157, 121, 16, 0.32);
     border-radius: 12px;
-    background: rgba(255, 250, 235, 0.76);
+    background: rgba(255, 255, 255, 0.94);
     padding: 0.5rem;
 }
 
@@ -515,7 +519,7 @@
 .dashboard-print-grid tbody th {
     position: sticky;
     left: 0;
-    background: #fff8e4;
+    background: #ffffff;
     z-index: 1;
     text-align: left;
     min-width: 168px;
@@ -762,12 +766,22 @@
     width: 34px;
     height: 34px;
     border-radius: var(--border-radius-full);
-    border: 0;
+    border: 1px solid rgba(0, 0, 0, 0.18);
     font-size: 1.2rem;
     line-height: 1;
     cursor: pointer;
-    color: var(--color-bg);
-    background: var(--color-secondary);
+    color: #222222;
+    background: #ffffff;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-modal-close:hover,
+.dashboard-modal-close:focus-visible {
+    background: #f7f7f7;
+    border-color: rgba(0, 0, 0, 0.24);
+    outline: none;
 }
 
 .dashboard-overlay[hidden],

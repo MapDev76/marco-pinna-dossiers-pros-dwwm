@@ -45,7 +45,7 @@ $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time())
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title><?php echo e($pageTitle); ?></title>
-        <link rel="icon" href="<?php echo $basePath; ?>/assets/images/faviconStaffeasePro.jpg" type="image/jpeg">
+        <link rel="icon" href="<?php echo $basePath; ?>/assets/icons/house.svg" type="image/svg+xml">
         <link rel="stylesheet" href="<?php echo $basePath; ?>/assets/css/style.css?v=<?php echo e($cssVersion); ?>">
         <script defer src="<?php echo $basePath; ?>/assets/js/flash.js?v=<?php echo filemtime(__DIR__ . '/assets/js/flash.js'); ?>"></script>
 </head>
@@ -70,14 +70,10 @@ require __DIR__ . '/app/layout/header.php';
                 <div id="flash-backdrop-success" class="flash-backdrop"></div>
                 <div id="flash-success" class="flash flash-success" role="alert" aria-live="assertive">
                         <button class="flash-close" aria-label="<?php echo e(t('common.close_message')); ?>">
-                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.29 9.18 12 2.88 5.71 4.29 4.29 10.59 10.59 17.89 4.29z"/></svg>
+                                <img src="<?php echo $basePath; ?>/assets/icons/close.svg" alt="" aria-hidden="true">
                         </button>
                                 <span class="flash-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
-                                                <path class="triangle" d="M1 21h22L12 2 1 21z" />
-                                                <path class="exclam" d="M12 8v5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                                <circle class="exclam" cx="12" cy="17" r="1.2" />
-                                        </svg>
+                                        <img src="<?php echo $basePath; ?>/assets/icons/alert-circle.svg" alt="" aria-hidden="true" />
                                 </span>
                         <div class="flash-body">
                                 <div class="flash-title"><?php echo e(t('common.done')); ?></div>
@@ -90,7 +86,7 @@ require __DIR__ . '/app/layout/header.php';
                 <div id="flash-backdrop-error" class="flash-backdrop"></div>
                 <div id="flash-error" class="flash flash-error" role="alert" aria-live="assertive">
                         <button class="flash-close" aria-label="<?php echo e(t('common.close_message')); ?>">
-                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.29 9.18 12 2.88 5.71 4.29 4.29 10.59 10.59 17.89 4.29z"/></svg>
+                                <img src="<?php echo $basePath; ?>/assets/icons/close.svg" alt="" aria-hidden="true">
                         </button>
                         <span class="flash-icon" aria-hidden="true">
                                 <img src="<?php echo $basePath; ?>/assets/icons/Icon%20alert.png" alt="" />

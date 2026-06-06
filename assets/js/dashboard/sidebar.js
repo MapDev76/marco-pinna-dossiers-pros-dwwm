@@ -73,40 +73,31 @@
       document.body.classList.remove('sidebar-expanded');
     };
 
-    var bindHoverSidebar = function () {
+    var bindToggleSidebar = function () {
       if (!sidebar || !sidebarHandle) return;
-      var closeTimer = null;
-      var cancelClose = function () {
-        if (closeTimer) {
-          window.clearTimeout(closeTimer);
-          closeTimer = null;
+
+      var toggleSidebar = function () {
+        if (document.body.classList.contains('sidebar-expanded')) {
+          closeSidebar();
+        } else {
+          openSidebar();
         }
       };
-      var scheduleClose = function () {
-        cancelClose();
-        closeTimer = window.setTimeout(function () {
-          if (!sidebar.matches(':hover') && !sidebarHandle.matches(':hover')) {
-            closeSidebar();
-          }
-        }, 180);
-      };
 
-      sidebarHandle.addEventListener('mouseenter', function () {
-        cancelClose();
-        openSidebar();
-      });
-      sidebarHandle.addEventListener('mouseleave', scheduleClose);
-      sidebarHandle.addEventListener('focusin', function () {
-        cancelClose();
-        openSidebar();
+      sidebarHandle.addEventListener('click', function (event) {
+        event.preventDefault();
+        toggleSidebar();
       });
 
-      sidebar.addEventListener('mouseenter', cancelClose);
-      sidebar.addEventListener('mouseleave', scheduleClose);
+      sidebarHandle.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggleSidebar();
+      });
     };
 
     if (sidebar && sidebarHandle) {
-      bindHoverSidebar();
+      bindToggleSidebar();
       closeSidebar();
     }
 

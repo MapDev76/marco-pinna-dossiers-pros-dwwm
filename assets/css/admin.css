@@ -166,7 +166,7 @@
 .settings-summary-card {
     padding: var(--spacing-md);
     border-radius: var(--border-radius-lg);
-    background: linear-gradient(180deg, #fffdf4 0%, #f8f1da 100%);
+    background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
     border: 1px solid rgba(157, 121, 16, 0.16);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
@@ -200,7 +200,7 @@
 .settings-tabs {
     padding: 0.35rem;
     border-radius: var(--border-radius-lg);
-    background: rgba(255, 248, 221, 0.88);
+    background: rgba(227, 192, 112, 0.3);
     border: 1px solid rgba(157, 121, 16, 0.16);
 }
 
@@ -346,7 +346,7 @@
 
 .settings-company-ip-wrap {
     border-color: rgba(157, 121, 16, 0.28);
-    background: linear-gradient(180deg, #fffdf6 0%, #fffaeb 100%);
+    background: linear-gradient(180deg, #f3e1ab 0%, #ead093 100%);
 }
 
 .settings-company-ip-row {
@@ -423,7 +423,7 @@
 }
 
 .settings-assignment-employee-item:hover {
-    background: #fff8e6;
+    background: #efdbab;
 }
 
 .settings-assignment-employee-item small {
@@ -698,7 +698,7 @@
     padding: 0.85rem 1rem;
     border-radius: 18px;
     border: 1px solid rgba(157, 121, 16, 0.22);
-    background: linear-gradient(180deg, #fff8e6 0%, #fff3cc 100%);
+    background: linear-gradient(180deg, #f3e1ab 0%, #e7cb82 100%);
 }
 
 .employee-network-status-card.is-ok {
@@ -828,7 +828,7 @@
     padding: 1rem;
     border-radius: 28px;
     border: 1px solid rgba(157, 121, 16, 0.18);
-    background: linear-gradient(180deg, #fffefa 0%, #fff7e8 100%);
+    background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
     box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
 }
 
@@ -888,7 +888,7 @@
     padding: 0.76rem;
     border-radius: 18px;
     border: 1px solid rgba(157, 121, 16, 0.2);
-    background: linear-gradient(180deg, #fffefa 0%, #fffaf0 100%);
+    background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
     box-shadow: 0 22px 36px rgba(0, 0, 0, 0.26);
 }
 
@@ -1057,13 +1057,13 @@
 }
 
 .settings-assignment-open-slot-item.is-selected {
-    background: #fff4d7;
+    background: #efd9a1;
     border-color: rgba(157, 121, 16, 0.45);
     box-shadow: 0 0 0 2px rgba(157, 121, 16, 0.08) inset;
 }
 
 .settings-assignment-open-slot-item:hover {
-    background: #fff8e6;
+    background: #efdbab;
 }
 
 .settings-assignment-modal-open-range {
@@ -1166,7 +1166,7 @@
     gap: 0.35rem;
     border: 1px solid rgba(157, 121, 16, 0.2);
     border-radius: 999px;
-    background: rgba(255, 248, 221, 0.9);
+    background: rgba(225, 188, 103, 0.4);
     padding: 0.24rem 0.52rem;
     font-size: 0.72rem;
     font-weight: var(--font-weight-bold);
@@ -1278,6 +1278,10 @@
 .settings-auto-assign-row {
     margin-bottom: 0.6rem;
     padding: 0.55rem 0.6rem;
+    border: 1px solid rgba(157, 121, 16, 0.42);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f3e1ab 0%, #ecd390 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .settings-auto-assign-row .settings-list-cols.settings-list-cols-shift-create {
@@ -1393,6 +1397,12 @@
     line-height: 1;
 }
 
+.settings-action-icon .settings-icon-image {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
 .settings-action-icon-danger {
     color: #8b1b1b;
     background: #ffe6e6;
@@ -1403,7 +1413,19 @@
     padding: 0.8rem;
     border: 1px solid rgba(157, 121, 16, 0.2);
     border-radius: 14px;
-    background: linear-gradient(180deg, #fff8dd 0%, #fffdf4 100%);
+    background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
+}
+
+.settings-create-row.settings-auto-assign-row {
+    border: 1px solid rgba(157, 121, 16, 0.42);
+    background: linear-gradient(180deg, #f3e1ab 0%, #ecd390 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.settings-create-row.settings-create-row-shift {
+    border: 1px solid rgba(157, 121, 16, 0.42);
+    background: linear-gradient(180deg, #f3e1ab 0%, #ecd390 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .settings-edit-drawer {
@@ -1448,7 +1470,7 @@
     padding: 0.75rem;
     border: 1px solid rgba(157, 121, 16, 0.18);
     border-radius: 12px;
-    background: linear-gradient(180deg, #fffefa 0%, #fffaf0 100%);
+    background: linear-gradient(180deg, #f3e1ab 0%, #ead093 100%);
     display: grid;
     gap: 0.45rem;
 }
@@ -1544,7 +1566,7 @@
 .settings-card.is-highlight,
 .schedule-card.is-highlight {
     border-color: rgba(157, 121, 16, 0.24);
-    background: linear-gradient(180deg, #fff8dd 0%, #fffdf4 100%);
+    background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
 }
 
 .settings-card.is-selected {
@@ -1675,7 +1697,7 @@
 }
 
 .settings-picker-toggle:hover {
-    background: #fff8e6;
+    background: #efdbab;
 }
 
 .settings-picker-popover {
@@ -1945,4 +1967,109 @@
     margin-top: var(--spacing-md);
     padding-top: var(--spacing-md);
     border-top: 1px solid var(--color-border-light);
+}
+
+/* =============================================
+   MODAL UI HARMONIZATION
+   ============================================= */
+
+.dashboard-modal .settings-summary-card,
+.crud-modal .settings-summary-card,
+.dashboard-modal .settings-company-ip-wrap,
+.crud-modal .settings-company-ip-wrap,
+.dashboard-modal .settings-assignment-employee-window,
+.crud-modal .settings-assignment-employee-window,
+.dashboard-modal .employee-attendance-dialog,
+.crud-modal .employee-attendance-dialog {
+    background: linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%);
+    border-color: rgba(157, 121, 16, 0.2);
+}
+
+.dashboard-modal .settings-tabs,
+.crud-modal .settings-tabs {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(157, 121, 16, 0.2);
+}
+
+.dashboard-modal .settings-assignment-employee-item:hover,
+.crud-modal .settings-assignment-employee-item:hover {
+    background: #f6f6f6;
+}
+
+.dashboard-modal .admin-action-link,
+.crud-modal .admin-action-link,
+.dashboard-modal .admin-action-link-secondary,
+.crud-modal .admin-action-link-secondary,
+.dashboard-modal .settings-tab,
+.crud-modal .settings-tab,
+.dashboard-modal .schedule-pill,
+.crud-modal .schedule-pill,
+.dashboard-modal .settings-assignment-employee-item,
+.crud-modal .settings-assignment-employee-item,
+.dashboard-modal .dashboard-sidebar-control-button,
+.crud-modal .dashboard-sidebar-control-button,
+.dashboard-modal .company-card-action,
+.crud-modal .company-card-action {
+    border: 1px solid rgba(157, 121, 16, 0.58);
+    border-radius: var(--border-radius-full);
+    background: #ffffff;
+    color: #1f1f1f;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.98),
+        0 4px 8px rgba(0, 0, 0, 0.08);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.dashboard-modal .admin-action-link:hover,
+.crud-modal .admin-action-link:hover,
+.dashboard-modal .admin-action-link-secondary:hover,
+.crud-modal .admin-action-link-secondary:hover,
+.dashboard-modal .settings-tab:hover,
+.crud-modal .settings-tab:hover,
+.dashboard-modal .schedule-pill:hover,
+.crud-modal .schedule-pill:hover,
+.dashboard-modal .settings-assignment-employee-item:hover,
+.crud-modal .settings-assignment-employee-item:hover,
+.dashboard-modal .dashboard-sidebar-control-button:hover,
+.crud-modal .dashboard-sidebar-control-button:hover,
+.dashboard-modal .company-card-action:hover,
+.crud-modal .company-card-action:hover,
+.dashboard-modal .admin-action-link:focus-visible,
+.crud-modal .admin-action-link:focus-visible,
+.dashboard-modal .admin-action-link-secondary:focus-visible,
+.crud-modal .admin-action-link-secondary:focus-visible,
+.dashboard-modal .settings-tab:focus-visible,
+.crud-modal .settings-tab:focus-visible,
+.dashboard-modal .schedule-pill:focus-visible,
+.crud-modal .schedule-pill:focus-visible,
+.dashboard-modal .settings-assignment-employee-item:focus-visible,
+.crud-modal .settings-assignment-employee-item:focus-visible,
+.dashboard-modal .dashboard-sidebar-control-button:focus-visible,
+.crud-modal .dashboard-sidebar-control-button:focus-visible,
+.dashboard-modal .company-card-action:focus-visible,
+.crud-modal .company-card-action:focus-visible {
+    background: #f7f7f7;
+    border-color: rgba(157, 121, 16, 0.72);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        0 8px 14px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.dashboard-modal .settings-tab.is-active,
+.crud-modal .settings-tab.is-active,
+.dashboard-modal .schedule-pill.is-active,
+.crud-modal .schedule-pill.is-active,
+.dashboard-modal .dashboard-sidebar-control-button.is-active,
+.crud-modal .dashboard-sidebar-control-button.is-active {
+    background: var(--color-secondary);
+    color: #ffffff;
+    border-color: var(--color-secondary);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
 }

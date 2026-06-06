@@ -38,7 +38,7 @@
       button.addEventListener('click', function () {
         var action = button.getAttribute('data-calendar-nav');
         var navMode = state.navigationMode || state.mode;
-        var stepByDay = state.mode === 'week';
+        var stepByDay = state.mode === 'week' && state.navigationMode === 'day';
         if (action === 'prev') {
           if (navMode === 'year') state.focusDate = new Date(state.focusDate.getFullYear() - 1, 0, 1, 12, 0, 0, 0);
           else if (navMode === 'month') state.focusDate = new Date(state.focusDate.getFullYear(), state.focusDate.getMonth() - 1, 1, 12, 0, 0, 0);

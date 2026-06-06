@@ -228,7 +228,7 @@
       if (state.mode === 'day') {
         cells.push(renderDayCard(state.focusDate));
       } else if (state.mode === 'week') {
-        var startWeek = startOfWeek(state.focusDate);
+        var startWeek = state.navigationMode === 'day' ? new Date(state.focusDate) : startOfWeek(state.focusDate);
         for (var weekIndex = 0; weekIndex < 7; weekIndex += 1) {
           cells.push(renderDayCard(addDays(startWeek, weekIndex)));
         }

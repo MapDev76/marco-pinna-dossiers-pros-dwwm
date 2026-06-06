@@ -87,12 +87,16 @@ $requestTypeLabels = [
                     <div class="dashboard-calendar-headline">
                         <div class="dashboard-calendar-headline-main">
                             <div class="dashboard-calendar-top-row">
-                                <input type="text" class="dashboard-calendar-navigator-range" value="<?php echo e(date('d/m/y')); ?> - <?php echo e(date('d/m/y')); ?>" readonly data-calendar-range-display>
+                                <div class="dashboard-calendar-range-actions">
+                                    <input type="text" class="dashboard-calendar-navigator-range" value="<?php echo e(date('d/m/y')); ?> - <?php echo e(date('d/m/y')); ?>" readonly data-calendar-range-display>
+                                    <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="today"><?php echo e(t('common.today', ['fallback' => 'Today'])); ?></button>
+                                </div>
                                 <div class="dashboard-calendar-title-nav">
                                     <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="prev" aria-label="Prev">‹</button>
                                     <h2 class="dashboard-calendar-title" data-calendar-title><?php echo e($dashboardCalendarScopeLabel ?? t('common.calendar')); ?></h2>
                                     <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="next" aria-label="Next">›</button>
                                 </div>
+                                <p class="dashboard-calendar-title-meta" data-calendar-stats><?php echo e(date('d M Y')); ?></p>
                                 <div class="dashboard-calendar-navigator-actions is-inline">
                                     <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="day"><?php echo e(t('common.one_day', ['fallback' => '1 day'])); ?></button>
                                     <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="week"><?php echo e(t('common.seven_days')); ?></button>
@@ -100,7 +104,6 @@ $requestTypeLabels = [
                                     <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="month"><?php echo e(t('common.one_month')); ?></button>
                                 </div>
                             </div>
-                            <p class="dashboard-calendar-title-meta" data-calendar-stats><?php echo e(date('d M Y')); ?></p>
                         </div>
                     </div>
 

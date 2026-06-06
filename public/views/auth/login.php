@@ -1,5 +1,11 @@
 <!-- Shared login page: authenticates all active roles. -->
 <?php $loginError = $loginError ?? null; ?>
+<?php
+$basePath = $basePath ?? (function () {
+    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
+})();
+?>
 <div class="auth-card">
     <h1><?php echo e(t('auth.login_title')); ?></h1>
     <p><?php echo e(t('auth.login_info')); ?></p>
@@ -8,12 +14,10 @@
         <div id="flash-backdrop-login" class="flash-backdrop"></div>
         <div id="flash-login" class="flash flash-error" role="alert" aria-live="assertive" data-backdrop="flash-backdrop-login">
             <button class="flash-close" aria-label="<?php echo e(t('common.close_message')); ?>">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.41 4.29 19.71 2.88 18.29 9.18 12 2.88 5.71 4.29 4.29 10.59 10.59 17.89 4.29z"/></svg>
+                <img src="<?php echo $basePath; ?>/assets/icons/close.svg" alt="" aria-hidden="true">
             </button>
             <span class="flash-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.54 13.54L13.41 12l2.13-3.54L15.13 7 12 10.13 8.87 7 7.46 8.46 9.59 12 7.46 15.54 8.87 17 12 13.87 15.13 17z" />
-                </svg>
+                <img src="<?php echo $basePath; ?>/assets/icons/alert-circle.svg" alt="" aria-hidden="true" />
             </span>
             <div class="flash-body">
                 <div class="flash-title"><?php echo e(t('auth.login_error_title')); ?></div>
