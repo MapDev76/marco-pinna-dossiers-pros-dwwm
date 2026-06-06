@@ -84,26 +84,22 @@ $requestTypeLabels = [
                 </section>
             <?php elseif ($role === 'admin' || $role === 'department_manager'): ?>
                 <section class="admin-card dashboard-calendar-shell">
-                    <div class="dashboard-calendar-navigator overlay" id="dashboard-calendar-navigator" aria-hidden="true">
-                        <div class="dashboard-calendar-navigator-top">
-                            <button type="button" class="dashboard-calendar-navigator-close" data-calendar-navigator-toggle aria-label="<?php echo e(t('common.calendar')); ?>">⌃</button>
-                            <input type="text" class="dashboard-calendar-navigator-range" value="<?php echo e(date('d/m/y')); ?> - <?php echo e(date('d/m/y')); ?>" readonly data-calendar-range-display>
-                        </div>
-                        <div class="dashboard-calendar-navigator-modes">
-                            <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="week"><?php echo e(t('common.seven_days')); ?></button>
-                            <button type="button" class="dashboard-calendar-navigator-pill is-active" data-calendar-mode="fortnight"><?php echo e(t('common.fifteen_days')); ?></button>
-                            <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="month"><?php echo e(t('common.one_month')); ?></button>
-                        </div>
-                        <div class="dashboard-calendar-navigator-actions">
-                            <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="prev">‹</button>
-                            <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="today" aria-label="<?php echo e(t('common.today')); ?>"><?php echo e(t('common.today')); ?></button>
-                            <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="next">›</button>
-                        </div>
-                    </div>
-
                     <div class="dashboard-calendar-headline">
-                        <div>
-                            <h2 class="dashboard-calendar-title" data-calendar-title><?php echo e($dashboardCalendarScopeLabel ?? t('common.calendar')); ?></h2>
+                        <div class="dashboard-calendar-headline-main">
+                            <div class="dashboard-calendar-top-row">
+                                <input type="text" class="dashboard-calendar-navigator-range" value="<?php echo e(date('d/m/y')); ?> - <?php echo e(date('d/m/y')); ?>" readonly data-calendar-range-display>
+                                <div class="dashboard-calendar-title-nav">
+                                    <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="prev" aria-label="Prev">‹</button>
+                                    <h2 class="dashboard-calendar-title" data-calendar-title><?php echo e($dashboardCalendarScopeLabel ?? t('common.calendar')); ?></h2>
+                                    <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="next" aria-label="Next">›</button>
+                                </div>
+                                <div class="dashboard-calendar-navigator-actions is-inline">
+                                    <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="day"><?php echo e(t('common.one_day', ['fallback' => '1 day'])); ?></button>
+                                    <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="week"><?php echo e(t('common.seven_days')); ?></button>
+                                    <button type="button" class="dashboard-calendar-navigator-pill is-active" data-calendar-mode="fortnight"><?php echo e(t('common.fifteen_days')); ?></button>
+                                    <button type="button" class="dashboard-calendar-navigator-pill" data-calendar-mode="month"><?php echo e(t('common.one_month')); ?></button>
+                                </div>
+                            </div>
                             <p class="dashboard-calendar-title-meta" data-calendar-stats><?php echo e(date('d M Y')); ?></p>
                         </div>
                     </div>

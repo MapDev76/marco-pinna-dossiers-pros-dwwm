@@ -1,12 +1,12 @@
 /* =============================================
-    REUSABLE COMPONENTS
+   COMPOSANTS RÉUTILISABLES
    =============================================
-    Styles for reusable components such as cards,
-    buttons, forms, and more.
+   Styles pour les composants réutilisables comme les cartes,
+   boutons, formulaires, etc.
    ============================================= */
 
 /* =============================================
-    CARDS
+   CARTES (CARD)
    ============================================= */
 .admin-card {
     width: 100%;
@@ -26,7 +26,7 @@
 }
 
 /* =============================================
-    BUTTONS
+   BOUTONS
    ============================================= */
 .admin-action-link {
     display: inline-flex;
@@ -58,7 +58,7 @@ button.admin-action-link {
 }
 
 /* =============================================
-    FORMS
+   FORMULAIRES
    ============================================= */
 .admin-form {
     display: grid;
@@ -94,7 +94,7 @@ button.admin-action-link {
     resize: vertical;
 }
 
-/* Form actions */
+/* Actions des formulaires */
 .form-actions {
     display: flex;
     gap: var(--spacing-sm);
@@ -112,7 +112,7 @@ button.admin-action-link {
     cursor: pointer;
 }
 
-/* Two-column elements */
+/* Éléments sur 2 colonnes */
 .span-2 {
     grid-column: span 2;
 }
@@ -144,7 +144,7 @@ button.admin-action-link {
     color: var(--color-text-light);
 }
 
-/* Table actions */
+/* Actions dans les tableaux */
 .table-actions {
     display: flex;
     gap: var(--spacing-xs);
@@ -158,9 +158,31 @@ button.admin-action-link {
     text-decoration: none;
 }
 
+/* Formulaires en ligne */
+.inline-form {
+    display: inline;
+}
+
+.inline-form button {
+    background: var(--color-error-text);
+}
+
+/* Badges */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.65rem;
+    border-radius: var(--border-radius-full);
+    background: var(--color-badge-bg);
+    color: var(--color-badge-text);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+}
+
 /* =============================================
-    BUTTONS IN THE DOCUMENTS TABLE
-    ============================================= */
+   PULSANTI NELLA TABELLA DEI DOCUMENTI
+   ============================================= */
 .admin-table td .admin-action-link {
     display: inline-block;
     margin-right: var(--spacing-xs);
@@ -173,9 +195,7 @@ button.admin-action-link {
     margin-right: var(--spacing-sm);
 }
 
-/* Empty placeholder comment */
-
-
+/* Celle della tabella */
 .admin-table td {
     padding: var(--spacing-sm) var(--spacing-md);
     vertical-align: middle;

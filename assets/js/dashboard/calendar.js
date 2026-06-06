@@ -9,10 +9,15 @@
 
 (function(){
   var feedback = window.DashboardFeedback;
+  var locale = String(document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+  var isFr = locale.indexOf('fr') === 0;
+  function tr(enText, frText) {
+    return isFr ? frText : enText;
+  }
 
   function notifyError(message) {
     if (feedback && typeof feedback.error === 'function') {
-      feedback.error('Oops!', message);
+      feedback.error(tr('Oops!', 'Erreur'), message);
       return;
     }
     console.error(message);
@@ -20,7 +25,7 @@
 
   function notifySuccess(message) {
     if (feedback && typeof feedback.success === 'function') {
-      feedback.success('Done', message);
+      feedback.success(tr('Done', 'Termine'), message);
       return;
     }
   }
@@ -364,7 +369,7 @@
     var host = document.createElement('div');
     host.className = 'calendar-day-fullscreen-overlay';
     host.hidden = true;
-    host.innerHTML = '\n      <section class="calendar-day-fullscreen-modal" role="dialog" aria-modal="true" aria-label="Day assignments">\n        <header class="calendar-day-fullscreen-head">\n          <div>\n            <p class="calendar-day-fullscreen-kicker">Daily overview</p>\n            <h3 data-calendar-day-fullscreen-title></h3>\n          </div>\n          <div class="calendar-day-fullscreen-head-actions">\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-prev>Previous day</button>\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-next>Next day</button>\n            <button type="button" class="calendar-day-fullscreen-close" data-calendar-day-fullscreen-close aria-label="Close">×</button>\n          </div>\n        </header>\n        <section class="calendar-day-fullscreen-summary" data-calendar-day-fullscreen-summary></section>\n        <section class="calendar-day-fullscreen-manual" data-calendar-day-fullscreen-manual></section>\n        <section class="calendar-day-fullscreen-unavailable" data-calendar-day-fullscreen-unavailable></section>\n        <div class="calendar-day-fullscreen-list" data-calendar-day-fullscreen-list></div>\n      </section>\n    ';
+    host.innerHTML = '\n      <section class="calendar-day-fullscreen-modal" role="dialog" aria-modal="true" aria-label="' + tr('Day assignments', 'Affectations du jour') + '">\n        <header class="calendar-day-fullscreen-head">\n          <div>\n            <p class="calendar-day-fullscreen-kicker">' + tr('Daily overview', 'Apercu quotidien') + '</p>\n            <h3 data-calendar-day-fullscreen-title></h3>\n          </div>\n          <div class="calendar-day-fullscreen-head-actions">\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-prev>' + tr('Previous day', 'Jour precedent') + '</button>\n            <button type="button" class="calendar-day-fullscreen-nav" data-calendar-day-fullscreen-next>' + tr('Next day', 'Jour suivant') + '</button>\n            <button type="button" class="calendar-day-fullscreen-close" data-calendar-day-fullscreen-close aria-label="' + tr('Close', 'Fermer') + '">×</button>\n          </div>\n        </header>\n        <section class="calendar-day-fullscreen-summary" data-calendar-day-fullscreen-summary></section>\n        <section class="calendar-day-fullscreen-manual" data-calendar-day-fullscreen-manual></section>\n        <section class="calendar-day-fullscreen-unavailable" data-calendar-day-fullscreen-unavailable></section>\n        <div class="calendar-day-fullscreen-list" data-calendar-day-fullscreen-list></div>\n      </section>\n    ';
 
     document.body.appendChild(host);
 
@@ -377,7 +382,7 @@
     var prevButton = host.querySelector('[data-calendar-day-fullscreen-prev]');
     var nextButton = host.querySelector('[data-calendar-day-fullscreen-next]');
     var panel = host.querySelector('.calendar-day-fullscreen-modal');
-    var titleFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    var titleFormatter = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     var assignShift = typeof options.assignShift === 'function' ? options.assignShift : null;
     var getActiveUser = typeof options.getActiveUser === 'function' ? options.getActiveUser : null;
     var getActiveShift = typeof options.getActiveShift === 'function' ? options.getActiveShift : null;
@@ -395,7 +400,7 @@
 
     function toDateLabel(dateValue) {
       var dateObj = typeof toLocalDate === 'function' ? toLocalDate(dateValue) : new Date(dateValue + 'T12:00:00');
-      if (!dateObj || Number.isNaN(dateObj.getTime())) return String(dateValue || 'Selected date');
+      if (!dateObj || Number.isNaN(dateObj.getTime())) return String(dateValue || tr('Selected date', 'Date selectionnee'));
       return titleFormatter.format(dateObj);
     }
 
@@ -404,7 +409,7 @@
         var key = String(event.shift_id || 0);
         if (!map.has(key)) {
           map.set(key, {
-            shiftName: event.shift_name || 'Shift',
+            shiftName: event.shift_name || tr('Shift', 'Poste'),
             shiftIcon: event.shift_icon || '🕒',
             shiftColor: event.shift_color || '#2f6fed',
             startTime: event.start_time || null,
@@ -414,7 +419,7 @@
         }
         if (Number(event.user_id || 0) > 0) {
           var fullName = String(event.user_name || '').trim();
-          map.get(key).employees.push(fullName || ('Employee #' + Number(event.user_id || 0)));
+          map.get(key).employees.push(fullName || (tr('Employee', 'Employe') + ' #' + Number(event.user_id || 0)));
         }
         return map;
       }, new Map());
@@ -499,7 +504,7 @@
       var lateCount = dayAttendances.filter(function (item) { return String(item.status || '').toLowerCase() === 'late'; }).length;
       var absentCount = dayAttendances.filter(function (item) { return String(item.status || '').toLowerCase() === 'absent'; }).length;
 
-      summaryNode.innerHTML = '\n        <div class="calendar-day-fullscreen-summary-grid">\n          <article class="calendar-day-fullscreen-summary-card"><span>Total shifts</span><strong>' + groups.length + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Assigned employees</span><strong>' + assignedUsers.size + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Open shifts</span><strong>' + openShifts + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Rest / Vacation / Sick</span><strong>' + unavailable.rest.length + ' / ' + unavailable.vacation.length + ' / ' + unavailable.sick.length + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Late attendances</span><strong>' + lateCount + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>Absent attendances</span><strong>' + absentCount + '</strong></article>\n        </div>\n      ';
+      summaryNode.innerHTML = '\n        <div class="calendar-day-fullscreen-summary-grid">\n          <article class="calendar-day-fullscreen-summary-card"><span>' + tr('Total shifts', 'Total postes') + '</span><strong>' + groups.length + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>' + tr('Assigned employees', 'Employes assignes') + '</span><strong>' + assignedUsers.size + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>' + tr('Open shifts', 'Postes ouverts') + '</span><strong>' + openShifts + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>' + tr('Rest / Vacation / Sick', 'Repos / Vacances / Maladie') + '</span><strong>' + unavailable.rest.length + ' / ' + unavailable.vacation.length + ' / ' + unavailable.sick.length + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>' + tr('Late attendances', 'Presences en retard') + '</span><strong>' + lateCount + '</strong></article>\n          <article class="calendar-day-fullscreen-summary-card"><span>' + tr('Absent attendances', 'Presences absentes') + '</span><strong>' + absentCount + '</strong></article>\n        </div>\n      ';
     }
 
     function renderManualAssignment(dateValue) {
@@ -510,12 +515,12 @@
       var selectedUserName = String(selectedUser && selectedUser.name ? selectedUser.name : '').trim();
 
       if (!selectedUserId) {
-        manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">Select an employee from the sidebar to assign Rest, Vacation or Sick leave for this date.</p>';
+        manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">' + tr('Select an employee from the sidebar to assign Rest, Vacation or Sick leave for this date.', 'Selectionnez un employe depuis la barre laterale pour attribuer repos, vacances ou arret maladie a cette date.') + '</p>';
         return;
       }
 
       if (String(dateValue || '') < todayKey()) {
-        manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">Past dates are locked and cannot be edited.</p>';
+        manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">' + tr('Past dates are locked and cannot be edited.', 'Les dates passees sont verrouillees et ne peuvent pas etre modifiees.') + '</p>';
         return;
       }
 
@@ -523,16 +528,16 @@
       var vacationShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('vacation') || 0) : 0;
       var sickShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('sick') || 0) : 0;
       if (!restShiftId || !vacationShiftId || !sickShiftId) {
-        manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">Absence templates are not available for this department.</p>';
+        manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">' + tr('Absence templates are not available for this department.', 'Les modeles d absence ne sont pas disponibles pour ce departement.') + '</p>';
         return;
       }
 
       var activeShift = getActiveShift ? (getActiveShift() || null) : null;
       var activeShiftKind = String(activeShift && activeShift.kind ? activeShift.kind : '').toLowerCase();
       var activeWorkShiftId = activeShift && activeShiftKind === 'work' ? Number(activeShift.id || 0) : 0;
-      var activeWorkShiftName = activeShift && activeShiftKind === 'work' ? String(activeShift.name || 'Selected shift') : 'Selected shift';
+      var activeWorkShiftName = activeShift && activeShiftKind === 'work' ? String(activeShift.name || tr('Selected shift', 'Poste selectionne')) : tr('Selected shift', 'Poste selectionne');
 
-      manualNode.innerHTML = '\n        <div class="calendar-day-fullscreen-manual-head">\n          <strong>Manual force assignment</strong>\n          <span>' + (selectedUserName || ('Employee #' + selectedUserId)) + ' • ' + dateValue + '</span>\n        </div>\n        <div class="calendar-day-fullscreen-manual-actions">\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="rest" data-user-id="' + selectedUserId + '" data-shift-id="' + restShiftId + '" data-date="' + dateValue + '">💤 Rest</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="vacation" data-user-id="' + selectedUserId + '" data-shift-id="' + vacationShiftId + '" data-date="' + dateValue + '">🏖 Vacation</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="sick" data-user-id="' + selectedUserId + '" data-shift-id="' + sickShiftId + '" data-date="' + dateValue + '">🤒 Sick</button>\n          ' + (activeWorkShiftId > 0 ? ('<button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-force-work="1" data-user-id="' + selectedUserId + '" data-shift-id="' + activeWorkShiftId + '" data-date="' + dateValue + '">⏱ Work: ' + activeWorkShiftName + '</button>') : '<span class="calendar-day-fullscreen-manual-note">Select a work shift in sidebar to force work assignment.</span>') + '\n        </div>\n        <p class="calendar-day-fullscreen-manual-note">Manual actions force assignment even if personal settings mark user unavailable.</p>\n      ';
+      manualNode.innerHTML = '\n        <div class="calendar-day-fullscreen-manual-head">\n          <strong>' + tr('Manual force assignment', 'Affectation manuelle forcee') + '</strong>\n          <span>' + (selectedUserName || (tr('Employee', 'Employe') + ' #' + selectedUserId)) + ' • ' + dateValue + '</span>\n        </div>\n        <div class="calendar-day-fullscreen-manual-actions">\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="rest" data-user-id="' + selectedUserId + '" data-shift-id="' + restShiftId + '" data-date="' + dateValue + '">💤 ' + tr('Rest', 'Repos') + '</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="vacation" data-user-id="' + selectedUserId + '" data-shift-id="' + vacationShiftId + '" data-date="' + dateValue + '">🏖 ' + tr('Vacation', 'Vacances') + '</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="sick" data-user-id="' + selectedUserId + '" data-shift-id="' + sickShiftId + '" data-date="' + dateValue + '">🤒 ' + tr('Sick', 'Maladie') + '</button>\n          ' + (activeWorkShiftId > 0 ? ('<button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-force-work="1" data-user-id="' + selectedUserId + '" data-shift-id="' + activeWorkShiftId + '" data-date="' + dateValue + '">⏱ ' + tr('Work', 'Travail') + ': ' + activeWorkShiftName + '</button>') : '<span class="calendar-day-fullscreen-manual-note">' + tr('Select a work shift in sidebar to force work assignment.', 'Selectionnez un poste de travail dans la barre laterale pour forcer l affectation.') + '</span>') + '\n        </div>\n        <p class="calendar-day-fullscreen-manual-note">' + tr('Manual actions force assignment even if personal settings mark user unavailable.', 'Les actions manuelles forcent l affectation meme si les regles personnelles marquent l utilisateur indisponible.') + '</p>\n      ';
     }
 
     function openModal(dateValue) {
@@ -557,12 +562,12 @@
 
       if (listNode) {
         if (!groups.length) {
-          listNode.innerHTML = '<p class="calendar-day-fullscreen-empty">No shifts scheduled for this date.</p>';
+          listNode.innerHTML = '<p class="calendar-day-fullscreen-empty">' + tr('No shifts scheduled for this date.', 'Aucun poste planifie pour cette date.') + '</p>';
         } else {
           listNode.innerHTML = groups.map(function (group) {
             var employees = group.employees.length
               ? group.employees
-              : ['Open shift'];
+              : [tr('Open shift', 'Poste ouvert')];
             return '\n              <article class="calendar-day-fullscreen-shift" style="--fullscreen-shift-color:' + group.shiftColor + '">\n                <div class="calendar-day-fullscreen-shift-head">\n                  <span class="calendar-day-fullscreen-shift-title">' + group.shiftName + '</span>\n                  <span class="calendar-day-fullscreen-shift-time">' + formatShiftTime(group) + '</span>\n                </div>\n                <ul class="calendar-day-fullscreen-employees">' + employees.map(function (name) {
                   return '<li>' + name + '</li>';
                 }).join('') + '</ul>\n              </article>\n            ';
@@ -577,7 +582,7 @@
           unavailableNode.hidden = true;
         } else {
           unavailableNode.hidden = false;
-          unavailableNode.innerHTML = '\n            <div class="calendar-day-fullscreen-unavailable-head">Unavailable employees</div>\n            <div class="calendar-day-fullscreen-unavailable-grid">\n              <section class="calendar-day-fullscreen-unavailable-card is-rest">\n                <h4>💤 Rest day</h4>\n                ' + (unavailable.rest.length ? ('<ul>' + unavailable.rest.map(function (name) { return '<li>💤 ' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-vacation">\n                <h4>🏖 Vacation / Holidays</h4>\n                ' + (unavailable.vacation.length ? ('<ul>' + unavailable.vacation.map(function (name) { return '<li>🏖 ' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-sick">\n                <h4>🤒 Sick leave</h4>\n                ' + (unavailable.sick.length ? ('<ul>' + unavailable.sick.map(function (name) { return '<li>🤒 ' + name + '</li>'; }).join('') + '</ul>') : '<p>None</p>') + '\n              </section>\n            </div>\n          ';
+          unavailableNode.innerHTML = '\n            <div class="calendar-day-fullscreen-unavailable-head">' + tr('Unavailable employees', 'Employes indisponibles') + '</div>\n            <div class="calendar-day-fullscreen-unavailable-grid">\n              <section class="calendar-day-fullscreen-unavailable-card is-rest">\n                <h4>💤 ' + tr('Rest day', 'Jour de repos') + '</h4>\n                ' + (unavailable.rest.length ? ('<ul>' + unavailable.rest.map(function (name) { return '<li>💤 ' + name + '</li>'; }).join('') + '</ul>') : '<p>' + tr('None', 'Aucun') + '</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-vacation">\n                <h4>🏖 ' + tr('Vacation / Holidays', 'Vacances / Conges') + '</h4>\n                ' + (unavailable.vacation.length ? ('<ul>' + unavailable.vacation.map(function (name) { return '<li>🏖 ' + name + '</li>'; }).join('') + '</ul>') : '<p>' + tr('None', 'Aucun') + '</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-sick">\n                <h4>🤒 ' + tr('Sick leave', 'Arret maladie') + '</h4>\n                ' + (unavailable.sick.length ? ('<ul>' + unavailable.sick.map(function (name) { return '<li>🤒 ' + name + '</li>'; }).join('') + '</ul>') : '<p>' + tr('None', 'Aucun') + '</p>') + '\n              </section>\n            </div>\n          ';
         }
       }
 

@@ -26,6 +26,10 @@
     var isUserAvailableForDate = options.isUserAvailableForDate;
     var getUserAvailabilityStatus = options.getUserAvailabilityStatus;
     var getVisibleDateKeys = options.getVisibleDateKeys;
+    var locale = String(document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+    var isFr = locale.indexOf('fr') === 0;
+    var tr = function (enText, frText) { return isFr ? frText : enText; };
+    var weekdayFormatter = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { weekday: 'short' });
     var todayKey = dateKey(calendarToday);
 
     function escapeHtml(value) {
@@ -83,7 +87,7 @@
       var assignmentId = Number(baseEvent.assignment_id || 0);
       var activeUserId = Number(state.activeUserId || 0);
       var activeShiftId = Number(state.activeShiftId || 0);
-      var activeUserName = (state.activeUserName || '').trim() || 'this employee';
+      var activeUserName = (state.activeUserName || '').trim() || tr('this employee', 'cet employe');
       var badge = (baseEvent.shift_icon ? '<span class="calendar-event-badge" style="color: ' + shiftColor + '">' + (baseEvent.shift_icon || '') + '</span>' : '');
       var assignedEmployees = (group.events || []).filter(function (event) {
         return Number(event.user_id || 0) > 0;
@@ -110,7 +114,7 @@
       var isSidebarAssignableTarget = isSidebarAssignCandidate && availabilityStatus.available;
       var sidebarUnavailableReason = (!availabilityStatus.available && availabilityStatus.reason)
         ? String(availabilityStatus.reason)
-        : 'Unavailable.';
+        : tr('Unavailable.', 'Indisponible.');
       var employeeSlot = '';
 
       if (assignedEmployees.length > 0) {
@@ -120,7 +124,7 @@
           var employeeName = (employeeEvent.user_name || '').trim();
           var employeeInitials = employeeName.split(' ').filter(Boolean).map(function (chunk) { return chunk.charAt(0).toUpperCase(); }).slice(0, 2).join('');
           var employeeBadge = employeeInitials ? '<span class="calendar-event-user-badge" style="--event-user-color:' + shiftColor + '; background:' + shiftColor + '; color:#ffffff;">' + employeeInitials + '</span>' : '';
-          var employeeFullName = employeeName || 'Employee';
+          var employeeFullName = employeeName || tr('Employee', 'Employe');
           var employeeLabel = '<span class="calendar-event-user-fullname">' + employeeFullName + '</span>';
           if (isPastSlot) {
             return '\n              <span class="calendar-event-slot-card is-locked" title="Past day locked">\n                ' + employeeBadge + employeeLabel + '\n              </span>\n            ';
@@ -159,14 +163,14 @@
           work_date: key,
           status: 'open',
           shift_id: shiftId,
-          shift_name: shift.name || 'Shift',
+          shift_name: shift.name || tr('Shift', 'Poste'),
           shift_icon: shift.icon || '🕒',
           shift_color: shift.color || '#2f6fed',
           shift_kind: shift.kind || 'work',
           start_time: shift.start_time || null,
           end_time: shift.end_time || null,
           department_id: activeDepartment ? activeDepartment.id : 0,
-          department_name: activeDepartment ? activeDepartment.name : 'Department',
+          department_name: activeDepartment ? activeDepartment.name : tr('Department', 'Departement'),
           department_color: activeDepartment ? activeDepartment.color : null,
           user_id: 0,
           user_name: '',
@@ -182,9 +186,9 @@
       var isSelected = key === dateKey(state.selectedDate);
       var isPastDay = key < todayKey;
       var isMuted = !!(options && options.muted);
-      var dayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date).toUpperCase();
+      var dayLabel = weekdayFormatter.format(date).replace('.', '').toUpperCase();
 
-      return '\n        <article class="calendar-day-card' + (isCurrentDay ? ' is-current' : '') + (isSelected ? ' is-selected' : '') + (isPastDay ? ' is-past' : '') + (isMuted ? ' is-muted' : '') + '" data-calendar-date="' + key + '" data-date-key="' + key + '">\n          <header class="calendar-day-head">\n            <span class="calendar-day-weekday">' + dayLabel + '</span>\n            <span class="calendar-day-number">' + date.getDate() + '</span>\n          </header>\n          <div class="calendar-day-events">\n            ' + (groupedEvents.length ? groupedEvents.map(function (group) { return renderAssignmentCard(group, true); }).join('') : '<div class="calendar-empty">Drop a user here to assign a shift</div>') + '\n          </div>\n        </article>\n      ';
+      return '\n        <article class="calendar-day-card' + (isCurrentDay ? ' is-current' : '') + (isSelected ? ' is-selected' : '') + (isPastDay ? ' is-past' : '') + (isMuted ? ' is-muted' : '') + '" data-calendar-date="' + key + '" data-date-key="' + key + '">\n          <header class="calendar-day-head">\n            <span class="calendar-day-weekday">' + dayLabel + '</span>\n            <span class="calendar-day-number">' + date.getDate() + '</span>\n          </header>\n          <div class="calendar-day-events">\n            ' + (groupedEvents.length ? groupedEvents.map(function (group) { return renderAssignmentCard(group, true); }).join('') : '<div class="calendar-empty"></div>') + '\n          </div>\n        </article>\n      ';
     };
 
     var renderYearCard = function (monthIndex) {
@@ -197,8 +201,8 @@
       });
       var topEvents = monthEvents.slice(0, 2);
       return '\n        <article class="calendar-year-card' + (monthIndex === calendarToday.getMonth() ? ' is-current' : '') + '" data-calendar-date="' + monthDate.getFullYear() + '-' + pad(monthIndex + 1) + '-01">\n          <header class="calendar-year-head">\n            <span class="calendar-year-label">' + monthNames[monthIndex] + '</span>\n            <span class="calendar-year-number">' + monthEvents.length + '</span>\n          </header>\n          <div class="calendar-year-events">\n            ' + (topEvents.length ? topEvents.map(function (event) {
-              return '\n              <div class="calendar-year-summary">\n                <span class="calendar-year-summary-title">' + event.work_date + '</span>\n                <span class="calendar-year-summary-meta">' + (event.shift_name || 'Shift') + (event.user_name ? ' • ' + event.user_name : '') + '</span>\n              </div>\n            ';
-            }).join('') : '<div class="calendar-empty">No assignments</div>') + '\n          </div>\n        </article>\n      ';
+              return '\n              <div class="calendar-year-summary">\n                <span class="calendar-year-summary-title">' + event.work_date + '</span>\n                <span class="calendar-year-summary-meta">' + (event.shift_name || tr('Shift', 'Poste')) + (event.user_name ? ' • ' + event.user_name : '') + '</span>\n              </div>\n            ';
+            }).join('') : '<div class="calendar-empty"></div>') + '\n          </div>\n        </article>\n      ';
     };
 
     var renderDetail = function () {
@@ -207,7 +211,7 @@
       var selectedEvents = Array.from(groupEventsByShiftDate((eventsByDate().get(key) || []).slice()).values()).sort(function (a, b) {
         return String(a.base.start_time || '').localeCompare(String(b.base.start_time || ''));
       });
-      calendarDetail.innerHTML = '\n        <div class="dashboard-calendar-detail-title">\n          <span>' + fullDateFormatter.format(state.selectedDate) + '</span>\n          <span>' + selectedEvents.length + ' shifts</span>\n        </div>\n        <div class="dashboard-calendar-detail-meta">\n          <span class="dashboard-calendar-detail-chip">' + monthLabelFormatter.format(state.selectedDate) + '</span>\n          <span class="dashboard-calendar-detail-chip">' + dateKey(state.selectedDate) + '</span>\n        </div>\n        <div class="calendar-day-events">\n          ' + (selectedEvents.length ? selectedEvents.map(function (group) { return renderAssignmentCard(group, false); }).join('') : '<div class="dashboard-calendar-detail-empty">No assignments for this date.</div>') + '\n        </div>\n      ';
+      calendarDetail.innerHTML = '\n        <div class="dashboard-calendar-detail-title">\n          <span>' + fullDateFormatter.format(state.selectedDate) + '</span>\n          <span>' + selectedEvents.length + ' ' + tr('shifts', 'postes') + '</span>\n        </div>\n        <div class="dashboard-calendar-detail-meta">\n          <span class="dashboard-calendar-detail-chip">' + monthLabelFormatter.format(state.selectedDate) + '</span>\n          <span class="dashboard-calendar-detail-chip">' + dateKey(state.selectedDate) + '</span>\n        </div>\n        <div class="calendar-day-events">\n          ' + (selectedEvents.length ? selectedEvents.map(function (group) { return renderAssignmentCard(group, false); }).join('') : '<div class="dashboard-calendar-detail-empty">' + tr('No assignments for this date.', 'Aucune affectation pour cette date.') + '</div>') + '\n        </div>\n      ';
     };
 
     var renderCalendar = function () {
@@ -221,7 +225,9 @@
       }
 
       var cells = [];
-      if (state.mode === 'week') {
+      if (state.mode === 'day') {
+        cells.push(renderDayCard(state.focusDate));
+      } else if (state.mode === 'week') {
         var startWeek = startOfWeek(state.focusDate);
         for (var weekIndex = 0; weekIndex < 7; weekIndex += 1) {
           cells.push(renderDayCard(addDays(startWeek, weekIndex)));

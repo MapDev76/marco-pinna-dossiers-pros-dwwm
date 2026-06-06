@@ -29,7 +29,7 @@ $role = $currentUser['role'] ?? 'employee';
     <div class="schedule-board">
         <div class="schedule-card is-highlight">
             <div class="schedule-card-head">
-                <span class="schedule-badge">Reception</span>
+                <span class="schedule-badge"><?php echo e(t('schedule.sample_reception')); ?></span>
                 <span class="schedule-color">#b98b12</span>
             </div>
             <div class="schedule-row"><span><?php echo e(t('schedule.start')); ?></span><strong>06:00</strong></div>
@@ -38,7 +38,7 @@ $role = $currentUser['role'] ?? 'employee';
         </div>
         <div class="schedule-card">
             <div class="schedule-card-head">
-                <span class="schedule-badge">Housekeeping</span>
+                <span class="schedule-badge"><?php echo e(t('schedule.sample_housekeeping')); ?></span>
                 <span class="schedule-color">#6c7ae0</span>
             </div>
             <div class="schedule-row"><span><?php echo e(t('schedule.start')); ?></span><strong>08:00</strong></div>
@@ -47,7 +47,7 @@ $role = $currentUser['role'] ?? 'employee';
         </div>
         <div class="schedule-card">
             <div class="schedule-card-head">
-                <span class="schedule-badge">Maintenance</span>
+                <span class="schedule-badge"><?php echo e(t('schedule.sample_maintenance')); ?></span>
                 <span class="schedule-color">#df7b2b</span>
             </div>
             <div class="schedule-row"><span><?php echo e(t('schedule.start')); ?></span><strong>09:00</strong></div>
@@ -56,7 +56,7 @@ $role = $currentUser['role'] ?? 'employee';
         </div>
         <div class="schedule-card">
             <div class="schedule-card-head">
-                <span class="schedule-badge">Night auditor</span>
+                <span class="schedule-badge"><?php echo e(t('schedule.sample_night_auditor')); ?></span>
                 <span class="schedule-color">#8e67d9</span>
             </div>
             <div class="schedule-row"><span><?php echo e(t('schedule.start')); ?></span><strong>22:00</strong></div>
@@ -68,7 +68,7 @@ $role = $currentUser['role'] ?? 'employee';
     <div class="schedule-form-grid">
         <label class="schedule-field">
             <?php echo e(t('schedule.task_name')); ?>
-            <input type="text" value="Reception" readonly>
+            <input type="text" value="<?php echo e(t('schedule.sample_reception')); ?>" readonly>
         </label>
         <label class="schedule-field">
             <?php echo e(t('schedule.color')); ?>
@@ -80,7 +80,7 @@ $role = $currentUser['role'] ?? 'employee';
         </label>
         <label class="schedule-field">
             <?php echo e(t('schedule.department')); ?>
-            <input type="text" value="Front Office" readonly>
+            <input type="text" value="<?php echo e(t('schedule.sample_front_office')); ?>" readonly>
         </label>
     </div>
 

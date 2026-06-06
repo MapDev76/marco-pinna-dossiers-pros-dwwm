@@ -13,6 +13,9 @@
  */
 (function(){
   const config = window.DashboardConfig || {};
+  const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+  const isFr = locale.startsWith('fr');
+  const tr = (enText, frText) => (isFr ? frText : enText);
   const apiCompanies = config.apiCompanies;
   const apiDepartments = config.apiDepartments;
   const apiUsers = config.apiUsers;
@@ -150,8 +153,8 @@
 
             const template = document.getElementById('crud-template-messages');
             if (template && crudBody) {
-              if (crudTitle) crudTitle.textContent = 'Messages';
-              if (crudSubtitle) crudSubtitle.textContent = 'Create requests or notifications and send them to selected users.';
+              if (crudTitle) crudTitle.textContent = tr('Messages', 'Messages');
+              if (crudSubtitle) crudSubtitle.textContent = tr('Create requests or notifications and send them to selected users.', 'Creez des demandes ou notifications et envoyez-les aux utilisateurs selectionnes.');
               crudBody.innerHTML = template.innerHTML;
               setModalContent('messages');
             }
@@ -164,7 +167,7 @@
             const recipientProbe = template ? template.content.querySelector('#crud-message-recipient-ids') : null;
             const recipientIds = collectDepartmentEmployeeIds(recipientProbe);
             if (recipientIds.length === 0) {
-              notifyError('No employees found in the selected department.');
+              notifyError(tr('No employees found in the selected department.', 'Aucun employe trouve dans le departement selectionne.'));
               return;
             }
 
@@ -181,8 +184,8 @@
             }
 
             if (template && crudBody) {
-              if (crudTitle) crudTitle.textContent = 'Messages';
-              if (crudSubtitle) crudSubtitle.textContent = 'Create requests or notifications and send them to selected users.';
+              if (crudTitle) crudTitle.textContent = tr('Messages', 'Messages');
+              if (crudSubtitle) crudSubtitle.textContent = tr('Create requests or notifications and send them to selected users.', 'Creez des demandes ou notifications et envoyez-les aux utilisateurs selectionnes.');
               crudBody.innerHTML = template.innerHTML;
               setModalContent('messages');
             }
@@ -192,18 +195,18 @@
         crudBody.querySelectorAll('[data-document-delete-id]').forEach((button) => {
           button.addEventListener('click', async () => {
             if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-              notifyError('Dashboard API is not available.');
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
               return;
             }
 
             const documentId = Number(button.getAttribute('data-document-delete-id') || 0);
             const documentName = String(button.getAttribute('data-document-delete-name') || 'document');
             if (!documentId) {
-              notifyError('Invalid document id.');
+              notifyError(tr('Invalid document id.', 'ID document invalide.'));
               return;
             }
 
-            if (!window.confirm('Delete document "' + documentName + '"? This action cannot be undone.')) {
+            if (!window.confirm(tr('Delete document "' + documentName + '"? This action cannot be undone.', 'Supprimer le document "' + documentName + '" ? Cette action est irreversible.'))) {
               return;
             }
 
@@ -214,12 +217,12 @@
                 document_id: documentId,
               });
               if (!response || response.ok === false || response.success === false) {
-                throw new Error((response && (response.error || response.message)) || 'Unable to delete document.');
+                throw new Error((response && (response.error || response.message)) || tr('Unable to delete document.', 'Impossible de supprimer le document.'));
               }
               removeDocumentCard(button.closest('.company-card'));
-              notifySuccess('Document deleted successfully.');
+              notifySuccess(tr('Document deleted successfully.', 'Document supprime avec succes.'));
             } catch (error) {
-              notifyError((error && error.message) || 'Unable to delete document.');
+              notifyError((error && error.message) || tr('Unable to delete document.', 'Impossible de supprimer le document.'));
             } finally {
               button.disabled = false;
             }
@@ -245,8 +248,8 @@
             requestType.disabled = isNotification;
             requestType.closest('label')?.classList.toggle('is-hidden', isNotification);
           }
-          if (messageHeading) messageHeading.textContent = isNotification ? 'Create notification' : 'Create request';
-          if (messageSubmit) messageSubmit.textContent = isNotification ? 'Send notification' : 'Send request';
+          if (messageHeading) messageHeading.textContent = isNotification ? tr('Create notification', 'Creer une notification') : tr('Create request', 'Creer une demande');
+          if (messageSubmit) messageSubmit.textContent = isNotification ? tr('Send notification', 'Envoyer la notification') : tr('Send request', 'Envoyer la demande');
         };
 
         const resetMessageForm = () => {
@@ -265,10 +268,10 @@
           if (requestedId > 0) {
             documentId.value = String(requestedId);
             if (messageTitle && !messageTitle.value) {
-              messageTitle.value = 'Planning document: ' + (requestedMessageDocument.name || 'Document');
+              messageTitle.value = tr('Planning document: ', 'Document planning : ') + (requestedMessageDocument.name || tr('Document', 'Document'));
             }
             if (messageBody && !messageBody.value) {
-              messageBody.value = 'Please review the attached planning document.';
+              messageBody.value = tr('Please review the attached planning document.', 'Veuillez consulter le document de planning joint.');
             }
             if (messageKind) {
               messageKind.value = 'notification';
@@ -307,20 +310,20 @@
         const companyForm = crudBody.querySelector('#crud-company-form');
 
         const resetCompanyForm = () => {
-          if (companyHeading) companyHeading.textContent = 'Create company';
+          if (companyHeading) companyHeading.textContent = tr('Create company', 'Creer une entreprise');
           if (companyAction) companyAction.value = 'create';
           if (companyId) companyId.value = '';
-          if (companySubmit) companySubmit.textContent = 'Create company';
+          if (companySubmit) companySubmit.textContent = tr('Create company', 'Creer une entreprise');
           if (companyForm) companyForm.reset();
         };
 
         const fillCompanyForm = (card) => {
           if (!card) return;
           const data = card.dataset || {};
-          if (companyHeading) companyHeading.textContent = 'Edit company';
+          if (companyHeading) companyHeading.textContent = tr('Edit company', 'Modifier l entreprise');
           if (companyAction) companyAction.value = 'update';
           if (companyId) companyId.value = data.companyId || '';
-          if (companySubmit) companySubmit.textContent = 'Update company';
+          if (companySubmit) companySubmit.textContent = tr('Update company', 'Mettre a jour l entreprise');
           const fields = {
             'crud-company-name': data.companyName || '',
             'crud-company-type': data.companyType || 'other',
@@ -357,10 +360,10 @@
         const resetUser = crudBody.querySelector('[data-crud-reset-user]');
 
         const resetUserForm = () => {
-          if (userHeading) userHeading.textContent = 'Create user';
+          if (userHeading) userHeading.textContent = tr('Create user', 'Creer un utilisateur');
           if (userAction) userAction.value = 'create';
           if (userId) userId.value = '';
-          if (userSubmit) userSubmit.textContent = 'Create user';
+          if (userSubmit) userSubmit.textContent = tr('Create user', 'Creer un utilisateur');
           if (userForm) userForm.reset();
           syncDepartmentFilter(userDepartment, '');
         };
@@ -377,10 +380,10 @@
         const fillUserForm = (card) => {
           if (!card) return;
           const data = card.dataset || [];
-          if (userHeading) userHeading.textContent = 'Edit user';
+          if (userHeading) userHeading.textContent = tr('Edit user', 'Modifier l utilisateur');
           if (userAction) userAction.value = 'update';
           if (userId) userId.value = data.userId || '';
-          if (userSubmit) userSubmit.textContent = 'Update user';
+          if (userSubmit) userSubmit.textContent = tr('Update user', 'Mettre a jour l utilisateur');
           const fields = {
             'crud-user-first-name': data.userFirstName || '',
             'crud-user-last-name': data.userLastName || '',
@@ -437,10 +440,10 @@
         };
 
         const resetDepartmentForm = () => {
-          if (departmentHeading) departmentHeading.textContent = 'Create department';
+          if (departmentHeading) departmentHeading.textContent = tr('Create department', 'Creer un departement');
           if (departmentAction) departmentAction.value = 'create';
           if (departmentId) departmentId.value = '';
-          if (departmentSubmit) departmentSubmit.textContent = 'Create department';
+          if (departmentSubmit) departmentSubmit.textContent = tr('Create department', 'Creer un departement');
           if (departmentForm) departmentForm.reset();
           filterDepartmentHeads('');
         };
@@ -448,10 +451,10 @@
         const fillDepartmentForm = (card) => {
           if (!card) return;
           const data = card.dataset || {};
-          if (departmentHeading) departmentHeading.textContent = 'Edit department';
+          if (departmentHeading) departmentHeading.textContent = tr('Edit department', 'Modifier le departement');
           if (departmentAction) departmentAction.value = 'update';
           if (departmentId) departmentId.value = data.departmentId || '';
-          if (departmentSubmit) departmentSubmit.textContent = 'Update department';
+          if (departmentSubmit) departmentSubmit.textContent = tr('Update department', 'Mettre a jour le departement');
           if (departmentCompany) departmentCompany.value = data.departmentCompanyId || '';
           filterDepartmentHeads(data.departmentCompanyId || '');
           const fields = {
@@ -518,16 +521,16 @@
           if (crudTitle) crudTitle.textContent = title;
           if (crudSubtitle) {
             crudSubtitle.textContent = entity === 'companies'
-              ? 'Create, edit and manage companies and departments.'
+              ? tr('Create, edit and manage companies and departments.', 'Creez, modifiez et gerez entreprises et departements.')
               : entity === 'users'
-                ? 'Create, edit and assign users by role and department.'
+                ? tr('Create, edit and assign users by role and department.', 'Creez, modifiez et assignez les utilisateurs par role et departement.')
                 : entity === 'departments'
-                  ? 'Create, edit and assign departments by company and head.'
+                  ? tr('Create, edit and assign departments by company and head.', 'Creez, modifiez et assignez les departements par entreprise et responsable.')
                   : entity === 'messages'
-                    ? 'Create requests or notifications and send them to selected users.'
+                    ? tr('Create requests or notifications and send them to selected users.', 'Creez des demandes ou notifications et envoyez-les aux utilisateurs selectionnes.')
                     : entity === 'documents'
-                      ? 'Browse documents available for attachments.'
-                : 'Common CRUD shell';
+                      ? tr('Browse documents available for attachments.', 'Parcourez les documents disponibles pour les pieces jointes.')
+                : tr('Common CRUD shell', 'Conteneur CRUD commun');
           }
           if (crudBody && template) crudBody.innerHTML = template.innerHTML;
           setModalContent(entity);
@@ -686,9 +689,9 @@
     };
     const confirmAction = async (message) => {
       if (feedback?.confirm) {
-        return feedback.confirm(message, 'Confirm action');
+        return feedback.confirm(message, tr('Confirm action', 'Confirmer l action'));
       }
-      notifyError('Confirmation dialog is not available.');
+      notifyError(tr('Confirmation dialog is not available.', 'La boite de confirmation n est pas disponible.'));
       return false;
     };
 
@@ -700,25 +703,25 @@
           const action = btn.getAttribute('data-action');
           try {
             if (action === 'set-ip') {
-              const ip = prompt('Signature IP address (leave blank to remove):');
+              const ip = prompt(tr('Signature IP address (leave blank to remove):', 'Adresse IP de signature (laisser vide pour supprimer) :'));
               if (ip === null) return;
               const j = await AppAPI.companies.setSignatureIp(apiCompanies, companyId, ip);
-              if (!j.ok) notifyError('Error: ' + (j.error || 'unknown')); else notifySuccess('Company Wi-Fi IP updated.');
+              if (!j.ok) notifyError(tr('Error: ', 'Erreur : ') + (j.error || tr('unknown', 'inconnue'))); else notifySuccess(tr('Company Wi-Fi IP updated.', 'IP Wi-Fi entreprise mise a jour.'));
               return;
             }
 
             if (action === 'delete') {
-              if (!await confirmAction('Confirm deletion of this company?')) return;
+              if (!await confirmAction(tr('Confirm deletion of this company?', 'Confirmer la suppression de cette entreprise ?'))) return;
               const j = await AppAPI.companies.delete(apiCompanies, companyId);
-              if (!j.ok) notifyError('Error: ' + (j.error || 'unknown')); else location.reload();
+                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ') + (jr.error || tr('unknown', 'inconnue'))); else location.reload();
               return;
             }
-
+                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ') + (jr.error || tr('unknown', 'inconnue'))); else location.reload();
             if (action === 'manage-departments') {
               const j = await AppAPI.departments.list(apiDepartments, companyId);
               if (!j.ok) { notifyError('Error: ' + (j.error || 'unknown')); return; }
-              const list = j.departments.map(d => `${d.id}: ${d.name}`).join('\n') || 'No departments';
-              const cmd = prompt('Departments:\n' + list + '\n\nTo create: type a new name. To delete: del:<id>');
+              const list = j.departments.map(d => `${d.id}: ${d.name}`).join('\n') || tr('No departments', 'Aucun departement');
+              const cmd = prompt(tr('Departments:\n', 'Departements :\n') + list + tr('\n\nTo create: type a new name. To delete: del:<id>', '\n\nPour creer : tapez un nouveau nom. Pour supprimer : del:<id>'));
               if (!cmd) return;
               if (cmd.startsWith('del:')) {
                 const id = cmd.split(':')[1];
@@ -734,27 +737,27 @@
             if (action === 'manage-employees') {
               const j = await AppAPI.users.listByCompany(apiUsers, companyId);
               if (!j.ok) { notifyError('Error: ' + (j.error || 'unknown')); return; }
-              const list = j.users.map(u => `${u.id}: ${u.first_name} ${u.last_name} (${u.role})`).join('\n') || 'No employees';
-              const cmd = prompt('Employees:\n' + list + '\n\nTo create: new:First Last,email,role. To delete: del:<id>');
+              const list = j.users.map(u => `${u.id}: ${u.first_name} ${u.last_name} (${u.role})`).join('\n') || tr('No employees', 'Aucun employe');
+              const cmd = prompt(tr('Employees:\n', 'Employes :\n') + list + tr('\n\nTo create: new:First Last,email,role. To delete: del:<id>', '\n\nPour creer : new:Prenom Nom,email,role. Pour supprimer : del:<id>'));
               if (!cmd) return;
               if (cmd.startsWith('del:')) {
                 const id = cmd.split(':')[1];
                 const jr = await AppAPI.users.delete(apiUsers, id);
-                if (!jr.ok) notifyError('Error: ' + (jr.error || 'unknown')); else location.reload();
+                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ') + (jr.error || tr('unknown', 'inconnue'))); else location.reload();
               } else if (cmd.startsWith('new:')) {
                 const payload = cmd.substring(4).split(',');
                 const name = payload[0] || ''; const email = payload[1] || ''; const role = payload[2] || 'employee';
                 const names = name.split(' '); const first = names.shift(); const last = names.join(' ') || '';
                 const jr = await AppAPI.users.create(apiUsers, { department_id: null, first_name: first, last_name: last, email, role });
-                if (!jr.ok) notifyError('Error: ' + (jr.error || 'unknown')); else location.reload();
+                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ') + (jr.error || tr('unknown', 'inconnue'))); else location.reload();
               }
               return;
             }
 
-            if (action === 'assign-head') { notifyError('Use the Manage Employees flow and assign-head through the next UI step.'); return; }
-            if (action === 'edit') { notifyError('Edit company UI is not implemented yet.'); return; }
+            if (action === 'assign-head') { notifyError(tr('Use the Manage Employees flow and assign-head through the next UI step.', 'Utilisez le flux Gerer les employes puis assignez le responsable a l etape suivante.')); return; }
+            if (action === 'edit') { notifyError(tr('Edit company UI is not implemented yet.', 'L interface de modification entreprise n est pas encore implementee.')); return; }
 
-          } catch (err) { notifyError('Network error: ' + err.message); }
+          } catch (err) { notifyError(tr('Network error: ', 'Erreur reseau : ') + err.message); }
         });
       });
     });
@@ -832,12 +835,13 @@
       start.setDate(start.getDate() + offset);
       return start;
     };
-    const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date(2024, index, 1)));
-    const weekdayNames = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(2024, 0, 1 + index)));
-    const fullDateFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    const shortDateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
-    const monthYearFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
-    const monthLabelFormatter = new Intl.DateTimeFormat('en-US', { month: 'long' });
+    const localeForDates = isFr ? 'fr-FR' : 'en-US';
+    const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(localeForDates, { month: 'short' }).format(new Date(2024, index, 1)));
+    const weekdayNames = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(localeForDates, { weekday: 'short' }).format(new Date(2024, 0, 1 + index)));
+    const fullDateFormatter = new Intl.DateTimeFormat(localeForDates, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const shortDateFormatter = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    const monthYearFormatter = new Intl.DateTimeFormat(localeForDates, { month: 'long', year: 'numeric' });
+    const monthLabelFormatter = new Intl.DateTimeFormat(localeForDates, { month: 'long' });
 
     const rawAssignments = Array.isArray(plannerData.assignments) ? plannerData.assignments : [];
     const attendances = Array.isArray(plannerData.attendances) ? plannerData.attendances : [];
@@ -846,8 +850,11 @@
     const events = rawAssignments.map((item) => ({ ...item }));
     let nextAssignmentId = events.reduce((max, item) => Math.max(max, Number(item.assignment_id || 0)), 0) + 1;
 
+    const initialCalendarMode = ['day', 'week', 'fortnight', 'month', 'year'].includes(plannerData.mode) ? plannerData.mode : 'week';
+
     const state = {
-      mode: ['day', 'week', 'fortnight', 'month', 'year'].includes(plannerData.mode) ? plannerData.mode : 'week',
+      mode: initialCalendarMode === 'day' ? 'week' : initialCalendarMode,
+      navigationMode: initialCalendarMode,
       focusDate: calendarToday,
       selectedDate: calendarToday,
       activeDepartmentId: Number(plannerData.active_department_id || departments[0]?.id || 0),
@@ -863,6 +870,7 @@
       window.DashboardPlannerRuntime = {
         getState: () => ({
           mode: state.mode,
+          navigationMode: state.navigationMode,
           focusDate: new Date(state.focusDate),
           selectedDate: new Date(state.selectedDate),
           activeDepartmentId: Number(state.activeDepartmentId || 0),
@@ -1070,7 +1078,7 @@
     const getCalendarCounters = () => {
       const activeDepartment = getActiveDepartment();
       if (!activeDepartment) {
-        return { title: 'Calendar', totalShifts: 0, assignedShifts: 0, freeShifts: 0 };
+        return { title: tr('Calendar', 'Calendrier'), totalShifts: 0, assignedShifts: 0, freeShifts: 0 };
       }
 
       const shifts = (activeDepartment.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
@@ -1102,7 +1110,10 @@
       }
 
       document.querySelectorAll('[data-calendar-mode]').forEach((button) => {
-        const isActive = button.getAttribute('data-calendar-mode') === state.mode;
+        const buttonMode = button.getAttribute('data-calendar-mode');
+        const isActive = buttonMode === 'day'
+          ? state.navigationMode === 'day'
+          : (buttonMode === state.mode && state.navigationMode !== 'day');
         button.classList.toggle('is-active', isActive);
         button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
       });
@@ -1120,7 +1131,9 @@
           title.style.color = counters.titleColor || '';
         }
         if (stats) {
-          stats.textContent = `${counters.totalShifts} shifts • ${counters.assignedShifts} assigned • ${counters.freeShifts} free for ${formatRangeLabel()}`;
+          stats.textContent = isFr
+            ? `${counters.totalShifts} postes • ${counters.assignedShifts} attribues • ${counters.freeShifts} libres pour ${formatRangeLabel()}`
+            : `${counters.totalShifts} shifts • ${counters.assignedShifts} assigned • ${counters.freeShifts} free for ${formatRangeLabel()}`;
         }
       }
 
@@ -1171,7 +1184,7 @@
       if (!plannerDetail) return;
       const activeDepartment = getActiveDepartment();
       if (!activeDepartment) {
-        plannerDetail.innerHTML = '<div class="dashboard-sidebar-planner-placeholder">No departments available.</div>';
+        plannerDetail.innerHTML = `<div class="dashboard-sidebar-planner-placeholder">${tr('No departments available.', 'Aucun departement disponible.')}</div>`;
         return;
       }
 
@@ -1181,42 +1194,42 @@
       if (workShifts.length > 0 && !workShifts.some((shift) => Number(shift.id) === Number(state.activeShiftId))) {
         state.activeShiftId = Number(workShifts[0].id || 0);
       }
-      const deptName = activeDepartment.name || 'Department';
+      const deptName = activeDepartment.name || tr('Department', 'Departement');
       const deptIcon = (activeDepartment.icon || '').toString().trim() || '🏷️';
       const deptColor = (activeDepartment.color || '#b98b12').toString();
       const activeShift = getActiveShift();
       plannerDetail.innerHTML = `
         <div class="dashboard-sidebar-planner-title">
           <span style="color:${deptColor}">${deptIcon} ${deptName}</span>
-          <span>${users.length} staff</span>
+          <span>${users.length} ${tr('staff', 'personnel')}</span>
         </div>
-        <div class="dashboard-sidebar-planner-description">${activeDepartment.description || 'Assigned team and shift list.'}</div>
+        <div class="dashboard-sidebar-planner-description">${activeDepartment.description || tr('Assigned team and shift list.', 'Equipe assignee et liste des postes.')}</div>
         <div>
-          <div class="dashboard-sidebar-group-title"><span>👤</span> Employees</div>
+          <div class="dashboard-sidebar-group-title"><span>👤</span> ${tr('Employees', 'Employes')}</div>
           <div class="dashboard-sidebar-chip-group">
             ${users.length ? users.map((user) => {
               const userId = Number(user.id || 0);
-              const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || `Employee #${userId}`;
+              const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || `${tr('Employee', 'Employe')} #${userId}`;
               const isActiveUser = userId === Number(state.activeUserId || 0);
               return `
               <article class="dashboard-sidebar-user-card ${isActiveUser ? 'is-active' : ''}" data-sidebar-user-card="${userId}" data-user-id="${userId}" data-user-name="${userName}">
-                <button type="button" class="dashboard-sidebar-user-chip ${isActiveUser ? 'is-active' : ''}" draggable="true" data-user-id="${userId}" data-user-name="${userName}" title="Click or drag to calendar">
+                <button type="button" class="dashboard-sidebar-user-chip ${isActiveUser ? 'is-active' : ''}" draggable="true" data-user-id="${userId}" data-user-name="${userName}" title="${tr('Click or drag to calendar', 'Cliquez ou glissez vers le calendrier')}">
                   ${userName}
                 </button>
               </article>
             `;
-            }).join('') : '<div class="dashboard-sidebar-planner-placeholder">No employees in this department.</div>'}
+            }).join('') : `<div class="dashboard-sidebar-planner-placeholder">${tr('No employees in this department.', 'Aucun employe dans ce departement.')}</div>`}
           </div>
         </div>
         <div>
-          <div class="dashboard-sidebar-group-title"><span>⏱</span> Shifts</div>
+          <div class="dashboard-sidebar-group-title"><span>⏱</span> ${tr('Shifts', 'Postes')}</div>
           <div class="dashboard-sidebar-chip-group">
             ${workShifts.length ? workShifts.map((shift) => `
               <button type="button" class="dashboard-sidebar-shift-chip ${Number(shift.id) === Number(state.activeShiftId) ? 'is-active' : ''}" data-shift-id="${shift.id}" style="--shift-chip-color:${(shift.color || '#2f6fed')}">
                 <span class="dashboard-sidebar-shift-icon">${shift.icon || '🕒'}</span>
-                <span>${shift.name || 'Shift'} ${formatShiftTime(shift)}</span>
+                <span>${shift.name || tr('Shift', 'Poste')} ${formatShiftTime(shift)}</span>
               </button>
-            `).join('') : '<div class="dashboard-sidebar-planner-placeholder">No work shifts configured.</div>'}
+            `).join('') : `<div class="dashboard-sidebar-planner-placeholder">${tr('No work shifts configured.', 'Aucun poste de travail configure.')}</div>`}
           </div>
         </div>
       `;
@@ -1278,7 +1291,7 @@
         ...payload,
       });
       if (!response || response.ok === false || response.success === false) {
-        throw new Error(response?.error || response?.message || 'Unable to save assignment');
+        throw new Error(response?.error || response?.message || tr('Unable to save assignment', 'Impossible d enregistrer l affectation'));
       }
       if (response.assignment) {
         upsertAssignment(response.assignment);
@@ -1293,7 +1306,7 @@
         ...payload,
       });
       if (!response || response.ok === false || response.success === false) {
-        throw new Error(response?.error || response?.message || 'Unable to move assignment');
+        throw new Error(response?.error || response?.message || tr('Unable to move assignment', 'Impossible de deplacer l affectation'));
       }
       if (response.assignment) {
         upsertAssignment(response.assignment);
@@ -1308,7 +1321,7 @@
         assignment_id: Number(assignmentId),
       });
       if (!response || response.ok === false || response.success === false) {
-        throw new Error(response?.error || response?.message || 'Unable to unassign shift');
+        throw new Error(response?.error || response?.message || tr('Unable to unassign shift', 'Impossible de desaffecter le poste'));
       }
       const index = events.findIndex((item) => Number(item.assignment_id) === Number(assignmentId));
       if (index >= 0) {
@@ -1329,6 +1342,60 @@
         state.focusDate = new Date(date);
       }
       renderCalendar();
+    };
+
+    const initCalendarRangePicker = () => {
+      const rangeInput = document.querySelector('[data-calendar-range-display]');
+      if (!rangeInput) return;
+
+      let nativePicker = document.getElementById('dashboard-calendar-range-picker');
+      if (!nativePicker) {
+        nativePicker = document.createElement('input');
+        nativePicker.type = 'date';
+        nativePicker.id = 'dashboard-calendar-range-picker';
+        nativePicker.className = 'dashboard-calendar-range-picker-native';
+        nativePicker.setAttribute('aria-hidden', 'true');
+        nativePicker.tabIndex = -1;
+        document.body.appendChild(nativePicker);
+      }
+
+      const applySelectedDate = (value) => {
+        if (!value) return;
+        const pickedDate = toLocalDate(value);
+        state.focusDate = new Date(pickedDate);
+        state.selectedDate = new Date(pickedDate);
+        renderCalendar();
+      };
+
+      nativePicker.addEventListener('change', () => {
+        applySelectedDate(nativePicker.value);
+      });
+
+      const openPicker = () => {
+        const sourceDate = state.focusDate instanceof Date ? state.focusDate : calendarToday;
+        nativePicker.value = dateKey(sourceDate);
+        if (typeof nativePicker.showPicker === 'function') {
+          try {
+            nativePicker.showPicker();
+            return;
+          } catch (_error) {
+            // Fallback for browsers that block showPicker in specific contexts.
+          }
+        }
+        nativePicker.click();
+      };
+
+      rangeInput.setAttribute('aria-label', tr('Choose a date for the calendar', 'Choisir une date pour le calendrier'));
+      rangeInput.addEventListener('click', (event) => {
+        event.preventDefault();
+        openPicker();
+      });
+
+      rangeInput.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openPicker();
+      });
     };
 
     if (window.DashboardSidebar && typeof window.DashboardSidebar.init === 'function') {
@@ -1386,6 +1453,8 @@
         getUserAvailabilityStatus,
       });
     }
+
+    initCalendarRangePicker();
 
     renderSidebarPlanner();
     renderCalendar();

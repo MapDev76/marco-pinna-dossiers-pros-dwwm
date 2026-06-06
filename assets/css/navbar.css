@@ -4,10 +4,15 @@
 
 .site-header {
     width: 100%;
+    position: relative;
+    z-index: 2100;
 }
 
 .site-navbar {
     width: 100%;
+    position: relative;
+    z-index: 2100;
+    overflow: visible;
 }
 
 .site-navbar-inner {
@@ -28,6 +33,8 @@
         0 18px 30px var(--color-shadow),
         inset 0 1px 0 rgba(255, 255, 255, 1);
     box-sizing: border-box;
+    overflow: visible;
+    z-index: 2100;
 }
 
 .site-navbar-left,
@@ -45,6 +52,7 @@
 .site-navbar-right {
     justify-content: flex-end;
     gap: 8px;
+    overflow: visible;
 }
 
 .site-navbar-center {
@@ -139,23 +147,53 @@
 }
 
 .site-lang-switch {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px;
-    border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    z-index: 2120;
+}
+
+.site-lang-dropdown {
+    position: relative;
+    z-index: 2120;
+}
+
+.site-lang-trigger {
+    list-style: none;
+    cursor: pointer;
+}
+
+.site-lang-trigger::-webkit-details-marker {
+    display: none;
+}
+
+.site-lang-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 132px;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.14);
     background: #ffffff;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+    display: none;
+    z-index: 2150;
+}
+
+.site-lang-dropdown[open] .site-lang-menu {
+    display: grid;
+    gap: 4px;
 }
 
 .site-lang-link {
-    min-width: 30px;
-    height: 24px;
-    padding: 0 8px;
-    border-radius: 999px;
+    min-width: 100%;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     font-size: 0.72rem;
     font-weight: 700;
     text-decoration: none;

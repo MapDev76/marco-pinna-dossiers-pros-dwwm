@@ -101,32 +101,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($payload['first_name'] === '' || $payload['last_name'] === '' || $payload['email'] === '') {
-        setFlash('error', 'First name, last name, and email are required.');
+        setFlash('error', t('flash.user_required_fields'));
         usersModalRedirect();
     } elseif (!filter_var($payload['email'], FILTER_VALIDATE_EMAIL)) {
-        setFlash('error', 'Invalid email address.');
+        setFlash('error', t('flash.invalid_email'));
         usersModalRedirect();
     } elseif (!in_array($payload['role'], ['super_admin', 'admin', 'department_manager', 'employee'], true)) {
-        setFlash('error', 'Invalid role.');
+        setFlash('error', t('flash.invalid_role'));
         usersModalRedirect();
     } elseif (!in_array($payload['status'], ['active', 'inactive'], true)) {
-        setFlash('error', 'Invalid status.');
+        setFlash('error', t('flash.invalid_status'));
         usersModalRedirect();
     } elseif ($payload['role'] === 'super_admin' && $payload['department_id'] !== null) {
         setFlash('error', t('common.super_admin_no_department'));
         usersModalRedirect();
     } elseif ($payload['role'] === 'admin' && $payload['department_id'] === null) {
-        setFlash('error', 'An Admin must be linked to a department.');
+        setFlash('error', t('flash.admin_requires_department'));
         usersModalRedirect();
     } elseif (in_array($payload['role'], ['department_manager', 'employee'], true) && $payload['department_id'] === null) {
-        setFlash('error', 'A department manager or employee must be linked to a department.');
+        setFlash('error', t('flash.user_requires_department'));
         usersModalRedirect();
     } else {
         $password = trim((string) ($_POST['password'] ?? ''));
 
         if ($action === 'create') {
             if ($password === '') {
-                setFlash('error', 'A password is required to create the user.');
+                setFlash('error', t('flash.password_required_create'));
                 usersModalRedirect();
             }
 

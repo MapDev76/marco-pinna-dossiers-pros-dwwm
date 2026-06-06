@@ -210,7 +210,7 @@ foreach ($visibleDepartments as $department) {
     }
     $departmentMetrics[$deptId] = [
         'department_id' => $deptId,
-        'department_name' => (string) ($department['name'] ?? 'Department'),
+        'department_name' => (string) ($department['name'] ?? t('settings.department_default')),
         'department_icon' => (string) ($department['icon'] ?? '🏷️'),
         'department_color' => (string) ($department['color'] ?? '#b98b12'),
         'assignments' => 0,
@@ -227,7 +227,7 @@ foreach ($assignmentsCurrentMonth as $assignment) {
     $deptId = (int) ($assignment['department_id'] ?? 0);
     $userId = (int) ($assignment['user_id'] ?? 0);
     $shiftId = (int) ($assignment['shift_id'] ?? 0);
-    $shiftName = (string) ($assignment['shift_name'] ?? 'Shift');
+    $shiftName = (string) ($assignment['shift_name'] ?? t('settings.shift_default'));
     $shiftStart = (string) ($assignment['start_time'] ?? ($shiftById[$shiftId]['start_time'] ?? ''));
     $shiftEnd = (string) ($assignment['end_time'] ?? ($shiftById[$shiftId]['end_time'] ?? ''));
     $durationHours = $durationHoursForTimes($shiftStart, $shiftEnd);
@@ -273,7 +273,7 @@ foreach ($assignmentsCurrentMonth as $assignment) {
         if (!isset($userWorkloadMap[$userId])) {
             $userWorkloadMap[$userId] = [
                 'user_id' => $userId,
-                'user_name' => (string) ($assignment['user_name'] ?? 'User'),
+                'user_name' => (string) ($assignment['user_name'] ?? t('settings.user_default')),
                 'assignments' => 0,
                 'hours' => 0.0,
                 'days' => [],
@@ -489,7 +489,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <select data-auto-assign-shift>
                                 <option value="0"><?php echo e(t('settings.all_open_work_shifts')); ?></option>
                                 <?php foreach ($shifts as $shift): ?>
-                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(($shift['icon'] ?? '🕒') . ' ' . ($shift['name'] ?? 'Shift')); ?></option>
+                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(($shift['icon'] ?? '🕒') . ' ' . ($shift['name'] ?? t('settings.shift_default'))); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
@@ -515,7 +515,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <?php
                             $departmentNameById = [];
                             foreach ($visibleDepartments as $deptOption) {
-                                $departmentNameById[(int) ($deptOption['id'] ?? 0)] = (string) ($deptOption['name'] ?? 'Department');
+                                $departmentNameById[(int) ($deptOption['id'] ?? 0)] = (string) ($deptOption['name'] ?? t('settings.department_default'));
                             }
 
                             $usersByDepartment = [];
@@ -576,13 +576,13 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         $shiftCatalog = array_map(static function (array $shift): array {
                             return [
                                 'id' => (int) ($shift['id'] ?? 0),
-                                'name' => (string) ($shift['name'] ?? 'Shift'),
+                                'name' => (string) ($shift['name'] ?? t('settings.shift_default')),
                                 'icon' => (string) ($shift['icon'] ?? '🕒'),
                                 'kind' => (string) ($shift['kind'] ?? 'work'),
                                 'start_time' => (string) ($shift['start_time'] ?? ''),
                                 'end_time' => (string) ($shift['end_time'] ?? ''),
                                 'department_id' => (int) ($shift['department_id'] ?? 0),
-                                'department_name' => (string) ($shift['department_name'] ?? 'Department'),
+                                'department_name' => (string) ($shift['department_name'] ?? t('settings.department_default')),
                             ];
                         }, $shifts);
                         echo json_encode($shiftCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -618,57 +618,57 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 </div>
                                 <div class="settings-assignment-modal-range-row">
                                     <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input type="date" data-assignment-modal-special-from></label>
-                                    <label class="settings-field">To date<input type="date" data-assignment-modal-special-to></label>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special-range>Add range</button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rules-reset>Reset rules</button>
+                                    <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input type="date" data-assignment-modal-special-to></label>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special-range><?php echo e(t('settings.add_range')); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rules-reset><?php echo e(t('settings.reset_rules')); ?></button>
                                 </div>
                                 <div class="settings-auto-rule-special-list" data-assignment-modal-special-list></div>
-                                <h5>Current Month Availability</h5>
+                                <h5><?php echo e(t('settings.current_month_availability')); ?></h5>
                                 <div class="settings-assignment-weekly-grid" data-assignment-modal-weekly></div>
-                                <h5>Unavailable Dates (Current Month)</h5>
+                                <h5><?php echo e(t('settings.unavailable_dates_month')); ?></h5>
                                 <div class="settings-auto-rule-special-list" data-assignment-modal-month-unavailable></div>
                             </section>
                             <section class="settings-analytics-card">
-                                <h5>Assigned Shifts</h5>
+                                <h5><?php echo e(t('settings.assigned_shifts')); ?></h5>
                                 <div class="settings-assignment-modal-shift-list" data-assignment-modal-shifts></div>
                             </section>
                             <section class="settings-analytics-card settings-assignment-modal-open-slots">
-                                <h5>Open Shifts to Cover</h5>
-                                <p class="crud-modal-subtitle">Select only open shifts in the employee department and within the date range below.</p>
+                                <h5><?php echo e(t('settings.open_shifts_to_cover')); ?></h5>
+                                <p class="crud-modal-subtitle"><?php echo e(t('settings.open_shifts_hint')); ?></p>
                                 <div class="settings-assignment-modal-open-range">
-                                    <label class="settings-field">From date<input type="date" data-assignment-modal-open-from></label>
-                                    <label class="settings-field">To date<input type="date" data-assignment-modal-open-to></label>
-                                    <label class="settings-field">Shift
+                                    <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input type="date" data-assignment-modal-open-from></label>
+                                    <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input type="date" data-assignment-modal-open-to></label>
+                                    <label class="settings-field"><?php echo e(t('common.shift')); ?>
                                         <select data-assignment-modal-open-shift>
-                                            <option value="0">All department shifts</option>
+                                            <option value="0"><?php echo e(t('settings.all_department_shifts')); ?></option>
                                         </select>
                                     </label>
                                 </div>
                                 <div class="settings-inline-actions">
-                                    <button type="button" class="admin-action-link" data-assignment-modal-open-cover-all>Cover all available dates</button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-clear>Clear selection</button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-reselect>Re-select available</button>
-                                    <button type="button" class="admin-action-link" data-assignment-modal-open-assign>Assign selected</button>
+                                    <button type="button" class="admin-action-link" data-assignment-modal-open-cover-all><?php echo e(t('settings.cover_all_dates')); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-clear><?php echo e(t('settings.clear_selection')); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-reselect><?php echo e(t('settings.reselect_available')); ?></button>
+                                    <button type="button" class="admin-action-link" data-assignment-modal-open-assign><?php echo e(t('settings.assign_selected')); ?></button>
                                 </div>
                                 <div class="settings-assignment-open-slot-list" data-assignment-modal-open-list></div>
                             </section>
                             <section class="settings-analytics-card settings-assignment-modal-open-slots">
-                                <h5>Assign Absence Range</h5>
-                                <p class="crud-modal-subtitle">Assign vacation, sick leave, or rest day from date to date.</p>
+                                <h5><?php echo e(t('settings.assign_absence_range')); ?></h5>
+                                <p class="crud-modal-subtitle"><?php echo e(t('settings.assign_absence_hint')); ?></p>
                                 <div class="settings-assignment-modal-open-range">
-                                    <label class="settings-field">From date<input type="date" data-assignment-modal-absence-from></label>
-                                    <label class="settings-field">To date<input type="date" data-assignment-modal-absence-to></label>
-                                    <label class="settings-field">Type
+                                    <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input type="date" data-assignment-modal-absence-from></label>
+                                    <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input type="date" data-assignment-modal-absence-to></label>
+                                    <label class="settings-field"><?php echo e(t('crud.type')); ?>
                                         <select data-assignment-modal-absence-type>
-                                            <option value="vacation">Vacation</option>
-                                            <option value="sick">Sick leave</option>
-                                            <option value="rest">Rest day</option>
+                                            <option value="vacation"><?php echo e(t('settings.vacation')); ?></option>
+                                            <option value="sick"><?php echo e(t('settings.sick')); ?></option>
+                                            <option value="rest"><?php echo e(t('settings.rest')); ?></option>
                                         </select>
                                     </label>
                                 </div>
                                 <div class="settings-inline-actions">
-                                    <button type="button" class="admin-action-link" data-assignment-modal-absence-assign>Assign absence range</button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-absence-reset>Reset dates</button>
+                                    <button type="button" class="admin-action-link" data-assignment-modal-absence-assign><?php echo e(t('settings.assign_absence_action')); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-absence-reset><?php echo e(t('settings.reset_dates')); ?></button>
                                 </div>
                             </section>
                         </div>
@@ -677,12 +677,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                 <div class="settings-analytics-grid">
                     <section class="settings-analytics-card">
-                        <h4>Coverage by Department</h4>
+                        <h4><?php echo e(t('settings.coverage_by_department')); ?></h4>
                         <p class="crud-modal-subtitle">
-                            Current Month: <?php echo e($currentMonthLabel); ?> (range: <?php echo e($assignmentRangeStart); ?> to <?php echo e($assignmentRangeEnd); ?>)
+                            <?php echo e(t('settings.current_month_range', ['month' => $currentMonthLabel, 'start' => $assignmentRangeStart, 'end' => $assignmentRangeEnd])); ?>
                         </p>
                         <?php if (empty($departmentCoverageRows)): ?>
-                            <div class="crud-empty-state">No department data available.</div>
+                            <div class="crud-empty-state"><?php echo e(t('settings.no_department_data')); ?></div>
                         <?php else: ?>
                             <div class="settings-analytics-list">
                                 <?php foreach (array_slice($departmentCoverageRows, 0, 12) as $deptMetric): ?>
@@ -692,13 +692,13 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                 <span class="settings-dept-title-icon" style="background: color-mix(in srgb, <?php echo e($deptMetric['department_color'] ?? '#b98b12'); ?> 18%, #ffffff 82%);">
                                                     <?php echo e($deptMetric['department_icon'] ?? '🏷️'); ?>
                                                 </span>
-                                                <?php echo e($deptMetric['department_name'] ?? 'Department'); ?>
+                                                <?php echo e($deptMetric['department_name'] ?? t('settings.department_default')); ?>
                                             </strong>
                                         </div>
                                         <div class="settings-analytics-metrics">
-                                            <span>Assignments: <?php echo (int) ($deptMetric['active_assignments'] ?? 0); ?></span>
-                                            <span>Hours: <?php echo e(number_format((float) ($deptMetric['hours'] ?? 0), 2)); ?>h</span>
-                                            <span class="settings-metric-warning">Uncovered days: <?php echo (int) ($deptMetric['uncovered_days'] ?? 0); ?></span>
+                                            <span><?php echo e(t('settings.assignments_metric')); ?>: <?php echo (int) ($deptMetric['active_assignments'] ?? 0); ?></span>
+                                            <span><?php echo e(t('settings.hours_label')); ?>: <?php echo e(number_format((float) ($deptMetric['hours'] ?? 0), 2)); ?>h</span>
+                                            <span class="settings-metric-warning"><?php echo e(t('settings.uncovered_days')); ?>: <?php echo (int) ($deptMetric['uncovered_days'] ?? 0); ?></span>
                                         </div>
                                     </article>
                                 <?php endforeach; ?>
@@ -707,22 +707,22 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     </section>
 
                     <section class="settings-analytics-card">
-                        <h4>Workload by User</h4>
-                        <p class="crud-modal-subtitle">Current Month <?php echo e($currentMonthLabel); ?>: hours, days, and most frequent shifts assigned to each user.</p>
+                        <h4><?php echo e(t('settings.workload_by_user')); ?></h4>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.workload_month_hint', ['month' => $currentMonthLabel])); ?></p>
                         <?php if (empty($userWorkloadRows)): ?>
-                            <div class="crud-empty-state">No user workload data available.</div>
+                            <div class="crud-empty-state"><?php echo e(t('settings.no_user_workload_data')); ?></div>
                         <?php else: ?>
                             <div class="settings-analytics-list">
                                 <?php foreach (array_slice($userWorkloadRows, 0, 12) as $workload): ?>
                                     <article class="settings-analytics-item">
                                         <div class="settings-analytics-item-head">
-                                            <strong><?php echo e($workload['user_name'] ?? 'User'); ?></strong>
-                                            <span><?php echo (int) ($workload['assignments'] ?? 0); ?> assignments</span>
+                                            <strong><?php echo e($workload['user_name'] ?? t('settings.user_default')); ?></strong>
+                                            <span><?php echo (int) ($workload['assignments'] ?? 0); ?> <?php echo e(t('settings.assignments_suffix')); ?></span>
                                         </div>
                                         <div class="settings-analytics-metrics">
-                                            <span>Hours: <?php echo e(number_format((float) ($workload['hours'] ?? 0), 2)); ?>h</span>
-                                            <span>Days: <?php echo (int) ($workload['days_count'] ?? 0); ?></span>
-                                            <span>Shifts: <?php echo e($workload['shift_preview'] ?: 'n/a'); ?></span>
+                                            <span><?php echo e(t('settings.hours_label')); ?>: <?php echo e(number_format((float) ($workload['hours'] ?? 0), 2)); ?>h</span>
+                                            <span><?php echo e(t('settings.days_label')); ?>: <?php echo (int) ($workload['days_count'] ?? 0); ?></span>
+                                            <span><?php echo e(t('settings.shifts_label')); ?>: <?php echo e($workload['shift_preview'] ?: t('settings.not_available')); ?></span>
                                         </div>
                                     </article>
                                 <?php endforeach; ?>
@@ -733,31 +733,31 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                 <div class="settings-inline-actions settings-assignment-list-toggle-row">
                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-list-toggle aria-expanded="false">
-                        Show daily assignments list
+                        <?php echo e(t('settings.show_daily_assignments')); ?>
                     </button>
                 </div>
 
                 <div class="settings-list-wrap" data-assignment-list-wrap hidden>
-                    <p class="crud-modal-subtitle">Daily assignments list for Current Month <?php echo e($currentMonthLabel); ?>.</p>
+                    <p class="crud-modal-subtitle"><?php echo e(t('settings.daily_assignments_month', ['month' => $currentMonthLabel])); ?></p>
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-assignment">
-                        <strong>Date</strong>
-                        <span>Department</span>
-                        <span>Shift</span>
-                        <span>User</span>
-                        <span>Workload</span>
-                        <span>Status</span>
-                        <span>Actions</span>
+                        <strong><?php echo e(t('common.date')); ?></strong>
+                        <span><?php echo e(t('common.department')); ?></span>
+                        <span><?php echo e(t('common.shift')); ?></span>
+                        <span><?php echo e(t('settings.user_label')); ?></span>
+                        <span><?php echo e(t('settings.workload_label')); ?></span>
+                        <span><?php echo e(t('common.status')); ?></span>
+                        <span><?php echo e(t('common.action')); ?></span>
                     </div>
 
                     <?php if (empty($assignmentsCurrentMonth)): ?>
-                        <div class="crud-empty-state">No assignments available.</div>
+                        <div class="crud-empty-state"><?php echo e(t('settings.no_assignments')); ?></div>
                     <?php else: ?>
                         <?php foreach (array_slice($assignmentsCurrentMonth, 0, 250) as $assignment): ?>
                             <article
                                 class="settings-list-item-wrap"
                                 data-assignment-id="<?php echo (int) ($assignment['assignment_id'] ?? 0); ?>"
                                 data-assignment-user-id="<?php echo (int) ($assignment['user_id'] ?? 0); ?>"
-                                data-assignment-user-name="<?php echo e($assignment['user_name'] ?: 'Open slot'); ?>"
+                                data-assignment-user-name="<?php echo e($assignment['user_name'] ?: t('settings.open_slot')); ?>"
                                 data-assignment-work-date="<?php echo e($assignment['work_date'] ?? ''); ?>"
                                 data-assignment-shift-id="<?php echo (int) ($assignment['shift_id'] ?? 0); ?>"
                                 data-assignment-shift-name="<?php echo e($assignment['shift_name'] ?? '--'); ?>"
@@ -780,7 +780,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             <small class="settings-meta-inline"><?php echo e($assignment['shift_description']); ?></small>
                                         <?php endif; ?>
                                     </span>
-                                    <span><?php echo e($assignment['user_name'] ?: 'Open slot'); ?></span>
+                                    <span><?php echo e($assignment['user_name'] ?: t('settings.open_slot')); ?></span>
                                     <?php
                                         $assignmentDuration = $durationHoursForTimes(
                                             (string) ($assignment['start_time'] ?? ''),
@@ -793,47 +793,47 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     </span>
                                     <span><?php echo e($assignment['status'] ?? ((int) ($assignment['user_id'] ?? 0) > 0 ? 'assigned' : 'open')); ?></span>
                                     <div class="settings-inline-actions">
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-assignment-edit" aria-label="Edit assignment" title="Edit assignment">✎</button>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-assignment-edit" aria-label="<?php echo e(t('settings.edit_assignment')); ?>" title="<?php echo e(t('settings.edit_assignment')); ?>">✎</button>
                                     </div>
                                 </div>
                                 <div class="settings-edit-drawer" hidden>
                                     <div class="settings-list-cols settings-list-cols-assignment-edit">
-                                        <label class="settings-field">Work date
+                                        <label class="settings-field"><?php echo e(t('settings.work_date')); ?>
                                             <input data-field="work_date" type="date" value="<?php echo e($assignment['work_date'] ?? ''); ?>">
                                         </label>
                                         <label class="settings-field">Shift
                                             <select data-field="shift_id">
                                                 <?php foreach ($shifts as $shift): ?>
                                                     <option value="<?php echo (int) ($shift['id'] ?? 0); ?>" <?php echo ((int) ($assignment['shift_id'] ?? 0) === (int) ($shift['id'] ?? 0)) ? 'selected' : ''; ?>>
-                                                        <?php echo e(($shift['icon'] ?? '🕒') . ' ' . ($shift['name'] ?? 'Shift') . ' • ' . ($shift['department_name'] ?? '')); ?><?php echo !empty($shift['description']) ? e(' • ' . $shift['description']) : ''; ?>
+                                                        <?php echo e(($shift['icon'] ?? '🕒') . ' ' . ($shift['name'] ?? t('settings.shift_default')) . ' • ' . ($shift['department_name'] ?? '')); ?><?php echo !empty($shift['description']) ? e(' • ' . $shift['description']) : ''; ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </label>
-                                        <label class="settings-field">Employee
+                                        <label class="settings-field"><?php echo e(t('settings.employee_name')); ?>
                                             <select data-field="user_id">
-                                                <option value="">Open slot</option>
+                                                <option value=""><?php echo e(t('settings.open_slot')); ?></option>
                                                 <?php foreach ($visibleUsers as $userOption): ?>
                                                     <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>" <?php echo ((int) ($assignment['user_id'] ?? 0) === (int) ($userOption['id'] ?? 0)) ? 'selected' : ''; ?>>
-                                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? 'User')); ?>
+                                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? t('settings.user_default'))); ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </label>
-                                        <label class="settings-field">Status
+                                        <label class="settings-field"><?php echo e(t('common.status')); ?>
                                             <select data-field="status">
                                                 <?php $assignmentStatus = (string) ($assignment['status'] ?? ((int) ($assignment['user_id'] ?? 0) > 0 ? 'assigned' : 'open')); ?>
-                                                <option value="open" <?php echo $assignmentStatus === 'open' ? 'selected' : ''; ?>>Open</option>
-                                                <option value="assigned" <?php echo $assignmentStatus === 'assigned' ? 'selected' : ''; ?>>Assigned</option>
-                                                <option value="in_progress" <?php echo $assignmentStatus === 'in_progress' ? 'selected' : ''; ?>>In progress</option>
-                                                <option value="completed" <?php echo $assignmentStatus === 'completed' ? 'selected' : ''; ?>>Completed</option>
-                                                <option value="cancelled" <?php echo $assignmentStatus === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                                                <option value="open" <?php echo $assignmentStatus === 'open' ? 'selected' : ''; ?>><?php echo e(t('settings.open_slot')); ?></option>
+                                                <option value="assigned" <?php echo $assignmentStatus === 'assigned' ? 'selected' : ''; ?>><?php echo e(t('settings.assigned')); ?></option>
+                                                <option value="in_progress" <?php echo $assignmentStatus === 'in_progress' ? 'selected' : ''; ?>><?php echo e(t('settings.in_progress')); ?></option>
+                                                <option value="completed" <?php echo $assignmentStatus === 'completed' ? 'selected' : ''; ?>><?php echo e(t('settings.completed')); ?></option>
+                                                <option value="cancelled" <?php echo $assignmentStatus === 'cancelled' ? 'selected' : ''; ?>><?php echo e(t('settings.cancelled')); ?></option>
                                             </select>
                                         </label>
                                         <div class="settings-inline-actions">
-                                            <button type="button" class="admin-action-link settings-assignment-save">Save</button>
-                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-assignment-unassign">Unassign</button>
-                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-assignment-cancel">Cancel</button>
+                                            <button type="button" class="admin-action-link settings-assignment-save"><?php echo e(t('settings.save')); ?></button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-assignment-unassign"><?php echo e(t('settings.unassign')); ?></button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-assignment-cancel"><?php echo e(t('employee.cancel')); ?></button>
                                         </div>
                                     </div>
                                 </div>
@@ -847,11 +847,11 @@ $departmentCreateHeadUsers = array_values(array_filter(
             <section class="crud-panel settings-panel" data-settings-panel="attendances" hidden>
                 <div class="settings-panel-head">
                     <div>
-                        <h3>Attendances</h3>
-                        <p class="crud-modal-subtitle">Manage attendance signatures and presence registration by department and employee.</p>
+                        <h3><?php echo e(t('settings.attendances')); ?></h3>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.attendance_panel_subtitle')); ?></p>
                     </div>
                     <div class="settings-pill-row">
-                        <span class="settings-pill"><?php echo count($attendances); ?> records</span>
+                        <span class="settings-pill"><?php echo count($attendances); ?> <?php echo e(t('settings.records')); ?></span>
                     </div>
                 </div>
 
@@ -859,8 +859,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <div class="settings-list-item-wrap settings-company-ip-wrap">
                         <div class="settings-list-row settings-company-ip-row">
                             <div>
-                                <strong>Authorized Wi-Fi IP for attendance signature</strong>
-                                <p class="crud-modal-subtitle">Leave empty to allow attendance signature from any network. If set, signatures are accepted only from this IP.</p>
+                                <strong><?php echo e(t('settings.authorized_wifi_ip_title')); ?></strong>
+                                <p class="crud-modal-subtitle"><?php echo e(t('settings.authorized_wifi_ip_subtitle')); ?></p>
                             </div>
                             <div class="settings-company-ip-controls">
                                 <input
@@ -870,7 +870,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     data-company-signature-ip
                                     data-company-id="<?php echo (int) $scopeCompanyId; ?>"
                                 >
-                                <button type="button" class="admin-action-link" data-company-signature-ip-save>Save Wi-Fi IP</button>
+                                <button type="button" class="admin-action-link" data-company-signature-ip-save><?php echo e(t('settings.save_wifi_ip')); ?></button>
                             </div>
                         </div>
                     </div>
@@ -878,18 +878,18 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                 <section class="settings-analytics-card settings-assignment-employee-index" data-attendance-employee-index>
                     <div class="settings-assignment-employee-index-head">
-                        <h4>Employees by Department</h4>
-                        <p class="crud-modal-subtitle">Open an employee profile, choose an assigned shift, and register attendance with digital signature.</p>
+                        <h4><?php echo e(t('settings.employees_by_department')); ?></h4>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.employees_by_department_hint')); ?></p>
                     </div>
                     <?php if (empty($visibleUsers)): ?>
-                        <div class="crud-empty-state">No users available for attendance management.</div>
+                        <div class="crud-empty-state"><?php echo e(t('settings.no_users_attendance')); ?></div>
                     <?php else: ?>
                         <?php
                             $attendanceUsersByDepartment = [];
                             foreach ($visibleUsers as $attendanceUserItem) {
-                                $attendanceDepartmentName = (string) ($attendanceUserItem['department_name'] ?? 'Unassigned');
+                                $attendanceDepartmentName = (string) ($attendanceUserItem['department_name'] ?? t('settings.unassigned'));
                                 if ($attendanceDepartmentName === '') {
-                                    $attendanceDepartmentName = 'Unassigned';
+                                    $attendanceDepartmentName = t('settings.unassigned');
                                 }
                                 if (!isset($attendanceUsersByDepartment[$attendanceDepartmentName])) {
                                     $attendanceUsersByDepartment[$attendanceDepartmentName] = [];
@@ -900,7 +900,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         ?>
                         <?php foreach ($attendanceUsersByDepartment as $attendanceDepartmentLabel => $attendanceDepartmentUsers): ?>
                             <section class="settings-assignment-employee-group">
-                                <div class="settings-assignment-employee-group-title">Dept: <?php echo e($attendanceDepartmentLabel); ?></div>
+                                <div class="settings-assignment-employee-group-title"><?php echo e(t('settings.department_prefix')); ?> <?php echo e($attendanceDepartmentLabel); ?></div>
                                 <div class="settings-assignment-employee-list">
                                     <?php foreach ($attendanceDepartmentUsers as $attendanceUserItem): ?>
                                         <?php
@@ -921,7 +921,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         >
                                             <strong><?php echo e($attendanceUserName); ?></strong>
                                             <span><?php echo e($attendanceUserItem['email'] ?? ''); ?></span>
-                                            <small>Attendance records: <?php echo $attendanceCount; ?></small>
+                                            <small><?php echo e(t('settings.attendance_records')); ?>: <?php echo $attendanceCount; ?></small>
                                         </button>
                                     <?php endforeach; ?>
                                 </div>
@@ -939,8 +939,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 'user_name' => (string) ($assignment['user_name'] ?? ''),
                                 'work_date' => (string) ($assignment['work_date'] ?? ''),
                                 'shift_id' => (int) ($assignment['shift_id'] ?? 0),
-                                'shift_name' => (string) ($assignment['shift_name'] ?? 'Shift'),
-                                'department_name' => (string) ($assignment['department_name'] ?? 'Department'),
+                                'shift_name' => (string) ($assignment['shift_name'] ?? t('settings.shift_default')),
+                                'department_name' => (string) ($assignment['department_name'] ?? t('settings.department_default')),
                                 'status' => (string) ($assignment['status'] ?? 'assigned'),
                             ];
                         }, $attendanceAssignableShifts);
@@ -973,38 +973,38 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <div class="settings-assignment-employee-window">
                         <header class="settings-assignment-employee-window-head">
                             <div>
-                                <h4 data-attendance-modal-title>Attendance signature</h4>
-                                <p class="crud-modal-subtitle" data-attendance-modal-subtitle>Select shift and sign to record attendance.</p>
+                                <h4 data-attendance-modal-title><?php echo e(t('settings.attendance_signature')); ?></h4>
+                                <p class="crud-modal-subtitle" data-attendance-modal-subtitle><?php echo e(t('settings.attendance_signature_hint')); ?></p>
                             </div>
-                            <button type="button" class="dashboard-modal-close" data-attendance-employee-close aria-label="Close attendance modal">&times;</button>
+                            <button type="button" class="dashboard-modal-close" data-attendance-employee-close aria-label="<?php echo e(t('settings.close_attendance_modal')); ?>">&times;</button>
                         </header>
 
                         <div class="settings-assignment-employee-window-grid">
                             <section class="settings-analytics-card">
-                                <label class="settings-field">Assigned shift
+                                <label class="settings-field"><?php echo e(t('settings.assigned_shift')); ?>
                                     <select data-attendance-modal-user-shift>
-                                        <option value="">Select assigned shift</option>
+                                        <option value=""><?php echo e(t('settings.select_assigned_shift')); ?></option>
                                     </select>
                                 </label>
-                                <label class="settings-field">Attendance status
+                                <label class="settings-field"><?php echo e(t('settings.attendance_status')); ?>
                                     <select data-attendance-modal-status>
-                                        <option value="present">Present</option>
-                                        <option value="late">Late</option>
-                                        <option value="absent">Absent</option>
-                                        <option value="early_departure">Early departure</option>
+                                        <option value="present"><?php echo e(t('settings.present')); ?></option>
+                                        <option value="late"><?php echo e(t('settings.late')); ?></option>
+                                        <option value="absent"><?php echo e(t('settings.absent')); ?></option>
+                                        <option value="early_departure"><?php echo e(t('settings.early_departure')); ?></option>
                                     </select>
                                 </label>
                                 <div class="employee-signature-pad-shell">
-                                    <span>Digital signature</span>
-                                    <canvas width="520" height="180" data-attendance-signature-canvas aria-label="Attendance signature pad"></canvas>
+                                    <span><?php echo e(t('employee.digital_signature')); ?></span>
+                                    <canvas width="520" height="180" data-attendance-signature-canvas aria-label="<?php echo e(t('settings.signature_pad_aria')); ?>"></canvas>
                                     <small class="employee-signature-error" data-attendance-signature-error></small>
                                     <div class="employee-signature-pad-actions">
-                                        <button type="button" class="admin-action-link admin-action-link-secondary" data-attendance-signature-clear>Clear signature</button>
-                                        <small>Use touch, stylus, or mouse to sign.</small>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary" data-attendance-signature-clear><?php echo e(t('employee.clear_signature')); ?></button>
+                                        <small><?php echo e(t('settings.signature_input_hint')); ?></small>
                                     </div>
                                 </div>
                                 <div class="settings-inline-actions">
-                                    <button type="button" class="admin-action-link" data-attendance-signature-save>Record attendance</button>
+                                    <button type="button" class="admin-action-link" data-attendance-signature-save><?php echo e(t('settings.record_attendance')); ?></button>
                                 </div>
                             </section>
                         </div>
@@ -1015,33 +1015,33 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <div class="settings-assignment-employee-window">
                         <header class="settings-assignment-employee-window-head">
                             <div>
-                                <h4 data-attendance-record-title>Edit attendance</h4>
-                                <p class="crud-modal-subtitle" data-attendance-record-subtitle>Update attendance status and times or cancel the registration.</p>
+                                <h4 data-attendance-record-title><?php echo e(t('settings.edit_attendance')); ?></h4>
+                                <p class="crud-modal-subtitle" data-attendance-record-subtitle><?php echo e(t('settings.edit_attendance_hint')); ?></p>
                             </div>
-                            <button type="button" class="dashboard-modal-close" data-attendance-record-close aria-label="Close attendance edit modal">&times;</button>
+                            <button type="button" class="dashboard-modal-close" data-attendance-record-close aria-label="<?php echo e(t('settings.close_attendance_edit_modal')); ?>">&times;</button>
                         </header>
 
                         <div class="settings-assignment-employee-window-grid">
                             <section class="settings-analytics-card">
-                                <label class="settings-field">Attendance status
+                                <label class="settings-field"><?php echo e(t('settings.attendance_status')); ?>
                                     <select data-attendance-record-status>
-                                        <option value="present">Present</option>
-                                        <option value="late">Late</option>
-                                        <option value="absent">Absent</option>
-                                        <option value="early_departure">Early departure</option>
+                                        <option value="present"><?php echo e(t('settings.present')); ?></option>
+                                        <option value="late"><?php echo e(t('settings.late')); ?></option>
+                                        <option value="absent"><?php echo e(t('settings.absent')); ?></option>
+                                        <option value="early_departure"><?php echo e(t('settings.early_departure')); ?></option>
                                     </select>
                                 </label>
                                 <div class="settings-assignment-modal-range-row">
-                                    <label class="settings-field">Check-in time
+                                    <label class="settings-field"><?php echo e(t('settings.checkin_time')); ?>
                                         <input type="time" data-attendance-record-checkin>
                                     </label>
-                                    <label class="settings-field">Check-out time
+                                    <label class="settings-field"><?php echo e(t('settings.checkout_time')); ?>
                                         <input type="time" data-attendance-record-checkout>
                                     </label>
                                 </div>
                                 <div class="settings-inline-actions">
-                                    <button type="button" class="admin-action-link" data-attendance-record-save>Save changes</button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-attendance-record-cancel-registration>Cancel attendance</button>
+                                    <button type="button" class="admin-action-link" data-attendance-record-save><?php echo e(t('settings.save_changes')); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-attendance-record-cancel-registration><?php echo e(t('settings.cancel_attendance')); ?></button>
                                 </div>
                             </section>
                         </div>
@@ -1050,16 +1050,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                 <div class="settings-list-wrap">
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-assignment">
-                        <strong>Date</strong>
-                        <span>Employee</span>
-                        <span>Department</span>
-                        <span>Shift</span>
-                        <span>Status</span>
-                        <span>Check-in</span>
-                        <span>Signature</span>
+                        <strong><?php echo e(t('common.date')); ?></strong>
+                        <span><?php echo e(t('settings.employee_label')); ?></span>
+                        <span><?php echo e(t('common.department')); ?></span>
+                        <span><?php echo e(t('common.shift')); ?></span>
+                        <span><?php echo e(t('common.status')); ?></span>
+                        <span><?php echo e(t('employee.check_in')); ?></span>
+                        <span><?php echo e(t('settings.signature_label')); ?></span>
                     </div>
                     <?php if (empty($attendances)): ?>
-                        <div class="crud-empty-state">No attendance records available.</div>
+                        <div class="crud-empty-state"><?php echo e(t('settings.no_attendance_records')); ?></div>
                     <?php else: ?>
                         <?php foreach (array_slice($attendances, 0, 250) as $attendance): ?>
                             <?php
@@ -1070,7 +1070,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 if (!$isLateCheckIn && $checkInTimeRaw !== '' && $shiftStartTimeRaw !== '') {
                                     $isLateCheckIn = strtotime('1970-01-01 ' . $checkInTimeRaw) > strtotime('1970-01-01 ' . $shiftStartTimeRaw);
                                 }
-                                $displayAttendanceStatus = $isLateCheckIn ? 'Late' : ucfirst($attendanceStatusRaw !== '' ? $attendanceStatusRaw : 'present');
+                                $displayAttendanceStatus = $isLateCheckIn ? t('settings.late') : ucfirst($attendanceStatusRaw !== '' ? $attendanceStatusRaw : 'present');
                             ?>
                             <article class="settings-list-item-wrap">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-assignment">
@@ -1084,9 +1084,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <span>
                                             <?php
                                                 if (!empty($attendance['digital_signature_id'])) {
-                                                    echo $isLateCheckIn ? 'Signed (Late)' : 'Signed';
+                                                    echo $isLateCheckIn ? t('settings.signed_late') : t('settings.signed');
                                                 } else {
-                                                    echo 'Missing';
+                                                    echo t('settings.missing');
                                                 }
                                             ?>
                                         </span>
@@ -1096,7 +1096,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             data-attendance-record-edit
                                             data-attendance-id="<?php echo (int) ($attendance['id'] ?? 0); ?>"
                                         >
-                                            Edit
+                                            <?php echo e(t('settings.edit')); ?>
                                         </button>
                                         <button
                                             type="button"
@@ -1104,7 +1104,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             data-attendance-record-delete
                                             data-attendance-id="<?php echo (int) ($attendance['id'] ?? 0); ?>"
                                         >
-                                            Cancel
+                                            <?php echo e(t('employee.cancel')); ?>
                                         </button>
                                     </div>
                                 </div>
@@ -1118,27 +1118,27 @@ $departmentCreateHeadUsers = array_values(array_filter(
             <section class="crud-panel settings-panel" data-settings-panel="departments" hidden>
                 <div class="settings-panel-head">
                     <div>
-                        <h3>Departments</h3>
-                        <p class="crud-modal-subtitle">List view with inline edit drawer for each department.</p>
+                        <h3><?php echo e(t('settings.departments')); ?></h3>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.departments_list_hint')); ?></p>
                     </div>
                     <div class="settings-pill-row">
-                        <span class="settings-pill"><?php echo count($visibleDepartments); ?> items</span>
+                        <span class="settings-pill"><?php echo count($visibleDepartments); ?> <?php echo e(t('settings.items')); ?></span>
                     </div>
                 </div>
 
                 <div class="settings-list-head settings-create-row" data-dept-create-row>
                     <div class="settings-list-cols settings-list-cols-dept">
-                        <label class="settings-field">Name<input data-field="name" type="text" value=""></label>
-                        <label class="settings-field">Icon
+                        <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('schedule.icon')); ?>
                             <div class="settings-picker-stack">
                                 <div class="settings-picker-row">
                                     <input data-field="icon" type="text" value="<?php echo e($departmentIconCatalog[0] ?? '🏷️'); ?>" readonly>
-                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
                                 </div>
                                 <div class="settings-picker-popover" data-picker-popover="icon" hidden>
                                     <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
                                         <?php foreach ($departmentIconCatalog as $icon): ?>
-                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($icon); ?>">
                                                 <span aria-hidden="true"><?php echo e($icon); ?></span>
                                             </button>
                                         <?php endforeach; ?>
@@ -1146,17 +1146,17 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 </div>
                             </div>
                         </label>
-                        <label class="settings-field">Color
+                        <label class="settings-field"><?php echo e(t('schedule.color')); ?>
                             <div class="settings-picker-stack">
                                 <div class="settings-picker-row">
                                     <input data-field="color" type="hidden" value="#b98b12">
-                                    <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: #b98b12;">
-                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                    <input data-color-preview type="text" value="" readonly aria-label="<?php echo e(t('settings.selected_color_preview')); ?>" style="--selected-color: #b98b12;">
+                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color"><?php echo e(t('common.select')); ?></button>
                                 </div>
                                 <div class="settings-picker-popover" data-picker-popover="color" hidden>
                                     <div class="settings-choice-grid" data-choice-field="color">
                                         <?php foreach ($pickerColorCatalog as $color): ?>
-                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
+                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="<?php echo e(t('settings.choose_color')); ?> <?php echo e($pickerColorLabel($color)); ?>">
                                                 <span class="settings-color-swatch" aria-hidden="true"></span>
                                                 <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
                                             </button>
@@ -1165,66 +1165,66 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 </div>
                             </div>
                         </label>
-                        <label class="settings-field">Head of department
+                        <label class="settings-field"><?php echo e(t('settings.head_of_department')); ?>
                             <select data-field="head_user_id">
-                                <option value="">-- unassigned --</option>
+                                <option value="">-- <?php echo e(t('settings.unassigned')); ?> --</option>
                                 <?php foreach ($departmentCreateHeadUsers as $userOption): ?>
                                     <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>">
-                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? 'User')); ?>
+                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? t('settings.user_default'))); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
                         <input data-field="company_id" type="hidden" value="<?php echo (int) $scopeCompanyId; ?>">
                         <div class="settings-inline-actions">
-                            <button type="button" class="admin-action-link settings-dept-create">Create</button>
-                            <button type="button" class="admin-action-link admin-action-link-secondary settings-dept-reset">Reset</button>
+                            <button type="button" class="admin-action-link settings-dept-create"><?php echo e(t('crud.create')); ?></button>
+                            <button type="button" class="admin-action-link admin-action-link-secondary settings-dept-reset"><?php echo e(t('crud.reset')); ?></button>
                         </div>
                     </div>
                 </div>
 
                 <div class="settings-list-wrap">
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-dept">
-                        <strong>Name</strong>
-                        <span>Company</span>
-                        <span>Lead</span>
-                        <span>Staff</span>
-                        <span>Shifts</span>
-                        <span>Actions</span>
+                        <strong><?php echo e(t('settings.name_label')); ?></strong>
+                        <span><?php echo e(t('settings.company_label')); ?></span>
+                        <span><?php echo e(t('settings.lead_label')); ?></span>
+                        <span><?php echo e(t('settings.staff_label')); ?></span>
+                        <span><?php echo e(t('settings.shifts')); ?></span>
+                        <span><?php echo e(t('common.action')); ?></span>
                     </div>
 
                     <?php if (empty($visibleDepartments)): ?>
-                        <div class="crud-empty-state">No departments available.</div>
+                        <div class="crud-empty-state"><?php echo e(t('settings.no_departments_available')); ?></div>
                     <?php else: ?>
                         <?php foreach ($visibleDepartments as $department): ?>
                             <article class="settings-list-item-wrap" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>" data-company-id="<?php echo (int) ($department['company_id'] ?? $scopeCompanyId); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-dept">
                                     <strong class="settings-dept-title">
                                         <span class="settings-dept-title-icon" style="color: <?php echo e($department['color'] ?? '#b98b12'); ?>;"><?php echo e($department['icon'] ?? '🏷️'); ?></span>
-                                        <span><?php echo e($department['name'] ?? 'Department'); ?></span>
+                                        <span><?php echo e($department['name'] ?? t('settings.department_default')); ?></span>
                                     </strong>
                                     <span><?php echo e($department['company_name'] ?? $scopeCompanyName); ?></span>
-                                    <span><?php echo e($department['head_user_name'] ?: 'Unassigned'); ?></span>
+                                    <span><?php echo e($department['head_user_name'] ?: t('settings.unassigned')); ?></span>
                                     <span><?php echo count($department['users'] ?? []); ?></span>
                                     <span><?php echo count($department['shifts'] ?? []); ?></span>
                                     <div class="settings-inline-actions">
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-dept-edit" aria-label="Edit department" title="Edit department">✎</button>
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-dept-delete" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>" aria-label="Delete department" title="Delete department">🗑</button>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-dept-edit" aria-label="<?php echo e(t('settings.edit_department')); ?>" title="<?php echo e(t('settings.edit_department')); ?>">✎</button>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-dept-delete" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>" aria-label="<?php echo e(t('settings.delete_department')); ?>" title="<?php echo e(t('settings.delete_department')); ?>">🗑</button>
                                     </div>
                                 </div>
                                 <div class="settings-edit-drawer" hidden>
                                     <div class="settings-list-cols settings-list-cols-dept-edit">
-                                        <label class="settings-field">Name<input data-field="name" type="text" value="<?php echo e($department['name'] ?? 'Department'); ?>"></label>
-                                        <label class="settings-field">Icon
+                                        <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value="<?php echo e($department['name'] ?? t('settings.department_default')); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('schedule.icon')); ?>
                                             <div class="settings-picker-stack">
                                                 <div class="settings-picker-row">
                                                     <input data-field="icon" type="text" value="<?php echo e($department['icon'] ?? ($departmentIconCatalog[0] ?? '🏷️')); ?>" readonly>
-                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
                                                 </div>
                                                 <div class="settings-picker-popover" data-picker-popover="icon" hidden>
                                                     <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
                                                         <?php foreach ($departmentIconCatalog as $icon): ?>
-                                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($icon); ?>">
                                                                 <span aria-hidden="true"><?php echo e($icon); ?></span>
                                                             </button>
                                                         <?php endforeach; ?>
@@ -1232,17 +1232,17 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                 </div>
                                             </div>
                                         </label>
-                                        <label class="settings-field">Color
+                                        <label class="settings-field"><?php echo e(t('schedule.color')); ?>
                                             <div class="settings-picker-stack">
                                                 <div class="settings-picker-row">
                                                     <input data-field="color" type="hidden" value="<?php echo e($department['color'] ?? '#b98b12'); ?>">
-                                                    <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: <?php echo e($department['color'] ?? '#b98b12'); ?>;">
-                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                                    <input data-color-preview type="text" value="" readonly aria-label="<?php echo e(t('settings.selected_color_preview')); ?>" style="--selected-color: <?php echo e($department['color'] ?? '#b98b12'); ?>;">
+                                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color"><?php echo e(t('common.select')); ?></button>
                                                 </div>
                                                 <div class="settings-picker-popover" data-picker-popover="color" hidden>
                                                     <div class="settings-choice-grid" data-choice-field="color">
                                                         <?php foreach ($pickerColorCatalog as $color): ?>
-                                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
+                                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="<?php echo e(t('settings.choose_color')); ?> <?php echo e($pickerColorLabel($color)); ?>">
                                                                 <span class="settings-color-swatch" aria-hidden="true"></span>
                                                                 <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
                                                             </button>
@@ -1251,9 +1251,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                 </div>
                                             </div>
                                         </label>
-                                        <label class="settings-field">Head of department
+                                        <label class="settings-field"><?php echo e(t('settings.head_of_department')); ?>
                                             <select data-field="head_user_id">
-                                                <option value="">-- unassigned --</option>
+                                                <option value="">-- <?php echo e(t('settings.unassigned')); ?> --</option>
                                                 <?php
                                                 $deptIdForHead = (int) ($department['id'] ?? 0);
                                                 $eligibleHeadUsers = array_values(array_filter(
@@ -1263,14 +1263,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                 ));
                                                 foreach ($eligibleHeadUsers as $userOption): ?>
                                                     <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>" <?php echo ((int) ($department['head_user_id'] ?? 0) === (int) ($userOption['id'] ?? 0)) ? 'selected' : ''; ?>>
-                                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? 'User')); ?>
+                                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? t('settings.user_default'))); ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </label>
                                         <div class="settings-inline-actions">
-                                            <button type="button" class="admin-action-link settings-dept-save">Save</button>
-                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-dept-cancel">Cancel</button>
+                                            <button type="button" class="admin-action-link settings-dept-save"><?php echo e(t('settings.save')); ?></button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-dept-cancel"><?php echo e(t('employee.cancel')); ?></button>
                                         </div>
                                     </div>
                                 </div>
@@ -1284,20 +1284,20 @@ $departmentCreateHeadUsers = array_values(array_filter(
             <section class="crud-panel settings-panel" data-settings-panel="users" hidden>
                 <div class="settings-panel-head">
                     <div>
-                        <h3>Users</h3>
-                        <p class="crud-modal-subtitle">List view with edit action to open full editable fields.</p>
+                        <h3><?php echo e(t('settings.users')); ?></h3>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.users_list_hint')); ?></p>
                     </div>
                     <div class="settings-pill-row">
-                        <span class="settings-pill"><?php echo count($visibleUsers); ?> users</span>
+                        <span class="settings-pill"><?php echo count($visibleUsers); ?> <?php echo e(t('settings.users_suffix')); ?></span>
                     </div>
                 </div>
 
                 <div class="settings-list-head settings-create-row" data-user-create-row>
                     <div class="settings-list-cols settings-list-cols-user-create">
-                        <label class="settings-field">First name<input data-field="first_name" type="text" value=""></label>
-                        <label class="settings-field">Last name<input data-field="last_name" type="text" value=""></label>
-                        <label class="settings-field">Email<input data-field="email" type="email" value=""></label>
-                        <label class="settings-field">Role
+                        <label class="settings-field"><?php echo e(t('crud.first_name')); ?><input data-field="first_name" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.last_name')); ?><input data-field="last_name" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.role')); ?>
                             <select data-field="role">
                                 <?php foreach ($roleCatalog as $r): ?>
                                     <?php if ($currentRole === 'admin' && $r['key'] === 'super_admin') continue; ?>
@@ -1305,55 +1305,55 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <?php endforeach; ?>
                             </select>
                         </label>
-                        <label class="settings-field">Department
+                        <label class="settings-field"><?php echo e(t('common.department')); ?>
                             <select data-field="department_id">
-                                <option value="">-- none --</option>
+                                <option value="">-- <?php echo e(t('crud.none')); ?> --</option>
                                 <?php foreach ($visibleDepartments as $department): ?>
-                                    <option value="<?php echo (int) ($department['id'] ?? 0); ?>"><?php echo e($department['name'] ?? 'Department'); ?></option>
+                                    <option value="<?php echo (int) ($department['id'] ?? 0); ?>"><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
-                        <label class="settings-field">Password<input data-field="password" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.password')); ?><input data-field="password" type="text" value=""></label>
                         <div class="settings-inline-actions">
-                            <button type="button" class="admin-action-link settings-user-create">Create user</button>
-                            <button type="button" class="admin-action-link admin-action-link-secondary settings-user-reset">Reset</button>
+                            <button type="button" class="admin-action-link settings-user-create"><?php echo e(t('crud.create_user')); ?></button>
+                            <button type="button" class="admin-action-link admin-action-link-secondary settings-user-reset"><?php echo e(t('crud.reset')); ?></button>
                         </div>
                     </div>
                 </div>
 
                 <div class="settings-list-wrap">
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-user">
-                        <strong>Name</strong>
-                        <span>Email</span>
-                        <span>Role</span>
-                        <span>Department</span>
-                        <span>Status</span>
-                        <span>Actions</span>
+                        <strong><?php echo e(t('crud.first_name')); ?></strong>
+                        <span><?php echo e(t('crud.email')); ?></span>
+                        <span><?php echo e(t('crud.role')); ?></span>
+                        <span><?php echo e(t('common.department')); ?></span>
+                        <span><?php echo e(t('common.status')); ?></span>
+                        <span><?php echo e(t('common.action')); ?></span>
                     </div>
 
                     <?php if (empty($visibleUsers)): ?>
-                        <div class="crud-empty-state">No users assigned yet.</div>
+                        <div class="crud-empty-state"><?php echo e(t('settings.no_users_assigned')); ?></div>
                     <?php else: ?>
                         <?php foreach (array_slice($visibleUsers, 0, 200) as $user): ?>
                             <article class="settings-list-item-wrap" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-user">
-                                    <strong><?php echo e(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?: 'User'); ?></strong>
+                                    <strong><?php echo e(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?: t('settings.user_default')); ?></strong>
                                     <span><?php echo e($user['email'] ?? ''); ?></span>
                                     <span><?php echo e($roleLabels[$user['role'] ?? 'employee'] ?? ucfirst((string) ($user['role'] ?? 'employee'))); ?></span>
                                     <span><?php echo e($user['department_name'] ?? '--'); ?></span>
                                     <span><?php echo e($user['status'] ?? 'active'); ?></span>
                                     <div class="settings-inline-actions">
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-user-edit" aria-label="Edit user" title="Edit user">✎ Edit</button>
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon-danger settings-user-delete" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>" aria-label="Delete user" title="Delete user">🗑 Delete</button>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-user-edit" aria-label="<?php echo e(t('crud.edit_user')); ?>" title="<?php echo e(t('crud.edit_user')); ?>">✎ <?php echo e(t('settings.edit')); ?></button>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon-danger settings-user-delete" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>" aria-label="<?php echo e(t('crud.delete_user')); ?>" title="<?php echo e(t('crud.delete_user')); ?>">🗑 <?php echo e(t('schedule.delete')); ?></button>
                                     </div>
                                 </div>
 
                                 <div class="settings-edit-drawer" hidden>
                                     <div class="settings-list-cols settings-list-cols-user-edit">
-                                        <label class="settings-field">First name<input data-field="first_name" type="text" value="<?php echo e($user['first_name'] ?? ''); ?>"></label>
-                                        <label class="settings-field">Last name<input data-field="last_name" type="text" value="<?php echo e($user['last_name'] ?? ''); ?>"></label>
-                                        <label class="settings-field">Email<input data-field="email" type="email" value="<?php echo e($user['email'] ?? ''); ?>"></label>
-                                        <label class="settings-field">Role
+                                        <label class="settings-field"><?php echo e(t('crud.first_name')); ?><input data-field="first_name" type="text" value="<?php echo e($user['first_name'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.last_name')); ?><input data-field="last_name" type="text" value="<?php echo e($user['last_name'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value="<?php echo e($user['email'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.role')); ?>
                                             <select data-field="role">
                                                 <?php foreach ($roleCatalog as $r): ?>
                                                     <?php if ($currentRole === 'admin' && $r['key'] === 'super_admin') continue; ?>
@@ -1361,24 +1361,24 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                 <?php endforeach; ?>
                                             </select>
                                         </label>
-                                        <label class="settings-field">Department
+                                        <label class="settings-field"><?php echo e(t('common.department')); ?>
                                             <select data-field="department_id">
-                                                <option value="">-- none --</option>
+                                                <option value="">-- <?php echo e(t('crud.none')); ?> --</option>
                                                 <?php foreach ($visibleDepartments as $department): ?>
-                                                    <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo ((int) ($user['department_id'] ?? 0) === (int) ($department['id'] ?? 0)) ? 'selected' : ''; ?>><?php echo e($department['name'] ?? 'Department'); ?></option>
+                                                    <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo ((int) ($user['department_id'] ?? 0) === (int) ($department['id'] ?? 0)) ? 'selected' : ''; ?>><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </label>
-                                        <label class="settings-field">Status
+                                        <label class="settings-field"><?php echo e(t('common.status')); ?>
                                             <select data-field="status">
-                                                <option value="active" <?php echo (($user['status'] ?? 'active') === 'active') ? 'selected' : ''; ?>>Active</option>
-                                                <option value="inactive" <?php echo (($user['status'] ?? '') === 'inactive') ? 'selected' : ''; ?>>Inactive</option>
+                                                <option value="active" <?php echo (($user['status'] ?? 'active') === 'active') ? 'selected' : ''; ?>><?php echo e(t('crud.active')); ?></option>
+                                                <option value="inactive" <?php echo (($user['status'] ?? '') === 'inactive') ? 'selected' : ''; ?>><?php echo e(t('crud.inactive')); ?></option>
                                             </select>
                                         </label>
-                                        <label class="settings-field">Password<input data-field="password" type="text" value="" placeholder="(leave blank to keep)"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.password')); ?><input data-field="password" type="text" value="" placeholder="<?php echo e(t('crud.leave_blank_password')); ?>"></label>
                                         <div class="settings-inline-actions">
-                                            <button type="button" class="admin-action-link settings-user-save" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>">Save</button>
-                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-user-cancel">Cancel</button>
+                                            <button type="button" class="admin-action-link settings-user-save" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>"><?php echo e(t('settings.save')); ?></button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-user-cancel"><?php echo e(t('employee.cancel')); ?></button>
                                         </div>
                                     </div>
                                 </div>
@@ -1391,42 +1391,42 @@ $departmentCreateHeadUsers = array_values(array_filter(
             <section class="crud-panel settings-panel" data-settings-panel="shifts" hidden>
                 <div class="settings-panel-head">
                     <div>
-                        <h3>Shifts</h3>
-                        <p class="crud-modal-subtitle">List view with edit action for each shift.</p>
+                        <h3><?php echo e(t('settings.shifts')); ?></h3>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.shifts_list_hint')); ?></p>
                     </div>
                     <div class="settings-pill-row">
-                        <span class="settings-pill"><?php echo count($shifts); ?> shifts</span>
+                        <span class="settings-pill"><?php echo count($shifts); ?> <?php echo e(t('settings.shifts_suffix')); ?></span>
                     </div>
                 </div>
 
                 <div class="settings-list-head settings-create-row settings-create-row-shift" data-shift-create-row>
                     <div class="settings-list-cols settings-list-cols-shift-create">
                         <div class="settings-shift-create-column settings-shift-create-column-left">
-                            <label class="settings-field">Department
+                            <label class="settings-field"><?php echo e(t('common.department')); ?>
                                 <select data-field="department_id">
                                     <?php foreach ($visibleDepartments as $department): ?>
                                         <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo (int) ($department['id'] ?? 0) === (int) ($planner['active_department_id'] ?? 0) ? 'selected' : ''; ?>>
-                                            <?php echo e($department['name'] ?? 'Department'); ?>
+                                            <?php echo e($department['name'] ?? t('settings.department_default')); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
                             </label>
-                            <label class="settings-field">Name<input data-field="name" type="text" value="" placeholder="Morning shift"></label>
-                            <label class="settings-field">From date<input data-field="range_start" type="date" value=""></label>
-                            <label class="settings-field">To date<input data-field="range_end" type="date" value=""></label>
+                            <label class="settings-field"><?php echo e(t('crud.department_name')); ?><input data-field="name" type="text" value="" placeholder="<?php echo e(t('settings.shift_name_placeholder')); ?>"></label>
+                            <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-field="range_start" type="date" value=""></label>
+                            <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-field="range_end" type="date" value=""></label>
                         </div>
 
                         <div class="settings-shift-create-column settings-shift-create-column-right">
-                            <label class="settings-field">Icon
+                            <label class="settings-field"><?php echo e(t('schedule.icon')); ?>
                                 <div class="settings-picker-stack">
                                     <div class="settings-picker-row">
                                         <input data-field="icon" type="text" value="<?php echo e($shiftIconCatalog[0] ?? '🕒'); ?>" readonly>
-                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
                                     </div>
                                     <div class="settings-picker-popover" data-picker-popover="icon" hidden>
                                         <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
                                             <?php foreach ($shiftIconCatalog as $icon): ?>
-                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($icon); ?>">
                                                     <span aria-hidden="true"><?php echo e($icon); ?></span>
                                                 </button>
                                             <?php endforeach; ?>
@@ -1434,17 +1434,17 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     </div>
                                 </div>
                             </label>
-                            <label class="settings-field">Color
+                            <label class="settings-field"><?php echo e(t('schedule.color')); ?>
                                 <div class="settings-picker-stack">
                                     <div class="settings-picker-row">
                                         <input data-field="color" type="hidden" value="#2f6fed">
-                                        <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: #2f6fed;">
-                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                        <input data-color-preview type="text" value="" readonly aria-label="<?php echo e(t('settings.selected_color_preview')); ?>" style="--selected-color: #2f6fed;">
+                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="color"><?php echo e(t('common.select')); ?></button>
                                     </div>
                                     <div class="settings-picker-popover" data-picker-popover="color" hidden>
                                         <div class="settings-choice-grid" data-choice-field="color">
                                             <?php foreach ($pickerColorCatalog as $color): ?>
-                                                <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
+                                                <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="<?php echo e(t('settings.choose_color')); ?> <?php echo e($pickerColorLabel($color)); ?>">
                                                     <span class="settings-color-swatch" aria-hidden="true"></span>
                                                     <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
                                                 </button>
@@ -1453,44 +1453,44 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     </div>
                                 </div>
                             </label>
-                            <label class="settings-field">Description
-                                <input data-field="description" type="text" value="" placeholder="Shift notes">
+                            <label class="settings-field"><?php echo e(t('crud.description')); ?>
+                                <input data-field="description" type="text" value="" placeholder="<?php echo e(t('settings.shift_notes_placeholder')); ?>">
                             </label>
-                            <label class="settings-field">Start<input data-field="start_time" type="time" value="09:00"></label>
-                            <label class="settings-field">End<input data-field="end_time" type="time" value="17:00"></label>
+                            <label class="settings-field"><?php echo e(t('schedule.start')); ?><input data-field="start_time" type="time" value="09:00"></label>
+                            <label class="settings-field"><?php echo e(t('schedule.end')); ?><input data-field="end_time" type="time" value="17:00"></label>
                         </div>
 
                         <div class="settings-shift-create-actions">
-                            <button type="button" class="admin-action-link settings-shift-create">Create shift</button>
-                            <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-reset">Reset</button>
+                            <button type="button" class="admin-action-link settings-shift-create"><?php echo e(t('settings.create_shift')); ?></button>
+                            <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-reset"><?php echo e(t('crud.reset')); ?></button>
                         </div>
                     </div>
                 </div>
 
                 <div class="settings-list-wrap">
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-shift">
-                        <strong>Name</strong>
-                        <span>Department</span>
-                        <span>Description</span>
-                        <span>Time</span>
-                        <span>Icon</span>
-                        <span>Color</span>
-                        <span>Actions</span>
+                        <strong><?php echo e(t('crud.department_name')); ?></strong>
+                        <span><?php echo e(t('common.department')); ?></span>
+                        <span><?php echo e(t('crud.description')); ?></span>
+                        <span><?php echo e(t('settings.time_label')); ?></span>
+                        <span><?php echo e(t('schedule.icon')); ?></span>
+                        <span><?php echo e(t('schedule.color')); ?></span>
+                        <span><?php echo e(t('common.action')); ?></span>
                     </div>
 
                     <?php if (empty($shifts)): ?>
-                        <div class="crud-empty-state">No shifts available.</div>
+                        <div class="crud-empty-state"><?php echo e(t('settings.no_shifts_available')); ?></div>
                     <?php else: ?>
                         <?php foreach ($shifts as $shift): ?>
                             <?php $isSystemShiftTemplate = in_array(strtolower((string) ($shift['kind'] ?? 'work')), ['rest', 'vacation', 'sick'], true); ?>
                             <article class="settings-list-item-wrap" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-shift">
-                                    <strong><?php echo e($shift['name'] ?? 'Shift'); ?></strong>
+                                    <strong><?php echo e($shift['name'] ?? t('settings.shift_default')); ?></strong>
                                     <span><?php echo e($shift['department_name'] ?? ''); ?></span>
                                     <span>
                                         <?php echo e($shift['description'] ?? '--'); ?>
                                         <?php if ($isSystemShiftTemplate): ?>
-                                            <br><small>System template (read-only)</small>
+                                            <br><small><?php echo e(t('settings.system_template_read_only')); ?></small>
                                         <?php endif; ?>
                                     </span>
                                     <span><?php echo e(($shift['start_time'] ?? '--:--') . ' - ' . ($shift['end_time'] ?? '--:--')); ?></span>
@@ -1501,27 +1501,27 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     </span>
                                     <div class="settings-inline-actions">
                                         <?php if ($isSystemShiftTemplate): ?>
-                                            <span class="admin-action-link admin-action-link-secondary" aria-label="System template" title="System template">Locked</span>
+                                            <span class="admin-action-link admin-action-link-secondary" aria-label="<?php echo e(t('settings.system_template')); ?>" title="<?php echo e(t('settings.system_template')); ?>"><?php echo e(t('settings.locked')); ?></span>
                                         <?php else: ?>
-                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-shift-edit" aria-label="Edit shift" title="Edit shift">✎</button>
-                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-shift-delete" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" aria-label="Delete shift" title="Delete shift">🗑</button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-shift-edit" aria-label="<?php echo e(t('settings.edit_shift')); ?>" title="<?php echo e(t('settings.edit_shift')); ?>">✎</button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-shift-delete" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" aria-label="<?php echo e(t('settings.delete_shift')); ?>" title="<?php echo e(t('settings.delete_shift')); ?>">🗑</button>
                                         <?php endif; ?>
                                     </div>
                                 </div>
                                 <?php if (!$isSystemShiftTemplate): ?>
                                     <div class="settings-edit-drawer" hidden>
                                         <div class="settings-list-cols settings-list-cols-shift-edit">
-                                            <label class="settings-field">Name<input data-field="name" type="text" value="<?php echo e($shift['name'] ?? 'Shift'); ?>"></label>
+                                            <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value="<?php echo e($shift['name'] ?? t('settings.shift_default')); ?>"></label>
                                             <label class="settings-field">Icon
                                                 <div class="settings-picker-stack">
                                                     <div class="settings-picker-row">
                                                         <input data-field="icon" type="text" value="<?php echo e($shift['icon'] ?? ($shiftIconCatalog[0] ?? '🕒')); ?>" readonly>
-                                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="icon">Select</button>
+                                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
                                                     </div>
                                                     <div class="settings-picker-popover" data-picker-popover="icon" hidden>
                                                         <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
                                                             <?php foreach ($shiftIconCatalog as $icon): ?>
-                                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="Choose icon <?php echo e($icon); ?>">
+                                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($icon); ?>">
                                                                     <span aria-hidden="true"><?php echo e($icon); ?></span>
                                                                 </button>
                                                             <?php endforeach; ?>
@@ -1529,17 +1529,17 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                     </div>
                                                 </div>
                                             </label>
-                                            <label class="settings-field">Color
+                                            <label class="settings-field"><?php echo e(t('schedule.color')); ?>
                                                 <div class="settings-picker-stack">
                                                     <div class="settings-picker-row">
                                                         <input data-field="color" type="hidden" value="<?php echo e($shift['color'] ?? '#2f6fed'); ?>">
-                                                        <input data-color-preview type="text" value="" readonly aria-label="Selected color preview" style="--selected-color: <?php echo e($shift['color'] ?? '#2f6fed'); ?>;">
-                                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="color">Select</button>
+                                                        <input data-color-preview type="text" value="" readonly aria-label="<?php echo e(t('settings.selected_color_preview')); ?>" style="--selected-color: <?php echo e($shift['color'] ?? '#2f6fed'); ?>;">
+                                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="color"><?php echo e(t('common.select')); ?></button>
                                                     </div>
                                                     <div class="settings-picker-popover" data-picker-popover="color" hidden>
                                                         <div class="settings-choice-grid" data-choice-field="color">
                                                             <?php foreach ($pickerColorCatalog as $color): ?>
-                                                                <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="Choose color <?php echo e($pickerColorLabel($color)); ?>">
+                                                                <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="<?php echo e(t('settings.choose_color')); ?> <?php echo e($pickerColorLabel($color)); ?>">
                                                                     <span class="settings-color-swatch" aria-hidden="true"></span>
                                                                     <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
                                                                 </button>
@@ -1548,14 +1548,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                     </div>
                                                 </div>
                                             </label>
-                                            <label class="settings-field settings-field-wide">Description
-                                                <input data-field="description" type="text" value="<?php echo e($shift['description'] ?? ''); ?>" placeholder="Shift notes">
+                                            <label class="settings-field settings-field-wide"><?php echo e(t('crud.description')); ?>
+                                                <input data-field="description" type="text" value="<?php echo e($shift['description'] ?? ''); ?>" placeholder="<?php echo e(t('settings.shift_notes_placeholder')); ?>">
                                             </label>
-                                            <label class="settings-field">Start<input data-field="start_time" type="time" value="<?php echo e($shift['start_time'] ?? ''); ?>"></label>
-                                            <label class="settings-field">End<input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>"></label>
+                                            <label class="settings-field"><?php echo e(t('schedule.start')); ?><input data-field="start_time" type="time" value="<?php echo e($shift['start_time'] ?? ''); ?>"></label>
+                                            <label class="settings-field"><?php echo e(t('schedule.end')); ?><input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>"></label>
                                             <div class="settings-inline-actions">
-                                                <button type="button" class="admin-action-link settings-shift-save" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">Save</button>
-                                                <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-cancel">Cancel</button>
+                                                <button type="button" class="admin-action-link settings-shift-save" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(t('settings.save')); ?></button>
+                                                <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-cancel"><?php echo e(t('employee.cancel')); ?></button>
                                             </div>
                                         </div>
                                     </div>

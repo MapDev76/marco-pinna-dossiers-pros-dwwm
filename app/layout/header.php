@@ -36,7 +36,14 @@ if (!$isPublicPage && $currentUser !== null) {
     } else {
         $companyName = t('common.app_name');
 
-        if (!empty($currentUser['department_id'])) {
+        if (isset($dashboardPlannerData['company']['name'])) {
+            $plannerCompanyName = trim((string) $dashboardPlannerData['company']['name']);
+            if ($plannerCompanyName !== '') {
+                $companyName = $plannerCompanyName;
+            }
+        }
+
+        if ($companyName === t('common.app_name') && !empty($currentUser['department_id'])) {
             try {
                 $pdo = getPDO();
                 $statement = $pdo->prepare(
@@ -215,8 +222,15 @@ if ($route === 'home') {
                     <?php endforeach; ?>
                 </div>
                 <div class="site-lang-switch" aria-label="<?php echo e(t('common.language')); ?>">
-                    <a href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" class="site-lang-link <?php echo $locale === 'fr' ? 'is-active' : ''; ?>">FR</a>
-                    <a href="<?php echo e(appCurrentUrl(['lang' => 'en'])); ?>" class="site-lang-link <?php echo $locale === 'en' ? 'is-active' : ''; ?>">EN</a>
+                    <details class="site-lang-dropdown">
+                        <summary class="site-icon-btn site-lang-trigger" title="<?php echo e(t('common.language')); ?>" aria-label="<?php echo e(t('common.language')); ?>">
+                            <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="<?php echo e(t('common.language')); ?>" class="site-icon">
+                        </summary>
+                        <div class="site-lang-menu" role="menu" aria-label="<?php echo e(t('common.language')); ?>">
+                            <a href="<?php echo e(appCurrentUrl(['lang' => 'en'])); ?>" class="site-lang-link <?php echo $locale === 'en' ? 'is-active' : ''; ?>" role="menuitem">English</a>
+                            <a href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" class="site-lang-link <?php echo $locale === 'fr' ? 'is-active' : ''; ?>" role="menuitem">Francais</a>
+                        </div>
+                    </details>
                 </div>
             </div>
         </div>

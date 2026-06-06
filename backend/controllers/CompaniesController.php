@@ -76,10 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($payload['name'] === '') {
-        setFlash('error', 'Company name is required.');
+        setFlash('error', t('flash.company_name_required'));
         companiesModalRedirect();
     } elseif (!in_array($payload['type'], ['hotel', 'hospital', 'clinic', 'elderly_center', 'restaurant', 'other'], true)) {
-        setFlash('error', 'Invalid company type.');
+        setFlash('error', t('flash.invalid_company_type'));
         companiesModalRedirect();
     } else {
         if ($action === 'create') {

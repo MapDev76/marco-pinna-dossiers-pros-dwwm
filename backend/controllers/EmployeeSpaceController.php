@@ -16,7 +16,7 @@ if (!isLoggedIn()) {
 $currentUser = currentUser();
 $allowedRoles = ['employee', 'admin', 'department_manager'];
 if (!in_array((string) ($currentUser['role'] ?? ''), $allowedRoles, true)) {
-    setFlash('error', 'Access restricted.');
+    setFlash('error', t('common.access_restricted'));
     redirectTo('dashboard');
 }
 
@@ -305,9 +305,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $shiftStartAt = null;
         $isLateCheckIn = false;
         if ($userShiftId <= 0) {
-            $error = 'Please select a valid shift.';
+            $error = t('employee.select_valid_shift');
         } elseif ($signatureData === '') {
-            $error = 'Please draw your signature before confirming attendance.';
+            $error = t('employee.draw_signature_first');
         } else {
             $shiftCheck = $pdo->prepare(
                 'SELECT us.id,
@@ -330,13 +330,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$assignedShift) {
                 $error = t('common.unauthorized_shift');
             } elseif ((string) ($assignedShift['work_date'] ?? '') !== $todayDate) {
-                $error = 'You can only sign attendance for today\'s shift.';
+                $error = t('employee.sign_today_only');
             } elseif (!in_array(strtolower(trim((string) ($assignedShift['shift_kind'] ?? 'work'))), ['work', 'overtime'], true)) {
-                $error = 'Attendance signing is available only for working shifts.';
+                $error = t('employee.sign_work_shifts_only');
             } else {
                 $shiftRequiredIp = $normalizeIp((string) ($assignedShift['signature_ip'] ?? ''));
                 if ($shiftRequiredIp !== '' && $clientIp !== $shiftRequiredIp) {
-                    $error = 'Attendance signature allowed only from company Wi-Fi IP: ' . $shiftRequiredIp . '.';
+                    $error = t('employee.signature_ip_required', ['ip' => $shiftRequiredIp]);
                 }
 
                 $shiftStartAt = $buildShiftDateTime((string) ($assignedShift['work_date'] ?? ''), (string) ($assignedShift['start_time'] ?? ''));
@@ -348,9 +348,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($error === null && $shiftStartAt !== null && $shiftEndAt !== null) {
                     $signWindowStart = $shiftStartAt->modify('-5 minutes');
                     if ($now < $signWindowStart) {
-                        $error = 'Attendance signing opens 5 minutes before your shift starts.';
+                        $error = t('employee.sign_open_before_shift');
                     } elseif ($now > $shiftEndAt) {
-                        $error = 'Attendance signing is no longer available after shift end.';
+                        $error = t('employee.sign_closed_after_shift');
                     }
                 }
 
@@ -382,7 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $existingAttendanceId = (int) ($existingAttendance['id'] ?? 0);
 
                 if ($existingAttendanceId > 0 && trim((string) ($existingAttendance['check_in_time'] ?? '')) !== '') {
-                    $error = 'Attendance already recorded for this shift. Ask your manager if it needs to be updated.';
+                    $error = t('employee.attendance_already_recorded');
                 }
 
                 if ($error === null && $existingAttendanceId > 0) {
@@ -417,9 +417,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($error === null) {
                     if ($isLateCheckIn) {
-                        setFlash('success', 'Attendance recorded. You checked in late after scheduled start time.');
+                        setFlash('success', t('flash.attendance_recorded_late'));
                     } else {
-                        setFlash('success', 'Attendance recorded with touchscreen signature.');
+                        setFlash('success', t('flash.attendance_recorded'));
                     }
                     redirectTo('my-space');
                 }

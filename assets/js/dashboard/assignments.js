@@ -1,16 +1,16 @@
 (() => {
   const apiUrl = window.DashboardConfig?.apiDashboard;
+  const locale = String(document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+  const isFr = locale.startsWith('fr');
+  const tr = (enText, frText) => (isFr ? frText : enText);
   const feedback = window.DashboardFeedback;
   const RULES_STORAGE_KEY = 'staffease:auto-assign-rules:v1';
-  const WEEKDAY_OPTIONS = [
-    { value: 1, label: 'Mon' },
-    { value: 2, label: 'Tue' },
-    { value: 3, label: 'Wed' },
-    { value: 4, label: 'Thu' },
-    { value: 5, label: 'Fri' },
-    { value: 6, label: 'Sat' },
-    { value: 0, label: 'Sun' },
-  ];
+  const WEEKDAY_FORMATTER = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { weekday: 'short' });
+  const WEEKDAY_OPTIONS = [1, 2, 3, 4, 5, 6, 0].map((value) => {
+    const baseDate = new Date(2024, 0, 1 + value, 12, 0, 0, 0);
+    const label = WEEKDAY_FORMATTER.format(baseDate).replace('.', '');
+    return { value, label: label.charAt(0).toUpperCase() + label.slice(1) };
+  });
   const employeeModal = document.querySelector('[data-assignment-employee-modal]');
   const employeeModalTitle = employeeModal?.querySelector('[data-assignment-modal-title]') || null;
   const employeeModalSubtitle = employeeModal?.querySelector('[data-assignment-modal-subtitle]') || null;
@@ -51,7 +51,7 @@
 
   function notifyError(message) {
     if (feedback) {
-      feedback.error('Oops!', message);
+      feedback.error(tr('Oops!', 'Erreur'), message);
       return;
     }
     console.error(message);
@@ -59,7 +59,7 @@
 
   function notifySuccess(message) {
     if (feedback) {
-      feedback.success('Done', message);
+      feedback.success(tr('Done', 'Termine'), message);
       return;
     }
   }
@@ -502,7 +502,7 @@
 
     const slots = getOpenSlotEntries();
     if (!slots.length) {
-      openList.innerHTML = '<div class="crud-empty-state">No open shifts available for this employee in the selected range.</div>';
+      openList.innerHTML = '<div class="crud-empty-state">' + tr('No open shifts available for this employee in the selected range.', 'Aucun poste ouvert disponible pour cet employe dans la plage selectionnee.') + '</div>';
       return;
     }
 
@@ -546,7 +546,7 @@
 
     const slots = getOpenSlotEntries().filter((slot) => selectedOpenSlotKeys.has(slot.key));
     if (!slots.length) {
-      notifyError('No valid open shifts found in the current range.');
+      notifyError(tr('No valid open shifts found in the current range.', 'Aucun poste ouvert valide trouve dans la plage courante.'));
       return;
     }
 
@@ -564,17 +564,17 @@
       }
       if (assignedCount > 0) {
         if (feedback?.reloadSettingsTabWithSuccess) {
-          feedback.reloadSettingsTabWithSuccess('assignments', 'Done', 'Selected open shifts assigned successfully.');
+          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine'), tr('Selected open shifts assigned successfully.', 'Les postes ouverts selectionnes ont ete assignes avec succes.'));
         } else {
-          notifySuccess('Selected open shifts assigned successfully.');
+          notifySuccess(tr('Selected open shifts assigned successfully.', 'Les postes ouverts selectionnes ont ete assignes avec succes.'));
           location.reload();
         }
       } else {
-        notifyError('No assignable open shifts were selected.');
+        notifyError(tr('No assignable open shifts were selected.', 'Aucun poste ouvert assignable n a ete selectionne.'));
       }
     } catch (error) {
       console.error(error);
-      notifyError('Error assigning selected open shifts.');
+      notifyError(tr('Error assigning selected open shifts.', 'Erreur lors de l affectation des postes ouverts selectionnes.'));
     }
   }
 
@@ -612,7 +612,7 @@
     employeeModalWeekly.innerHTML = weekBlocks.map((days, index) => {
       return `
         <article class="settings-assignment-week-card">
-          <strong>Week ${index + 1}</strong>
+          <strong>${tr('Week', 'Semaine')} ${index + 1}</strong>
           <div class="settings-assignment-week-days">
             ${days.map((day) => `
               <button
@@ -620,7 +620,7 @@
                 class="settings-assignment-week-day ${day.blocked ? 'is-unavailable' : 'is-available'}"
                 data-assignment-modal-week-day="${day.key}"
                 data-assignment-modal-week-day-state="${day.blocked ? 'unavailable' : 'available'}"
-                title="${day.reason ? toRuleReasonLabel(day.reason) : 'Available'}"
+                title="${day.reason ? toRuleReasonLabel(day.reason) : tr('Available', 'Disponible')}"
               >
                 <small>${day.label}</small>
                 <b>${day.key.slice(8)}</b>
@@ -649,23 +649,23 @@
           return true;
         }
         if (feedback?.reloadSettingsTabWithSuccess) {
-          feedback.reloadSettingsTabWithSuccess('assignments', 'Done', successLabel || 'Shift assigned successfully.');
+          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine'), successLabel || tr('Shift assigned successfully.', 'Poste assigne avec succes.'));
         } else {
-          notifySuccess(successLabel || 'Shift assigned successfully.');
+          notifySuccess(successLabel || tr('Shift assigned successfully.', 'Poste assigne avec succes.'));
           location.reload();
         }
       } else {
         if (options?.silent) {
           return false;
         }
-        notifyError('Assignment failed: ' + (res?.error || 'unknown'));
+        notifyError(tr('Assignment failed: ', 'Echec de l affectation : ') + (res?.error || tr('unknown', 'inconnue')));
       }
     } catch (error) {
       if (options?.silent) {
         throw error;
       }
       console.error(error);
-      notifyError('Error assigning shift.');
+      notifyError(tr('Error assigning shift.', 'Erreur lors de l affectation du poste.'));
     }
   }
 
@@ -697,21 +697,21 @@
     if (!employeeModalSpecialList) return;
     const list = Array.isArray(rule?.special_dates) ? rule.special_dates.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))) : [];
     if (!list.length) {
-      employeeModalSpecialList.innerHTML = '<span class="crud-modal-subtitle">No unavailable dates defined.</span>';
+      employeeModalSpecialList.innerHTML = '<span class="crud-modal-subtitle">' + tr('No unavailable dates defined.', 'Aucune date indisponible definie.') + '</span>';
       return;
     }
 
     employeeModalSpecialList.innerHTML = list.map((item) => {
       const dateValue = String(item?.date || '');
       const reason = String(item?.reason || 'special');
-      return `<span class="settings-auto-rule-chip" data-date="${dateValue}" data-reason="${reason}">${dateValue} • ${toRuleReasonLabel(reason)}<button type="button" data-assignment-modal-remove-special="${dateValue}" aria-label="Remove unavailable date">×</button></span>`;
+      return `<span class="settings-auto-rule-chip" data-date="${dateValue}" data-reason="${reason}">${dateValue} • ${toRuleReasonLabel(reason)}<button type="button" data-assignment-modal-remove-special="${dateValue}" aria-label="${tr('Remove unavailable date', 'Supprimer la date indisponible')}">×</button></span>`;
     }).join('');
   }
 
   function renderEmployeeShiftList(rows) {
     if (!employeeModalShifts) return;
     if (!rows.length) {
-      employeeModalShifts.innerHTML = '<div class="crud-empty-state">No shifts currently assigned to this employee.</div>';
+      employeeModalShifts.innerHTML = '<div class="crud-empty-state">' + tr('No shifts currently assigned to this employee.', 'Aucun poste actuellement assigne a cet employe.') + '</div>';
       return;
     }
 

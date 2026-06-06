@@ -287,10 +287,14 @@ function isSuperAdmin(): bool
 /**
  * Ensures the current user has the requested role or stops the request.
  */
-function requireRole(string $role, string $errorMessage = 'Access restricted.'): void
+function requireRole(string $role, string $errorMessage = ''): void
 {
+    if ($errorMessage === '') {
+        $errorMessage = t('common.access_restricted');
+    }
+
     if (!isLoggedIn()) {
-        setFlash('error', 'Please log in to continue.');
+        setFlash('error', t('common.login_required'));
         redirectTo('login');
     }
 
@@ -305,7 +309,7 @@ function requireRole(string $role, string $errorMessage = 'Access restricted.'):
  */
 function requireSuperAdmin(): void
 {
-    requireRole('super_admin', 'Access restricted to Super Admin.');
+    requireRole('super_admin', t('common.super_admin_only'));
 }
 
 /**

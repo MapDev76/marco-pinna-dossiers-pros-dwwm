@@ -582,7 +582,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $recipientIds = array_values(array_filter(array_map('intval', is_array($recipientIds) ? $recipientIds : [$recipientIds])));
 
         if ($messageTitle === '' || $messageBody === '' || empty($recipientIds)) {
-            setFlash('error', 'Message title, body and at least one recipient are required.');
+            setFlash('error', t('flash.message_required_fields'));
         } else {
             $messageType = $messageKind === 'notification' ? 'notification' : $requestType;
             $insertStatement = $pdo->prepare(
@@ -603,7 +603,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             }
 
-            setFlash('success', 'Message sent successfully.');
+            setFlash('success', t('flash.message_sent_success'));
         }
 
         redirectTo('dashboard');
