@@ -117,6 +117,56 @@ $iconLabel = static function (string $icon): string {
     return ucwords(trim($name));
 };
 
+$localizedSystemShiftName = static function (string $kind, string $defaultName = ''): string {
+    $kind = strtolower(trim($kind));
+    if ($kind === 'rest') {
+        return t('settings.rest');
+    }
+    if ($kind === 'vacation') {
+        return t('settings.vacation');
+    }
+    if ($kind === 'sick') {
+        return t('settings.sick');
+    }
+
+    return $defaultName;
+};
+
+$isFrLocale = str_starts_with(strtolower((string) appLocale()), 'fr');
+
+$localizedShiftKindLabel = static function (string $kind) use ($isFrLocale): string {
+    $kind = strtolower(trim($kind));
+    if ($kind === 'rest') {
+        return t('settings.rest');
+    }
+    if ($kind === 'vacation') {
+        return t('settings.vacation');
+    }
+    if ($kind === 'sick') {
+        return t('settings.sick');
+    }
+    if ($kind === 'work') {
+        return $isFrLocale ? 'Travail' : 'Work';
+    }
+
+    return ucfirst($kind !== '' ? $kind : 'work');
+};
+
+$localizedSystemShiftDescription = static function (string $kind, string $fallback = '') use ($isFrLocale): string {
+    $kind = strtolower(trim($kind));
+    if ($kind === 'rest') {
+        return $isFrLocale ? 'Modele systeme pour attribuer un jour de repos.' : 'System template for rest day assignment.';
+    }
+    if ($kind === 'vacation') {
+        return $isFrLocale ? 'Modele systeme pour attribuer des vacances.' : 'System template for vacation assignment.';
+    }
+    if ($kind === 'sick') {
+        return $isFrLocale ? 'Modele systeme pour attribuer un conge maladie.' : 'System template for sick leave assignment.';
+    }
+
+    return $fallback;
+};
+
 $departmentIconCatalog = $iconCatalog;
 $shiftIconCatalog = $iconCatalog;
 $pickerColorCatalogMap = [
@@ -630,7 +680,15 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <select data-auto-assign-shift>
                                 <option value="0"><?php echo e(t('settings.all_open_work_shifts')); ?></option>
                                 <?php foreach ($shifts as $shift): ?>
-                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(($shift['name'] ?? t('settings.shift_default'))); ?></option>
+                                    <?php
+                                        $shiftOptionKind = (string) ($shift['kind'] ?? 'work');
+                                        $shiftOptionName = (string) ($shift['name'] ?? t('settings.shift_default'));
+                                        $shiftOptionDisplayName = $localizedSystemShiftName($shiftOptionKind, $shiftOptionName);
+                                        if ($shiftOptionDisplayName === '') {
+                                            $shiftOptionDisplayName = $shiftOptionName;
+                                        }
+                                    ?>
+                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e($shiftOptionDisplayName); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </label>
@@ -909,6 +967,18 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="crud-empty-state"><?php echo e(t('settings.no_assignments')); ?></div>
                     <?php else: ?>
                         <?php foreach (array_slice($assignmentsCurrentMonth, 0, 250) as $assignment): ?>
+                            <?php
+                                $assignmentShiftKindValue = (string) ($assignment['shift_kind'] ?? 'work');
+                                $assignmentShiftNameValue = (string) ($assignment['shift_name'] ?? '--');
+                                $assignmentShiftDisplayName = $localizedSystemShiftName($assignmentShiftKindValue, $assignmentShiftNameValue);
+                                $assignmentShiftDescriptionDisplay = $localizedSystemShiftDescription(
+                                    $assignmentShiftKindValue,
+                                    (string) ($assignment['shift_description'] ?? '')
+                                );
+                                if ($assignmentShiftDisplayName === '') {
+                                    $assignmentShiftDisplayName = $assignmentShiftNameValue;
+                                }
+                            ?>
                             <article
                                 class="settings-list-item-wrap"
                                 data-assignment-id="<?php echo (int) ($assignment['assignment_id'] ?? 0); ?>"
@@ -916,7 +986,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 data-assignment-user-name="<?php echo e($assignment['user_name'] ?: t('settings.open_slot')); ?>"
                                 data-assignment-work-date="<?php echo e($assignment['work_date'] ?? ''); ?>"
                                 data-assignment-shift-id="<?php echo (int) ($assignment['shift_id'] ?? 0); ?>"
-                                data-assignment-shift-name="<?php echo e($assignment['shift_name'] ?? '--'); ?>"
+                                data-assignment-shift-name="<?php echo e($assignmentShiftDisplayName); ?>"
                                 data-assignment-shift-icon="<?php echo e($assignment['shift_icon'] ?? '🕒'); ?>"
                                 data-assignment-shift-kind="<?php echo e($assignment['shift_kind'] ?? 'work'); ?>"
                                 data-assignment-status="<?php echo e($assignment['status'] ?? ((int) ($assignment['user_id'] ?? 0) > 0 ? 'assigned' : 'open')); ?>"
@@ -929,11 +999,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <strong><?php echo e($assignment['work_date'] ?? ''); ?></strong>
                                     <span><?php echo e($assignment['department_name'] ?? '--'); ?></span>
                                     <span>
-                                        <?php echo e($assignment['shift_icon'] ?? '🕒'); ?>
-                                        <?php echo e($assignment['shift_name'] ?? '--'); ?>
-                                        <small class="settings-meta-inline"><?php echo e(ucfirst((string) ($assignment['shift_kind'] ?? 'work'))); ?></small>
-                                        <?php if (!empty($assignment['shift_description'])): ?>
-                                            <small class="settings-meta-inline"><?php echo e($assignment['shift_description']); ?></small>
+                                        <?php $assignmentShiftIcon = (string) ($assignment['shift_icon'] ?? '🕒'); ?>
+                                        <?php if ($isIconAsset($assignmentShiftIcon)): ?>
+                                            <img src="<?php echo e($iconUrl($assignmentShiftIcon)); ?>" alt="" aria-hidden="true" class="settings-icon-inline-image">
+                                        <?php else: ?>
+                                            <?php echo e($assignmentShiftIcon); ?>
+                                        <?php endif; ?>
+                                        <?php echo e($assignmentShiftDisplayName); ?>
+                                        <small class="settings-meta-inline"><?php echo e($localizedShiftKindLabel((string) ($assignment['shift_kind'] ?? 'work'))); ?></small>
+                                        <?php if ($assignmentShiftDescriptionDisplay !== ''): ?>
+                                            <small class="settings-meta-inline"><?php echo e($assignmentShiftDescriptionDisplay); ?></small>
                                         <?php endif; ?>
                                     </span>
                                     <span><?php echo e($assignment['user_name'] ?: t('settings.open_slot')); ?></span>
@@ -960,8 +1035,17 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <label class="settings-field">Shift
                                             <select data-field="shift_id">
                                                 <?php foreach ($shifts as $shift): ?>
+                                                    <?php
+                                                        $editShiftKind = (string) ($shift['kind'] ?? 'work');
+                                                        $editShiftName = (string) ($shift['name'] ?? t('settings.shift_default'));
+                                                        $editShiftDisplayName = $localizedSystemShiftName($editShiftKind, $editShiftName);
+                                                        if ($editShiftDisplayName === '') {
+                                                            $editShiftDisplayName = $editShiftName;
+                                                        }
+                                                        $editShiftDescription = $localizedSystemShiftDescription($editShiftKind, (string) ($shift['description'] ?? ''));
+                                                    ?>
                                                     <option value="<?php echo (int) ($shift['id'] ?? 0); ?>" <?php echo ((int) ($assignment['shift_id'] ?? 0) === (int) ($shift['id'] ?? 0)) ? 'selected' : ''; ?>>
-                                                        <?php echo e(($shift['icon'] ?? '🕒') . ' ' . ($shift['name'] ?? t('settings.shift_default')) . ' • ' . ($shift['department_name'] ?? '')); ?><?php echo !empty($shift['description']) ? e(' • ' . $shift['description']) : ''; ?>
+                                                        <?php echo e(($shift['icon'] ?? '🕒') . ' ' . $editShiftDisplayName . ' • ' . ($shift['department_name'] ?? '')); ?><?php echo $editShiftDescription !== '' ? e(' • ' . $editShiftDescription) : ''; ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -1465,6 +1549,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                 <div class="settings-list-head settings-create-row" data-user-create-row>
                     <div class="settings-list-cols settings-list-cols-user-create">
+                        <input data-field="company_id" type="hidden" value="<?php echo (int) $scopeCompanyId; ?>">
                         <label class="settings-field"><?php echo e(t('crud.first_name')); ?><input data-field="first_name" type="text" value=""></label>
                         <label class="settings-field"><?php echo e(t('crud.last_name')); ?><input data-field="last_name" type="text" value=""></label>
                         <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value=""></label>
@@ -1656,12 +1741,21 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <?php else: ?>
                         <?php foreach ($shifts as $shift): ?>
                             <?php $isSystemShiftTemplate = in_array(strtolower((string) ($shift['kind'] ?? 'work')), ['rest', 'vacation', 'sick'], true); ?>
+                            <?php
+                                $shiftKindValue = (string) ($shift['kind'] ?? 'work');
+                                $shiftNameValue = (string) ($shift['name'] ?? t('settings.shift_default'));
+                                $shiftDisplayName = $localizedSystemShiftName($shiftKindValue, $shiftNameValue);
+                                $shiftDescriptionDisplay = $localizedSystemShiftDescription($shiftKindValue, (string) ($shift['description'] ?? '--'));
+                                if ($shiftDisplayName === '') {
+                                    $shiftDisplayName = $shiftNameValue;
+                                }
+                            ?>
                             <article class="settings-list-item-wrap" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-shift">
-                                    <strong><?php echo e($shift['name'] ?? t('settings.shift_default')); ?></strong>
+                                    <strong><?php echo e($shiftDisplayName); ?></strong>
                                     <span><?php echo e($shift['department_name'] ?? ''); ?></span>
                                     <span>
-                                        <?php echo e($shift['description'] ?? '--'); ?>
+                                        <?php echo e($shiftDescriptionDisplay); ?>
                                         <?php if ($isSystemShiftTemplate): ?>
                                             <br><small><?php echo e(t('settings.system_template_read_only')); ?></small>
                                         <?php endif; ?>

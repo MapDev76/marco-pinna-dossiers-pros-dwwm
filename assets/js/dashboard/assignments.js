@@ -4,6 +4,7 @@
   const isFr = locale.startsWith('fr');
   const tr = (enText, frText) => (isFr ? frText : enText);
   const feedback = window.DashboardFeedback;
+  const iconsBase = String((window.DashboardConfig && window.DashboardConfig.iconsBase) || '/assets/icons/');
   const RULES_STORAGE_KEY = 'staffease:auto-assign-rules:v1';
   const WEEKDAY_FORMATTER = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { weekday: 'short' });
   const WEEKDAY_OPTIONS = [1, 2, 3, 4, 5, 6, 0].map((value) => {
@@ -48,6 +49,28 @@
   let activeEmployeeDepartmentId = 0;
   let activeEmployeeDepartmentName = '';
   let selectedOpenSlotKeys = new Set();
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function isIconAsset(icon) {
+    return /\.(svg|png|jpe?g|gif|webp|ico)$/i.test(String(icon || ''));
+  }
+
+  function renderShiftIcon(icon) {
+    const value = String(icon || '').trim();
+    if (!value) return '';
+    if (isIconAsset(value)) {
+      return `<img src="${iconsBase}${encodeURIComponent(value)}" aria-hidden="true" class="settings-icon-inline-image">`;
+    }
+    return escapeHtml(value);
+  }
 
   function notifyError(message) {
     if (feedback) {
@@ -164,6 +187,17 @@
       default:
         return tr('Special day', 'Jour special');
     }
+  }
+
+  function toShiftKindLabel(kind) {
+    var normalized = String(kind || 'work').toLowerCase();
+    if (normalized === 'rest' || normalized === 'vacation' || normalized === 'sick') {
+      return toRuleReasonLabel(normalized);
+    }
+    if (normalized === 'work') {
+      return tr('Work', 'Travail');
+    }
+    return normalized;
   }
 
   function getRuleRows() {
@@ -349,8 +383,9 @@
       .map((item) => {
         const id = parseInt(String(item?.id || '0'), 10) || 0;
         const icon = String(item?.icon || '🕒');
-        const name = String(item?.name || 'Shift');
-        return `<option value="${id}">${icon} ${name}</option>`;
+        const iconLabel = isIconAsset(icon) ? '•' : icon;
+        const name = String(item?.name || tr('Shift', 'Poste'));
+        return `<option value="${id}">${iconLabel} ${name}</option>`;
       })
       .join('');
     employeeModalOpenShift.innerHTML = `<option value="0">Tous les postes du departement</option>${optionHtml}`;
@@ -721,6 +756,7 @@
       const shiftName = String(row.dataset.assignmentShiftName || 'Shift');
       const shiftIcon = String(row.dataset.assignmentShiftIcon || '🕒');
       const shiftKind = String(row.dataset.assignmentShiftKind || 'work');
+      const shiftKindLabel = toShiftKindLabel(shiftKind);
       const departmentName = String(row.dataset.assignmentDepartmentName || '--');
       const status = String(row.dataset.assignmentStatus || 'assigned');
       const start = String(row.dataset.assignmentStartTime || '--:--');
@@ -731,7 +767,7 @@
             <strong>${workDate}</strong>
             <span>${status}</span>
           </div>
-          <div class="settings-assignment-modal-shift-item-meta">${shiftIcon} ${shiftName} • ${start || '--:--'} - ${end || '--:--'} • ${shiftKind} • ${departmentName}</div>
+          <div class="settings-assignment-modal-shift-item-meta">${renderShiftIcon(shiftIcon)} ${escapeHtml(shiftName)} • ${escapeHtml(start || '--:--')} - ${escapeHtml(end || '--:--')} • ${escapeHtml(shiftKindLabel)} • ${escapeHtml(departmentName)}</div>
           <div class="settings-assignment-modal-shift-item-actions">
             <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-edit="${assignmentId}">Modify</button>
             <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-unassign="${assignmentId}">Unassign</button>

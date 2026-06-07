@@ -13,6 +13,10 @@ if (!isset($dashboardSidebarSections) || !is_array($dashboardSidebarSections)) {
 $sidebarRoleLabel = $dashboardSidebarRoleLabel ?? t('roles.employee');
 $currentSidebarUser = currentUser();
 $sidebarRole = $currentSidebarUser['role'] ?? 'employee';
+$basePath = $basePath ?? (function () {
+    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
+})();
 
 $sidebarTitleMap = [
     'Management' => t('common.management'),
@@ -22,6 +26,14 @@ $sidebarTitleMap = [
     'Section' => t('common.section'),
     'Action' => t('common.action'),
 ];
+
+$sidebarIsIconAsset = static function (string $icon): bool {
+    return (bool) preg_match('/\.(svg|png|jpe?g|gif|webp|ico)$/i', $icon);
+};
+
+$sidebarIconUrl = static function (string $icon) use ($basePath): string {
+    return $basePath . '/assets/icons/' . rawurlencode($icon);
+};
 ?>
 <aside id="dashboard-sidebar" class="app-sidebar" aria-label="<?php echo e(t('common.dashboard')); ?> <?php echo e(t('common.quick_actions')); ?>">
     <div class="dashboard-sidebar-shell">
@@ -78,7 +90,13 @@ $sidebarTitleMap = [
                                 data-planner-department-description="<?php echo e($department['description'] ?? ''); ?>"
                                 data-planner-department-icon="<?php echo e($deptIcon); ?>"
                                 data-planner-department-color="<?php echo e($deptColor); ?>">
-                                <span style="color: <?php echo e($deptColor); ?>;"><?php echo e($deptIcon); ?></span>
+                                <span style="color: <?php echo e($deptColor); ?>;">
+                                    <?php if ($sidebarIsIconAsset((string) $deptIcon)): ?>
+                                        <img src="<?php echo e($sidebarIconUrl((string) $deptIcon)); ?>" alt="" aria-hidden="true" class="calendar-icon-img">
+                                    <?php else: ?>
+                                        <?php echo e($deptIcon); ?>
+                                    <?php endif; ?>
+                                </span>
                                 <span><?php echo e($department['name'] ?? t('common.department')); ?></span>
                             </button>
                         <?php endforeach; ?>
@@ -104,7 +122,14 @@ $sidebarTitleMap = [
                         $activeDeptColor = $activeDept['color'] ?? '#b98b12';
                         ?>
                         <div class="dashboard-sidebar-planner-title">
-                            <span style="color: <?php echo e($activeDeptColor); ?>;"><?php echo e($activeDeptIcon); ?> <?php echo e($activeDept['name'] ?? t('common.department')); ?></span>
+                            <span style="color: <?php echo e($activeDeptColor); ?>;">
+                                <?php if ($sidebarIsIconAsset((string) $activeDeptIcon)): ?>
+                                    <img src="<?php echo e($sidebarIconUrl((string) $activeDeptIcon)); ?>" alt="" aria-hidden="true" class="calendar-icon-img">
+                                <?php else: ?>
+                                    <?php echo e($activeDeptIcon); ?>
+                                <?php endif; ?>
+                                <?php echo e($activeDept['name'] ?? t('common.department')); ?>
+                            </span>
                             <span><?php echo count($users); ?> <?php echo e(t('common.staff')); ?></span>
                         </div>
                         <div class="dashboard-sidebar-planner-description"><?php echo e($activeDept['description'] ?? ''); ?></div>
@@ -127,7 +152,13 @@ $sidebarTitleMap = [
                                     <?php $shiftIcon = $shift['icon'] ?? '🕒'; ?>
                                     <?php $shiftColor = $shift['color'] ?? '#2f6fed'; ?>
                                     <button type="button" class="dashboard-sidebar-shift-chip" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" style="--shift-chip-color: <?php echo e($shiftColor); ?>;">
-                                        <span class="dashboard-sidebar-shift-icon"><?php echo e($shiftIcon); ?></span>
+                                        <span class="dashboard-sidebar-shift-icon">
+                                            <?php if ($sidebarIsIconAsset((string) $shiftIcon)): ?>
+                                                <img src="<?php echo e($sidebarIconUrl((string) $shiftIcon)); ?>" alt="" aria-hidden="true" class="calendar-icon-img">
+                                            <?php else: ?>
+                                                <?php echo e($shiftIcon); ?>
+                                            <?php endif; ?>
+                                        </span>
                                         <span><?php echo e($shift['name'] ?? t('common.shift')); ?></span>
                                     </button>
                                 <?php endforeach; else: ?>

@@ -1,4 +1,24 @@
 (function(){
+  var iconsBase = String((window.DashboardConfig && window.DashboardConfig.iconsBase) || '/assets/icons/');
+  var isIconAsset = function (icon) {
+    return /\.(svg|png|jpe?g|gif|webp|ico)$/i.test(String(icon || ''));
+  };
+  var escapeHtml = function (value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+  var renderIconHtml = function (icon) {
+    if (!icon) return '';
+    if (isIconAsset(icon)) {
+      return '<img src="' + escapeHtml(iconsBase + encodeURIComponent(icon)) + '" aria-hidden="true" class="calendar-icon-img">';
+    }
+    return escapeHtml(icon);
+  };
+
   function initSidebar(options) {
     var sidebar = options.sidebar;
     var sidebarHandle = options.sidebarHandle;
@@ -35,7 +55,7 @@
       var name = button.getAttribute('data-planner-department-name') || 'Department';
       var color = button.getAttribute('data-planner-department-color') || '#b98b12';
       currentDepartment.hidden = false;
-      currentDepartment.innerHTML = '<button type="button" class="dashboard-sidebar-current-department-button" style="color:' + color + ';">' + icon + ' ' + name + '</button>';
+      currentDepartment.innerHTML = '<button type="button" class="dashboard-sidebar-current-department-button" style="color:' + escapeHtml(color) + ';">' + renderIconHtml(icon) + ' ' + escapeHtml(name) + '</button>';
       var currentButton = currentDepartment.querySelector('button');
       if (currentButton) {
         currentButton.addEventListener('click', function () {

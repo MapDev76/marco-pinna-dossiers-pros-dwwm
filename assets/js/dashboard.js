@@ -22,13 +22,26 @@
   const apiDashboard = config.apiDashboard;
   const iconsBase = String(config.iconsBase || '/assets/icons/');
 
+  const escapeHtml = (value) => String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
   const isIconAsset = (icon) => /\.(svg|png|jpe?g|gif|webp|ico)$/i.test(String(icon || ''));
   const renderIconHtml = (icon, color) => {
     if (!icon) return '';
     if (isIconAsset(icon)) {
       return `<img src="${iconsBase}${encodeURIComponent(icon)}" aria-hidden="true" class="calendar-icon-img">`;
     }
-    return `<span style="color:${color || ''}">${icon}</span>`;
+    return `<span style="color:${escapeHtml(color || '')}">${escapeHtml(icon)}</span>`;
+  };
+
+  const renderDepartmentTitleHtml = (icon, name, color) => {
+    const safeName = escapeHtml(name || 'Department');
+    const iconHtml = icon ? `${renderIconHtml(icon, color)} ` : '';
+    return `${iconHtml}${safeName}`;
   };
 
   /**
@@ -1109,7 +1122,8 @@
       const departmentColor = (activeDepartment.color || '#b98b12').toString();
 
       return {
-        title: departmentIcon ? `${departmentIcon} ${departmentName}` : departmentName,
+        title: departmentName,
+        titleIcon: departmentIcon,
         titleColor: departmentColor,
         totalShifts,
         assignedShifts,
@@ -1140,7 +1154,7 @@
         const stats = calendarSection.querySelector('[data-calendar-stats]');
         const counters = getCalendarCounters();
         if (title) {
-          title.textContent = counters.title;
+          title.innerHTML = renderDepartmentTitleHtml(counters.titleIcon || '', counters.title || '', counters.titleColor || '');
           title.style.color = counters.titleColor || '';
         }
         if (stats) {
@@ -1213,7 +1227,7 @@
       const activeShift = getActiveShift();
       plannerDetail.innerHTML = `
         <div class="dashboard-sidebar-planner-title">
-          <span style="color:${deptColor}">${deptIcon} ${deptName}</span>
+          <span style="color:${escapeHtml(deptColor)}">${renderIconHtml(deptIcon, deptColor)} ${escapeHtml(deptName)}</span>
           <span>${users.length} ${tr('staff', 'personnel')}</span>
         </div>
         <div class="dashboard-sidebar-planner-description">${activeDepartment.description || tr('Assigned team and shift list.', 'Equipe assignee et liste des postes.')}</div>

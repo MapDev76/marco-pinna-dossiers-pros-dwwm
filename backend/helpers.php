@@ -377,7 +377,7 @@ function absenceShiftTemplateDefinitions(): array
     return [
         'rest' => [
             'name' => 'Rest day',
-            'icon' => 'moon.svg',
+            'icon' => 'popcorn.svg',
             'color' => '#9ca3af',
             'description' => 'System template for rest day assignment.',
             'start_time' => '00:00:00',
@@ -393,7 +393,7 @@ function absenceShiftTemplateDefinitions(): array
         ],
         'sick' => [
             'name' => 'Sick leave',
-            'icon' => 'scan-heart.svg',
+            'icon' => 'heart-pulse.svg',
             'color' => '#9ca3af',
             'description' => 'System template for sick leave assignment.',
             'start_time' => '00:00:00',

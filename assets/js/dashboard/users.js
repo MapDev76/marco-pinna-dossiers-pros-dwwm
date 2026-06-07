@@ -29,12 +29,15 @@
 
   function collectCreateData() {
     const c = getCreateCard(); if (!c) return null;
+    const settingsCompanyId = document.querySelector('[data-settings-company-select]')?.value || '';
+    const companyIdFromRow = c.querySelector('[data-field="company_id"]')?.value || '';
     return {
       first_name: c.querySelector('[data-field="first_name"]')?.value.trim() || '',
       last_name: c.querySelector('[data-field="last_name"]')?.value.trim() || '',
       email: c.querySelector('[data-field="email"]')?.value.trim() || '',
       role: c.querySelector('[data-field="role"]')?.value || 'employee',
       department_id: c.querySelector('[data-field="department_id"]')?.value || null,
+      company_id: companyIdFromRow || settingsCompanyId || null,
       password: c.querySelector('[data-field="password"]')?.value || ''
     };
   }
