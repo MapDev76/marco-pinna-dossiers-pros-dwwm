@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/ShiftModel.php';
+require_once __DIR__ . '/../models/DepartmentModel.php';
 
 $currentUser = currentUser();
 $currentRole = (string) ($currentUser['role'] ?? '');
@@ -12,6 +13,7 @@ if (!isLoggedIn() || !in_array($currentRole, ['super_admin', 'admin', 'departmen
 $pdo = getPDO();
 ensureSchedulerSchema($pdo);
 $shiftModel = new ShiftModel($pdo);
+$departmentModel = new DepartmentModel($pdo);
 
 $raw = file_get_contents('php://input');
 $input = json_decode($raw, true) ?: $_POST;
@@ -19,8 +21,51 @@ $action = $input['action'] ?? ($_GET['action'] ?? 'list');
 
 $isProtectedTemplate = static function (?array $shiftRow): bool {
     $kind = strtolower(trim((string) ($shiftRow['kind'] ?? 'work')));
-    return in_array($kind, ['rest', 'vacation', 'sick'], true);
+    if (in_array($kind, ['rest', 'vacation', 'sick'], true)) {
+        return true;
+    }
+
+    // Legacy fallback: some historical rows may still have kind=work.
+    $name = strtolower(trim((string) ($shiftRow['name'] ?? '')));
+    return in_array($name, ['rest day', 'vacation', 'sick leave'], true);
 };
+
+$resolveUserCompanyId = static function (PDO $pdo, array $user): int {
+    $companyId = (int) ($user['company_id'] ?? 0);
+    if ($companyId > 0) {
+        return $companyId;
+    }
+
+    $userId = (int) ($user['id'] ?? 0);
+    if ($userId <= 0) {
+        return 0;
+    }
+
+    $statement = $pdo->prepare(
+        'SELECT d.company_id
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         WHERE u.id = :user_id
+         LIMIT 1'
+    );
+    $statement->execute(['user_id' => $userId]);
+
+    return (int) ($statement->fetchColumn() ?: 0);
+};
+
+$resolveShiftCompanyId = static function (PDO $pdo, array $shift): int {
+    $departmentId = (int) ($shift['department_id'] ?? 0);
+    if ($departmentId <= 0) {
+        return 0;
+    }
+
+    $statement = $pdo->prepare('SELECT company_id FROM departments WHERE id = :id LIMIT 1');
+    $statement->execute(['id' => $departmentId]);
+
+    return (int) ($statement->fetchColumn() ?: 0);
+};
+
+$adminCompanyId = $currentRole === 'admin' ? $resolveUserCompanyId($pdo, $currentUser) : 0;
 
 try {
     switch ($action) {
@@ -34,7 +79,7 @@ try {
             break;
 
         case 'create':
-            if ($currentRole !== 'admin') {
+            if (!in_array($currentRole, ['admin', 'super_admin'], true)) {
                 jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
             }
             $required = ['department_id', 'name', 'start_time', 'end_time', 'range_start', 'range_end'];
@@ -44,8 +89,25 @@ try {
                 }
             }
 
+            $createDepartmentId = (int) ($input['department_id'] ?? 0);
+            if ($createDepartmentId <= 0) {
+                jsonResponse(['ok' => false, 'error' => t('common.department_required')], 400);
+            }
+
+            $createDepartment = $departmentModel->findById($createDepartmentId);
+            if (!$createDepartment) {
+                jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
+            }
+
+            if ($currentRole === 'admin') {
+                $departmentCompanyId = (int) ($createDepartment['company_id'] ?? 0);
+                if ($adminCompanyId <= 0 || $departmentCompanyId <= 0 || $departmentCompanyId !== $adminCompanyId) {
+                    jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+                }
+            }
+
             $id = $shiftModel->create([
-                'department_id' => (int) $input['department_id'],
+                'department_id' => $createDepartmentId,
                 'name' => trim((string) $input['name']),
                 'icon' => $input['icon'] ?? null,
                 'color' => $input['color'] ?? null,
@@ -100,7 +162,7 @@ try {
             break;
 
         case 'update':
-            if ($currentRole !== 'admin') {
+            if (!in_array($currentRole, ['admin', 'super_admin'], true)) {
                 jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
             }
             $id = (int) ($input['id'] ?? 0);
@@ -109,15 +171,24 @@ try {
             if (!$existingShift) {
                 jsonResponse(['ok' => false, 'error' => 'Shift not found'], 404);
             }
-            if ($isProtectedTemplate($existingShift)) {
+
+            if ($currentRole === 'admin' && $isProtectedTemplate($existingShift)) {
                 jsonResponse(['ok' => false, 'error' => 'System absence templates cannot be modified.'], 400);
             }
+
+            if ($currentRole === 'admin') {
+                $shiftCompanyId = $resolveShiftCompanyId($pdo, $existingShift);
+                if ($adminCompanyId <= 0 || $shiftCompanyId <= 0 || $shiftCompanyId !== $adminCompanyId) {
+                    jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+                }
+            }
+
             $shiftModel->update($id, $input);
             jsonResponse(['ok' => true]);
             break;
 
         case 'delete':
-            if ($currentRole !== 'admin') {
+            if (!in_array($currentRole, ['admin', 'super_admin'], true)) {
                 jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
             }
             $id = (int) ($input['id'] ?? 0);
@@ -126,9 +197,18 @@ try {
             if (!$existingShift) {
                 jsonResponse(['ok' => false, 'error' => 'Shift not found'], 404);
             }
-            if ($isProtectedTemplate($existingShift)) {
+
+            if ($currentRole === 'admin' && $isProtectedTemplate($existingShift)) {
                 jsonResponse(['ok' => false, 'error' => 'System absence templates cannot be deleted.'], 400);
             }
+
+            if ($currentRole === 'admin') {
+                $shiftCompanyId = $resolveShiftCompanyId($pdo, $existingShift);
+                if ($adminCompanyId <= 0 || $shiftCompanyId <= 0 || $shiftCompanyId !== $adminCompanyId) {
+                    jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+                }
+            }
+
             $shiftModel->delete($id);
             jsonResponse(['ok' => true]);
             break;

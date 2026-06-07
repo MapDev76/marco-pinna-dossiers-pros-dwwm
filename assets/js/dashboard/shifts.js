@@ -239,11 +239,12 @@
     if (!id) return;
     const payload = {
       id,
+      department_id: parseInt(row.dataset.shiftDepartmentId || '0', 10) || null,
       name: row.querySelector('input[data-field="name"]')?.value || '',
       icon: row.querySelector('input[data-field="icon"]')?.value || getDefaultIcon(),
       color: row.querySelector('input[data-field="color"]')?.value || getDefaultColor(),
       description: row.querySelector('input[data-field="description"]')?.value || '',
-      kind: 'work',
+      kind: row.dataset.shiftKind || 'work',
       start_time: row.querySelector('input[data-field="start_time"]')?.value || '',
       end_time: row.querySelector('input[data-field="end_time"]')?.value || '',
     };

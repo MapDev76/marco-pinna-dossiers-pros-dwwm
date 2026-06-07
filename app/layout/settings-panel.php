@@ -21,9 +21,9 @@ $scopeCompanies = is_array($planner['companies'] ?? null) ? $planner['companies'
 $visibleUsers = $users;
 $currentRole = $currentUser['role'] ?? '';
 $canCreateDepartments = $currentRole === 'super_admin';
-$canCreateShifts = $currentRole === 'admin';
+$canCreateShifts = in_array($currentRole, ['super_admin', 'admin'], true);
 $canManageDepartments = $currentRole === 'super_admin';
-$canManageShifts = $currentRole === 'admin';
+$canManageShifts = in_array($currentRole, ['super_admin', 'admin'], true);
 if ($currentRole === 'admin') {
     $visibleUsers = array_values(array_filter($users, static function($u) use ($scopeCompanyId) {
         $rowCompanyId = (int) ($u['company_id'] ?? 0);
@@ -1740,7 +1740,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="crud-empty-state"><?php echo e(t('settings.no_shifts_available')); ?></div>
                     <?php else: ?>
                         <?php foreach ($shifts as $shift): ?>
-                            <?php $isSystemShiftTemplate = in_array(strtolower((string) ($shift['kind'] ?? 'work')), ['rest', 'vacation', 'sick'], true); ?>
+                            <?php
+                                $shiftKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
+                                $shiftNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
+                                $isSystemShiftTemplate = in_array($shiftKindRaw, ['rest', 'vacation', 'sick'], true)
+                                    || in_array($shiftNameRaw, ['rest day', 'vacation', 'sick leave'], true);
+                            ?>
                             <?php
                                 $shiftKindValue = (string) ($shift['kind'] ?? 'work');
                                 $shiftNameValue = (string) ($shift['name'] ?? t('settings.shift_default'));
@@ -1750,7 +1755,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     $shiftDisplayName = $shiftNameValue;
                                 }
                             ?>
-                            <article class="settings-list-item-wrap" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>">
+                            <article class="settings-list-item-wrap" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" data-shift-kind="<?php echo e($shiftKindValue); ?>" data-shift-department-id="<?php echo (int) ($shift['department_id'] ?? 0); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-shift">
                                     <strong><?php echo e($shiftDisplayName); ?></strong>
                                     <span><?php echo e($shift['department_name'] ?? ''); ?></span>
@@ -1774,7 +1779,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <span><?php echo e($pickerColorLabel((string) ($shift['color'] ?? '#2f6fed'))); ?></span>
                                     </span>
                                     <div class="settings-inline-actions">
-                                        <?php if ($isSystemShiftTemplate): ?>
+                                        <?php if ($isSystemShiftTemplate && $currentRole !== 'super_admin'): ?>
                                             <span class="admin-action-link admin-action-link-secondary" aria-label="<?php echo e(t('settings.system_template')); ?>" title="<?php echo e(t('settings.system_template')); ?>"><?php echo e(t('settings.locked')); ?></span>
                                         <?php elseif (!$canManageShifts): ?>
                                             <span class="admin-action-link admin-action-link-secondary"><?php echo e(t('settings.locked')); ?></span>
@@ -1784,7 +1789,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <?php if (!$isSystemShiftTemplate && $canManageShifts): ?>
+                                <?php if ($canManageShifts && (!$isSystemShiftTemplate || $currentRole === 'super_admin')): ?>
                                     <div class="settings-edit-drawer" hidden>
                                         <div class="settings-list-cols settings-list-cols-shift-edit">
                                             <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value="<?php echo e($shift['name'] ?? t('settings.shift_default')); ?>"></label>
