@@ -20,6 +20,10 @@ $scopeCompanySignatureIp = trim((string) ($plannerCompany['signature_ip'] ?? '')
 $scopeCompanies = is_array($planner['companies'] ?? null) ? $planner['companies'] : [];
 $visibleUsers = $users;
 $currentRole = $currentUser['role'] ?? '';
+$canCreateDepartments = $currentRole === 'super_admin';
+$canCreateShifts = $currentRole === 'admin';
+$canManageDepartments = $currentRole === 'super_admin';
+$canManageShifts = $currentRole === 'admin';
 if ($currentRole === 'admin') {
     $visibleUsers = array_values(array_filter($users, static function($u) use ($scopeCompanyId) {
         $rowCompanyId = (int) ($u['company_id'] ?? 0);
@@ -463,6 +467,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
         </div>
 
         <div class="settings-tabs" role="tablist" aria-label="<?php echo e(t('settings.management_rubrics')); ?>">
+            <?php if ($currentRole === 'super_admin'): ?>
+                <button type="button" class="settings-tab" data-settings-tab="companies"><?php echo e(t('common.companies')); ?></button>
+            <?php endif; ?>
             <button type="button" class="settings-tab" data-settings-tab="users"><?php echo e(t('settings.users')); ?></button>
             <?php if ($currentRole !== 'department_manager'): ?>
                 <button type="button" class="settings-tab" data-settings-tab="departments"><?php echo e(t('settings.departments')); ?></button>
@@ -473,6 +480,105 @@ $departmentCreateHeadUsers = array_values(array_filter(
         </div>
 
         <div class="crud-modal-body settings-modal-body">
+            <?php if ($currentRole === 'super_admin'): ?>
+            <section class="crud-panel settings-panel" data-settings-panel="companies" hidden>
+                <div class="settings-panel-head">
+                    <div>
+                        <h3><?php echo e(t('common.companies')); ?></h3>
+                        <p class="crud-modal-subtitle">Create, edit and delete companies.</p>
+                    </div>
+                    <div class="settings-pill-row">
+                        <span class="settings-pill"><?php echo count($scopeCompanies); ?> items</span>
+                    </div>
+                </div>
+
+                <div class="settings-list-head settings-create-row" data-company-create-row>
+                    <div class="settings-list-cols settings-list-cols-company">
+                        <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.type')); ?>
+                            <select data-field="type">
+                                <option value="hotel">Hotel</option>
+                                <option value="hospital">Hospital</option>
+                                <option value="clinic">Clinic</option>
+                                <option value="elderly_center">Elderly center</option>
+                                <option value="restaurant">Restaurant</option>
+                                <option value="other" selected>Other</option>
+                            </select>
+                        </label>
+                        <label class="settings-field"><?php echo e(t('crud.address')); ?><input data-field="address" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.city')); ?><input data-field="city" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.zip_code')); ?><input data-field="zip_code" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.phone')); ?><input data-field="phone" type="text" value=""></label>
+                        <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value=""></label>
+                        <label class="settings-field">Logo path<input data-field="logo_path" type="text" value=""></label>
+                        <label class="settings-field">Authorized Wi-Fi IP<input data-field="signature_ip" type="text" value=""></label>
+                        <div class="settings-inline-actions">
+                            <button type="button" class="admin-action-link settings-company-create"><?php echo e(t('crud.create')); ?></button>
+                            <button type="button" class="admin-action-link admin-action-link-secondary settings-company-reset"><?php echo e(t('crud.reset')); ?></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-list-wrap">
+                    <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-company">
+                        <strong><?php echo e(t('settings.name_label')); ?></strong>
+                        <span><?php echo e(t('crud.type')); ?></span>
+                        <span><?php echo e(t('crud.city')); ?></span>
+                        <span><?php echo e(t('crud.email')); ?></span>
+                        <span><?php echo e(t('crud.phone')); ?></span>
+                        <span>Action</span>
+                    </div>
+
+                    <?php if (empty($scopeCompanies)): ?>
+                        <div class="crud-empty-state">No companies available.</div>
+                    <?php else: ?>
+                        <?php foreach ($scopeCompanies as $company): ?>
+                            <article class="settings-list-item-wrap" data-company-id="<?php echo (int) ($company['id'] ?? 0); ?>">
+                                <div class="settings-list-row settings-list-cols settings-list-cols-company">
+                                    <strong><?php echo e($company['name'] ?? 'Company'); ?></strong>
+                                    <span><?php echo e($company['type'] ?? 'other'); ?></span>
+                                    <span><?php echo e($company['city'] ?? '--'); ?></span>
+                                    <span><?php echo e($company['email'] ?? '--'); ?></span>
+                                    <span><?php echo e($company['phone'] ?? '--'); ?></span>
+                                    <div class="settings-inline-actions">
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-company-edit"><?php echo e(t('settings.edit')); ?></button>
+                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon-danger settings-company-delete"><?php echo e(t('schedule.delete')); ?></button>
+                                    </div>
+                                </div>
+                                <div class="settings-edit-drawer" hidden>
+                                    <div class="settings-list-cols settings-list-cols-company-edit">
+                                        <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value="<?php echo e($company['name'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.type')); ?>
+                                            <select data-field="type">
+                                                <?php $companyType = (string) ($company['type'] ?? 'other'); ?>
+                                                <option value="hotel" <?php echo $companyType === 'hotel' ? 'selected' : ''; ?>>Hotel</option>
+                                                <option value="hospital" <?php echo $companyType === 'hospital' ? 'selected' : ''; ?>>Hospital</option>
+                                                <option value="clinic" <?php echo $companyType === 'clinic' ? 'selected' : ''; ?>>Clinic</option>
+                                                <option value="elderly_center" <?php echo $companyType === 'elderly_center' ? 'selected' : ''; ?>>Elderly center</option>
+                                                <option value="restaurant" <?php echo $companyType === 'restaurant' ? 'selected' : ''; ?>>Restaurant</option>
+                                                <option value="other" <?php echo $companyType === 'other' ? 'selected' : ''; ?>>Other</option>
+                                            </select>
+                                        </label>
+                                        <label class="settings-field"><?php echo e(t('crud.address')); ?><input data-field="address" type="text" value="<?php echo e($company['address'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.city')); ?><input data-field="city" type="text" value="<?php echo e($company['city'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.zip_code')); ?><input data-field="zip_code" type="text" value="<?php echo e($company['zip_code'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.phone')); ?><input data-field="phone" type="text" value="<?php echo e($company['phone'] ?? ''); ?>"></label>
+                                        <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value="<?php echo e($company['email'] ?? ''); ?>"></label>
+                                        <label class="settings-field">Logo path<input data-field="logo_path" type="text" value="<?php echo e($company['logo_path'] ?? ''); ?>"></label>
+                                        <label class="settings-field">Authorized Wi-Fi IP<input data-field="signature_ip" type="text" value="<?php echo e($company['signature_ip'] ?? ''); ?>"></label>
+                                        <div class="settings-inline-actions">
+                                            <button type="button" class="admin-action-link settings-company-save"><?php echo e(t('settings.save')); ?></button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-company-cancel"><?php echo e(t('employee.cancel')); ?></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </section>
+            <?php endif; ?>
+
             <section class="crud-panel settings-panel" data-settings-panel="assignments" hidden>
                 <?php
                     $employeeAssignmentStats = [];
@@ -580,7 +686,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         ?>
                         <?php foreach ($usersByDepartment as $departmentLabel => $departmentUsers): ?>
                             <section class="settings-assignment-employee-group">
-                                <div class="settings-assignment-employee-group-title">🏷 <?php echo e($departmentLabel); ?></div>
+                                <div class="settings-assignment-employee-group-title"><img src="<?php echo $basePath; ?>/assets/icons/ticket.svg" alt="" aria-hidden="true" class="settings-icon-inline-image"> <?php echo e($departmentLabel); ?></div>
                                 <div class="settings-assignment-employee-list">
                                     <?php foreach ($departmentUsers as $employeeItem): ?>
                                         <?php
@@ -735,7 +841,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <div class="settings-analytics-item-head">
                                             <strong>
                                                 <span class="settings-dept-title-icon" style="background: color-mix(in srgb, <?php echo e($deptMetric['department_color'] ?? '#b98b12'); ?> 18%, #ffffff 82%);">
-                                                    <?php echo e($deptMetric['department_icon'] ?? '🏷️'); ?>
+                                                    <?php $analyticsIconValue = (string) ($deptMetric['department_icon'] ?? ''); ?>
+                                                    <?php if ($isIconAsset($analyticsIconValue)): ?>
+                                                        <img src="<?php echo e($iconUrl($analyticsIconValue)); ?>" alt="" aria-hidden="true" class="settings-icon-inline-image">
+                                                    <?php else: ?>
+                                                        <?php echo e($analyticsIconValue ?: '🏷️'); ?>
+                                                    <?php endif; ?>
                                                 </span>
                                                 <?php echo e($deptMetric['department_name'] ?? t('settings.department_default')); ?>
                                             </strong>
@@ -1171,62 +1282,64 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     </div>
                 </div>
 
-                <div class="settings-list-head settings-create-row" data-dept-create-row>
-                    <div class="settings-list-cols settings-list-cols-dept">
-                        <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value=""></label>
-                        <label class="settings-field"><?php echo e(t('schedule.icon')); ?>
-                            <div class="settings-picker-stack">
-                                <div class="settings-picker-row">
-                                    <input data-field="icon" data-icon-preview data-icon-base="<?php echo e($basePath . '/assets/icons/'); ?>" type="text" value="<?php echo e($defaultPickerIcon); ?>" readonly>
-                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
-                                </div>
-                                <div class="settings-picker-popover" data-picker-popover="icon" hidden>
-                                    <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
-                                        <?php foreach ($departmentIconCatalog as $icon): ?>
-                                            <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($iconLabel((string) $icon)); ?>">
-                                                <img src="<?php echo e($iconUrl((string) $icon)); ?>" alt="" aria-hidden="true" class="settings-choice-icon-image">
-                                            </button>
-                                        <?php endforeach; ?>
+                <?php if ($canCreateDepartments): ?>
+                    <div class="settings-list-head settings-create-row" data-dept-create-row>
+                        <div class="settings-list-cols settings-list-cols-dept">
+                            <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value=""></label>
+                            <label class="settings-field"><?php echo e(t('schedule.icon')); ?>
+                                <div class="settings-picker-stack">
+                                    <div class="settings-picker-row">
+                                        <input data-field="icon" data-icon-preview data-icon-base="<?php echo e($basePath . '/assets/icons/'); ?>" type="text" value="<?php echo e($defaultPickerIcon); ?>" readonly>
+                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="icon"><?php echo e(t('common.select')); ?></button>
+                                    </div>
+                                    <div class="settings-picker-popover" data-picker-popover="icon" hidden>
+                                        <div class="settings-choice-grid settings-choice-grid-icons" data-choice-field="icon">
+                                            <?php foreach ($departmentIconCatalog as $icon): ?>
+                                                <button type="button" class="settings-choice-btn settings-choice-btn-icon" data-choice-value="<?php echo e($icon); ?>" aria-label="<?php echo e(t('settings.choose_icon')); ?> <?php echo e($iconLabel((string) $icon)); ?>">
+                                                    <img src="<?php echo e($iconUrl((string) $icon)); ?>" alt="" aria-hidden="true" class="settings-choice-icon-image">
+                                                </button>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </label>
-                        <label class="settings-field"><?php echo e(t('schedule.color')); ?>
-                            <div class="settings-picker-stack">
-                                <div class="settings-picker-row">
-                                    <input data-field="color" type="hidden" value="#b98b12">
-                                    <input data-color-preview type="text" value="" readonly aria-label="<?php echo e(t('settings.selected_color_preview')); ?>" style="--selected-color: #b98b12;">
-                                    <button type="button" class="settings-picker-toggle" data-picker-toggle="color"><?php echo e(t('common.select')); ?></button>
-                                </div>
-                                <div class="settings-picker-popover" data-picker-popover="color" hidden>
-                                    <div class="settings-choice-grid" data-choice-field="color">
-                                        <?php foreach ($pickerColorCatalog as $color): ?>
-                                            <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="<?php echo e(t('settings.choose_color')); ?> <?php echo e($pickerColorLabel($color)); ?>">
-                                                <span class="settings-color-swatch" aria-hidden="true"></span>
-                                                <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
-                                            </button>
-                                        <?php endforeach; ?>
+                            </label>
+                            <label class="settings-field"><?php echo e(t('schedule.color')); ?>
+                                <div class="settings-picker-stack">
+                                    <div class="settings-picker-row">
+                                        <input data-field="color" type="hidden" value="#b98b12">
+                                        <input data-color-preview type="text" value="" readonly aria-label="<?php echo e(t('settings.selected_color_preview')); ?>" style="--selected-color: #b98b12;">
+                                        <button type="button" class="settings-picker-toggle" data-picker-toggle="color"><?php echo e(t('common.select')); ?></button>
+                                    </div>
+                                    <div class="settings-picker-popover" data-picker-popover="color" hidden>
+                                        <div class="settings-choice-grid" data-choice-field="color">
+                                            <?php foreach ($pickerColorCatalog as $color): ?>
+                                                <button type="button" class="settings-choice-btn settings-choice-btn-color" data-choice-value="<?php echo e($color); ?>" data-choice-label="<?php echo e($pickerColorLabel($color)); ?>" style="--choice-color: <?php echo e($color); ?>;" aria-label="<?php echo e(t('settings.choose_color')); ?> <?php echo e($pickerColorLabel($color)); ?>">
+                                                    <span class="settings-color-swatch" aria-hidden="true"></span>
+                                                    <span class="settings-choice-label"><?php echo e($pickerColorLabel($color)); ?></span>
+                                                </button>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
                                 </div>
+                            </label>
+                            <label class="settings-field"><?php echo e(t('settings.head_of_department')); ?>
+                                <select data-field="head_user_id">
+                                    <option value="">-- <?php echo e(t('settings.unassigned')); ?> --</option>
+                                    <?php foreach ($departmentCreateHeadUsers as $userOption): ?>
+                                        <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>">
+                                            <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? t('settings.user_default'))); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <input data-field="company_id" type="hidden" value="<?php echo (int) $scopeCompanyId; ?>">
+                            <div class="settings-inline-actions">
+                                <button type="button" class="admin-action-link settings-dept-create"><?php echo e(t('crud.create')); ?></button>
+                                <button type="button" class="admin-action-link admin-action-link-secondary settings-dept-reset"><?php echo e(t('crud.reset')); ?></button>
                             </div>
-                        </label>
-                        <label class="settings-field"><?php echo e(t('settings.head_of_department')); ?>
-                            <select data-field="head_user_id">
-                                <option value="">-- <?php echo e(t('settings.unassigned')); ?> --</option>
-                                <?php foreach ($departmentCreateHeadUsers as $userOption): ?>
-                                    <option value="<?php echo (int) ($userOption['id'] ?? 0); ?>">
-                                        <?php echo e(trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? ''))) ?: ($userOption['email'] ?? t('settings.user_default'))); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </label>
-                        <input data-field="company_id" type="hidden" value="<?php echo (int) $scopeCompanyId; ?>">
-                        <div class="settings-inline-actions">
-                            <button type="button" class="admin-action-link settings-dept-create"><?php echo e(t('crud.create')); ?></button>
-                            <button type="button" class="admin-action-link admin-action-link-secondary settings-dept-reset"><?php echo e(t('crud.reset')); ?></button>
                         </div>
                     </div>
-                </div>
+                <?php endif; ?>
 
                 <div class="settings-list-wrap">
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-dept">
@@ -1259,11 +1372,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <span><?php echo e($department['head_user_name'] ?: t('settings.unassigned')); ?></span>
                                     <span><?php echo count($department['users'] ?? []); ?></span>
                                     <span><?php echo count($department['shifts'] ?? []); ?></span>
-                                    <div class="settings-inline-actions">
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-dept-edit" aria-label="<?php echo e(t('settings.edit_department')); ?>" title="<?php echo e(t('settings.edit_department')); ?>">✎</button>
-                                        <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-dept-delete" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>" aria-label="<?php echo e(t('settings.delete_department')); ?>" title="<?php echo e(t('settings.delete_department')); ?>">🗑</button>
-                                    </div>
+                                    <?php if ($canManageDepartments): ?>
+                                        <div class="settings-inline-actions">
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-dept-edit" aria-label="<?php echo e(t('settings.edit_department')); ?>" title="<?php echo e(t('settings.edit_department')); ?>">✎</button>
+                                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-dept-delete" data-department-id="<?php echo (int) ($department['id'] ?? 0); ?>" aria-label="<?php echo e(t('settings.delete_department')); ?>" title="<?php echo e(t('settings.delete_department')); ?>">🗑</button>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="admin-action-link admin-action-link-secondary"><?php echo e(t('settings.locked')); ?></span>
+                                    <?php endif; ?>
                                 </div>
+                                <?php if ($canManageDepartments): ?>
                                 <div class="settings-edit-drawer" hidden>
                                     <div class="settings-list-cols settings-list-cols-dept-edit">
                                         <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value="<?php echo e($department['name'] ?? t('settings.department_default')); ?>"></label>
@@ -1326,6 +1444,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         </div>
                                     </div>
                                 </div>
+                                <?php endif; ?>
                             </article>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -1451,6 +1570,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     </div>
                 </div>
 
+                <?php if ($canCreateShifts): ?>
                 <div class="settings-list-head settings-create-row settings-create-row-shift" data-shift-create-row>
                     <div class="settings-list-cols settings-list-cols-shift-create">
                         <div class="settings-shift-create-column settings-shift-create-column-left">
@@ -1518,6 +1638,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <div class="settings-list-wrap">
                     <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-shift">
@@ -1561,13 +1682,15 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <div class="settings-inline-actions">
                                         <?php if ($isSystemShiftTemplate): ?>
                                             <span class="admin-action-link admin-action-link-secondary" aria-label="<?php echo e(t('settings.system_template')); ?>" title="<?php echo e(t('settings.system_template')); ?>"><?php echo e(t('settings.locked')); ?></span>
+                                        <?php elseif (!$canManageShifts): ?>
+                                            <span class="admin-action-link admin-action-link-secondary"><?php echo e(t('settings.locked')); ?></span>
                                         <?php else: ?>
                                             <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-shift-edit" aria-label="<?php echo e(t('settings.edit_shift')); ?>" title="<?php echo e(t('settings.edit_shift')); ?>">✎</button>
                                             <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon settings-action-icon-danger settings-shift-delete" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" aria-label="<?php echo e(t('settings.delete_shift')); ?>" title="<?php echo e(t('settings.delete_shift')); ?>">🗑</button>
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <?php if (!$isSystemShiftTemplate): ?>
+                                <?php if (!$isSystemShiftTemplate && $canManageShifts): ?>
                                     <div class="settings-edit-drawer" hidden>
                                         <div class="settings-list-cols settings-list-cols-shift-edit">
                                             <label class="settings-field"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value="<?php echo e($shift['name'] ?? t('settings.shift_default')); ?>"></label>

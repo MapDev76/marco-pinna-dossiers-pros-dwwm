@@ -37,6 +37,9 @@
       try { return await res.json(); } catch (e) { return res; }
     },
     companies: {
+      list(url){ return AppAPI.postJSON(url, { action: 'list' }); },
+      create(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'create' }, payload)); },
+      update(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'update' }, payload)); },
       setSignatureIp(url, companyId, ip){ return AppAPI.postJSON(url, { action: 'set_signature_ip', company_id: companyId, ip }); },
       delete(url, id){ return AppAPI.postJSON(url, { action: 'delete', id }); }
     },

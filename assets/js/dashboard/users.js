@@ -113,7 +113,10 @@
   async function deleteUser(card) {
     if (!card) return;
     const id = parseInt(card.dataset.userId || '0', 10); if (!id) return;
-    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this user?', 'Confirm deletion') : false;
+    const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+    const isFr = locale.startsWith('fr');
+    const tr = (en, fr) => (isFr ? fr : en);
+    const canDelete = feedback?.confirm ? await feedback.confirm(tr('Delete this user?', 'Supprimer cet utilisateur ?'), tr('Confirm deletion', 'Confirmer la suppression')) : false;
     if (!feedback?.confirm) {
       notifyError('Confirmation dialog is not available.');
       return;

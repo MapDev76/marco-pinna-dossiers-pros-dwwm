@@ -242,7 +242,10 @@
     const id = parseInt(card.dataset.departmentId || '0', 10) || 0;
     const companyId = parseInt(card.dataset.companyId || '0', 10) || 0;
     if (!id) return;
-    const canDelete = feedback?.confirm ? await feedback.confirm('Delete this department?', 'Confirm deletion') : false;
+    const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+    const isFr = locale.startsWith('fr');
+    const tr = (en, fr) => (isFr ? fr : en);
+    const canDelete = feedback?.confirm ? await feedback.confirm(tr('Delete this department?', 'Supprimer ce département ?'), tr('Confirm deletion', 'Confirmer la suppression')) : false;
     if (!feedback?.confirm) {
       notifyError('Confirmation dialog is not available.');
       return;

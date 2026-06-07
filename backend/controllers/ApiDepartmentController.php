@@ -41,6 +41,9 @@ try {
             break;
 
         case 'create':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            }
             $companyId = $isAdmin
                 ? $effectiveAdminCompanyId
                 : (int) ($input['company_id'] ?? 0);
@@ -60,6 +63,9 @@ try {
             break;
 
         case 'update':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             if ($isAdmin) {
@@ -83,6 +89,9 @@ try {
             break;
 
         case 'delete':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             if ($isAdmin) {

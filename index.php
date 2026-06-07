@@ -69,9 +69,6 @@ require __DIR__ . '/app/layout/header.php';
 <?php if ($flashSuccess !== null): ?>
                 <div id="flash-backdrop-success" class="flash-backdrop"></div>
                 <div id="flash-success" class="flash flash-success" role="alert" aria-live="assertive">
-                        <button class="flash-close" aria-label="<?php echo e(t('common.close_message')); ?>">
-                                <img src="<?php echo $basePath; ?>/assets/icons/close.svg" alt="" aria-hidden="true">
-                        </button>
                                 <span class="flash-icon" aria-hidden="true">
                                         <img src="<?php echo $basePath; ?>/assets/icons/alert-circle.svg" alt="" aria-hidden="true" />
                                 </span>
@@ -85,11 +82,8 @@ require __DIR__ . '/app/layout/header.php';
 <?php if ($flashError !== null): ?>
                 <div id="flash-backdrop-error" class="flash-backdrop"></div>
                 <div id="flash-error" class="flash flash-error" role="alert" aria-live="assertive">
-                        <button class="flash-close" aria-label="<?php echo e(t('common.close_message')); ?>">
-                                <img src="<?php echo $basePath; ?>/assets/icons/close.svg" alt="" aria-hidden="true">
-                        </button>
                         <span class="flash-icon" aria-hidden="true">
-                                <img src="<?php echo $basePath; ?>/assets/icons/Icon%20alert.png" alt="" />
+                                <img src="<?php echo $basePath; ?>/assets/icons/alert-circle.svg" alt="" aria-hidden="true" />
                         </span>
                         <div class="flash-body">
                                 <div class="flash-title"><?php echo e(t('common.oops')); ?></div>
@@ -116,7 +110,8 @@ require $viewFile;
                 apiDepartments: '<?php echo appUrl('api-departments'); ?>',
                 apiUsers: '<?php echo appUrl('api-users'); ?>',
                 apiDashboard: '<?php echo appUrl('api-dashboard'); ?>',
-                apiShifts: '<?php echo appUrl('api-shifts'); ?>'
+                apiShifts: '<?php echo appUrl('api-shifts'); ?>',
+                iconsBase: '<?php echo $basePath; ?>/assets/icons/'
         };
         window.DashboardCurrentUser = <?php echo json_encode([
                 'id' => (int) (currentUser()['id'] ?? 0),
@@ -135,6 +130,7 @@ require $viewFile;
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/departments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/departments.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
+<script src="<?php echo $basePath; ?>/assets/js/dashboard/companies.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/companies.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/assignments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/assignments.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/attendances.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/attendances.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/print.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/print.js'); ?>"></script>

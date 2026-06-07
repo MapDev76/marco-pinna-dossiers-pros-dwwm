@@ -13,9 +13,6 @@ $basePath = $basePath ?? (function () {
     <?php if ($loginError !== null): ?>
         <div id="flash-backdrop-login" class="flash-backdrop"></div>
         <div id="flash-login" class="flash flash-error" role="alert" aria-live="assertive" data-backdrop="flash-backdrop-login">
-            <button class="flash-close" aria-label="<?php echo e(t('common.close_message')); ?>">
-                <img src="<?php echo $basePath; ?>/assets/icons/close.svg" alt="" aria-hidden="true">
-            </button>
             <span class="flash-icon" aria-hidden="true">
                 <img src="<?php echo $basePath; ?>/assets/icons/alert-circle.svg" alt="" aria-hidden="true" />
             </span>

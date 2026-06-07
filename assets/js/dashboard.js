@@ -20,6 +20,16 @@
   const apiDepartments = config.apiDepartments;
   const apiUsers = config.apiUsers;
   const apiDashboard = config.apiDashboard;
+  const iconsBase = String(config.iconsBase || '/assets/icons/');
+
+  const isIconAsset = (icon) => /\.(svg|png|jpe?g|gif|webp|ico)$/i.test(String(icon || ''));
+  const renderIconHtml = (icon, color) => {
+    if (!icon) return '';
+    if (isIconAsset(icon)) {
+      return `<img src="${iconsBase}${encodeURIComponent(icon)}" aria-hidden="true" class="calendar-icon-img">`;
+    }
+    return `<span style="color:${color || ''}">${icon}</span>`;
+  };
 
   /**
    * setupModals
@@ -1229,7 +1239,7 @@
           <div class="dashboard-sidebar-chip-group">
             ${workShifts.length ? workShifts.map((shift) => `
               <button type="button" class="dashboard-sidebar-shift-chip ${Number(shift.id) === Number(state.activeShiftId) ? 'is-active' : ''}" data-shift-id="${shift.id}" style="--shift-chip-color:${(shift.color || '#2f6fed')}">
-                <span class="dashboard-sidebar-shift-icon">${shift.icon || '🕒'}</span>
+                <span class="dashboard-sidebar-shift-icon">${renderIconHtml(shift.icon, shift.color || '#2f6fed')}</span>
                 <span>${shift.name || tr('Shift', 'Poste')} ${formatShiftTime(shift)}</span>
               </button>
             `).join('') : `<div class="dashboard-sidebar-planner-placeholder">${tr('No work shifts configured.', 'Aucun poste de travail configure.')}</div>`}

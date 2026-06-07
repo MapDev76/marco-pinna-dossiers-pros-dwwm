@@ -17,6 +17,48 @@
     }, 260);
   }
 
+  function formatFlashTitle(title, isError) {
+    if (title && title.trim()) {
+      if (title === 'Done') return _fbTr('Done', 'Terminé');
+      if (title === 'Oops!') return _fbTr('Oops!', 'Oups !');
+      return title;
+    }
+
+    return isError ? _fbTr('Oops!', 'Oups !') : _fbTr('Done', 'Terminé');
+  }
+
+  function formatFlashMessage(message) {
+    const raw = String(message || '').trim();
+    if (!raw || !_fbIsFr) return raw;
+
+    const dictionary = {
+      'User created successfully.': 'Utilisateur créé avec succès.',
+      'User updated successfully.': 'Utilisateur mis à jour avec succès.',
+      'User deleted successfully.': 'Utilisateur supprimé avec succès.',
+      'Department created successfully.': 'Département créé avec succès.',
+      'Department updated successfully.': 'Département mis à jour avec succès.',
+      'Department deleted successfully.': 'Département supprimé avec succès.',
+      'Company created successfully.': 'Entreprise créée avec succès.',
+      'Company updated successfully.': 'Entreprise mise à jour avec succès.',
+      'Company deleted successfully.': 'Entreprise supprimée avec succès.',
+      'Shift created successfully.': 'Poste créé avec succès.',
+      'Shift updated successfully.': 'Poste mis à jour avec succès.',
+      'Shift deleted successfully.': 'Poste supprimé avec succès.',
+      'Assignment updated successfully.': 'Affectation mise à jour avec succès.',
+      'Shift assigned successfully.': 'Poste assigné avec succès.',
+      'Shift unassigned successfully.': 'Poste désassigné avec succès.',
+      'Absence assigned successfully.': 'Absence assignée avec succès.',
+      'Work shift assigned successfully.': 'Poste de travail assigné avec succès.',
+      'Absence forced successfully.': 'Absence forcée avec succès.',
+      'Work shift forced successfully.': 'Poste de travail forcé avec succès.',
+      'Attendance updated successfully.': 'Présence mise à jour avec succès.',
+      'Attendance cancelled successfully.': 'Présence annulée avec succès.',
+      'Company Wi-Fi IP updated.': 'IP Wi-Fi de l\'entreprise mise à jour.',
+    };
+
+    return dictionary[raw] || raw;
+  }
+
   function show(type, title, message) {
     removeExistingFlash();
 
@@ -31,12 +73,6 @@
     flash.setAttribute('role', 'alert');
     flash.setAttribute('aria-live', 'assertive');
 
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'flash-close';
-    closeBtn.setAttribute('aria-label', 'Close message');
-    closeBtn.type = 'button';
-    closeBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
-
     const icon = document.createElement('span');
     icon.className = 'flash-icon';
     icon.setAttribute('aria-hidden', 'true');
@@ -47,21 +83,18 @@
 
     const titleEl = document.createElement('div');
     titleEl.className = 'flash-title';
-    titleEl.textContent = title || (isError ? 'Oops!' : 'Done');
+    titleEl.textContent = formatFlashTitle(title, isError);
 
     const messageEl = document.createElement('p');
-    messageEl.textContent = message || '';
+    messageEl.textContent = formatFlashMessage(message || '');
 
     body.appendChild(titleEl);
     body.appendChild(messageEl);
-    flash.appendChild(closeBtn);
     flash.appendChild(icon);
     flash.appendChild(body);
 
     document.body.appendChild(backdrop);
     document.body.appendChild(flash);
-
-    closeBtn.addEventListener('click', () => closeFlash(flash, backdrop));
 
     requestAnimationFrame(() => {
       backdrop.classList.add('show');
@@ -71,7 +104,13 @@
     setTimeout(() => closeFlash(flash, backdrop), 2800);
   }
 
-  function confirmAction(message, title = 'Confirm action') {
+  const _fbLocale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+  const _fbIsFr = _fbLocale.startsWith('fr');
+  const _fbTr = (en, fr) => (_fbIsFr ? fr : en);
+  const _fbIconsBase = String((window.DashboardConfig && window.DashboardConfig.iconsBase) || '/assets/icons/');
+
+  function confirmAction(message, title) {
+    if (!title) title = _fbTr('Confirm action', 'Confirmer l\'action');
     removeExistingFlash();
 
     return new Promise((resolve) => {
@@ -83,16 +122,14 @@
       flash.setAttribute('role', 'alertdialog');
       flash.setAttribute('aria-live', 'assertive');
 
-      const closeBtn = document.createElement('button');
-      closeBtn.className = 'flash-close';
-      closeBtn.setAttribute('aria-label', 'Close dialog');
-      closeBtn.type = 'button';
-      closeBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
-
       const icon = document.createElement('span');
       icon.className = 'flash-icon';
       icon.setAttribute('aria-hidden', 'true');
-      icon.textContent = '❔';
+      const iconImg = document.createElement('img');
+      iconImg.src = _fbIconsBase + 'triangle-alert.svg';
+      iconImg.alt = '';
+      iconImg.style.cssText = 'width:32px;height:32px;object-fit:contain;';
+      icon.appendChild(iconImg);
 
       const body = document.createElement('div');
       body.className = 'flash-body';
@@ -102,7 +139,7 @@
       titleEl.textContent = title;
 
       const messageEl = document.createElement('p');
-      messageEl.textContent = message || 'Are you sure?';
+      messageEl.textContent = message || _fbTr('Are you sure?', 'Êtes-vous sûr ?');
 
       const actions = document.createElement('div');
       actions.className = 'flash-actions';
@@ -110,12 +147,12 @@
       const cancelBtn = document.createElement('button');
       cancelBtn.type = 'button';
       cancelBtn.className = 'flash-action-btn flash-action-btn-cancel';
-      cancelBtn.textContent = 'Cancel';
+      cancelBtn.textContent = _fbTr('Cancel', 'Annuler');
 
       const confirmBtn = document.createElement('button');
       confirmBtn.type = 'button';
       confirmBtn.className = 'flash-action-btn flash-action-btn-confirm';
-      confirmBtn.textContent = 'Confirm';
+      confirmBtn.textContent = _fbTr('Confirm', 'Confirmer');
 
       const finish = (ok) => {
         closeFlash(flash, backdrop);
@@ -124,7 +161,6 @@
 
       cancelBtn.addEventListener('click', () => finish(false));
       confirmBtn.addEventListener('click', () => finish(true));
-      closeBtn.addEventListener('click', () => finish(false));
       backdrop.addEventListener('click', () => finish(false));
 
       actions.appendChild(cancelBtn);
@@ -133,7 +169,6 @@
       body.appendChild(messageEl);
       body.appendChild(actions);
 
-      flash.appendChild(closeBtn);
       flash.appendChild(icon);
       flash.appendChild(body);
 

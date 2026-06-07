@@ -20,11 +20,16 @@
         }
     }
 
-    async function confirmAction(message, title = 'Confirm action') {
+    const _atLocale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+    const _atIsFr = _atLocale.startsWith('fr');
+    const _atTr = (en, fr) => (_atIsFr ? fr : en);
+
+    async function confirmAction(message, title) {
+        if (!title) title = _atTr('Confirm action', "Confirmer l'action");
         if (feedback?.confirm) {
             return feedback.confirm(message, title);
         }
-        notifyError('Confirmation dialog is not available.');
+        notifyError(_atTr('Confirmation dialog is not available.', "La boîte de confirmation n'est pas disponible."));
         return false;
     }
 
@@ -263,7 +268,7 @@
 
     async function cancelAttendance(attendanceId) {
         if (!attendanceId) return;
-        const canProceed = await confirmAction('Cancel this attendance registration?', 'Confirm cancellation');
+        const canProceed = await confirmAction(_atTr('Cancel this attendance registration?', 'Annuler cet enregistrement de présence ?'), _atTr('Confirm cancellation', "Confirmer l'annulation"));
         if (!canProceed) return;
         const response = await AppAPI.postJSON(apiUrl, {
             action: 'cancel_attendance',

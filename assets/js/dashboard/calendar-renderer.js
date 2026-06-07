@@ -41,6 +41,20 @@
         .replace(/'/g, '&#39;');
     }
 
+    var iconsBase = String((window.DashboardConfig && window.DashboardConfig.iconsBase) || '/assets/icons/');
+
+    function isIconAsset(icon) {
+      return /\.(svg|png|jpe?g|gif|webp|ico)$/i.test(String(icon || ''));
+    }
+
+    function renderIconHtml(icon, color) {
+      if (!icon) return '';
+      if (isIconAsset(icon)) {
+        return '<img src="' + escapeHtml(iconsBase + encodeURIComponent(icon)) + '" aria-hidden="true" class="calendar-icon-img" style="filter: none;">';
+      }
+      return '<span style="color:' + escapeHtml(color || '') + '">' + escapeHtml(icon) + '</span>';
+    }
+
     var getVisibleEvents = function () {
       var activeDepartment = typeof getActiveDepartment === 'function' ? getActiveDepartment() : null;
       if (!activeDepartment || !activeDepartment.id) {
@@ -88,7 +102,7 @@
       var activeUserId = Number(state.activeUserId || 0);
       var activeShiftId = Number(state.activeShiftId || 0);
       var activeUserName = (state.activeUserName || '').trim() || tr('this employee', 'cet employe');
-      var badge = (baseEvent.shift_icon ? '<span class="calendar-event-badge" style="color: ' + shiftColor + '">' + (baseEvent.shift_icon || '') + '</span>' : '');
+      var badge = (baseEvent.shift_icon ? renderIconHtml(baseEvent.shift_icon, shiftColor) : '');
       var assignedEmployees = (group.events || []).filter(function (event) {
         return Number(event.user_id || 0) > 0;
       });

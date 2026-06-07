@@ -2,7 +2,10 @@
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/ShiftModel.php';
 
-if (!isLoggedIn() || !in_array((currentUser()['role'] ?? ''), ['super_admin', 'admin', 'department_manager'], true)) {
+$currentUser = currentUser();
+$currentRole = (string) ($currentUser['role'] ?? '');
+
+if (!isLoggedIn() || !in_array($currentRole, ['super_admin', 'admin', 'department_manager'], true)) {
             jsonResponse(['error' => t('common.unauthorized')], 403);
 }
 
@@ -31,6 +34,9 @@ try {
             break;
 
         case 'create':
+            if ($currentRole !== 'admin') {
+                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            }
             $required = ['department_id', 'name', 'start_time', 'end_time', 'range_start', 'range_end'];
             foreach ($required as $r) {
                 if (empty($input[$r]) && $input[$r] !== '0') {
@@ -94,6 +100,9 @@ try {
             break;
 
         case 'update':
+            if ($currentRole !== 'admin') {
+                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             $existingShift = $shiftModel->findById($id);
@@ -108,6 +117,9 @@ try {
             break;
 
         case 'delete':
+            if ($currentRole !== 'admin') {
+                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             $existingShift = $shiftModel->findById($id);

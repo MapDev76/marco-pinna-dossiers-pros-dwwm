@@ -409,16 +409,26 @@
       return leftTime.localeCompare(rightTime);
     });
 
+    var iconsBasePrint = String((window.DashboardConfig && window.DashboardConfig.iconsBase) || '/assets/icons/');
+    var isIconAssetPrint = function (icon) { return /\.(svg|png|jpe?g|gif|webp|ico)$/i.test(String(icon || '')); };
+
     return '<div class="dashboard-print-legend-list">' + ordered.map(function (shift) {
       var color = normalizeShiftColor(shift && shift.color || '');
       var icon = String(shift && shift.icon || '').trim();
       var name = String(shift && shift.name || tr('Shift', 'Poste')).trim();
       var start = String(shift && shift.start_time || '--:--').slice(0, 5);
       var end = String(shift && shift.end_time || '--:--').slice(0, 5);
-      var label = ((icon ? icon + ' ' : '') + name).trim();
+      var iconHtml = '';
+      if (icon) {
+        if (isIconAssetPrint(icon)) {
+          iconHtml = '<img src="' + escapeHtml(iconsBasePrint + encodeURIComponent(icon)) + '" aria-hidden="true" class="calendar-icon-img"> ';
+        } else {
+          iconHtml = escapeHtml(icon) + ' ';
+        }
+      }
       return '' +
         '<span class="dashboard-print-legend-item" style="--print-shift-color:' + escapeHtml(color) + ';">' +
-          '<strong>' + escapeHtml(label) + '</strong>' +
+          '<strong>' + iconHtml + escapeHtml(name) + '</strong>' +
           '<small>' + escapeHtml(start + ' - ' + end) + '</small>' +
         '</span>';
     }).join('') + '</div>';

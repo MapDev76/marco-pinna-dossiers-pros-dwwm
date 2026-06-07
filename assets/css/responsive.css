@@ -162,6 +162,8 @@
     .settings-list-cols-shift-edit,
     .settings-list-cols-assignment,
     .settings-list-cols-assignment-edit,
+    .settings-list-cols-company,
+    .settings-list-cols-company-edit,
     .settings-list-cols-role,
     .settings-list-cols-role-edit {
         grid-template-columns: 1fr;
@@ -447,6 +449,8 @@
     .settings-list-cols-shift-edit,
     .settings-list-cols-assignment,
     .settings-list-cols-assignment-edit,
+    .settings-list-cols-company,
+    .settings-list-cols-company-edit,
     .settings-list-cols-role,
     .settings-list-cols-role-edit {
         grid-template-columns: 1fr;
@@ -792,7 +796,7 @@
     }
 
     .site-navbar-center {
-        display: none;
+        display: flex;
         z-index: 1;
         pointer-events: none;
     }
@@ -816,9 +820,9 @@
     }
 
     .site-brand-logo {
-        width: 42px;
-        height: 42px;
-        opacity: 0.9;
+        width: 58px;
+        height: 58px;
+        opacity: 0.92;
     }
 
     .site-lang-switch,
