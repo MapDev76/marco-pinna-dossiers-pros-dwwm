@@ -1405,6 +1405,21 @@
     padding: 0.34rem 0.48rem;
 }
 
+.settings-field select[data-field="department_ids"] {
+    min-height: 124px;
+    padding: 0.24rem;
+}
+
+.settings-field select[data-field="department_ids"] option {
+    padding: 0.32rem 0.4rem;
+    border-radius: 8px;
+}
+
+.settings-field select[data-field="department_ids"] option:checked {
+    background: rgba(157, 121, 16, 0.28);
+    color: #1f1f1f;
+}
+
 .settings-shift-create-actions {
     display: grid;
     gap: 0.4rem;
@@ -1428,6 +1443,28 @@
     color: var(--color-text-light);
     line-height: 1.35;
     grid-column: 1 / -1;
+}
+
+@media (min-width: 1101px) {
+    .settings-create-row.settings-create-row-shift .settings-list-cols.settings-list-cols-shift-create {
+        grid-template-columns: minmax(300px, 1.15fr) minmax(300px, 1.15fr) minmax(150px, 0.55fr);
+        align-items: start;
+    }
+
+    .settings-shift-create-column-left {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.55rem;
+    }
+
+    .settings-shift-create-column-left .settings-field-departments,
+    .settings-shift-create-column-left .settings-field-shift-name,
+    .settings-shift-create-column-left .settings-field-shift-kind {
+        grid-column: 1 / -1;
+    }
+
+    .settings-shift-create-actions {
+        align-content: center;
+    }
 }
 
 .settings-list-cols-shift .settings-inline-actions .admin-action-link {

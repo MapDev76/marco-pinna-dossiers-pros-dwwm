@@ -165,9 +165,11 @@
     if (!row) return;
     const activeDepartmentId = Number(window.DashboardPlannerData?.active_department_id || 0);
     const month = getCurrentMonthRange();
-    const deptSelect = row.querySelector('select[data-field="department_id"]');
+    const deptSelect = row.querySelector('select[data-field="department_ids"]');
     if (deptSelect && activeDepartmentId) {
-      deptSelect.value = String(activeDepartmentId);
+      Array.from(deptSelect.options || []).forEach((option) => {
+        option.selected = Number(option.value) === activeDepartmentId;
+      });
     }
     const defaults = {
       'input[data-field="name"]': '',
@@ -183,37 +185,68 @@
       const input = row.querySelector(selector);
       if (input) input.value = value;
     });
+    const kindSelect = row.querySelector('select[data-field="kind"]');
+    if (kindSelect) kindSelect.value = 'work';
     syncChoiceState(row);
+  }
+
+  function getSelectedDepartmentIds(row) {
+    const multi = row.querySelector('select[data-field="department_ids"]');
+    if (multi) {
+      const ids = Array.from(multi.selectedOptions || [])
+        .map((option) => parseInt(option.value || '0', 10) || 0)
+        .filter((id) => id > 0);
+      return Array.from(new Set(ids));
+    }
+
+    const single = parseInt(row.querySelector('select[data-field="department_id"]')?.value || '0', 10) || 0;
+    return single > 0 ? [single] : [];
+  }
+
+  function getDefaultShiftName(kind) {
+    const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+    const isFr = locale.startsWith('fr');
+    const labels = isFr
+      ? { work: 'Poste de travail', rest: 'Repos', vacation: 'Vacances', sick: 'Maladie' }
+      : { work: 'Work shift', rest: 'Rest day', vacation: 'Vacation', sick: 'Sick leave' };
+    return labels[kind] || labels.work;
   }
 
   async function createShift() {
     const row = getCreateRow();
     if (!row) return;
-    const departmentId = parseInt(row.querySelector('select[data-field="department_id"]')?.value || '0', 10) || 0;
-    const name = row.querySelector('input[data-field="name"]')?.value.trim() || '';
+    const departmentIds = getSelectedDepartmentIds(row);
     const icon = row.querySelector('input[data-field="icon"]')?.value.trim() || getDefaultIcon();
     const color = row.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
     const description = row.querySelector('input[data-field="description"]')?.value.trim() || '';
+    const kind = row.querySelector('select[data-field="kind"]')?.value || 'work';
+    const enteredName = row.querySelector('input[data-field="name"]')?.value.trim() || '';
+    const name = enteredName || getDefaultShiftName(kind);
     const range_start = row.querySelector('input[data-field="range_start"]')?.value || '';
     const range_end = row.querySelector('input[data-field="range_end"]')?.value || '';
     const start_time = row.querySelector('input[data-field="start_time"]')?.value || '';
     const end_time = row.querySelector('input[data-field="end_time"]')?.value || '';
 
-    if (!departmentId) return notifyError('Choose a department for the new shift.');
-    if (!name) return notifyError('Enter a shift name.');
-    if (!range_start || !range_end) return notifyError('Set both start and end date.');
-    if (range_end < range_start) return notifyError('End date must be after start date.');
+    if (!departmentIds.length) return notifyError('Choose at least one department for the new shift.');
+    if (kind === 'work') {
+      if (!range_start || !range_end) return notifyError('Set both start and end date.');
+      if (range_end < range_start) return notifyError('End date must be after start date.');
+    }
+
+    const normalizedStart = kind === 'work' ? start_time : (start_time || '00:00');
+    const normalizedEnd = kind === 'work' ? end_time : (end_time || '23:59');
 
     try {
       const res = await AppAPI.shifts.create(window.DashboardConfig.apiShifts, {
-        department_id: departmentId,
+        department_ids: departmentIds,
+        department_id: departmentIds[0],
         name,
-        start_time,
-        end_time,
+        start_time: normalizedStart,
+        end_time: normalizedEnd,
         icon,
         color,
         description,
-        kind: 'work',
+        kind,
         range_start,
         range_end,
       });
@@ -237,6 +270,13 @@
     if (!row) return;
     const id = parseInt(row.dataset.shiftId || '0', 10) || 0;
     if (!id) return;
+    const normalizeTime = (raw) => {
+      const value = String(raw || '').trim();
+      if (!value) return '';
+      return value.length >= 5 ? value.slice(0, 5) : value;
+    };
+    const startInput = row.querySelector('input[data-field="start_time"]');
+    const endInput = row.querySelector('input[data-field="end_time"]');
     const payload = {
       id,
       department_id: parseInt(row.dataset.shiftDepartmentId || '0', 10) || null,
@@ -245,8 +285,8 @@
       color: row.querySelector('input[data-field="color"]')?.value || getDefaultColor(),
       description: row.querySelector('input[data-field="description"]')?.value || '',
       kind: row.dataset.shiftKind || 'work',
-      start_time: row.querySelector('input[data-field="start_time"]')?.value || '',
-      end_time: row.querySelector('input[data-field="end_time"]')?.value || '',
+      start_time: normalizeTime(startInput?.value || startInput?.defaultValue || ''),
+      end_time: normalizeTime(endInput?.value || endInput?.defaultValue || ''),
     };
     try {
       const res = await AppAPI.shifts.update(window.DashboardConfig.apiShifts, payload);
@@ -296,6 +336,19 @@
       notifyError('Error deleting shift.');
     }
   }
+
+  // Make multi-department selection easier: single click toggles each option.
+  document.addEventListener('mousedown', (ev) => {
+    if (!isShiftsPanelActive()) return;
+    const option = ev.target.closest && ev.target.closest('option');
+    if (!option) return;
+    const select = option.parentElement;
+    if (!select || select.tagName !== 'SELECT') return;
+    if (select.getAttribute('data-field') !== 'department_ids' || !select.multiple) return;
+    ev.preventDefault();
+    option.selected = !option.selected;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
 
   document.addEventListener('click', (ev) => {
     if (!isShiftsPanelActive()) return;

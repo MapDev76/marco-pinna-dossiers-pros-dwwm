@@ -82,83 +82,163 @@ try {
             if (!in_array($currentRole, ['admin', 'super_admin'], true)) {
                 jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
             }
-            $required = ['department_id', 'name', 'start_time', 'end_time', 'range_start', 'range_end'];
+            $requestedKind = strtolower(trim((string) ($input['kind'] ?? 'work')));
+            if (!in_array($requestedKind, ['work', 'rest', 'vacation', 'sick'], true)) {
+                $requestedKind = 'work';
+            }
+            if ($currentRole === 'admin' && $requestedKind !== 'work') {
+                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            }
+
+            $required = ['department_id', 'name', 'start_time', 'end_time'];
             foreach ($required as $r) {
                 if (empty($input[$r]) && $input[$r] !== '0') {
                     jsonResponse(['ok' => false, 'error' => $r . ' required'], 400);
                 }
             }
 
-            $createDepartmentId = (int) ($input['department_id'] ?? 0);
-            if ($createDepartmentId <= 0) {
+            $createDepartmentIds = [];
+            $rawDepartmentIds = $input['department_ids'] ?? null;
+            if (is_array($rawDepartmentIds)) {
+                foreach ($rawDepartmentIds as $candidateId) {
+                    $id = (int) $candidateId;
+                    if ($id > 0) {
+                        $createDepartmentIds[] = $id;
+                    }
+                }
+            }
+
+            if (empty($createDepartmentIds)) {
+                $fallbackDepartmentId = (int) ($input['department_id'] ?? 0);
+                if ($fallbackDepartmentId > 0) {
+                    $createDepartmentIds[] = $fallbackDepartmentId;
+                }
+            }
+
+            $createDepartmentIds = array_values(array_unique($createDepartmentIds));
+            if (empty($createDepartmentIds)) {
                 jsonResponse(['ok' => false, 'error' => t('common.department_required')], 400);
             }
 
-            $createDepartment = $departmentModel->findById($createDepartmentId);
-            if (!$createDepartment) {
-                jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
-            }
-
-            if ($currentRole === 'admin') {
-                $departmentCompanyId = (int) ($createDepartment['company_id'] ?? 0);
-                if ($adminCompanyId <= 0 || $departmentCompanyId <= 0 || $departmentCompanyId !== $adminCompanyId) {
-                    jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            foreach ($createDepartmentIds as $createDepartmentId) {
+                $createDepartment = $departmentModel->findById($createDepartmentId);
+                if (!$createDepartment) {
+                    jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
                 }
+
+                if ($currentRole === 'admin') {
+                    $departmentCompanyId = (int) ($createDepartment['company_id'] ?? 0);
+                    if ($adminCompanyId <= 0 || $departmentCompanyId <= 0 || $departmentCompanyId !== $adminCompanyId) {
+                        jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+                    }
+                }
+
             }
 
-            $id = $shiftModel->create([
-                'department_id' => $createDepartmentId,
-                'name' => trim((string) $input['name']),
-                'icon' => $input['icon'] ?? null,
-                'color' => $input['color'] ?? null,
-                'description' => $input['description'] ?? null,
-                'kind' => 'work',
-                'start_time' => $input['start_time'],
-                'end_time' => $input['end_time'],
-            ]);
+            $createdShiftIds = [];
+            $name = trim((string) $input['name']);
+            $icon = $input['icon'] ?? null;
+            $color = $input['color'] ?? null;
+            $description = $input['description'] ?? null;
+            $startTime = $input['start_time'];
+            $endTime = $input['end_time'];
 
-            $rangeStart = trim((string) ($input['range_start'] ?? ''));
-            $rangeEnd = trim((string) ($input['range_end'] ?? ''));
-            if ($rangeStart === '' || $rangeEnd === '') {
-                jsonResponse(['ok' => false, 'error' => 'range_start and range_end required'], 400);
-            }
+            $lookupTemplateShift = $pdo->prepare(
+                'SELECT id
+                 FROM shifts
+                 WHERE department_id = :department_id
+                   AND kind = :kind
+                 ORDER BY id ASC
+                 LIMIT 1'
+            );
 
-            $start = new DateTimeImmutable($rangeStart);
-            $end = new DateTimeImmutable($rangeEnd);
-            if ($end < $start) {
-                [$start, $end] = [$end, $start];
-            }
-
-            $datesToInsert = [];
-            foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
-                $datesToInsert[] = $date->format('Y-m-d');
-            }
-
-            if (!empty($datesToInsert)) {
-                $existingStmt = $pdo->prepare(
-                    'SELECT id FROM user_shifts WHERE shift_id = :shift_id AND work_date = :work_date LIMIT 1'
-                );
-                $insertStmt = $pdo->prepare(
-                    'INSERT INTO user_shifts (shift_id, user_id, work_date, status)
-                     VALUES (:shift_id, NULL, :work_date, "open")'
-                );
-                foreach ($datesToInsert as $workDate) {
-                    $existingStmt->execute([
-                        'shift_id' => $id,
-                        'work_date' => $workDate,
+            foreach ($createDepartmentIds as $createDepartmentId) {
+                if (in_array($requestedKind, ['rest', 'vacation', 'sick'], true)) {
+                    $lookupTemplateShift->execute([
+                        'department_id' => $createDepartmentId,
+                        'kind' => $requestedKind,
                     ]);
-                    if ($existingStmt->fetchColumn()) {
+                    $existingTemplateId = (int) ($lookupTemplateShift->fetchColumn() ?: 0);
+                    if ($existingTemplateId > 0) {
+                        $shiftModel->update($existingTemplateId, [
+                            'department_id' => $createDepartmentId,
+                            'name' => $name,
+                            'icon' => $icon,
+                            'color' => $color,
+                            'description' => $description,
+                            'kind' => $requestedKind,
+                            'start_time' => $startTime,
+                            'end_time' => $endTime,
+                        ]);
+                        $createdShiftIds[] = $existingTemplateId;
                         continue;
                     }
-                    $insertStmt->execute([
-                        'shift_id' => $id,
-                        'work_date' => $workDate,
-                    ]);
+                }
+
+                $createdShiftIds[] = $shiftModel->create([
+                    'department_id' => $createDepartmentId,
+                    'name' => $name,
+                    'icon' => $icon,
+                    'color' => $color,
+                    'description' => $description,
+                    'kind' => $requestedKind,
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                ]);
+            }
+
+            if ($requestedKind === 'work') {
+                $rangeStart = trim((string) ($input['range_start'] ?? ''));
+                $rangeEnd = trim((string) ($input['range_end'] ?? ''));
+                if ($rangeStart === '' || $rangeEnd === '') {
+                    jsonResponse(['ok' => false, 'error' => 'range_start and range_end required'], 400);
+                }
+
+                $start = new DateTimeImmutable($rangeStart);
+                $end = new DateTimeImmutable($rangeEnd);
+                if ($end < $start) {
+                    [$start, $end] = [$end, $start];
+                }
+
+                $datesToInsert = [];
+                foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
+                    $datesToInsert[] = $date->format('Y-m-d');
+                }
+
+                if (!empty($datesToInsert)) {
+                    $existingStmt = $pdo->prepare(
+                        'SELECT id FROM user_shifts WHERE shift_id = :shift_id AND work_date = :work_date LIMIT 1'
+                    );
+                    $insertStmt = $pdo->prepare(
+                        'INSERT INTO user_shifts (shift_id, user_id, work_date, status)
+                         VALUES (:shift_id, NULL, :work_date, "open")'
+                    );
+                    foreach ($createdShiftIds as $createdShiftId) {
+                        foreach ($datesToInsert as $workDate) {
+                            $existingStmt->execute([
+                                'shift_id' => $createdShiftId,
+                                'work_date' => $workDate,
+                            ]);
+                            if ($existingStmt->fetchColumn()) {
+                                continue;
+                            }
+                            $insertStmt->execute([
+                                'shift_id' => $createdShiftId,
+                                'work_date' => $workDate,
+                            ]);
+                        }
+                    }
                 }
             }
 
-            $shift = $shiftModel->findById($id);
-            jsonResponse(['ok' => true, 'shift' => $shift]);
+            $firstShiftId = (int) ($createdShiftIds[0] ?? 0);
+            $shift = $firstShiftId > 0 ? $shiftModel->findById($firstShiftId) : null;
+            jsonResponse([
+                'ok' => true,
+                'shift' => $shift,
+                'shift_ids' => $createdShiftIds,
+                'department_ids' => $createDepartmentIds,
+            ]);
             break;
 
         case 'update':
@@ -183,7 +263,38 @@ try {
                 }
             }
 
-            $shiftModel->update($id, $input);
+            $normalizeTime = static function ($value, $fallback) {
+                $candidate = trim((string) $value);
+                if ($candidate === '') {
+                    return trim((string) $fallback);
+                }
+                return strlen($candidate) >= 5 ? substr($candidate, 0, 5) : $candidate;
+            };
+
+            $resolvedDepartmentId = (int) ($input['department_id'] ?? ($existingShift['department_id'] ?? 0));
+            if ($resolvedDepartmentId <= 0) {
+                jsonResponse(['ok' => false, 'error' => t('common.department_required')], 400);
+            }
+
+            $resolvedPayload = [
+                'department_id' => $resolvedDepartmentId,
+                'name' => trim((string) ($input['name'] ?? ($existingShift['name'] ?? ''))),
+                'icon' => array_key_exists('icon', $input) ? $input['icon'] : ($existingShift['icon'] ?? null),
+                'color' => array_key_exists('color', $input) ? $input['color'] : ($existingShift['color'] ?? null),
+                'description' => array_key_exists('description', $input) ? $input['description'] : ($existingShift['description'] ?? null),
+                'kind' => (string) ($input['kind'] ?? ($existingShift['kind'] ?? 'work')),
+                'start_time' => $normalizeTime($input['start_time'] ?? '', $existingShift['start_time'] ?? ''),
+                'end_time' => $normalizeTime($input['end_time'] ?? '', $existingShift['end_time'] ?? ''),
+            ];
+
+            if ($resolvedPayload['name'] === '') {
+                jsonResponse(['ok' => false, 'error' => 'name required'], 400);
+            }
+            if ($resolvedPayload['start_time'] === '' || $resolvedPayload['end_time'] === '') {
+                jsonResponse(['ok' => false, 'error' => 'start_time and end_time required'], 400);
+            }
+
+            $shiftModel->update($id, $resolvedPayload);
             jsonResponse(['ok' => true]);
             break;
 

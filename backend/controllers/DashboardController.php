@@ -164,7 +164,6 @@ if ($role === 'super_admin') {
         $departmentRows = $departmentModel->byCompanyId($plannerCompanyId);
         $userRows = $userModel->companyUsersByCompanyId($plannerCompanyId);
         $departmentIds = array_values(array_map(static fn (array $department): int => (int) $department['id'], $departmentRows));
-        ensureAbsenceShiftTemplatesForDepartments($pdo, $departmentIds);
         $shiftRows = [];
         if (!empty($departmentIds)) {
             $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
@@ -288,7 +287,6 @@ if ($role === 'admin' && $companyId !== null) {
     $departmentRows = $departmentModel->byCompanyId($companyId);
     $userRows = $userModel->companyUsersByCompanyId($companyId);
     $departmentIds = array_values(array_map(static fn (array $department): int => (int) $department['id'], $departmentRows));
-    ensureAbsenceShiftTemplatesForDepartments($pdo, $departmentIds);
     $shiftRows = [];
     if (!empty($departmentIds)) {
         $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
@@ -442,8 +440,6 @@ if ($role === 'department_manager' && $departmentId !== null) {
 
     $teamRows = $userModel->teamByDepartmentId($departmentId);
     $shiftSelect = 's.id, s.department_id, s.name, s.icon, s.color, s.description, s.kind, s.start_time, s.end_time, d.name AS department_name';
-
-    ensureDepartmentAbsenceShiftTemplates($pdo, (int) $departmentId);
 
     $shiftStatement = $pdo->prepare(
         'SELECT ' . $shiftSelect . ' FROM shifts s INNER JOIN departments d ON d.id = s.department_id WHERE s.department_id = :department_id ORDER BY s.start_time ASC, s.id ASC'

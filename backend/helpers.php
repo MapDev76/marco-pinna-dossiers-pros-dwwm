@@ -425,6 +425,17 @@ function ensureDepartmentAbsenceShiftTemplates(PDO $pdo, int $departmentId): arr
          VALUES (:department_id, :name, :icon, :color, :description, :kind, :start_time, :end_time)'
     );
 
+    $refreshExisting = $pdo->prepare(
+        'UPDATE shifts
+         SET name = :name,
+             icon = :icon,
+             color = :color,
+             description = :description,
+             start_time = :start_time,
+             end_time = :end_time
+         WHERE id = :id'
+    );
+
     foreach ($templates as $kind => $template) {
         $lookup->execute([
             'department_id' => $departmentId,
@@ -433,6 +444,15 @@ function ensureDepartmentAbsenceShiftTemplates(PDO $pdo, int $departmentId): arr
 
         $existingId = (int) ($lookup->fetchColumn() ?: 0);
         if ($existingId > 0) {
+            $refreshExisting->execute([
+                'name' => (string) ($template['name'] ?? ucfirst($kind)),
+                'icon' => (string) ($template['icon'] ?? ''),
+                'color' => (string) ($template['color'] ?? '#9ca3af'),
+                'description' => (string) ($template['description'] ?? ''),
+                'start_time' => (string) ($template['start_time'] ?? '00:00:00'),
+                'end_time' => (string) ($template['end_time'] ?? '23:59:00'),
+                'id' => $existingId,
+            ]);
             $idsByKind[$kind] = $existingId;
             continue;
         }

@@ -35,6 +35,16 @@ if ($currentRole === 'admin') {
     }));
 }
 $shifts = is_array($planner['shifts'] ?? null) ? $planner['shifts'] : [];
+$visibleShifts = $shifts;
+if ($currentRole !== 'super_admin') {
+    $visibleShifts = array_values(array_filter($shifts, static function (array $shift): bool {
+        $kind = strtolower(trim((string) ($shift['kind'] ?? 'work')));
+        $name = strtolower(trim((string) ($shift['name'] ?? '')));
+        $isSystem = in_array($kind, ['rest', 'vacation', 'sick'], true)
+            || in_array($name, ['rest day', 'vacation', 'sick leave'], true);
+        return !$isSystem;
+    }));
+}
 $assignments = is_array($planner['assignments'] ?? null) ? $planner['assignments'] : [];
 $attendances = is_array($planner['attendances'] ?? null) ? $planner['attendances'] : [];
 $roleLabels = [
@@ -1651,7 +1661,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <p class="crud-modal-subtitle"><?php echo e(t('settings.shifts_list_hint')); ?></p>
                     </div>
                     <div class="settings-pill-row">
-                        <span class="settings-pill"><?php echo count($shifts); ?> <?php echo e(t('settings.shifts_suffix')); ?></span>
+                        <span class="settings-pill"><?php echo count($visibleShifts); ?> <?php echo e(t('settings.shifts_suffix')); ?></span>
                     </div>
                 </div>
 
@@ -1659,16 +1669,26 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <div class="settings-list-head settings-create-row settings-create-row-shift" data-shift-create-row>
                     <div class="settings-list-cols settings-list-cols-shift-create">
                         <div class="settings-shift-create-column settings-shift-create-column-left">
-                            <label class="settings-field"><?php echo e(t('common.department')); ?>
-                                <select data-field="department_id">
+                            <label class="settings-field settings-field-departments"><?php echo e(t('common.department')); ?>
+                                <select data-field="department_ids" multiple size="4">
                                     <?php foreach ($visibleDepartments as $department): ?>
                                         <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo (int) ($department['id'] ?? 0) === (int) ($planner['active_department_id'] ?? 0) ? 'selected' : ''; ?>>
                                             <?php echo e($department['name'] ?? t('settings.department_default')); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <small class="settings-shift-create-hint"><?php echo e($isFrLocale ? 'Cliquez pour sélectionner un ou plusieurs départements.' : 'Click to select one or more departments.'); ?></small>
                             </label>
-                            <label class="settings-field"><?php echo e(t('crud.department_name')); ?><input data-field="name" type="text" value="" placeholder="<?php echo e(t('settings.shift_name_placeholder')); ?>"></label>
+                            <?php if ($currentRole === 'super_admin'): ?>
+                                <label class="settings-field settings-field-shift-kind"><?php echo e(t('crud.role')); ?>
+                                    <select data-field="kind">
+                                        <option value="work" selected><?php echo e($isFrLocale ? 'Travail' : 'Work'); ?></option>
+                                        <option value="rest"><?php echo e(t('settings.rest')); ?></option>
+                                        <option value="vacation"><?php echo e(t('settings.vacation')); ?></option>
+                                        <option value="sick"><?php echo e(t('settings.sick')); ?></option>
+                                    </select>
+                                </label>
+                            <?php endif; ?>
                             <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-field="range_start" type="date" value=""></label>
                             <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-field="range_end" type="date" value=""></label>
                         </div>
@@ -1736,10 +1756,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <span><?php echo e(t('common.action')); ?></span>
                     </div>
 
-                    <?php if (empty($shifts)): ?>
+                    <?php if (empty($visibleShifts)): ?>
                         <div class="crud-empty-state"><?php echo e(t('settings.no_shifts_available')); ?></div>
                     <?php else: ?>
-                        <?php foreach ($shifts as $shift): ?>
+                        <?php foreach ($visibleShifts as $shift): ?>
                             <?php
                                 $shiftKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
                                 $shiftNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
@@ -1761,7 +1781,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <span><?php echo e($shift['department_name'] ?? ''); ?></span>
                                     <span>
                                         <?php echo e($shiftDescriptionDisplay); ?>
-                                        <?php if ($isSystemShiftTemplate): ?>
+                                        <?php if ($isSystemShiftTemplate && $currentRole !== 'super_admin'): ?>
                                             <br><small><?php echo e(t('settings.system_template_read_only')); ?></small>
                                         <?php endif; ?>
                                     </span>
@@ -1832,8 +1852,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             <label class="settings-field settings-field-wide"><?php echo e(t('crud.description')); ?>
                                                 <input data-field="description" type="text" value="<?php echo e($shift['description'] ?? ''); ?>" placeholder="<?php echo e(t('settings.shift_notes_placeholder')); ?>">
                                             </label>
-                                            <label class="settings-field"><?php echo e(t('schedule.start')); ?><input data-field="start_time" type="time" value="<?php echo e($shift['start_time'] ?? ''); ?>"></label>
-                                            <label class="settings-field"><?php echo e(t('schedule.end')); ?><input data-field="end_time" type="time" value="<?php echo e($shift['end_time'] ?? ''); ?>"></label>
+                                            <label class="settings-field"><?php echo e(t('schedule.start')); ?><input data-field="start_time" type="time" value="<?php echo e(substr((string) ($shift['start_time'] ?? ''), 0, 5)); ?>"></label>
+                                            <label class="settings-field"><?php echo e(t('schedule.end')); ?><input data-field="end_time" type="time" value="<?php echo e(substr((string) ($shift['end_time'] ?? ''), 0, 5)); ?>"></label>
                                             <div class="settings-inline-actions">
                                                 <button type="button" class="admin-action-link settings-shift-save" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(t('settings.save')); ?></button>
                                                 <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-cancel"><?php echo e(t('employee.cancel')); ?></button>
