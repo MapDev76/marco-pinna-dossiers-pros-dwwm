@@ -934,10 +934,23 @@
         name: fullName || String(user.email || 'Employee'),
       };
     };
+    const normalizeAbsenceKind = (value) => {
+      const normalized = String(value || '').toLowerCase().replace(/[^a-z]/g, '');
+      if (!normalized) return '';
+      if (normalized === 'rest' || normalized === 'restday' || normalized === 'dayoff' || normalized === 'reposo') return 'rest';
+      if (normalized === 'vacation' || normalized === 'vacations' || normalized === 'holiday' || normalized === 'holidays' || normalized === 'leave' || normalized === 'conge' || normalized === 'conges' || normalized === 'ferie') return 'vacation';
+      if (normalized === 'sick' || normalized === 'sickness' || normalized === 'sickleave' || normalized === 'maladie' || normalized === 'malattia') return 'sick';
+      return normalized;
+    };
+
+    const getAbsenceTemplateShift = (kind) => {
+      const targetKind = normalizeAbsenceKind(kind);
+      if (!targetKind) return null;
+      return getActiveShifts().find((shift) => normalizeAbsenceKind(shift?.kind || '') === targetKind) || null;
+    };
+
     const getAbsenceTemplateShiftId = (kind) => {
-      const targetKind = String(kind || '').toLowerCase();
-      if (!targetKind) return 0;
-      const match = getActiveShifts().find((shift) => String(shift?.kind || '').toLowerCase() === targetKind);
+      const match = getAbsenceTemplateShift(kind);
       return Number(match?.id || 0);
     };
     const getUserAvailabilityStatus = (userId, slotDate) => {
@@ -1514,6 +1527,7 @@
         getActiveUser: getActiveUserForCalendar,
         getActiveShift,
         getAbsenceTemplateShiftId,
+        getAbsenceTemplateShift,
       });
     }
 

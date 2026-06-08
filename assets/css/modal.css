@@ -561,6 +561,14 @@
     line-height: 1;
 }
 
+.dashboard-print-cell-icon {
+    width: 0.95rem;
+    height: 0.95rem;
+    object-fit: contain;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .dashboard-print-grid td small {
     display: block;
     margin-top: 1px;
@@ -701,6 +709,11 @@
         font-size: 10.2pt;
         line-height: 1;
         font-weight: 700;
+    }
+
+    body.print-planning-mode #modal-print .dashboard-print-cell-icon {
+        width: 10.2pt;
+        height: 10.2pt;
     }
 
     body.print-planning-mode #modal-print .dashboard-print-shifts-legend {

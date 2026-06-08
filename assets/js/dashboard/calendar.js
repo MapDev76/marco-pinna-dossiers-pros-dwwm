@@ -11,6 +11,7 @@
   var feedback = window.DashboardFeedback;
   var locale = String(document.documentElement.getAttribute('lang') || 'en').toLowerCase();
   var isFr = locale.indexOf('fr') === 0;
+  var iconsBase = String((window.DashboardConfig && window.DashboardConfig.iconsBase) || '/assets/icons/');
   function tr(enText, frText) {
     return isFr ? frText : enText;
   }
@@ -387,6 +388,7 @@
     var getActiveUser = typeof options.getActiveUser === 'function' ? options.getActiveUser : null;
     var getActiveShift = typeof options.getActiveShift === 'function' ? options.getActiveShift : null;
     var getAbsenceTemplateShiftId = typeof options.getAbsenceTemplateShiftId === 'function' ? options.getAbsenceTemplateShiftId : null;
+    var getAbsenceTemplateShift = typeof options.getAbsenceTemplateShift === 'function' ? options.getAbsenceTemplateShift : null;
     var isUserAvailableForDate = typeof options.isUserAvailableForDate === 'function' ? options.isUserAvailableForDate : null;
     var getUserAvailabilityStatus = typeof options.getUserAvailabilityStatus === 'function' ? options.getUserAvailabilityStatus : null;
     var attendances = Array.isArray(options.attendances) ? options.attendances : [];
@@ -402,6 +404,30 @@
       var dateObj = typeof toLocalDate === 'function' ? toLocalDate(dateValue) : new Date(dateValue + 'T12:00:00');
       if (!dateObj || Number.isNaN(dateObj.getTime())) return String(dateValue || tr('Selected date', 'Date selectionnee'));
       return titleFormatter.format(dateObj);
+    }
+
+    function resolveTemplateIconPath(shiftRecord, fallbackIconFile) {
+      var rawIcon = String((shiftRecord && (shiftRecord.icon || shiftRecord.shift_icon)) || '').trim();
+      if (!rawIcon) {
+        return iconsBase + fallbackIconFile;
+      }
+      if (rawIcon.indexOf('data:') === 0 || rawIcon.indexOf('http://') === 0 || rawIcon.indexOf('https://') === 0 || rawIcon.indexOf('/') === 0) {
+        return rawIcon;
+      }
+      return iconsBase + rawIcon.replace(/^\/+/, '');
+    }
+
+    function getAbsenceTemplateMeta(kind, fallbackIconFile) {
+      var shiftRecord = getAbsenceTemplateShift ? (getAbsenceTemplateShift(kind) || null) : null;
+      var shiftId = Number(shiftRecord && shiftRecord.id ? shiftRecord.id : (getAbsenceTemplateShiftId ? getAbsenceTemplateShiftId(kind) : 0));
+      return {
+        id: shiftId,
+        iconPath: resolveTemplateIconPath(shiftRecord, fallbackIconFile),
+      };
+    }
+
+    function renderAbsenceIcon(path, className) {
+      return '<img src="' + path + '" class="' + className + '" alt="" aria-hidden="true">';
     }
 
     function groupByShift(dayEvents) {
@@ -456,8 +482,26 @@
         sick: [],
       };
 
+      var templateShiftIds = {
+        rest: getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('rest') || 0) : 0,
+        vacation: getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('vacation') || 0) : 0,
+        sick: getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('sick') || 0) : 0,
+      };
+
       dayEvents.forEach(function (event) {
         var kind = String(event.shift_kind || '').toLowerCase();
+        var shiftId = Number(event.shift_id || 0);
+
+        if (!kind && shiftId && shiftId === templateShiftIds.rest) {
+          kind = 'rest';
+        }
+        if (!kind && shiftId && shiftId === templateShiftIds.vacation) {
+          kind = 'vacation';
+        }
+        if (!kind && shiftId && shiftId === templateShiftIds.sick) {
+          kind = 'sick';
+        }
+
         if (!kind && String(event.status || '').toLowerCase() === 'rest') {
           kind = 'rest';
         }
@@ -470,8 +514,8 @@
 
         var normalizedReason = '';
         if (kind === 'rest' || kind === 'restday' || kind === 'rest_day') normalizedReason = 'rest';
-        if (kind === 'vacation') normalizedReason = 'vacation';
-        if (kind === 'sick') normalizedReason = 'sick';
+        if (kind === 'vacation' || kind === 'holiday' || kind === 'leave' || kind === 'conge' || kind === 'holidays') normalizedReason = 'vacation';
+        if (kind === 'sick' || kind === 'sickness' || kind === 'sickleave' || kind === 'sick_leave' || kind === 'maladie') normalizedReason = 'sick';
         if (!normalizedReason) return;
 
         var userId = Number(event.user_id || 0);
@@ -524,10 +568,10 @@
         return;
       }
 
-      var restShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('rest') || 0) : 0;
-      var vacationShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('vacation') || 0) : 0;
-      var sickShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId('sick') || 0) : 0;
-      if (!restShiftId || !vacationShiftId || !sickShiftId) {
+      var restMeta = getAbsenceTemplateMeta('rest', 'moon.svg');
+      var vacationMeta = getAbsenceTemplateMeta('vacation', 'parasol.svg');
+      var sickMeta = getAbsenceTemplateMeta('sick', 'stethoscope.svg');
+      if (!restMeta.id || !vacationMeta.id || !sickMeta.id) {
         manualNode.innerHTML = '<p class="calendar-day-fullscreen-manual-empty">' + tr('Absence templates are not available for this department.', 'Les modeles d absence ne sont pas disponibles pour ce departement.') + '</p>';
         return;
       }
@@ -537,7 +581,7 @@
       var activeWorkShiftId = activeShift && activeShiftKind === 'work' ? Number(activeShift.id || 0) : 0;
       var activeWorkShiftName = activeShift && activeShiftKind === 'work' ? String(activeShift.name || tr('Selected shift', 'Poste selectionne')) : tr('Selected shift', 'Poste selectionne');
 
-      manualNode.innerHTML = '\n        <div class="calendar-day-fullscreen-manual-head">\n          <strong>' + tr('Manual force assignment', 'Affectation manuelle forcee') + '</strong>\n          <span>' + (selectedUserName || (tr('Employee', 'Employe') + ' #' + selectedUserId)) + ' • ' + dateValue + '</span>\n        </div>\n        <div class="calendar-day-fullscreen-manual-actions">\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="rest" data-user-id="' + selectedUserId + '" data-shift-id="' + restShiftId + '" data-date="' + dateValue + '">💤 ' + tr('Rest', 'Repos') + '</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="vacation" data-user-id="' + selectedUserId + '" data-shift-id="' + vacationShiftId + '" data-date="' + dateValue + '">🏖 ' + tr('Vacation', 'Vacances') + '</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="sick" data-user-id="' + selectedUserId + '" data-shift-id="' + sickShiftId + '" data-date="' + dateValue + '">🤒 ' + tr('Sick', 'Maladie') + '</button>\n          ' + (activeWorkShiftId > 0 ? ('<button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-force-work="1" data-user-id="' + selectedUserId + '" data-shift-id="' + activeWorkShiftId + '" data-date="' + dateValue + '">⏱ ' + tr('Work', 'Travail') + ': ' + activeWorkShiftName + '</button>') : '<span class="calendar-day-fullscreen-manual-note">' + tr('Select a work shift in sidebar to force work assignment.', 'Selectionnez un poste de travail dans la barre laterale pour forcer l affectation.') + '</span>') + '\n        </div>\n        <p class="calendar-day-fullscreen-manual-note">' + tr('Manual actions force assignment even if personal settings mark user unavailable.', 'Les actions manuelles forcent l affectation meme si les regles personnelles marquent l utilisateur indisponible.') + '</p>\n      ';
+      manualNode.innerHTML = '\n        <div class="calendar-day-fullscreen-manual-head">\n          <strong>' + tr('Manual force assignment', 'Affectation manuelle forcee') + '</strong>\n          <span>' + (selectedUserName || (tr('Employee', 'Employe') + ' #' + selectedUserId)) + ' • ' + dateValue + '</span>\n        </div>\n        <div class="calendar-day-fullscreen-manual-actions">\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="rest" data-user-id="' + selectedUserId + '" data-shift-id="' + restMeta.id + '" data-date="' + dateValue + '">' + renderAbsenceIcon(restMeta.iconPath, 'calendar-day-fullscreen-icon') + ' ' + tr('Rest', 'Repos') + '</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="vacation" data-user-id="' + selectedUserId + '" data-shift-id="' + vacationMeta.id + '" data-date="' + dateValue + '">' + renderAbsenceIcon(vacationMeta.iconPath, 'calendar-day-fullscreen-icon') + ' ' + tr('Vacation', 'Vacances') + '</button>\n          <button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-absence-assign="sick" data-user-id="' + selectedUserId + '" data-shift-id="' + sickMeta.id + '" data-date="' + dateValue + '">' + renderAbsenceIcon(sickMeta.iconPath, 'calendar-day-fullscreen-icon') + ' ' + tr('Sick', 'Maladie') + '</button>\n          ' + (activeWorkShiftId > 0 ? ('<button type="button" class="calendar-day-fullscreen-manual-btn" data-calendar-day-force-work="1" data-user-id="' + selectedUserId + '" data-shift-id="' + activeWorkShiftId + '" data-date="' + dateValue + '">⏱ ' + tr('Work', 'Travail') + ': ' + activeWorkShiftName + '</button>') : '<span class="calendar-day-fullscreen-manual-note">' + tr('Select a work shift in sidebar to force work assignment.', 'Selectionnez un poste de travail dans la barre laterale pour forcer l affectation.') + '</span>') + '\n        </div>\n        <p class="calendar-day-fullscreen-manual-note">' + tr('Manual actions force assignment even if personal settings mark user unavailable.', 'Les actions manuelles forcent l affectation meme si les regles personnelles marquent l utilisateur indisponible.') + '</p>\n      ';
     }
 
     function openModal(dateValue) {
@@ -582,7 +626,13 @@
           unavailableNode.hidden = true;
         } else {
           unavailableNode.hidden = false;
-          unavailableNode.innerHTML = '\n            <div class="calendar-day-fullscreen-unavailable-head">' + tr('Unavailable employees', 'Employes indisponibles') + '</div>\n            <div class="calendar-day-fullscreen-unavailable-grid">\n              <section class="calendar-day-fullscreen-unavailable-card is-rest">\n                <h4>💤 ' + tr('Rest day', 'Jour de repos') + '</h4>\n                ' + (unavailable.rest.length ? ('<ul>' + unavailable.rest.map(function (name) { return '<li>💤 ' + name + '</li>'; }).join('') + '</ul>') : '<p>' + tr('None', 'Aucun') + '</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-vacation">\n                <h4>🏖 ' + tr('Vacation / Holidays', 'Vacances / Conges') + '</h4>\n                ' + (unavailable.vacation.length ? ('<ul>' + unavailable.vacation.map(function (name) { return '<li>🏖 ' + name + '</li>'; }).join('') + '</ul>') : '<p>' + tr('None', 'Aucun') + '</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-sick">\n                <h4>🤒 ' + tr('Sick leave', 'Arret maladie') + '</h4>\n                ' + (unavailable.sick.length ? ('<ul>' + unavailable.sick.map(function (name) { return '<li>🤒 ' + name + '</li>'; }).join('') + '</ul>') : '<p>' + tr('None', 'Aucun') + '</p>') + '\n              </section>\n            </div>\n          ';
+          var restTemplate = getAbsenceTemplateMeta('rest', 'moon.svg');
+          var vacationTemplate = getAbsenceTemplateMeta('vacation', 'parasol.svg');
+          var sickTemplate = getAbsenceTemplateMeta('sick', 'stethoscope.svg');
+          var restIcon = renderAbsenceIcon(restTemplate.iconPath, 'calendar-day-fullscreen-icon');
+          var vacationIcon = renderAbsenceIcon(vacationTemplate.iconPath, 'calendar-day-fullscreen-icon');
+          var sickIcon = renderAbsenceIcon(sickTemplate.iconPath, 'calendar-day-fullscreen-icon');
+          unavailableNode.innerHTML = '\n            <div class="calendar-day-fullscreen-unavailable-head">' + tr('Unavailable employees', 'Employes indisponibles') + '</div>\n            <div class="calendar-day-fullscreen-unavailable-grid">\n              <section class="calendar-day-fullscreen-unavailable-card is-rest">\n                <h4>' + restIcon + tr('Rest day', 'Jour de repos') + '</h4>\n                ' + (unavailable.rest.length ? ('<ul>' + unavailable.rest.map(function (name) { return '<li>' + restIcon + name + '</li>'; }).join('') + '</ul>') : '<p>' + tr('None', 'Aucun') + '</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-vacation">\n                <h4>' + vacationIcon + tr('Vacation / Holidays', 'Vacances / Conges') + '</h4>\n                ' + (unavailable.vacation.length ? ('<ul>' + unavailable.vacation.map(function (name) { return '<li>' + vacationIcon + name + '</li>'; }).join('') + '</ul>') : '<p>' + tr('None', 'Aucun') + '</p>') + '\n              </section>\n              <section class="calendar-day-fullscreen-unavailable-card is-sick">\n                <h4>' + sickIcon + tr('Sick leave', 'Arret maladie') + '</h4>\n                ' + (unavailable.sick.length ? ('<ul>' + unavailable.sick.map(function (name) { return '<li>' + sickIcon + name + '</li>'; }).join('') + '</ul>') : '<p>' + tr('None', 'Aucun') + '</p>') + '\n              </section>\n            </div>\n          ';
         }
       }
 
@@ -719,15 +769,208 @@
     var getActiveUser = options.getActiveUser;
     var getActiveShift = options.getActiveShift;
     var getAbsenceTemplateShiftId = options.getAbsenceTemplateShiftId;
+    var getAbsenceTemplateShift = options.getAbsenceTemplateShift;
     var bulkAssignModal = createBulkAssignModal(assignShift, events, isUserAvailableForDate);
     var dayFullscreenModal = createDayFullscreenModal(events, toLocalDate, openDate, {
       assignShift: assignShift,
       getActiveUser: getActiveUser,
       getActiveShift: getActiveShift,
       getAbsenceTemplateShiftId: getAbsenceTemplateShiftId,
+      getAbsenceTemplateShift: getAbsenceTemplateShift,
       isUserAvailableForDate: isUserAvailableForDate,
       getUserAvailabilityStatus: getUserAvailabilityStatus,
       attendances: attendances,
+    });
+    var badgeActionState = {
+      assignmentId: 0,
+      userId: 0,
+      workDate: '',
+      anchorKey: '',
+    };
+
+    function resolveTemplateIconPath(kind, fallbackIconFile) {
+      var templateShift = typeof getAbsenceTemplateShift === 'function' ? (getAbsenceTemplateShift(kind) || null) : null;
+      var rawIcon = String((templateShift && (templateShift.icon || templateShift.shift_icon)) || '').trim();
+      if (!rawIcon) return iconsBase + fallbackIconFile;
+      if (rawIcon.indexOf('data:') === 0 || rawIcon.indexOf('http://') === 0 || rawIcon.indexOf('https://') === 0 || rawIcon.indexOf('/') === 0) {
+        return rawIcon;
+      }
+      return iconsBase + rawIcon.replace(/^\/+/, '');
+    }
+
+    function renderBadgeActionsMenu() {
+      var restIconPath = resolveTemplateIconPath('rest', 'moon.svg');
+      var vacationIconPath = resolveTemplateIconPath('vacation', 'parasol.svg');
+      var sickIconPath = resolveTemplateIconPath('sick', 'stethoscope.svg');
+      badgeActionMenu.innerHTML = [
+        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="rest"><img class="calendar-badge-actions-icon" src="' + restIconPath + '" alt="" aria-hidden="true"> ' + tr('Rest', 'Repos') + '</button>',
+        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="vacation"><img class="calendar-badge-actions-icon" src="' + vacationIconPath + '" alt="" aria-hidden="true"> ' + tr('Vacation', 'Vacances') + '</button>',
+        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="sick"><img class="calendar-badge-actions-icon" src="' + sickIconPath + '" alt="" aria-hidden="true"> ' + tr('Sick', 'Maladie') + '</button>',
+        '<button type="button" class="calendar-badge-actions-btn is-danger" data-calendar-badge-action="unassign"><img class="calendar-badge-actions-icon" src="' + iconsBase + 'x.svg" alt="" aria-hidden="true"> ' + tr('Unassign', 'Desassigner') + '</button>',
+        '<button type="button" class="calendar-badge-actions-btn" data-calendar-badge-action="cancel">' + tr('Cancel', 'Annuler') + '</button>'
+      ].join('');
+    }
+
+    var badgeActionMenu = document.createElement('div');
+    badgeActionMenu.className = 'calendar-badge-actions-menu';
+    badgeActionMenu.hidden = true;
+    renderBadgeActionsMenu();
+    document.body.appendChild(badgeActionMenu);
+
+    function closeBadgeActionMenu() {
+      badgeActionMenu.hidden = true;
+      badgeActionState.assignmentId = 0;
+      badgeActionState.userId = 0;
+      badgeActionState.workDate = '';
+      badgeActionState.anchorKey = '';
+    }
+
+    function openBadgeActionMenu(anchorNode, context, triggerEvent) {
+      var targetAnchorKey = String(context.assignmentId || 0) + '|' + String(context.userId || 0) + '|' + String(context.workDate || '');
+      if (!badgeActionMenu.hidden && badgeActionState.anchorKey === targetAnchorKey) {
+        closeBadgeActionMenu();
+        return;
+      }
+
+      renderBadgeActionsMenu();
+
+      var rect = anchorNode && typeof anchorNode.getBoundingClientRect === 'function'
+        ? anchorNode.getBoundingClientRect()
+        : null;
+      if (rect && rect.left === 0 && rect.top === 0 && rect.width === 0 && rect.height === 0) {
+        rect = null;
+      }
+
+      if (!rect && triggerEvent && triggerEvent.target && typeof triggerEvent.target.closest === 'function') {
+        var fallbackAnchor = triggerEvent.target.closest('.calendar-event-slot-card[data-calendar-slot-toggle], .calendar-event-user-badge, [data-calendar-slot-toggle]');
+        if (fallbackAnchor && typeof fallbackAnchor.getBoundingClientRect === 'function') {
+          rect = fallbackAnchor.getBoundingClientRect();
+        }
+      }
+
+      var eventClientX = Number(triggerEvent && triggerEvent.clientX || 0);
+      var eventClientY = Number(triggerEvent && triggerEvent.clientY || 0);
+      if (rect && eventClientX > 20 && eventClientY > 20 && rect.left <= 2 && rect.top <= 2) {
+        rect = null;
+      }
+
+      var top = rect ? (rect.bottom + 6) : (eventClientY + 10);
+      var left = rect ? rect.left : (eventClientX + 10);
+
+      badgeActionMenu.hidden = false;
+
+      var viewportWidth = Math.max(
+        Number(window.innerWidth || 0),
+        Number((window.visualViewport && window.visualViewport.width) || 0),
+        Number(document.documentElement && document.documentElement.clientWidth || 0),
+        Number(document.body && document.body.clientWidth || 0)
+      );
+      var viewportHeight = Math.max(
+        Number(window.innerHeight || 0),
+        Number((window.visualViewport && window.visualViewport.height) || 0),
+        Number(document.documentElement && document.documentElement.clientHeight || 0),
+        Number(document.body && document.body.clientHeight || 0)
+      );
+      var menuWidth = Number(badgeActionMenu.offsetWidth || 170);
+      var menuHeight = Number(badgeActionMenu.offsetHeight || 130);
+      var boundary = 8;
+
+      if (viewportWidth > 0 && left + menuWidth > viewportWidth - boundary) {
+        left = Math.max(boundary, viewportWidth - menuWidth - boundary);
+      }
+      if (viewportHeight > 0 && top + menuHeight > viewportHeight - boundary) {
+        var aboveTop = rect ? (rect.top - menuHeight - 6) : (viewportHeight - menuHeight - boundary);
+        top = Math.max(boundary, aboveTop);
+      }
+
+      top = Math.max(boundary, top);
+      left = Math.max(boundary, left);
+      badgeActionMenu.style.top = top + 'px';
+      badgeActionMenu.style.left = left + 'px';
+
+      badgeActionState.assignmentId = Number(context.assignmentId || 0);
+      badgeActionState.userId = Number(context.userId || 0);
+      badgeActionState.workDate = String(context.workDate || '');
+      badgeActionState.anchorKey = targetAnchorKey;
+    }
+
+    badgeActionMenu.addEventListener('click', function (event) {
+      var actionButton = event.target.closest('[data-calendar-badge-action]');
+      if (!actionButton) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      var action = String(actionButton.getAttribute('data-calendar-badge-action') || '').toLowerCase();
+      var assignmentId = Number(badgeActionState.assignmentId || 0);
+      var userId = Number(badgeActionState.userId || 0);
+      var workDate = String(badgeActionState.workDate || '');
+
+      if (action === 'cancel') {
+        closeBadgeActionMenu();
+        return;
+      }
+
+      if (!workDate || isPastDateKey(workDate)) {
+        notifyError('Past days are locked and cannot be edited.');
+        closeBadgeActionMenu();
+        return;
+      }
+
+      if (action === 'unassign') {
+        if (!assignmentId || typeof unassignAssignment !== 'function') {
+          notifyError('Missing unassign context.');
+          return;
+        }
+        (async function () {
+          try {
+            await unassignAssignment(assignmentId);
+            notifySuccess(tr('Shift unassigned successfully.', 'Poste desassigne avec succes.'));
+            closeBadgeActionMenu();
+          } catch (error) {
+            notifyError((error && error.message) || tr('Unable to unassign shift.', 'Impossible de desassigner le poste.'));
+          }
+        })();
+        return;
+      }
+
+      if (!assignShift || !userId) {
+        notifyError('Missing assignment context.');
+        return;
+      }
+
+      var absenceShiftId = getAbsenceTemplateShiftId ? Number(getAbsenceTemplateShiftId(action) || 0) : 0;
+      if (!absenceShiftId) {
+        notifyError(tr('Absence template is not available.', 'Le modele d absence n est pas disponible.'));
+        return;
+      }
+
+      (async function () {
+        try {
+          await assignShift({
+            user_id: userId,
+            shift_id: absenceShiftId,
+            work_date: workDate,
+            status: 'assigned',
+            force_override: true,
+          });
+          notifySuccess(tr('Absence assigned successfully.', 'Absence assignee avec succes.'));
+          closeBadgeActionMenu();
+        } catch (error) {
+          notifyError((error && error.message) || tr('Unable to assign absence.', 'Impossible d assigner l absence.'));
+        }
+      })();
+    });
+
+    document.addEventListener('click', function (event) {
+      if (badgeActionMenu.hidden) return;
+      if (event.target.closest('.calendar-badge-actions-menu')) return;
+      closeBadgeActionMenu();
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !badgeActionMenu.hidden) {
+        closeBadgeActionMenu();
+      }
     });
 
     var toDateKey = function (dateObj) {
@@ -747,6 +990,33 @@
     if (!calendarShell) return;
 
     calendarShell.addEventListener('click', function (event) {
+      var userBadge = event.target.closest('.calendar-event-user-badge');
+      if (userBadge) {
+        var slotCardButton = userBadge.closest('.calendar-event-slot-card[data-calendar-slot-toggle]');
+        if (slotCardButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          openBadgeActionMenu(userBadge, {
+            assignmentId: Number(slotCardButton.getAttribute('data-assignment-id') || 0),
+            userId: Number(slotCardButton.getAttribute('data-user-id') || 0),
+            workDate: String(slotCardButton.getAttribute('data-work-date') || ''),
+          }, event);
+          return;
+        }
+      }
+
+      var slotCardQuickActions = event.target.closest('.calendar-event-slot-card[data-calendar-slot-toggle]');
+      if (slotCardQuickActions && !event.target.closest('.calendar-event-slot-expanded')) {
+        event.preventDefault();
+        event.stopPropagation();
+        openBadgeActionMenu(slotCardQuickActions, {
+          assignmentId: Number(slotCardQuickActions.getAttribute('data-assignment-id') || 0),
+          userId: Number(slotCardQuickActions.getAttribute('data-user-id') || 0),
+          workDate: String(slotCardQuickActions.getAttribute('data-work-date') || ''),
+        }, event);
+        return;
+      }
+
       var sidebarAssignButton = event.target.closest('[data-calendar-sidebar-assign]');
       if (sidebarAssignButton) {
         event.preventDefault();

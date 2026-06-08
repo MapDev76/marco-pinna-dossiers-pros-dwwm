@@ -12,6 +12,7 @@
   var feedback = window.DashboardFeedback || null;
   var locale = String(document.documentElement.getAttribute('lang') || 'en').toLowerCase();
   var isFr = locale.indexOf('fr') === 0;
+  var iconsBase = String(config.iconsBase || '/assets/icons/');
   function tr(enText, frText) {
     return isFr ? frText : enText;
   }
@@ -193,6 +194,18 @@
     return value;
   }
 
+  function resolvePrintIconPath(iconValue) {
+    var raw = String(iconValue || '').trim();
+    if (!raw) return '';
+    if (raw.indexOf('data:') === 0 || raw.indexOf('http://') === 0 || raw.indexOf('https://') === 0 || raw.indexOf('/') === 0) {
+      return raw;
+    }
+    if (/\.(svg|png|jpe?g|gif|webp)$/i.test(raw)) {
+      return iconsBase + raw.replace(/^\/+/, '');
+    }
+    return '';
+  }
+
   function buildAssignmentIndex(assignments, departmentId) {
     var index = {};
     (assignments || []).forEach(function (item) {
@@ -237,8 +250,12 @@
         var first = dayAssignments[0];
         var cellValue = ((first.shiftIcon ? first.shiftIcon + ' ' : '') + first.shiftName).trim();
         var displayIcon = String(first.shiftIcon || '').trim() || '•';
+        var iconPath = resolvePrintIconPath(first.shiftIcon);
         return {
           value: displayIcon,
+          valueHtml: iconPath
+            ? ('<img class="dashboard-print-cell-icon" src="' + escapeHtml(iconPath) + '" alt="" aria-hidden="true">')
+            : '',
           exportValue: cellValue || (first.kind === 'work' ? tr('Work', 'Travail') : tr('No work', 'Sans travail')),
           className: (first.kind === 'work' ? 'is-work' : 'is-no-work') + ' is-icon-only',
           details: '',
@@ -271,7 +288,8 @@
         var details = cell.details ? ('<small>' + escapeHtml(cell.details) + '</small>') : '';
         var styleAttr = cell.style ? (' style="' + escapeHtml(cell.style) + '"') : '';
         var titleAttr = cell.exportValue ? (' title="' + escapeHtml(cell.exportValue) + '"') : '';
-        return '<td class="' + cell.className + '"' + styleAttr + titleAttr + '><span>' + escapeHtml(cell.value) + '</span>' + details + '</td>';
+        var content = cell.valueHtml || ('<span>' + escapeHtml(cell.value) + '</span>');
+        return '<td class="' + cell.className + '"' + styleAttr + titleAttr + '>' + content + details + '</td>';
       }).join('');
       return '<tr><th scope="row" title="' + escapeHtml(row.employeeName) + '">' + escapeHtml(row.employeeInitials || '--') + '</th>' + cells + '</tr>';
     }).join('');

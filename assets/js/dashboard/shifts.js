@@ -102,13 +102,117 @@
   }
 
   function closeAllPickers(exceptPopover = null) {
-    document.querySelectorAll('[data-shift-create-row] [data-picker-popover], [data-shift-id] [data-picker-popover]').forEach((popover) => {
+    document.querySelectorAll('[data-picker-popover]').forEach((popover) => {
+      const isShiftPicker = !!popover.__ownerScope || !!popover.closest('[data-shift-create-row], [data-shift-id]');
+      if (!isShiftPicker) return;
       const shouldKeepOpen = exceptPopover && popover === exceptPopover;
       popover.hidden = !shouldKeepOpen;
-      const stack = popover.closest('.settings-picker-stack');
-      const toggle = stack ? stack.querySelector('[data-picker-toggle]') : null;
+      const stack = getPopoverStack(popover);
+      if (stack) stack.classList.toggle('is-open', shouldKeepOpen);
+      const toggle = getPopoverToggle(popover, stack);
       if (toggle) toggle.setAttribute('aria-expanded', shouldKeepOpen ? 'true' : 'false');
+      if (!shouldKeepOpen) {
+        restorePopover(popover);
+      }
     });
+  }
+
+  function getPopoverStack(popover) {
+    if (!popover) return null;
+    const local = popover.closest('.settings-picker-stack');
+    if (local) return local;
+    const scope = popover.__ownerScope;
+    const field = popover.getAttribute('data-picker-popover');
+    if (!scope || !field) return null;
+    const toggle = scope.querySelector(`[data-picker-toggle="${field}"]`);
+    return toggle ? toggle.closest('.settings-picker-stack') : null;
+  }
+
+  function getPopoverToggle(popover, stack = null) {
+    const field = popover?.getAttribute?.('data-picker-popover');
+    if (!field) return null;
+    if (stack) {
+      const inStack = stack.querySelector(`[data-picker-toggle="${field}"]`);
+      if (inStack) return inStack;
+    }
+    const scope = popover?.__ownerScope;
+    return scope ? scope.querySelector(`[data-picker-toggle="${field}"]`) : null;
+  }
+
+  function positionPopover(popover, toggle) {
+    if (!popover || !toggle) return;
+    const rect = toggle.getBoundingClientRect();
+    const viewportPadding = 8;
+    const gap = 6;
+    const maxWidth = Math.min(360, window.innerWidth - 16);
+    const desiredWidth = Math.max(rect.width, 280);
+    const width = Math.min(desiredWidth, maxWidth);
+
+    popover.style.position = 'fixed';
+    popover.style.zIndex = '40000';
+    popover.style.width = `${width}px`;
+    popover.style.maxHeight = `${Math.max(240, window.innerHeight - (viewportPadding * 2))}px`;
+    popover.style.overflow = 'auto';
+
+    let left = rect.left;
+    if (left + width > window.innerWidth - viewportPadding) {
+      left = window.innerWidth - width - viewportPadding;
+    }
+    if (left < viewportPadding) left = viewportPadding;
+
+    const panelHeight = Math.min(
+      popover.getBoundingClientRect().height || popover.scrollHeight || 420,
+      parseInt(popover.style.maxHeight, 10) || 420
+    );
+
+    const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding);
+    const spaceAbove = Math.max(0, rect.top - viewportPadding);
+    let top = rect.bottom + gap;
+
+    if (panelHeight > spaceBelow && spaceAbove > spaceBelow) {
+      top = rect.top - panelHeight - gap;
+    }
+
+    if (top + panelHeight > window.innerHeight - viewportPadding) {
+      top = window.innerHeight - viewportPadding - panelHeight;
+    }
+    if (top < viewportPadding) {
+      top = viewportPadding;
+    }
+
+    popover.style.left = `${Math.round(left)}px`;
+    popover.style.top = `${Math.round(top)}px`;
+  }
+
+  function portalPopover(popover, scope, toggle) {
+    if (!popover || !scope || !toggle) return;
+    if (!popover.__originParent) {
+      popover.__originParent = popover.parentNode;
+      popover.__originNextSibling = popover.nextSibling;
+    }
+    popover.__ownerScope = scope;
+    if (popover.parentNode !== document.body) {
+      document.body.appendChild(popover);
+    }
+  }
+
+  function restorePopover(popover) {
+    if (!popover) return;
+    if (popover.parentNode === document.body && popover.__originParent) {
+      const parent = popover.__originParent;
+      const next = popover.__originNextSibling;
+      if (next && next.parentNode === parent) {
+        parent.insertBefore(popover, next);
+      } else {
+        parent.appendChild(popover);
+      }
+    }
+    popover.style.removeProperty('position');
+    popover.style.removeProperty('z-index');
+    popover.style.removeProperty('width');
+    popover.style.removeProperty('max-height');
+    popover.style.removeProperty('left');
+    popover.style.removeProperty('top');
   }
 
   function syncChoiceState(scope) {
@@ -156,8 +260,18 @@
     if (!popover || !toggle) return;
     const willOpen = popover.hidden;
     closeAllPickers(willOpen ? popover : null);
+    if (willOpen) {
+      portalPopover(popover, scope, toggle);
+    }
     popover.hidden = !willOpen;
+    const stack = toggle.closest('.settings-picker-stack');
+    if (stack) stack.classList.toggle('is-open', willOpen);
     toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    if (!willOpen) {
+      restorePopover(popover);
+    } else {
+      positionPopover(popover, toggle);
+    }
   }
 
   function resetCreateShiftForm() {
@@ -203,13 +317,17 @@
     return single > 0 ? [single] : [];
   }
 
-  function getDefaultShiftName(kind) {
-    const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
-    const isFr = locale.startsWith('fr');
-    const labels = isFr
-      ? { work: 'Poste de travail', rest: 'Repos', vacation: 'Vacances', sick: 'Maladie' }
-      : { work: 'Work shift', rest: 'Rest day', vacation: 'Vacation', sick: 'Sick leave' };
-    return labels[kind] || labels.work;
+  function getSharedShiftIds(row) {
+    if (!row) return [];
+    const fromDataset = String(row.dataset.shiftSharedIds || '')
+      .split(',')
+      .map((value) => parseInt(value.trim() || '0', 10) || 0)
+      .filter((id) => id > 0);
+    const primaryId = parseInt(row.dataset.shiftId || '0', 10) || 0;
+    if (primaryId > 0) {
+      fromDataset.push(primaryId);
+    }
+    return Array.from(new Set(fromDataset));
   }
 
   async function createShift() {
@@ -220,14 +338,14 @@
     const color = row.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
     const description = row.querySelector('input[data-field="description"]')?.value.trim() || '';
     const kind = row.querySelector('select[data-field="kind"]')?.value || 'work';
-    const enteredName = row.querySelector('input[data-field="name"]')?.value.trim() || '';
-    const name = enteredName || getDefaultShiftName(kind);
+    const name = row.querySelector('input[data-field="name"]')?.value.trim() || '';
     const range_start = row.querySelector('input[data-field="range_start"]')?.value || '';
     const range_end = row.querySelector('input[data-field="range_end"]')?.value || '';
     const start_time = row.querySelector('input[data-field="start_time"]')?.value || '';
     const end_time = row.querySelector('input[data-field="end_time"]')?.value || '';
 
     if (!departmentIds.length) return notifyError('Choose at least one department for the new shift.');
+    if (!name) return notifyError('Enter a shift title.');
     if (kind === 'work') {
       if (!range_start || !range_end) return notifyError('Set both start and end date.');
       if (range_end < range_start) return notifyError('End date must be after start date.');
@@ -268,8 +386,8 @@
 
   async function saveShift(row) {
     if (!row) return;
-    const id = parseInt(row.dataset.shiftId || '0', 10) || 0;
-    if (!id) return;
+    const shiftIds = getSharedShiftIds(row);
+    if (!shiftIds.length) return;
     const normalizeTime = (raw) => {
       const value = String(raw || '').trim();
       if (!value) return '';
@@ -277,10 +395,9 @@
     };
     const startInput = row.querySelector('input[data-field="start_time"]');
     const endInput = row.querySelector('input[data-field="end_time"]');
-    const payload = {
-      id,
-      department_id: parseInt(row.dataset.shiftDepartmentId || '0', 10) || null,
-      name: row.querySelector('input[data-field="name"]')?.value || '',
+    const providedName = row.querySelector('input[data-field="name"]')?.value?.trim() || '';
+    const payloadBase = {
+      name: providedName || (row.dataset.shiftName || '').trim(),
       icon: row.querySelector('input[data-field="icon"]')?.value || getDefaultIcon(),
       color: row.querySelector('input[data-field="color"]')?.value || getDefaultColor(),
       description: row.querySelector('input[data-field="description"]')?.value || '',
@@ -288,17 +405,38 @@
       start_time: normalizeTime(startInput?.value || startInput?.defaultValue || ''),
       end_time: normalizeTime(endInput?.value || endInput?.defaultValue || ''),
     };
+    if (!payloadBase.name) {
+      delete payloadBase.name;
+    }
+    if (shiftIds.length === 1) {
+      payloadBase.department_id = parseInt(row.dataset.shiftDepartmentId || '0', 10) || null;
+    }
     try {
-      const res = await AppAPI.shifts.update(window.DashboardConfig.apiShifts, payload);
-      if (res?.ok) {
+      const results = await Promise.all(
+        shiftIds.map((shiftId) => AppAPI.shifts.update(window.DashboardConfig.apiShifts, {
+          ...payloadBase,
+          id: shiftId,
+        }).then((result) => ({ ok: !!result?.ok, result })).catch((error) => ({ ok: false, error })))
+      );
+      const successCount = results.filter((item) => item.ok).length;
+      const firstFailed = results.find((item) => !item.ok);
+      if (successCount === shiftIds.length) {
         if (feedback?.reloadSettingsTabWithSuccess) {
           feedback.reloadSettingsTabWithSuccess('shifts', 'Done', 'Shift updated successfully.');
         } else {
           notifySuccess('Shift updated successfully.');
           location.reload();
         }
+      } else if (successCount > 0) {
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('shifts', 'Done', `Shift updated on ${successCount}/${shiftIds.length} shared rows.`);
+        } else {
+          notifySuccess(`Shift updated on ${successCount}/${shiftIds.length} shared rows.`);
+          location.reload();
+        }
       } else {
-        notifyError('Failed to save shift: ' + (res?.error || 'unknown'));
+        const failureMessage = firstFailed?.result?.error || firstFailed?.error?.message || 'unknown';
+        notifyError('Failed to save shift: ' + failureMessage);
       }
     } catch (e) {
       console.error(e);
@@ -308,8 +446,8 @@
 
   async function deleteShift(row) {
     if (!row) return;
-    const id = parseInt(row.dataset.shiftId || '0', 10) || 0;
-    if (!id) return;
+    const shiftIds = getSharedShiftIds(row);
+    if (!shiftIds.length) return;
     const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     const isFr = locale.startsWith('fr');
     const tr = (en, fr) => (isFr ? fr : en);
@@ -320,8 +458,11 @@
     }
     if (!canDelete) return;
     try {
-      const res = await AppAPI.shifts.delete(window.DashboardConfig.apiShifts, id);
-      if (res?.ok) {
+      const results = await Promise.all(
+        shiftIds.map((shiftId) => AppAPI.shifts.delete(window.DashboardConfig.apiShifts, shiftId))
+      );
+      const failed = results.find((result) => !result?.ok);
+      if (!failed) {
         if (feedback?.reloadSettingsTabWithSuccess) {
           feedback.reloadSettingsTabWithSuccess('shifts', 'Done', 'Shift deleted successfully.');
         } else {
@@ -329,7 +470,7 @@
           row.remove();
         }
       } else {
-        notifyError('Failed to delete shift: ' + (res?.error || 'unknown'));
+        notifyError('Failed to delete shift: ' + (failed?.error || 'unknown'));
       }
     } catch (e) {
       console.error(e);
@@ -366,7 +507,8 @@
     if (choiceBtn) {
       ev.preventDefault();
       const group = choiceBtn.closest('[data-choice-field]');
-      const scope = choiceBtn.closest('[data-shift-id], [data-shift-create-row]');
+      const popup = choiceBtn.closest('[data-picker-popover]');
+      const scope = choiceBtn.closest('[data-shift-id], [data-shift-create-row]') || popup?.__ownerScope || null;
       const field = group?.getAttribute('data-choice-field');
       const value = choiceBtn.getAttribute('data-choice-value') || '';
       if (scope && field && value) {
@@ -417,9 +559,19 @@
       return;
     }
 
-    if (!ev.target.closest('.settings-picker-stack')) {
+    if (!ev.target.closest('.settings-picker-stack') && !ev.target.closest('.settings-picker-popover')) {
       closeAllPickers();
     }
+  });
+
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('[data-picker-popover]').forEach((popover) => {
+      if (popover.hidden || !popover.__ownerScope) return;
+      const field = popover.getAttribute('data-picker-popover');
+      if (!field) return;
+      const toggle = popover.__ownerScope.querySelector(`[data-picker-toggle="${field}"]`);
+      if (toggle) positionPopover(popover, toggle);
+    });
   });
 
   document.querySelectorAll('[data-shift-create-row], [data-shift-id]').forEach((scope) => {

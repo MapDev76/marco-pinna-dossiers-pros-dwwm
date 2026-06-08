@@ -86,15 +86,19 @@ try {
             if (!in_array($requestedKind, ['work', 'rest', 'vacation', 'sick'], true)) {
                 $requestedKind = 'work';
             }
-            if ($currentRole === 'admin' && $requestedKind !== 'work') {
-                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
+            if ($requestedKind !== 'work') {
+                jsonResponse(['ok' => false, 'error' => t('settings.system_shift_auto_managed')], 400);
             }
 
-            $required = ['department_id', 'name', 'start_time', 'end_time'];
+            $required = ['department_id', 'start_time', 'end_time'];
             foreach ($required as $r) {
                 if (empty($input[$r]) && $input[$r] !== '0') {
                     jsonResponse(['ok' => false, 'error' => $r . ' required'], 400);
                 }
+            }
+
+            if (trim((string) ($input['name'] ?? '')) === '') {
+                jsonResponse(['ok' => false, 'error' => t('settings.shift_name_required')], 400);
             }
 
             $createDepartmentIds = [];
@@ -288,7 +292,10 @@ try {
             ];
 
             if ($resolvedPayload['name'] === '') {
-                jsonResponse(['ok' => false, 'error' => 'name required'], 400);
+                $resolvedPayload['name'] = trim((string) ($existingShift['name'] ?? ''));
+            }
+            if ($resolvedPayload['name'] === '') {
+                jsonResponse(['ok' => false, 'error' => t('settings.shift_name_required')], 400);
             }
             if ($resolvedPayload['start_time'] === '' || $resolvedPayload['end_time'] === '') {
                 jsonResponse(['ok' => false, 'error' => 'start_time and end_time required'], 400);

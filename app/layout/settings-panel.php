@@ -35,16 +35,39 @@ if ($currentRole === 'admin') {
     }));
 }
 $shifts = is_array($planner['shifts'] ?? null) ? $planner['shifts'] : [];
-$visibleShifts = $shifts;
-if ($currentRole !== 'super_admin') {
-    $visibleShifts = array_values(array_filter($shifts, static function (array $shift): bool {
-        $kind = strtolower(trim((string) ($shift['kind'] ?? 'work')));
-        $name = strtolower(trim((string) ($shift['name'] ?? '')));
-        $isSystem = in_array($kind, ['rest', 'vacation', 'sick'], true)
-            || in_array($name, ['rest day', 'vacation', 'sick leave'], true);
-        return !$isSystem;
-    }));
+$visibleShifts = array_values(array_filter($shifts, static function (array $shift): bool {
+    $kind = strtolower(trim((string) ($shift['kind'] ?? 'work')));
+    $name = strtolower(trim((string) ($shift['name'] ?? '')));
+    $isSystem = in_array($kind, ['rest', 'vacation', 'sick'], true)
+        || in_array($name, ['rest day', 'vacation', 'sick leave', 'repos', 'vacances', 'maladie'], true);
+    return !$isSystem;
+}));
+$visibleShiftGroupsMap = [];
+foreach ($visibleShifts as $shiftRow) {
+    $groupKey = strtolower(trim((string) ($shiftRow['kind'] ?? 'work'))) . '|' . trim((string) ($shiftRow['name'] ?? ''))
+        . '|' . trim((string) ($shiftRow['start_time'] ?? '')) . '|' . trim((string) ($shiftRow['end_time'] ?? ''))
+        . '|' . trim((string) ($shiftRow['icon'] ?? '')) . '|' . trim((string) ($shiftRow['color'] ?? ''))
+        . '|' . trim((string) ($shiftRow['description'] ?? ''));
+
+    if (!isset($visibleShiftGroupsMap[$groupKey])) {
+        $visibleShiftGroupsMap[$groupKey] = [
+            'shift' => $shiftRow,
+            'shift_ids' => [],
+            'departments' => [],
+        ];
+    }
+
+    $visibleShiftGroupsMap[$groupKey]['shift_ids'][] = (int) ($shiftRow['id'] ?? 0);
+    $departmentLabel = trim((string) ($shiftRow['department_name'] ?? ''));
+    if ($departmentLabel !== '') {
+        $visibleShiftGroupsMap[$groupKey]['departments'][$departmentLabel] = true;
+    }
 }
+$visibleShiftGroups = array_values(array_map(static function (array $group): array {
+    $group['shift_ids'] = array_values(array_filter(array_unique(array_map('intval', $group['shift_ids'] ?? []))));
+    $group['departments'] = array_values(array_keys($group['departments'] ?? []));
+    return $group;
+}, $visibleShiftGroupsMap));
 $assignments = is_array($planner['assignments'] ?? null) ? $planner['assignments'] : [];
 $attendances = is_array($planner['attendances'] ?? null) ? $planner['attendances'] : [];
 $roleLabels = [
@@ -180,33 +203,57 @@ $localizedSystemShiftDescription = static function (string $kind, string $fallba
 $departmentIconCatalog = $iconCatalog;
 $shiftIconCatalog = $iconCatalog;
 $pickerColorCatalogMap = [
+    '#fef3c7' => 'Champagne',
+    '#fde68a' => 'Buttermilk',
+    '#fca5a5' => 'Blush Red',
+    '#fb7185' => 'Coral Rose',
+    '#fda4af' => 'Soft Rose',
+    '#fdba74' => 'Apricot',
+    '#fed7aa' => 'Peach Cream',
+    '#fcd34d' => 'Sun Gold',
     '#b98b12' => 'Warm Amber',
     '#d97706' => 'Golden Hour',
     '#f59e0b' => 'Sunbeam',
     '#fbbf24' => 'Honey',
     '#facc15' => 'Lemon Glow',
+    '#d9f99d' => 'Spring Lime',
     '#84cc16' => 'Lime Spark',
     '#22c55e' => 'Fresh Green',
     '#16a34a' => 'Forest Green',
+    '#4ade80' => 'Emerald Light',
+    '#86efac' => 'Pistachio',
     '#10b981' => 'Mint',
+    '#6ee7b7' => 'Mint Foam',
     '#14b8a6' => 'Teal Mist',
     '#0f766e' => 'Deep Teal',
+    '#99f6e4' => 'Seafoam',
+    '#5eead4' => 'Aqua Mint',
     '#06b6d4' => 'Sky Tide',
     '#0891b2' => 'Ocean Blue',
     '#0ea5e9' => 'Clear Blue',
+    '#38bdf8' => 'Sky Glow',
+    '#7dd3fc' => 'Ice Blue',
     '#3b82f6' => 'Bright Blue',
     '#2f6fed' => 'Royal Blue',
+    '#60a5fa' => 'Azure',
+    '#93c5fd' => 'Powder Blue',
     '#6366f1' => 'Indigo Pulse',
     '#4f46e5' => 'Blue Violet',
     '#7c3aed' => 'Violet Bloom',
     '#a855f7' => 'Lavender',
+    '#c4b5fd' => 'Lilac Haze',
+    '#ddd6fe' => 'Soft Violet',
     '#d946ef' => 'Orchid',
     '#ec4899' => 'Rose Bloom',
+    '#f9a8d4' => 'Pink Silk',
+    '#fbcfe8' => 'Petal Pink',
     '#be123c' => 'Crimson',
     '#ef4444' => 'Vivid Red',
     '#f97316' => 'Tangerine',
     '#ea580c' => 'Ember',
     '#c2410c' => 'Burnt Orange',
+    '#e7e5e4' => 'Pebble',
+    '#d6d3d1' => 'Clay Gray',
     '#374151' => 'Slate',
     '#475569' => 'Steel',
     '#64748b' => 'Mist Gray',
@@ -691,6 +738,13 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <option value="0"><?php echo e(t('settings.all_open_work_shifts')); ?></option>
                                 <?php foreach ($shifts as $shift): ?>
                                     <?php
+                                        $shiftOptionKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
+                                        $shiftOptionNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
+                                        $isWorkAssignable = $shiftOptionKindRaw === 'work'
+                                            && !in_array($shiftOptionNameRaw, ['rest day', 'vacation', 'sick leave'], true);
+                                        if (!$isWorkAssignable) {
+                                            continue;
+                                        }
                                         $shiftOptionKind = (string) ($shift['kind'] ?? 'work');
                                         $shiftOptionName = (string) ($shift['name'] ?? t('settings.shift_default'));
                                         $shiftOptionDisplayName = $localizedSystemShiftName($shiftOptionKind, $shiftOptionName);
@@ -706,6 +760,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-auto-assign-range-end type="date" value="<?php echo e($autoAssignDefaultEnd); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
                         <label class="settings-field"><?php echo e(t('settings.minimum_employees')); ?><input data-auto-assign-min-employees type="number" min="0" step="1" value="1"></label>
                         <label class="settings-field"><?php echo e(t('settings.maximum_employees')); ?><input data-auto-assign-max-employees type="number" min="1" step="1" value="3"></label>
+                        <label class="settings-field"><?php echo e(t('settings.rest_days_per_week')); ?><input data-auto-assign-rest-days type="number" min="0" max="6" step="1" value="1"></label>
+                        <label class="settings-field"><?php echo e(t('settings.work_days_per_week')); ?><input data-auto-assign-work-days type="number" min="1" max="7" step="1" value="6"></label>
                         <div class="settings-inline-actions">
                             <button
                                 type="button"
@@ -720,6 +776,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <img src="<?php echo $basePath; ?>/assets/icons/calendar-x.svg" alt="" aria-hidden="true" class="settings-icon-image">
                             </button>
                         </div>
+                        <small class="settings-shift-create-hint"><?php echo e(t('settings.auto_assign_open_help')); ?></small>
+                        <small class="settings-shift-create-hint"><?php echo e(t('settings.clear_assigned_shifts_help')); ?></small>
                     </div>
                 </div>
 
@@ -842,9 +900,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rules-reset><?php echo e(t('settings.reset_rules')); ?></button>
                                 </div>
                                 <div class="settings-auto-rule-special-list" data-assignment-modal-special-list></div>
-                                <h5><?php echo e(t('settings.current_month_availability')); ?></h5>
+                                <div class="settings-assignment-modal-range-row settings-assignment-modal-month-row">
+                                    <label class="settings-field"><?php echo e(t('settings.rules_month')); ?><input type="month" data-assignment-modal-rules-month></label>
+                                </div>
+                                <h5><?php echo e(t('settings.selected_month_availability')); ?></h5>
                                 <div class="settings-assignment-weekly-grid" data-assignment-modal-weekly></div>
-                                <h5><?php echo e(t('settings.unavailable_dates_month')); ?></h5>
+                                <h5><?php echo e(t('settings.unavailable_dates_selected_month')); ?></h5>
                                 <div class="settings-auto-rule-special-list" data-assignment-modal-month-unavailable></div>
                             </section>
                             <section class="settings-analytics-card">
@@ -855,15 +916,34 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <h5><?php echo e(t('settings.open_shifts_to_cover')); ?></h5>
                                 <p class="crud-modal-subtitle"><?php echo e(t('settings.open_shifts_hint')); ?></p>
                                 <div class="settings-assignment-modal-open-range">
+                                    <label class="settings-field"><?php echo e(t('settings.assignment_period')); ?>
+                                        <select data-assignment-modal-period-mode>
+                                            <option value="current"><?php echo e(t('settings.assignment_period_current')); ?></option>
+                                            <option value="future"><?php echo e(t('settings.assignment_period_future')); ?></option>
+                                            <option value="month"><?php echo e(t('settings.assignment_period_month')); ?></option>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field"><?php echo e(t('settings.target_month')); ?><input type="month" data-assignment-modal-period-month></label>
                                     <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input type="date" data-assignment-modal-open-from></label>
                                     <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input type="date" data-assignment-modal-open-to></label>
-                                    <label class="settings-field"><?php echo e(t('common.shift')); ?>
+                                    <label class="settings-field"><?php echo e(t('settings.shift_selection')); ?>
+                                        <select data-assignment-modal-shift-mode>
+                                            <option value="all"><?php echo e(t('settings.shift_selection_all')); ?></option>
+                                            <option value="one"><?php echo e(t('settings.shift_selection_one')); ?></option>
+                                            <option value="some"><?php echo e(t('settings.shift_selection_some')); ?></option>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field" data-assignment-modal-open-single-shift-wrap><?php echo e(t('common.shift')); ?>
                                         <select data-assignment-modal-open-shift>
                                             <option value="0"><?php echo e(t('settings.all_department_shifts')); ?></option>
                                         </select>
                                     </label>
                                 </div>
+                                <div class="settings-assignment-open-shift-list" data-assignment-modal-open-shift-list hidden></div>
                                 <div class="settings-inline-actions">
+                                    <button type="button" class="admin-action-link" data-assignment-modal-open-auto-assign><?php echo e(t('settings.auto_assign_for_employee')); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-clear-assigned><?php echo e(t('settings.clear_employee_assignments')); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-reassign><?php echo e(t('settings.reassign_employee')); ?></button>
                                     <button type="button" class="admin-action-link" data-assignment-modal-open-cover-all><?php echo e(t('settings.cover_all_dates')); ?></button>
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-clear><?php echo e(t('settings.clear_selection')); ?></button>
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-reselect><?php echo e(t('settings.reselect_available')); ?></button>
@@ -1661,7 +1741,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <p class="crud-modal-subtitle"><?php echo e(t('settings.shifts_list_hint')); ?></p>
                     </div>
                     <div class="settings-pill-row">
-                        <span class="settings-pill"><?php echo count($visibleShifts); ?> <?php echo e(t('settings.shifts_suffix')); ?></span>
+                        <span class="settings-pill"><?php echo count($visibleShiftGroups); ?> <?php echo e(t('settings.shifts_suffix')); ?></span>
                     </div>
                 </div>
 
@@ -1679,6 +1759,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 </select>
                                 <small class="settings-shift-create-hint"><?php echo e($isFrLocale ? 'Cliquez pour sélectionner un ou plusieurs départements.' : 'Click to select one or more departments.'); ?></small>
                             </label>
+                            <label class="settings-field settings-field-shift-name"><?php echo e(t('settings.name_label')); ?><input data-field="name" type="text" value="" placeholder="<?php echo e(t('settings.shift_name_placeholder')); ?>"></label>
                             <?php if ($currentRole === 'super_admin'): ?>
                                 <label class="settings-field settings-field-shift-kind"><?php echo e(t('crud.role')); ?>
                                     <select data-field="kind">
@@ -1756,10 +1837,18 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <span><?php echo e(t('common.action')); ?></span>
                     </div>
 
-                    <?php if (empty($visibleShifts)): ?>
+                    <?php if (empty($visibleShiftGroups)): ?>
                         <div class="crud-empty-state"><?php echo e(t('settings.no_shifts_available')); ?></div>
                     <?php else: ?>
-                        <?php foreach ($visibleShifts as $shift): ?>
+                        <?php foreach ($visibleShiftGroups as $shiftGroup): ?>
+                            <?php
+                                $shift = is_array($shiftGroup['shift'] ?? null) ? $shiftGroup['shift'] : [];
+                                $sharedShiftIds = is_array($shiftGroup['shift_ids'] ?? null) ? $shiftGroup['shift_ids'] : [];
+                                $sharedDepartments = is_array($shiftGroup['departments'] ?? null) ? $shiftGroup['departments'] : [];
+                                $sharedDepartmentDisplay = !empty($sharedDepartments)
+                                    ? implode(', ', $sharedDepartments)
+                                    : ((string) ($shift['department_name'] ?? ''));
+                            ?>
                             <?php
                                 $shiftKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
                                 $shiftNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
@@ -1775,10 +1864,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     $shiftDisplayName = $shiftNameValue;
                                 }
                             ?>
-                            <article class="settings-list-item-wrap" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" data-shift-kind="<?php echo e($shiftKindValue); ?>" data-shift-department-id="<?php echo (int) ($shift['department_id'] ?? 0); ?>">
+                            <article class="settings-list-item-wrap" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>" data-shift-kind="<?php echo e($shiftKindValue); ?>" data-shift-department-id="<?php echo (int) ($shift['department_id'] ?? 0); ?>" data-shift-name="<?php echo e($shiftNameValue); ?>" data-shift-shared-ids="<?php echo e(implode(',', $sharedShiftIds)); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-shift">
                                     <strong><?php echo e($shiftDisplayName); ?></strong>
-                                    <span><?php echo e($shift['department_name'] ?? ''); ?></span>
+                                    <span><?php echo e($sharedDepartmentDisplay); ?></span>
                                     <span>
                                         <?php echo e($shiftDescriptionDisplay); ?>
                                         <?php if ($isSystemShiftTemplate && $currentRole !== 'super_admin'): ?>
