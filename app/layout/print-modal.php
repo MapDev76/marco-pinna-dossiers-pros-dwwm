@@ -8,6 +8,15 @@
 if (!isLoggedIn()) {
     return;
 }
+
+$basePath = $basePath ?? (function () {
+    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
+})();
+
+$dashboardPlannerData = isset($dashboardPlannerData) && is_array($dashboardPlannerData) ? $dashboardPlannerData : [];
+$dashboardPlannerDepartments = is_array($dashboardPlannerData['departments'] ?? null) ? $dashboardPlannerData['departments'] : [];
+$dashboardPlannerActiveDepartmentId = (int) ($dashboardPlannerData['active_department_id'] ?? ($dashboardPlannerDepartments[0]['id'] ?? 0));
 ?>
 <section class="dashboard-modal dashboard-print-modal" id="modal-print" hidden role="dialog" aria-modal="true" aria-labelledby="print-modal-title">
     <div class="dashboard-print-shell" data-print-shell>
@@ -34,6 +43,23 @@ if (!isLoggedIn()) {
                 <button type="button" class="dashboard-sidebar-control-button is-active" data-print-trigger><?php echo e(t('print.print')); ?></button>
             </div>
         </header>
+
+        <div class="dashboard-print-department-picker" data-print-departments>
+            <?php foreach ($dashboardPlannerDepartments as $department): ?>
+                <?php
+                    $departmentId = (int) ($department['id'] ?? 0);
+                    $departmentName = (string) ($department['name'] ?? t('common.department'));
+                    $departmentIcon = (string) ($department['icon'] ?? '');
+                ?>
+                <label class="dashboard-print-department-chip">
+                    <input type="checkbox" data-print-department-id="<?php echo $departmentId; ?>" <?php echo $departmentId === $dashboardPlannerActiveDepartmentId ? 'checked' : ''; ?>>
+                    <?php if ($departmentIcon !== '' && preg_match('/\.(svg|png|jpe?g|gif|webp|ico)$/i', $departmentIcon)): ?>
+                        <img src="<?php echo e($basePath . '/assets/icons/' . rawurlencode($departmentIcon)); ?>" alt="" aria-hidden="true" class="settings-icon-inline-image">
+                    <?php endif; ?>
+                    <span><?php echo e($departmentName); ?></span>
+                </label>
+            <?php endforeach; ?>
+        </div>
 
         <div class="dashboard-print-meta" data-print-meta></div>
         <div class="dashboard-print-feedback" data-print-feedback aria-live="polite"></div>

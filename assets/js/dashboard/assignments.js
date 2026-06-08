@@ -24,6 +24,15 @@
   const employeeModalMonthUnavailable = employeeModal?.querySelector('[data-assignment-modal-month-unavailable]') || null;
   const employeeModalRulesMonth = employeeModal?.querySelector('[data-assignment-modal-rules-month]') || null;
   const employeeModalShifts = employeeModal?.querySelector('[data-assignment-modal-shifts]') || null;
+  const employeeModalShiftsSummary = employeeModal?.querySelector('[data-assignment-modal-shifts-summary]') || null;
+  const employeeModalShiftsModal = employeeModal?.querySelector('[data-assignment-modal-shifts-modal]') || null;
+  const employeeModalShiftsModalTitle = employeeModal?.querySelector('[data-assignment-modal-shifts-modal-title]') || null;
+  const employeeModalShiftsOpenBtn = employeeModal?.querySelector('[data-assignment-modal-open-shifts]') || null;
+  const employeeModalShiftsCloseBtn = employeeModal?.querySelector('[data-assignment-modal-shifts-close]') || null;
+  const employeeModalShiftsSelectAllBtn = employeeModal?.querySelector('[data-assignment-modal-shifts-select-all]') || null;
+  const employeeModalShiftsClearBtn = employeeModal?.querySelector('[data-assignment-modal-shifts-clear-selection]') || null;
+  const employeeModalShiftsUnassignSelectedBtn = employeeModal?.querySelector('[data-assignment-modal-shifts-unassign-selected]') || null;
+  const employeeModalShiftsUnassignAllBtn = employeeModal?.querySelector('[data-assignment-modal-shifts-unassign-all]') || null;
   const employeeModalWeekly = employeeModal?.querySelector('[data-assignment-modal-weekly]') || null;
   const employeeModalPeriodMode = employeeModal?.querySelector('[data-assignment-modal-period-mode]') || null;
   const employeeModalPeriodMonth = employeeModal?.querySelector('[data-assignment-modal-period-month]') || null;
@@ -55,6 +64,8 @@
   let activeEmployeeUserName = '';
   let activeEmployeeDepartmentId = 0;
   let activeEmployeeDepartmentName = '';
+  let employeeModalSelectedShiftIds = new Set();
+  let employeeModalShiftRows = [];
   let selectedOpenSlotKeys = new Set();
   let selectedOpenShiftFilterIds = new Set();
 
@@ -901,11 +912,137 @@
 
   function closeEmployeeModal() {
     if (!employeeModal) return;
+    closeAssignedShiftsModal();
     employeeModal.hidden = true;
     activeEmployeeUserId = 0;
     activeEmployeeUserName = '';
     activeEmployeeDepartmentId = 0;
     activeEmployeeDepartmentName = '';
+    employeeModalSelectedShiftIds = new Set();
+    employeeModalShiftRows = [];
+  }
+
+  function openAssignedShiftsModal() {
+    if (!employeeModalShiftsModal || !activeEmployeeUserId) return;
+    employeeModalShiftsModal.hidden = false;
+    syncAssignedShiftsToolbar();
+  }
+
+  function closeAssignedShiftsModal() {
+    if (!employeeModalShiftsModal) return;
+    employeeModalShiftsModal.hidden = true;
+  }
+
+  function getVisibleEmployeeShiftRows() {
+    return Array.from(employeeModalShifts?.querySelectorAll('[data-assignment-modal-shift-row]') || []);
+  }
+
+  function syncAssignedShiftsToolbar() {
+    if (!employeeModalShifts) return;
+    const rows = getVisibleEmployeeShiftRows();
+    const total = rows.length;
+    const selectedCount = rows.filter((row) => row.querySelector('[data-assignment-modal-shift-select]')?.checked).length;
+
+    if (employeeModalShiftsSummary) {
+      employeeModalShiftsSummary.textContent = total
+        ? `${selectedCount}/${total} selected`
+        : tr('No shifts assigned for selected month.', 'Aucun poste assigne pour le mois selectionne.');
+    }
+    if (employeeModalShiftsModalTitle) {
+      employeeModalShiftsModalTitle.textContent = total
+        ? `${selectedCount}/${total} selected`
+        : tr('No shifts assigned for selected month.', 'Aucun poste assigne pour le mois selectionne.');
+    }
+
+    if (employeeModalShiftsSelectAllBtn) employeeModalShiftsSelectAllBtn.disabled = total === 0 || selectedCount === total;
+    if (employeeModalShiftsClearBtn) employeeModalShiftsClearBtn.disabled = selectedCount === 0;
+    if (employeeModalShiftsUnassignSelectedBtn) employeeModalShiftsUnassignSelectedBtn.disabled = selectedCount === 0;
+    if (employeeModalShiftsUnassignAllBtn) employeeModalShiftsUnassignAllBtn.disabled = total === 0;
+  }
+
+  function setAllEmployeeShiftSelection(checked) {
+    if (!employeeModalShifts) return;
+    getVisibleEmployeeShiftRows().forEach((row) => {
+      const checkbox = row.querySelector('[data-assignment-modal-shift-select]');
+      if (checkbox) checkbox.checked = checked;
+    });
+    employeeModalSelectedShiftIds = new Set(
+      checked
+        ? getVisibleEmployeeShiftRows().map((row) => parseInt(row.getAttribute('data-assignment-id') || '0', 10)).filter((value) => value > 0)
+        : []
+    );
+    syncAssignedShiftsToolbar();
+  }
+
+  function syncEmployeeShiftSelectionFromDom() {
+    const selected = getVisibleEmployeeShiftRows()
+      .filter((row) => row.querySelector('[data-assignment-modal-shift-select]')?.checked)
+      .map((row) => parseInt(row.getAttribute('data-assignment-id') || '0', 10))
+      .filter((value) => value > 0);
+    employeeModalSelectedShiftIds = new Set(selected);
+    syncAssignedShiftsToolbar();
+  }
+
+  async function unassignEmployeeShiftsBulk(unassignAll = false) {
+    const rows = getVisibleEmployeeShiftRows();
+    const targetRows = unassignAll ? rows : rows.filter((row) => row.querySelector('[data-assignment-modal-shift-select]')?.checked);
+    const ids = targetRows
+      .map((row) => parseInt(row.getAttribute('data-assignment-id') || '0', 10))
+      .filter((value) => value > 0);
+
+    if (!ids.length) {
+      notifyError('Select at least one assigned shift first.');
+      return;
+    }
+
+    const validRows = targetRows.filter((row) => !isPastDateKey(String(row.getAttribute('data-assignment-work-date') || '')));
+    const validIds = validRows.map((row) => parseInt(row.getAttribute('data-assignment-id') || '0', 10)).filter((value) => value > 0);
+    const skipped = ids.length - validIds.length;
+    if (!validIds.length) {
+      notifyError('Past dates are read-only and cannot be edited.');
+      return;
+    }
+
+    if (employeeModalShiftsUnassignSelectedBtn) employeeModalShiftsUnassignSelectedBtn.disabled = true;
+    if (employeeModalShiftsUnassignAllBtn) employeeModalShiftsUnassignAllBtn.disabled = true;
+    if (employeeModalShiftsSelectAllBtn) employeeModalShiftsSelectAllBtn.disabled = true;
+
+    let successCount = 0;
+    let failureCount = 0;
+    try {
+      for (const assignmentId of validIds) {
+        // Keep the flow simple and reliable: one verified API call per selected shift.
+        // The dashboard refreshes after the batch completes.
+        // eslint-disable-next-line no-await-in-loop
+        const ok = await unassignAssignmentById(assignmentId);
+        if (ok) {
+          successCount += 1;
+        } else {
+          failureCount += 1;
+        }
+      }
+
+      if (successCount > 0) {
+        closeAssignedShiftsModal();
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('assignments', 'Done', `${successCount} shift(s) unassigned successfully.`);
+        } else {
+          notifySuccess(`${successCount} shift(s) unassigned successfully.`);
+          location.reload();
+        }
+        if (skipped > 0 && failureCount === 0) {
+          notifySuccess(`${skipped} past shift(s) were skipped.`);
+        }
+        return;
+      }
+
+      notifyError('Unassign failed: unable to update selected shifts.');
+    } catch (error) {
+      console.error(error);
+      notifyError('Error unassigning shift(s).');
+    } finally {
+      syncAssignedShiftsToolbar();
+    }
   }
 
   function renderEmployeeWeekdays(rule) {
@@ -934,9 +1071,12 @@
 
   function renderEmployeeShiftList(rows, monthKey) {
     if (!employeeModalShifts) return;
+    employeeModalShiftRows = Array.isArray(rows) ? rows.slice() : [];
+    employeeModalSelectedShiftIds = new Set();
     const normalizedMonth = normalizeMonthKey(monthKey) || currentMonthKey();
     if (!rows.length) {
       employeeModalShifts.innerHTML = '<div class="crud-empty-state">' + tr('No shifts assigned for selected month.', 'Aucun poste assigne pour le mois selectionne.') + ` (${normalizedMonth})</div>`;
+      syncAssignedShiftsToolbar();
       return;
     }
 
@@ -952,12 +1092,12 @@
       const start = String(row.startTime || row.dataset?.assignmentStartTime || '--:--');
       const end = String(row.endTime || row.dataset?.assignmentEndTime || '--:--');
       return `
-        <article class="settings-assignment-modal-shift-item">
+        <article class="settings-assignment-modal-shift-item" data-assignment-modal-shift-row data-assignment-id="${assignmentId}" data-assignment-work-date="${escapeHtml(workDate)}">
           <div class="settings-assignment-modal-shift-item-head">
             <strong>${workDate}</strong>
             <span>${status}</span>
           </div>
-          <div class="settings-assignment-modal-shift-item-meta">${renderShiftIcon(shiftIcon)} ${escapeHtml(shiftName)} • ${escapeHtml(start || '--:--')} - ${escapeHtml(end || '--:--')} • ${escapeHtml(shiftKindLabel)} • ${escapeHtml(departmentName)}</div>
+          <div class="settings-assignment-modal-shift-item-meta"><label class="settings-assignment-shift-select-label"><input type="checkbox" data-assignment-modal-shift-select data-assignment-id="${assignmentId}"> <span>${renderShiftIcon(shiftIcon)} ${escapeHtml(shiftName)} • ${escapeHtml(start || '--:--')} - ${escapeHtml(end || '--:--')} • ${escapeHtml(shiftKindLabel)} • ${escapeHtml(departmentName)}</span></label></div>
           <div class="settings-assignment-modal-shift-item-actions">
             <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-edit="${assignmentId}">Modify</button>
             <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-unassign="${assignmentId}">Unassign</button>
@@ -965,6 +1105,7 @@
         </article>
       `;
     }).join('');
+    syncAssignedShiftsToolbar();
   }
 
   async function refreshEmployeeAssignedShifts() {
@@ -1010,6 +1151,7 @@
     renderEmployeeSpecialDates(rule);
     renderEmployeeWeeklyAvailability(rule);
     renderSelectedMonthUnavailable(rule);
+    closeAssignedShiftsModal();
     renderEmployeeShiftList(rows, getActiveAssignmentsMonthKey());
     if (employeeModalRulesMonth && !normalizeMonthKey(employeeModalRulesMonth.value)) {
       employeeModalRulesMonth.value = currentMonthKey();
@@ -1083,7 +1225,25 @@
     if (!row) return;
     closeAllDrawers();
     const drawer = getDrawer(row);
-    if (drawer) drawer.hidden = false;
+    if (drawer) {
+      drawer.hidden = false;
+      syncAssignmentShiftPreview(drawer);
+    }
+  }
+
+  function syncAssignmentShiftPreview(scope) {
+    if (!scope) return;
+    const select = scope.querySelector('select[data-field="shift_id"]');
+    const preview = scope.querySelector('[data-assignment-shift-preview]');
+    if (!select || !preview) return;
+
+    const selectedOption = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : null;
+    const iconValue = String(selectedOption?.dataset?.shiftOptionIcon || '').trim();
+    const displayName = String(selectedOption?.dataset?.shiftOptionName || selectedOption?.textContent || '').trim();
+    const iconHtml = iconValue ? renderShiftIcon(iconValue) : '';
+    const labelHtml = escapeHtml(displayName || 'Shift');
+
+    preview.innerHTML = `${iconHtml || ''}<span class="settings-shift-picker-preview-label">${labelHtml}</span>`;
   }
 
   function closeDrawer(row) {
@@ -1132,6 +1292,25 @@
     }
   }
 
+  async function unassignAssignmentById(assignmentId) {
+    const normalizedId = parseInt(String(assignmentId || '0'), 10) || 0;
+    if (!normalizedId || !apiUrl || !window.AppAPI) return false;
+
+    try {
+      const res = await AppAPI.postJSON(apiUrl, {
+        action: 'unassign_shift',
+        assignment_id: normalizedId,
+      });
+      if (res?.ok || res?.success) {
+        return true;
+      }
+      throw new Error('Unassign failed: ' + (res?.error || 'unknown'));
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  }
+
   async function unassignAssignment(row) {
     if (!row || !apiUrl || !window.AppAPI) return;
     const assignmentId = parseInt(row.dataset.assignmentId || '0', 10) || 0;
@@ -1142,25 +1321,17 @@
       return;
     }
 
-    try {
-      const res = await AppAPI.postJSON(apiUrl, {
-        action: 'unassign_shift',
-        assignment_id: assignmentId,
-      });
-      if (res?.ok || res?.success) {
-        if (feedback?.reloadSettingsTabWithSuccess) {
-          feedback.reloadSettingsTabWithSuccess('assignments', 'Done', 'Shift unassigned successfully.');
-        } else {
-          notifySuccess('Shift unassigned successfully.');
-          location.reload();
-        }
+    const ok = await unassignAssignmentById(assignmentId);
+    if (ok) {
+      if (feedback?.reloadSettingsTabWithSuccess) {
+        feedback.reloadSettingsTabWithSuccess('assignments', 'Done', 'Shift unassigned successfully.');
       } else {
-        notifyError('Unassign failed: ' + (res?.error || 'unknown'));
+        notifySuccess('Shift unassigned successfully.');
+        location.reload();
       }
-    } catch (e) {
-      console.error(e);
-      notifyError('Error unassigning shift.');
+      return;
     }
+    notifyError('Error unassigning shift.');
   }
 
   async function autoAssignOpen() {
@@ -1481,6 +1652,49 @@
       return;
     }
 
+    const openAssignedShiftsBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-open-shifts]');
+    if (openAssignedShiftsBtn) {
+      ev.preventDefault();
+      openAssignedShiftsModal();
+      return;
+    }
+
+    const closeAssignedShiftsBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-shifts-close]');
+    if (closeAssignedShiftsBtn) {
+      ev.preventDefault();
+      closeAssignedShiftsModal();
+      return;
+    }
+
+    const selectAllAssignedShiftsBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-shifts-select-all]');
+    if (selectAllAssignedShiftsBtn) {
+      ev.preventDefault();
+      setAllEmployeeShiftSelection(true);
+      return;
+    }
+
+    const clearAssignedShiftsBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-shifts-clear-selection]');
+    if (clearAssignedShiftsBtn) {
+      ev.preventDefault();
+      setAllEmployeeShiftSelection(false);
+      return;
+    }
+
+    const unassignSelectedShiftsBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-shifts-unassign-selected]');
+    if (unassignSelectedShiftsBtn) {
+      ev.preventDefault();
+      unassignEmployeeShiftsBulk(false);
+      return;
+    }
+
+    const unassignAllShiftsBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-shifts-unassign-all]');
+    if (unassignAllShiftsBtn) {
+      ev.preventDefault();
+      setAllEmployeeShiftSelection(true);
+      unassignEmployeeShiftsBulk(true);
+      return;
+    }
+
     const reassignEmployeeBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-open-reassign]');
     if (reassignEmployeeBtn) {
       ev.preventDefault();
@@ -1517,6 +1731,11 @@
 
     if (employeeModal && ev.target === employeeModal) {
       closeEmployeeModal();
+      return;
+    }
+
+    if (employeeModalShiftsModal && ev.target === employeeModalShiftsModal) {
+      closeAssignedShiftsModal();
       return;
     }
 
@@ -1676,6 +1895,14 @@
   document.addEventListener('change', (ev) => {
     if (!isAssignmentsPanelActive()) return;
     const target = ev.target;
+    if (target.matches('[data-assignment-modal-shift-select]')) {
+      syncEmployeeShiftSelectionFromDom();
+      return;
+    }
+    if (target.matches('select[data-field="shift_id"]')) {
+      syncAssignmentShiftPreview(target.closest('.settings-edit-drawer'));
+      return;
+    }
     if (
       target.matches('[data-auto-rule-scope]')
       || target.matches('[data-auto-rule-weekday]')

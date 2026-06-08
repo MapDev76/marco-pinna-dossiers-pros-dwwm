@@ -20,9 +20,9 @@ $scopeCompanySignatureIp = trim((string) ($plannerCompany['signature_ip'] ?? '')
 $scopeCompanies = is_array($planner['companies'] ?? null) ? $planner['companies'] : [];
 $visibleUsers = $users;
 $currentRole = $currentUser['role'] ?? '';
-$canCreateDepartments = $currentRole === 'super_admin';
+$canCreateDepartments = in_array($currentRole, ['super_admin', 'admin'], true);
 $canCreateShifts = in_array($currentRole, ['super_admin', 'admin'], true);
-$canManageDepartments = $currentRole === 'super_admin';
+$canManageDepartments = in_array($currentRole, ['super_admin', 'admin'], true);
 $canManageShifts = in_array($currentRole, ['super_admin', 'admin'], true);
 if ($currentRole === 'admin') {
     $visibleUsers = array_values(array_filter($users, static function($u) use ($scopeCompanyId) {
@@ -148,6 +148,27 @@ $iconLabel = static function (string $icon): string {
     $name = pathinfo($icon, PATHINFO_FILENAME);
     $name = str_replace(['-', '_'], ' ', $name);
     return ucwords(trim($name));
+};
+
+$renderGroupIcon = static function (?int $departmentId, string $iconValue, string $fallbackLabel = '') use ($iconUrl, $isIconAsset, $defaultPickerIcon, $basePath): string {
+    $iconValue = trim($iconValue);
+    if ($departmentId !== null && $departmentId > 0) {
+        if ($iconValue === '') {
+            $iconValue = $defaultPickerIcon;
+        }
+        if ($isIconAsset($iconValue)) {
+            return '<img src="' . e($iconUrl($iconValue)) . '" alt="" aria-hidden="true" class="settings-icon-inline-image">';
+        }
+
+        return e($iconValue);
+    }
+
+    $ticketIcon = 'ticket.svg';
+    if ($isIconAsset($ticketIcon)) {
+        return '<img src="' . e($iconUrl($ticketIcon)) . '" alt="" aria-hidden="true" class="settings-icon-inline-image">';
+    }
+
+    return e($fallbackLabel !== '' ? $fallbackLabel : t('settings.unassigned'));
 };
 
 $localizedSystemShiftName = static function (string $kind, string $defaultName = ''): string {
@@ -810,8 +831,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     <?php else: ?>
                         <?php
                             $departmentNameById = [];
+                            $departmentIconById = [];
                             foreach ($visibleDepartments as $deptOption) {
                                 $departmentNameById[(int) ($deptOption['id'] ?? 0)] = (string) ($deptOption['name'] ?? t('settings.department_default'));
+                                $departmentIconById[(int) ($deptOption['id'] ?? 0)] = (string) ($deptOption['icon'] ?? $defaultPickerIcon);
                             }
 
                             $usersByDepartment = [];
@@ -821,19 +844,25 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 if ($employeeDepartmentName === '') {
                                     $employeeDepartmentName = t('settings.unassigned');
                                 }
-                                if (!isset($usersByDepartment[$employeeDepartmentName])) {
-                                    $usersByDepartment[$employeeDepartmentName] = [];
+                                $groupKey = $employeeDepartmentId > 0 ? 'dept-' . $employeeDepartmentId : 'unassigned';
+                                if (!isset($usersByDepartment[$groupKey])) {
+                                    $usersByDepartment[$groupKey] = [
+                                        'label' => $employeeDepartmentName,
+                                        'department_id' => $employeeDepartmentId,
+                                        'icon' => $departmentIconById[$employeeDepartmentId] ?? '',
+                                        'users' => [],
+                                    ];
                                 }
-                                $usersByDepartment[$employeeDepartmentName][] = $employeeItem;
+                                $usersByDepartment[$groupKey]['users'][] = $employeeItem;
                             }
 
                             ksort($usersByDepartment);
                         ?>
-                        <?php foreach ($usersByDepartment as $departmentLabel => $departmentUsers): ?>
+                        <?php foreach ($usersByDepartment as $departmentGroup): ?>
                             <section class="settings-assignment-employee-group">
-                                <div class="settings-assignment-employee-group-title"><img src="<?php echo $basePath; ?>/assets/icons/ticket.svg" alt="" aria-hidden="true" class="settings-icon-inline-image"> <?php echo e($departmentLabel); ?></div>
+                                <div class="settings-assignment-employee-group-title"><?php echo $renderGroupIcon((int) ($departmentGroup['department_id'] ?? 0), (string) ($departmentGroup['icon'] ?? ''), (string) ($departmentGroup['label'] ?? t('settings.unassigned'))); ?> <?php echo e($departmentGroup['label'] ?? t('settings.unassigned')); ?></div>
                                 <div class="settings-assignment-employee-list">
-                                    <?php foreach ($departmentUsers as $employeeItem): ?>
+                                    <?php foreach ($departmentGroup['users'] as $employeeItem): ?>
                                         <?php
                                             $employeeId = (int) ($employeeItem['id'] ?? 0);
                                             $employeeName = trim((string) (($employeeItem['first_name'] ?? '') . ' ' . ($employeeItem['last_name'] ?? '')));
@@ -849,7 +878,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             data-user-id="<?php echo $employeeId; ?>"
                                             data-user-name="<?php echo e($employeeName); ?>"
                                             data-user-department-id="<?php echo (int) ($employeeItem['department_id'] ?? 0); ?>"
-                                            data-user-department-name="<?php echo e($departmentLabel); ?>"
+                                            data-user-department-name="<?php echo e($departmentGroup['label'] ?? t('settings.unassigned')); ?>"
                                         >
                                             <strong><?php echo e($employeeName); ?></strong>
                                             <span><?php echo e($employeeItem['email'] ?? ''); ?></span>
@@ -929,7 +958,11 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             </section>
                             <section class="settings-analytics-card">
                                 <h5><?php echo e(t('settings.assigned_shifts')); ?></h5>
-                                <div class="settings-assignment-modal-shift-list" data-assignment-modal-shifts></div>
+                                <p class="crud-modal-subtitle"><?php echo e(t('settings.assigned_shifts_hint')); ?></p>
+                                <div class="settings-inline-actions">
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-shifts>Open assigned shifts</button>
+                                </div>
+                                <p class="crud-modal-subtitle settings-assignment-shifts-summary" data-assignment-modal-shifts-summary></p>
                             </section>
                             <section class="settings-analytics-card settings-assignment-modal-open-slots">
                                 <h5><?php echo e(t('settings.open_shifts_to_cover')); ?></h5>
@@ -990,6 +1023,24 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 </div>
                             </section>
                         </div>
+                        <section class="settings-assignment-shifts-modal" data-assignment-modal-shifts-modal hidden>
+                            <div class="settings-assignment-shifts-window">
+                                <header class="settings-assignment-shifts-window-head">
+                                    <div>
+                                        <h5><?php echo e(t('settings.assigned_shifts')); ?></h5>
+                                        <p class="crud-modal-subtitle" data-assignment-modal-shifts-modal-title><?php echo e(t('settings.assigned_shifts_hint')); ?></p>
+                                    </div>
+                                    <button type="button" class="dashboard-modal-close" data-assignment-modal-shifts-close aria-label="<?php echo e(t('settings.close')); ?>">&times;</button>
+                                </header>
+                                <div class="settings-inline-actions settings-assignment-shifts-toolbar">
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-shifts-select-all>Select all</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-shifts-clear-selection>Deselect all</button>
+                                    <button type="button" class="admin-action-link" data-assignment-modal-shifts-unassign-selected>Unassign selected</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-shifts-unassign-all>Unassign all</button>
+                                </div>
+                                <div class="settings-assignment-modal-shift-list" data-assignment-modal-shifts></div>
+                            </div>
+                        </section>
                     </div>
                 </section>
 
@@ -1142,6 +1193,18 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             <input data-field="work_date" type="date" value="<?php echo e($assignment['work_date'] ?? ''); ?>">
                                         </label>
                                         <label class="settings-field">Shift
+                                            <?php
+                                                $assignmentShiftIconValue = (string) ($assignment['shift_icon'] ?? $assignment['icon'] ?? '🕒');
+                                                $assignmentShiftNameValue = (string) ($assignmentShiftDisplayName ?? ($assignment['shift_name'] ?? t('settings.shift_default')));
+                                            ?>
+                                            <div class="settings-shift-picker-preview" data-assignment-shift-preview>
+                                                <?php if ($isIconAsset($assignmentShiftIconValue)): ?>
+                                                    <img src="<?php echo e($iconUrl($assignmentShiftIconValue)); ?>" alt="" aria-hidden="true" class="settings-icon-inline-image">
+                                                <?php else: ?>
+                                                    <span class="settings-shift-picker-preview-text"><?php echo e($assignmentShiftIconValue); ?></span>
+                                                <?php endif; ?>
+                                                <span class="settings-shift-picker-preview-label"><?php echo e($assignmentShiftNameValue); ?></span>
+                                            </div>
                                             <select data-field="shift_id">
                                                 <?php foreach ($shifts as $shift): ?>
                                                     <?php
@@ -1152,9 +1215,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                             $editShiftDisplayName = $editShiftName;
                                                         }
                                                         $editShiftDescription = $localizedSystemShiftDescription($editShiftKind, (string) ($shift['description'] ?? ''));
+                                                        $editShiftIconValue = (string) ($shift['icon'] ?? '🕒');
                                                     ?>
-                                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>" <?php echo ((int) ($assignment['shift_id'] ?? 0) === (int) ($shift['id'] ?? 0)) ? 'selected' : ''; ?>>
-                                                        <?php echo e(($shift['icon'] ?? '🕒') . ' ' . $editShiftDisplayName . ' • ' . ($shift['department_name'] ?? '')); ?><?php echo $editShiftDescription !== '' ? e(' • ' . $editShiftDescription) : ''; ?>
+                                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>" data-shift-option-icon="<?php echo e($editShiftIconValue); ?>" data-shift-option-name="<?php echo e($editShiftDisplayName); ?>" <?php echo ((int) ($assignment['shift_id'] ?? 0) === (int) ($shift['id'] ?? 0)) ? 'selected' : ''; ?>>
+                                                        <?php echo e($editShiftDisplayName . ' • ' . ($shift['department_name'] ?? '')); ?><?php echo $editShiftDescription !== '' ? e(' • ' . $editShiftDescription) : ''; ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -1234,24 +1298,36 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="crud-empty-state"><?php echo e(t('settings.no_users_attendance')); ?></div>
                     <?php else: ?>
                         <?php
+                            $attendanceDepartmentIconById = [];
+                            foreach ($visibleDepartments as $deptOption) {
+                                $attendanceDepartmentIconById[(int) ($deptOption['id'] ?? 0)] = (string) ($deptOption['icon'] ?? $defaultPickerIcon);
+                            }
+
                             $attendanceUsersByDepartment = [];
                             foreach ($visibleUsers as $attendanceUserItem) {
+                                $attendanceDepartmentId = (int) ($attendanceUserItem['department_id'] ?? 0);
                                 $attendanceDepartmentName = (string) ($attendanceUserItem['department_name'] ?? t('settings.unassigned'));
                                 if ($attendanceDepartmentName === '') {
                                     $attendanceDepartmentName = t('settings.unassigned');
                                 }
-                                if (!isset($attendanceUsersByDepartment[$attendanceDepartmentName])) {
-                                    $attendanceUsersByDepartment[$attendanceDepartmentName] = [];
+                                $attendanceGroupKey = $attendanceDepartmentId > 0 ? 'dept-' . $attendanceDepartmentId : 'unassigned';
+                                if (!isset($attendanceUsersByDepartment[$attendanceGroupKey])) {
+                                    $attendanceUsersByDepartment[$attendanceGroupKey] = [
+                                        'label' => $attendanceDepartmentName,
+                                        'department_id' => $attendanceDepartmentId,
+                                        'icon' => $attendanceDepartmentIconById[$attendanceDepartmentId] ?? '',
+                                        'users' => [],
+                                    ];
                                 }
-                                $attendanceUsersByDepartment[$attendanceDepartmentName][] = $attendanceUserItem;
+                                $attendanceUsersByDepartment[$attendanceGroupKey]['users'][] = $attendanceUserItem;
                             }
                             ksort($attendanceUsersByDepartment);
                         ?>
-                        <?php foreach ($attendanceUsersByDepartment as $attendanceDepartmentLabel => $attendanceDepartmentUsers): ?>
+                        <?php foreach ($attendanceUsersByDepartment as $attendanceDepartmentGroup): ?>
                             <section class="settings-assignment-employee-group">
-                                <div class="settings-assignment-employee-group-title"><?php echo e(t('settings.department_prefix')); ?> <?php echo e($attendanceDepartmentLabel); ?></div>
+                                <div class="settings-assignment-employee-group-title"><?php echo $renderGroupIcon((int) ($attendanceDepartmentGroup['department_id'] ?? 0), (string) ($attendanceDepartmentGroup['icon'] ?? ''), (string) ($attendanceDepartmentGroup['label'] ?? t('settings.unassigned'))); ?> <?php echo e($attendanceDepartmentGroup['label'] ?? t('settings.unassigned')); ?></div>
                                 <div class="settings-assignment-employee-list">
-                                    <?php foreach ($attendanceDepartmentUsers as $attendanceUserItem): ?>
+                                    <?php foreach ($attendanceDepartmentGroup['users'] as $attendanceUserItem): ?>
                                         <?php
                                             $attendanceUserId = (int) ($attendanceUserItem['id'] ?? 0);
                                             $attendanceUserName = trim((string) (($attendanceUserItem['first_name'] ?? '') . ' ' . ($attendanceUserItem['last_name'] ?? '')));
@@ -1266,7 +1342,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             data-attendance-employee-open
                                             data-user-id="<?php echo $attendanceUserId; ?>"
                                             data-user-name="<?php echo e($attendanceUserName); ?>"
-                                            data-user-department-name="<?php echo e($attendanceDepartmentLabel); ?>"
+                                            data-user-department-name="<?php echo e($attendanceDepartmentGroup['label'] ?? t('settings.unassigned')); ?>"
                                         >
                                             <strong><?php echo e($attendanceUserName); ?></strong>
                                             <span><?php echo e($attendanceUserItem['email'] ?? ''); ?></span>

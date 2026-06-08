@@ -2,7 +2,7 @@
 /**
  * API endpoint for department operations (list/create/update/delete).
  *
- * This controller is intended for Super Admin authenticated calls and returns
+ * This controller is intended for authenticated admin/super admin calls and returns
  * JSON responses. It expects an `action` parameter and optional payload data
  * in JSON or form-encoded POST bodies.
  */
@@ -41,9 +41,6 @@ try {
             break;
 
         case 'create':
-            if (!$isSuperAdmin) {
-                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
-            }
             $companyId = $isAdmin
                 ? $effectiveAdminCompanyId
                 : (int) ($input['company_id'] ?? 0);
@@ -63,17 +60,11 @@ try {
             break;
 
         case 'update':
-            if (!$isSuperAdmin) {
-                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
-            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             if ($isAdmin) {
-                if ($effectiveAdminCompanyId <= 0) {
-                    jsonResponse(['ok' => false, 'error' => 'company_id required'], 400);
-                }
                 $target = $deptModel->findById($id);
-                if (!$target || ($effectiveAdminCompanyId > 0 && (int) ($target['company_id'] ?? 0) !== $effectiveAdminCompanyId)) {
+                if (!$target || (int) ($target['company_id'] ?? 0) !== $effectiveAdminCompanyId) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
                 }
             }
@@ -89,17 +80,11 @@ try {
             break;
 
         case 'delete':
-            if (!$isSuperAdmin) {
-                jsonResponse(['ok' => false, 'error' => t('common.unauthorized')], 403);
-            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
             if ($isAdmin) {
-                if ($effectiveAdminCompanyId <= 0) {
-                    jsonResponse(['ok' => false, 'error' => 'company_id required'], 400);
-                }
                 $target = $deptModel->findById($id);
-                if (!$target || ($effectiveAdminCompanyId > 0 && (int) ($target['company_id'] ?? 0) !== $effectiveAdminCompanyId)) {
+                if (!$target || (int) ($target['company_id'] ?? 0) !== $effectiveAdminCompanyId) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
                 }
             }
