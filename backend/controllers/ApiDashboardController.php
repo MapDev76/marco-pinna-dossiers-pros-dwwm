@@ -434,6 +434,62 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         return $date < date('Y-m-d');
     };
 
+    $loadUserDepartmentIdsMap = static function (PDO $pdo, array $userIds): array {
+        $map = [];
+        $normalizedUserIds = array_values(array_unique(array_filter(array_map('intval', $userIds), static fn (int $id): bool => $id > 0)));
+        if (empty($normalizedUserIds)) {
+            return $map;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($normalizedUserIds), '?'));
+
+        $primaryStmt = $pdo->prepare(
+            'SELECT id AS user_id, department_id
+             FROM users
+             WHERE id IN (' . $placeholders . ')'
+        );
+        $primaryStmt->execute($normalizedUserIds);
+        foreach ($primaryStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $uid = (int) ($row['user_id'] ?? 0);
+            $did = (int) ($row['department_id'] ?? 0);
+            if ($uid <= 0 || $did <= 0) {
+                continue;
+            }
+            if (!isset($map[$uid])) {
+                $map[$uid] = [];
+            }
+            $map[$uid][$did] = $did;
+        }
+
+        try {
+            $linkStmt = $pdo->prepare(
+                'SELECT user_id, department_id
+                 FROM user_department_links
+                 WHERE user_id IN (' . $placeholders . ')'
+            );
+            $linkStmt->execute($normalizedUserIds);
+            foreach ($linkStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $uid = (int) ($row['user_id'] ?? 0);
+                $did = (int) ($row['department_id'] ?? 0);
+                if ($uid <= 0 || $did <= 0) {
+                    continue;
+                }
+                if (!isset($map[$uid])) {
+                    $map[$uid] = [];
+                }
+                $map[$uid][$did] = $did;
+            }
+        } catch (Throwable $e) {
+            // Legacy schemas may not have link table.
+        }
+
+        foreach ($map as $uid => $departmentIds) {
+            $map[$uid] = array_values(array_map('intval', array_keys($departmentIds)));
+        }
+
+        return $map;
+    };
+
     if ($action === 'employee_assignments') {
         $targetUserId = max(0, (int) ($input['target_user_id'] ?? 0));
         $targetMonth = trim((string) ($input['target_month'] ?? date('Y-m')));
@@ -812,6 +868,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         );
         $userStmt->execute($scopeOnlyParams);
         $users = $userStmt->fetchAll(PDO::FETCH_ASSOC);
+        $userDepartmentIdsById = $loadUserDepartmentIdsMap($pdo, array_map(static fn (array $row): int => (int) ($row['id'] ?? 0), $users));
         $userDepartmentById = [];
         foreach ($users as $userRow) {
             $userDepartmentById[(int) ($userRow['id'] ?? 0)] = (int) ($userRow['department_id'] ?? 0);
@@ -947,7 +1004,8 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
 
         foreach ($users as $candidateUser) {
             $uid = (int) ($candidateUser['id'] ?? 0);
-            $departmentId = (int) ($candidateUser['department_id'] ?? 0);
+            $candidateDepartmentIds = $userDepartmentIdsById[$uid] ?? [];
+            $departmentId = (int) ($candidateDepartmentIds[0] ?? ($candidateUser['department_id'] ?? 0));
             if ($uid <= 0 || $departmentId <= 0) {
                 continue;
             }
@@ -1130,7 +1188,8 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                     if ($uid <= 0) {
                         continue;
                     }
-                    if ((int) ($candidateUser['department_id'] ?? 0) !== $slotDepartmentId) {
+                    $candidateDepartmentIds = $userDepartmentIdsById[$uid] ?? [];
+                    if (!in_array($slotDepartmentId, $candidateDepartmentIds, true)) {
                         continue;
                     }
                     $slotWeek = date('o-W', strtotime($slotDate));
@@ -1322,14 +1381,17 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         if (!$targetUser) {
             jsonResponse(['success' => false, 'error' => 'User not found'], 404);
         }
-        if ($role === 'department_manager' && (int) $targetUser['department_id'] !== (int) ($profile['department_id'] ?? 0)) {
+        $targetUserDepartmentIdsMap = $loadUserDepartmentIdsMap($pdo, [$assignmentUserId]);
+        $targetUserDepartmentIds = $targetUserDepartmentIdsMap[$assignmentUserId] ?? [];
+
+        if ($role === 'department_manager' && !in_array((int) ($profile['department_id'] ?? 0), $targetUserDepartmentIds, true)) {
             jsonResponse(['success' => false, 'error' => 'Target user is outside your department'], 403);
         }
         if ($role === 'admin' && (int) $targetUser['company_id'] !== (int) ($profile['company_id'] ?? 0)) {
             jsonResponse(['success' => false, 'error' => 'Target user is outside your company'], 403);
         }
 
-        if ($shift && (int) ($targetUser['department_id'] ?? 0) !== (int) ($shift['department_id'] ?? 0)) {
+        if ($shift && !in_array((int) ($shift['department_id'] ?? 0), $targetUserDepartmentIds, true)) {
             jsonResponse(['success' => false, 'error' => 'Employee and shift must belong to the same department'], 400);
         }
     }

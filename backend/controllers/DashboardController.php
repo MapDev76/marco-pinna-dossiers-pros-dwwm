@@ -177,11 +177,22 @@ if ($role === 'super_admin') {
 
         $groupedUsers = [];
         foreach ($userRows as $userRow) {
-            $deptKey = (int) ($userRow['department_id'] ?? 0);
-            if (!isset($groupedUsers[$deptKey])) {
-                $groupedUsers[$deptKey] = [];
+            $departmentIds = $userRow['department_ids'] ?? [];
+            if (!is_array($departmentIds) || empty($departmentIds)) {
+                $fallbackDepartmentId = (int) ($userRow['department_id'] ?? 0);
+                $departmentIds = $fallbackDepartmentId > 0 ? [$fallbackDepartmentId] : [];
             }
-            $groupedUsers[$deptKey][] = $userRow;
+
+            foreach ($departmentIds as $departmentIdValue) {
+                $deptKey = (int) $departmentIdValue;
+                if ($deptKey <= 0) {
+                    continue;
+                }
+                if (!isset($groupedUsers[$deptKey])) {
+                    $groupedUsers[$deptKey] = [];
+                }
+                $groupedUsers[$deptKey][] = $userRow;
+            }
         }
 
         $groupedShifts = [];
@@ -300,11 +311,22 @@ if ($role === 'admin' && $companyId !== null) {
 
     $groupedUsers = [];
     foreach ($userRows as $userRow) {
-        $deptKey = (int) ($userRow['department_id'] ?? 0);
-        if (!isset($groupedUsers[$deptKey])) {
-            $groupedUsers[$deptKey] = [];
+        $departmentIds = $userRow['department_ids'] ?? [];
+        if (!is_array($departmentIds) || empty($departmentIds)) {
+            $fallbackDepartmentId = (int) ($userRow['department_id'] ?? 0);
+            $departmentIds = $fallbackDepartmentId > 0 ? [$fallbackDepartmentId] : [];
         }
-        $groupedUsers[$deptKey][] = $userRow;
+
+        foreach ($departmentIds as $departmentIdValue) {
+            $deptKey = (int) $departmentIdValue;
+            if ($deptKey <= 0) {
+                continue;
+            }
+            if (!isset($groupedUsers[$deptKey])) {
+                $groupedUsers[$deptKey] = [];
+            }
+            $groupedUsers[$deptKey][] = $userRow;
+        }
     }
 
     $groupedShifts = [];

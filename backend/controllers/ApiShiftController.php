@@ -146,6 +146,20 @@ try {
             $description = $input['description'] ?? null;
             $startTime = $input['start_time'];
             $endTime = $input['end_time'];
+            $weeklyRestWeekdaysRaw = $input['weekly_rest_weekdays'] ?? [];
+            if (is_string($weeklyRestWeekdaysRaw)) {
+                $decodedWeeklyRest = json_decode($weeklyRestWeekdaysRaw, true);
+                $weeklyRestWeekdaysRaw = is_array($decodedWeeklyRest) ? $decodedWeeklyRest : [];
+            }
+            $weeklyRestWeekdays = [];
+            if (is_array($weeklyRestWeekdaysRaw)) {
+                foreach ($weeklyRestWeekdaysRaw as $weekdayRaw) {
+                    $weekday = (int) $weekdayRaw;
+                    if ($weekday >= 0 && $weekday <= 6) {
+                        $weeklyRestWeekdays[$weekday] = true;
+                    }
+                }
+            }
 
             $lookupTemplateShift = $pdo->prepare(
                 'SELECT id
@@ -206,6 +220,10 @@ try {
 
                 $datesToInsert = [];
                 foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
+                    $weekday = (int) $date->format('w');
+                    if (!empty($weeklyRestWeekdays[$weekday])) {
+                        continue;
+                    }
                     $datesToInsert[] = $date->format('Y-m-d');
                 }
 
@@ -242,6 +260,7 @@ try {
                 'shift' => $shift,
                 'shift_ids' => $createdShiftIds,
                 'department_ids' => $createDepartmentIds,
+                'weekly_rest_weekdays' => array_values(array_map('intval', array_keys($weeklyRestWeekdays))),
             ]);
             break;
 

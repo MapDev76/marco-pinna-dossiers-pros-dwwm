@@ -62,6 +62,22 @@ CREATE TABLE users (
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE user_department_links (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  department_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_user_department (user_id, department_id),
+  KEY idx_user_department_user (user_id),
+  KEY idx_user_department_department (department_id),
+  CONSTRAINT fk_user_department_links_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_user_department_links_department
+    FOREIGN KEY (department_id) REFERENCES departments(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE shifts (
   id INT AUTO_INCREMENT PRIMARY KEY,
   department_id INT NOT NULL,

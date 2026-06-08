@@ -31,6 +31,116 @@ class UserModel
         return isset($this->userColumns[$column]);
     }
 
+    private function attachDepartmentAssignments(array $rows): array
+    {
+        if (empty($rows)) {
+            return $rows;
+        }
+
+        $userIds = [];
+        foreach ($rows as $row) {
+            $uid = (int) ($row['id'] ?? 0);
+            if ($uid > 0) {
+                $userIds[] = $uid;
+            }
+        }
+        $userIds = array_values(array_unique($userIds));
+        if (empty($userIds)) {
+            return $rows;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($userIds), '?'));
+        $links = [];
+        try {
+            $statement = $this->pdo->prepare(
+                'SELECT l.user_id, l.department_id, d.name AS department_name
+                 FROM user_department_links l
+                 INNER JOIN departments d ON d.id = l.department_id
+                 WHERE l.user_id IN (' . $placeholders . ')'
+            );
+            $statement->execute($userIds);
+            $links = $statement->fetchAll();
+        } catch (Throwable $e) {
+            $links = [];
+        }
+
+        $byUser = [];
+        foreach ($links as $link) {
+            $uid = (int) ($link['user_id'] ?? 0);
+            $did = (int) ($link['department_id'] ?? 0);
+            $name = trim((string) ($link['department_name'] ?? ''));
+            if ($uid <= 0 || $did <= 0) {
+                continue;
+            }
+            if (!isset($byUser[$uid])) {
+                $byUser[$uid] = [
+                    'ids' => [],
+                    'names' => [],
+                ];
+            }
+            $byUser[$uid]['ids'][$did] = $did;
+            if ($name !== '') {
+                $byUser[$uid]['names'][$name] = $name;
+            }
+        }
+
+        foreach ($rows as &$row) {
+            $uid = (int) ($row['id'] ?? 0);
+            $primaryDepartmentId = (int) ($row['department_id'] ?? 0);
+            $primaryDepartmentName = trim((string) ($row['department_name'] ?? ''));
+
+            $ids = isset($byUser[$uid]['ids']) ? $byUser[$uid]['ids'] : [];
+            $names = isset($byUser[$uid]['names']) ? $byUser[$uid]['names'] : [];
+
+            if ($primaryDepartmentId > 0) {
+                $ids[$primaryDepartmentId] = $primaryDepartmentId;
+            }
+            if ($primaryDepartmentName !== '') {
+                $names[$primaryDepartmentName] = $primaryDepartmentName;
+            }
+
+            $row['department_ids'] = array_values(array_map('intval', array_keys($ids)));
+            $row['department_names'] = array_values(array_map('strval', array_keys($names)));
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    public function setDepartmentLinks(int $userId, array $departmentIds): void
+    {
+        if ($userId <= 0) {
+            return;
+        }
+
+        $normalized = [];
+        foreach ($departmentIds as $departmentId) {
+            $id = (int) $departmentId;
+            if ($id > 0) {
+                $normalized[$id] = $id;
+            }
+        }
+        $normalized = array_values($normalized);
+
+        $delete = $this->pdo->prepare('DELETE FROM user_department_links WHERE user_id = :user_id');
+        $delete->execute(['user_id' => $userId]);
+
+        if (empty($normalized)) {
+            return;
+        }
+
+        $insert = $this->pdo->prepare(
+            'INSERT INTO user_department_links (user_id, department_id)
+             VALUES (:user_id, :department_id)'
+        );
+        foreach ($normalized as $departmentId) {
+            $insert->execute([
+                'user_id' => $userId,
+                'department_id' => $departmentId,
+            ]);
+        }
+    }
+
     /**
      * findByEmail
      * Return a user row matching the provided email or null. Used for login.
@@ -82,7 +192,7 @@ class UserModel
              ORDER BY u.created_at DESC, u.id DESC'
         );
 
-        return $statement->fetchAll();
+        return $this->attachDepartmentAssignments($statement->fetchAll());
     }
 
     /**
@@ -161,13 +271,19 @@ class UserModel
         $statement = $this->pdo->prepare(
             'SELECT u.id, u.department_id, ' . $companySelect . ', u.first_name, u.last_name, u.email, u.role, u.status
              FROM users u
-             LEFT JOIN departments d ON d.id = u.department_id
-             WHERE u.department_id = :department_id
+               LEFT JOIN departments d ON d.id = u.department_id
+               WHERE u.department_id = :department_id
+                 OR EXISTS (
+                    SELECT 1
+                    FROM user_department_links udl
+                    WHERE udl.user_id = u.id
+                      AND udl.department_id = :department_id
+                 )
              ORDER BY u.last_name, u.first_name'
         );
         $statement->execute(['department_id' => $departmentId]);
 
-        return $statement->fetchAll();
+           return $this->attachDepartmentAssignments($statement->fetchAll());
     }
 
     /**
@@ -189,7 +305,7 @@ class UserModel
             );
             $statement->execute(['company_id' => $companyId]);
 
-            return $statement->fetchAll();
+            return $this->attachDepartmentAssignments($statement->fetchAll());
         }
 
         $statement = $this->pdo->prepare(
@@ -232,7 +348,7 @@ class UserModel
             'super_admin_role' => 'super_admin',
         ]);
 
-        return $orphanStatement->fetchAll();
+        return $this->attachDepartmentAssignments($orphanStatement->fetchAll());
     }
 
     /**

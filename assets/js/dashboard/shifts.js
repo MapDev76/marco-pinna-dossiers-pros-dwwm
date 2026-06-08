@@ -301,6 +301,12 @@
     });
     const kindSelect = row.querySelector('select[data-field="kind"]');
     if (kindSelect) kindSelect.value = 'work';
+    const weeklyRestSelect = row.querySelector('select[data-field="weekly_rest_weekdays"]');
+    if (weeklyRestSelect) {
+      Array.from(weeklyRestSelect.options || []).forEach((option) => {
+        option.selected = false;
+      });
+    }
     syncChoiceState(row);
   }
 
@@ -343,6 +349,9 @@
     const range_end = row.querySelector('input[data-field="range_end"]')?.value || '';
     const start_time = row.querySelector('input[data-field="start_time"]')?.value || '';
     const end_time = row.querySelector('input[data-field="end_time"]')?.value || '';
+    const weekly_rest_weekdays = Array.from(row.querySelectorAll('select[data-field="weekly_rest_weekdays"] option:checked'))
+      .map((option) => parseInt(option.value || '0', 10) || 0)
+      .filter((value, index, array) => value >= 0 && value <= 6 && array.indexOf(value) === index);
 
     if (!departmentIds.length) return notifyError('Choose at least one department for the new shift.');
     if (!name) return notifyError('Enter a shift title.');
@@ -367,6 +376,7 @@
         kind,
         range_start,
         range_end,
+        weekly_rest_weekdays,
       });
       if (res?.ok) {
         if (feedback?.reloadSettingsTabWithSuccess) {
@@ -485,7 +495,7 @@
     if (!option) return;
     const select = option.parentElement;
     if (!select || select.tagName !== 'SELECT') return;
-    if (select.getAttribute('data-field') !== 'department_ids' || !select.multiple) return;
+    if (!['department_ids', 'weekly_rest_weekdays'].includes(select.getAttribute('data-field') || '') || !select.multiple) return;
     ev.preventDefault();
     option.selected = !option.selected;
     select.dispatchEvent(new Event('change', { bubbles: true }));

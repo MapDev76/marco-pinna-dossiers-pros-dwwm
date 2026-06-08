@@ -271,6 +271,10 @@ body.sidebar-expanded .app-sidebar {
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
 }
 
+.calendar-badge-actions-menu[hidden] {
+    display: none !important;
+}
+
 .calendar-badge-actions-btn {
     display: inline-flex;
     align-items: center;

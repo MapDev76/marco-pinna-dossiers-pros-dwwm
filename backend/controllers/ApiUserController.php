@@ -21,6 +21,7 @@ if (!isLoggedIn() || (!$isSuperAdmin && !$isAdmin)) {
 }
 
 $pdo = getPDO();
+ensureSchedulerSchema($pdo);
 $userModel = new UserModel($pdo);
 $departmentModel = new DepartmentModel($pdo);
 
@@ -31,6 +32,38 @@ $action = $input['action'] ?? ($_GET['action'] ?? 'list');
 $requestedCompanyId = (int) ($input['company_id'] ?? ($_GET['company_id'] ?? 0));
 $profileCompanyId = (int) ($profile['company_id'] ?? 0);
 $effectiveAdminCompanyId = $profileCompanyId > 0 ? $profileCompanyId : $requestedCompanyId;
+
+$normalizeDepartmentIds = static function ($rawValue): array {
+    if (is_string($rawValue)) {
+        $decoded = json_decode($rawValue, true);
+        $rawValue = is_array($decoded) ? $decoded : [];
+    }
+    if (!is_array($rawValue)) {
+        $rawValue = [];
+    }
+
+    $ids = [];
+    foreach ($rawValue as $candidate) {
+        $id = (int) $candidate;
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    }
+
+    return array_values($ids);
+};
+
+$resolveValidatedDepartments = static function (DepartmentModel $departmentModel, array $departmentIds): array {
+    $validated = [];
+    foreach ($departmentIds as $departmentId) {
+        $department = $departmentModel->findById((int) $departmentId);
+        if (!$department) {
+            jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
+        }
+        $validated[] = $department;
+    }
+    return $validated;
+};
 
 try {
     switch ($action) {
@@ -50,29 +83,50 @@ try {
             break;
 
         case 'create':
+            $departmentIds = $normalizeDepartmentIds($input['department_ids'] ?? []);
             $departmentId = $input['department_id'] ?? null;
             $userRole = trim((string) ($input['role'] ?? 'employee'));
             $assignedCompanyId = $isAdmin ? $effectiveAdminCompanyId : (int) ($input['company_id'] ?? 0);
 
+            if (!empty($departmentIds) && ($departmentId === null || $departmentId === '')) {
+                $departmentId = (int) ($departmentIds[0] ?? 0);
+            }
+            if ((int) $departmentId > 0 && !in_array((int) $departmentId, $departmentIds, true)) {
+                array_unshift($departmentIds, (int) $departmentId);
+                $departmentIds = array_values(array_unique(array_map('intval', $departmentIds)));
+            }
+
             if ($userRole === 'super_admin') {
                 if ($isAdmin) jsonResponse(['ok' => false, 'error' => 'Forbidden role'], 403);
                 $departmentId = null;
+                $departmentIds = [];
             } elseif ($userRole === 'admin') {
                 if (($departmentId === null || $departmentId === '') && $assignedCompanyId > 0) {
                     $reception = $departmentModel->findByNameAndCompanyId('Reception', (int) $assignedCompanyId);
                     if ($reception) {
                         $departmentId = (int) $reception['id'];
+                        $departmentIds = [$departmentId];
                     }
                 }
             } else {
-                if ($departmentId === null || $departmentId === '') {
+                if (($departmentId === null || $departmentId === '') && empty($departmentIds)) {
                     jsonResponse(['ok' => false, 'error' => 'department_id is required for department_manager/employee'], 400);
                 }
-                $department = $departmentModel->findById((int) $departmentId);
-                if (!$department) {
+                if (empty($departmentIds) && (int) $departmentId > 0) {
+                    $departmentIds = [(int) $departmentId];
+                }
+                $validatedDepartments = $resolveValidatedDepartments($departmentModel, $departmentIds);
+                if (empty($validatedDepartments)) {
                     jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
                 }
-                $assignedCompanyId = (int) ($department['company_id'] ?? $assignedCompanyId);
+                $departmentId = (int) ($departmentIds[0] ?? 0);
+                $assignedCompanyId = (int) ($validatedDepartments[0]['company_id'] ?? $assignedCompanyId);
+
+                foreach ($validatedDepartments as $validatedDepartment) {
+                    if ((int) ($validatedDepartment['company_id'] ?? 0) !== (int) $assignedCompanyId) {
+                        jsonResponse(['ok' => false, 'error' => 'All departments must belong to the same company'], 400);
+                    }
+                }
             }
 
             if ((int) $assignedCompanyId <= 0 && !empty($departmentId)) {
@@ -92,15 +146,20 @@ try {
                 'status' => $input['status'] ?? 'active',
             ];
             if ($isAdmin && !empty($departmentId)) {
-                $dept = $departmentModel->findById((int) $departmentId);
-                if (!$dept || ($effectiveAdminCompanyId > 0 && (int) ($dept['company_id'] ?? 0) !== $effectiveAdminCompanyId)) {
-                    jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+                $validatedDepartments = $resolveValidatedDepartments($departmentModel, !empty($departmentIds) ? $departmentIds : [(int) $departmentId]);
+                foreach ($validatedDepartments as $dept) {
+                    if ($effectiveAdminCompanyId > 0 && (int) ($dept['company_id'] ?? 0) !== $effectiveAdminCompanyId) {
+                        jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+                    }
                 }
             }
             if ($data['first_name'] === '' || $data['last_name'] === '' || $data['email'] === '') {
                 jsonResponse(['ok' => false, 'error' => 'Missing required fields'], 400);
             }
             $id = $userModel->create($data);
+            if (!empty($departmentIds)) {
+                $userModel->setDepartmentLinks($id, $departmentIds);
+            }
             $user = $userModel->findById($id);
             jsonResponse(['ok' => true, 'user' => $user]);
             break;
@@ -108,29 +167,49 @@ try {
         case 'update':
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);
+            $departmentIds = $normalizeDepartmentIds($input['department_ids'] ?? []);
             $departmentId = $input['department_id'] ?? null;
             $userRole = trim((string) ($input['role'] ?? 'employee'));
             $assignedCompanyId = $isAdmin ? $effectiveAdminCompanyId : (int) ($input['company_id'] ?? 0);
 
+            if (!empty($departmentIds) && ($departmentId === null || $departmentId === '')) {
+                $departmentId = (int) ($departmentIds[0] ?? 0);
+            }
+            if ((int) $departmentId > 0 && !in_array((int) $departmentId, $departmentIds, true)) {
+                array_unshift($departmentIds, (int) $departmentId);
+                $departmentIds = array_values(array_unique(array_map('intval', $departmentIds)));
+            }
+
             if ($userRole === 'super_admin') {
                 if ($isAdmin) jsonResponse(['ok' => false, 'error' => 'Forbidden role'], 403);
                 $departmentId = null;
+                $departmentIds = [];
             } elseif ($userRole === 'admin') {
                 if (($departmentId === null || $departmentId === '') && $assignedCompanyId > 0) {
                     $reception = $departmentModel->findByNameAndCompanyId('Reception', (int) $assignedCompanyId);
                     if ($reception) {
                         $departmentId = (int) $reception['id'];
+                        $departmentIds = [$departmentId];
                     }
                 }
             } else {
-                if ($departmentId === null || $departmentId === '') {
+                if (($departmentId === null || $departmentId === '') && empty($departmentIds)) {
                     jsonResponse(['ok' => false, 'error' => 'department_id is required for department_manager/employee'], 400);
                 }
-                $department = $departmentModel->findById((int) $departmentId);
-                if (!$department) {
+                if (empty($departmentIds) && (int) $departmentId > 0) {
+                    $departmentIds = [(int) $departmentId];
+                }
+                $validatedDepartments = $resolveValidatedDepartments($departmentModel, $departmentIds);
+                if (empty($validatedDepartments)) {
                     jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
                 }
-                $assignedCompanyId = (int) ($department['company_id'] ?? $assignedCompanyId);
+                $departmentId = (int) ($departmentIds[0] ?? 0);
+                $assignedCompanyId = (int) ($validatedDepartments[0]['company_id'] ?? $assignedCompanyId);
+                foreach ($validatedDepartments as $validatedDepartment) {
+                    if ((int) ($validatedDepartment['company_id'] ?? 0) !== (int) $assignedCompanyId) {
+                        jsonResponse(['ok' => false, 'error' => 'All departments must belong to the same company'], 400);
+                    }
+                }
             }
 
             if ((int) $assignedCompanyId <= 0 && !empty($departmentId)) {
@@ -157,12 +236,21 @@ try {
                 $payload['password'] = password_hash($input['password'], PASSWORD_DEFAULT);
             }
             if ($isAdmin && !empty($departmentId)) {
-                $dept = $departmentModel->findById((int) $departmentId);
-                if (!$dept || ($effectiveAdminCompanyId > 0 && (int) ($dept['company_id'] ?? 0) !== $effectiveAdminCompanyId)) {
-                    jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+                $validatedDepartments = $resolveValidatedDepartments($departmentModel, !empty($departmentIds) ? $departmentIds : [(int) $departmentId]);
+                foreach ($validatedDepartments as $dept) {
+                    if ($effectiveAdminCompanyId > 0 && (int) ($dept['company_id'] ?? 0) !== $effectiveAdminCompanyId) {
+                        jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+                    }
                 }
             }
             $userModel->update($id, $payload);
+            if (!empty($departmentIds)) {
+                $userModel->setDepartmentLinks($id, $departmentIds);
+            } elseif ($departmentId !== null && $departmentId !== '') {
+                $userModel->setDepartmentLinks($id, [(int) $departmentId]);
+            } else {
+                $userModel->setDepartmentLinks($id, []);
+            }
             jsonResponse(['ok' => true]);
             break;
 

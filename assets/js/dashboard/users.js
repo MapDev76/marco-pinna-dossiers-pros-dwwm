@@ -18,33 +18,65 @@
     }
   }
 
+  function isUsersPanelActive() {
+    const panel = document.querySelector('.settings-panel[data-settings-panel="users"]');
+    return !!panel && !panel.hidden;
+  }
+
   function getCreateCard() { return document.querySelector('[data-user-create-row]'); }
+  function getSelectedDepartmentIds(scope) {
+    if (!scope) return [];
+    const multi = scope.querySelector('select[data-field="department_ids"]');
+    if (!multi) return [];
+    return Array.from(multi.selectedOptions || [])
+      .map((option) => parseInt(option.value || '0', 10) || 0)
+      .filter((id, index, array) => id > 0 && array.indexOf(id) === index);
+  }
+
   function resetCreateUserForm() {
     const card = getCreateCard(); if (!card) return;
-    ['first_name','last_name','email','role','department_id','password'].forEach((f) => {
+    ['first_name','last_name','email','role','password'].forEach((f) => {
       const el = card.querySelector('[data-field="' + f + '"]'); if (!el) return;
       if (el.tagName === 'SELECT') el.selectedIndex = 0; else el.value = '';
     });
+    const departments = card.querySelector('select[data-field="department_ids"]');
+    if (departments) {
+      Array.from(departments.options || []).forEach((option) => {
+        option.selected = false;
+      });
+    }
   }
 
   function collectCreateData() {
     const c = getCreateCard(); if (!c) return null;
     const settingsCompanyId = document.querySelector('[data-settings-company-select]')?.value || '';
     const companyIdFromRow = c.querySelector('[data-field="company_id"]')?.value || '';
+    const departmentIds = getSelectedDepartmentIds(c);
     return {
       first_name: c.querySelector('[data-field="first_name"]')?.value.trim() || '',
       last_name: c.querySelector('[data-field="last_name"]')?.value.trim() || '',
       email: c.querySelector('[data-field="email"]')?.value.trim() || '',
       role: c.querySelector('[data-field="role"]')?.value || 'employee',
-      department_id: c.querySelector('[data-field="department_id"]')?.value || null,
+      department_id: departmentIds[0] || null,
+      department_ids: departmentIds,
       company_id: companyIdFromRow || settingsCompanyId || null,
       password: c.querySelector('[data-field="password"]')?.value || ''
     };
   }
 
+  function validateDepartmentsForRole(role, departmentIds) {
+    if (role !== 'department_manager') return true;
+    if (Array.isArray(departmentIds) && departmentIds.length > 0) return true;
+    const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+    const isFr = locale.startsWith('fr');
+    notifyError(isFr ? 'Selectionnez au moins un departement pour le responsable de departement.' : 'Select at least one department for a department manager.');
+    return false;
+  }
+
   async function createUser() {
     const data = collectCreateData(); if (!data) return notifyError('Form not found.');
     if (!data.first_name || !data.last_name || !data.email) return notifyError('Fill required fields.');
+    if (!validateDepartmentsForRole(data.role, data.department_ids)) return;
     try {
       const res = await AppAPI.users.create(apiUrl, data);
       if (res?.ok) {
@@ -93,9 +125,12 @@
       last_name: card.querySelector('[data-field="last_name"]')?.value || '',
       email: card.querySelector('[data-field="email"]')?.value || '',
       role: card.querySelector('[data-field="role"]')?.value || 'employee',
-      department_id: card.querySelector('[data-field="department_id"]')?.value || null,
+      department_id: null,
+      department_ids: getSelectedDepartmentIds(card),
       status: card.querySelector('[data-field="status"]')?.value || 'active',
     };
+    payload.department_id = payload.department_ids[0] || null;
+    if (!validateDepartmentsForRole(payload.role, payload.department_ids)) return;
     const pwd = card.querySelector('[data-field="password"]')?.value || '';
     if (pwd) payload.password = pwd;
     try {
@@ -179,6 +214,18 @@
     if (saveBtn) { ev.preventDefault(); const card = getUserCard(saveBtn); saveUser(card); return; }
     const delBtn = ev.target.closest && ev.target.closest('.settings-user-delete');
     if (delBtn) { ev.preventDefault(); const card = getUserCard(delBtn); deleteUser(card); return; }
+  });
+
+  document.addEventListener('mousedown', (ev) => {
+    if (!isUsersPanelActive()) return;
+    const option = ev.target.closest && ev.target.closest('option');
+    if (!option) return;
+    const select = option.parentElement;
+    if (!select || select.tagName !== 'SELECT') return;
+    if (select.getAttribute('data-field') !== 'department_ids' || !select.multiple) return;
+    ev.preventDefault();
+    option.selected = !option.selected;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
   resetCreateUserForm();

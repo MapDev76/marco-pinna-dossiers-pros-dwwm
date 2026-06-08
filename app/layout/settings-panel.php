@@ -166,6 +166,25 @@ $localizedSystemShiftName = static function (string $kind, string $defaultName =
 };
 
 $isFrLocale = str_starts_with(strtolower((string) appLocale()), 'fr');
+$weekdayLabels = $isFrLocale
+    ? [
+        0 => 'Dimanche',
+        1 => 'Lundi',
+        2 => 'Mardi',
+        3 => 'Mercredi',
+        4 => 'Jeudi',
+        5 => 'Vendredi',
+        6 => 'Samedi',
+    ]
+    : [
+        0 => 'Sunday',
+        1 => 'Monday',
+        2 => 'Tuesday',
+        3 => 'Wednesday',
+        4 => 'Thursday',
+        5 => 'Friday',
+        6 => 'Saturday',
+    ];
 
 $localizedShiftKindLabel = static function (string $kind) use ($isFrLocale): string {
     $kind = strtolower(trim($kind));
@@ -1652,12 +1671,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             </select>
                         </label>
                         <label class="settings-field"><?php echo e(t('common.department')); ?>
-                            <select data-field="department_id">
-                                <option value="">-- <?php echo e(t('crud.none')); ?> --</option>
+                            <select data-field="department_ids" multiple size="4">
                                 <?php foreach ($visibleDepartments as $department): ?>
                                     <option value="<?php echo (int) ($department['id'] ?? 0); ?>"><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <small class="settings-shift-create-hint"><?php echo e($isFrLocale ? 'Pour employee: selection multiple autorisee.' : 'For employee: multiple selection is allowed.'); ?></small>
                         </label>
                         <label class="settings-field"><?php echo e(t('crud.password')); ?><input data-field="password" type="text" value=""></label>
                         <div class="settings-inline-actions">
@@ -1681,12 +1700,26 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="crud-empty-state"><?php echo e(t('settings.no_users_assigned')); ?></div>
                     <?php else: ?>
                         <?php foreach (array_slice($visibleUsers, 0, 200) as $user): ?>
+                            <?php
+                                $userDepartmentIds = is_array($user['department_ids'] ?? null)
+                                    ? array_values(array_filter(array_map('intval', $user['department_ids']), static fn (int $id): bool => $id > 0))
+                                    : [];
+                                if (empty($userDepartmentIds) && (int) ($user['department_id'] ?? 0) > 0) {
+                                    $userDepartmentIds[] = (int) ($user['department_id'] ?? 0);
+                                }
+                                $userDepartmentNames = is_array($user['department_names'] ?? null)
+                                    ? array_values(array_filter(array_map(static fn ($name): string => trim((string) $name), $user['department_names']), static fn (string $name): bool => $name !== ''))
+                                    : [];
+                                if (empty($userDepartmentNames) && trim((string) ($user['department_name'] ?? '')) !== '') {
+                                    $userDepartmentNames[] = trim((string) ($user['department_name'] ?? ''));
+                                }
+                            ?>
                             <article class="settings-list-item-wrap" data-user-id="<?php echo (int) ($user['id'] ?? 0); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-user">
                                     <strong><?php echo e(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?: t('settings.user_default')); ?></strong>
                                     <span><?php echo e($user['email'] ?? ''); ?></span>
                                     <span><?php echo e($roleLabels[$user['role'] ?? 'employee'] ?? ucfirst((string) ($user['role'] ?? 'employee'))); ?></span>
-                                    <span><?php echo e($user['department_name'] ?? '--'); ?></span>
+                                    <span><?php echo e(!empty($userDepartmentNames) ? implode(', ', $userDepartmentNames) : '--'); ?></span>
                                     <span><?php echo e($user['status'] ?? 'active'); ?></span>
                                     <div class="settings-inline-actions">
                                         <button type="button" class="admin-action-link admin-action-link-secondary settings-user-edit" aria-label="<?php echo e(t('crud.edit_user')); ?>" title="<?php echo e(t('crud.edit_user')); ?>">✎ <?php echo e(t('settings.edit')); ?></button>
@@ -1708,12 +1741,13 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             </select>
                                         </label>
                                         <label class="settings-field"><?php echo e(t('common.department')); ?>
-                                            <select data-field="department_id">
-                                                <option value="">-- <?php echo e(t('crud.none')); ?> --</option>
+                                            <select data-field="department_ids" multiple size="4">
                                                 <?php foreach ($visibleDepartments as $department): ?>
-                                                    <option value="<?php echo (int) ($department['id'] ?? 0); ?>" <?php echo ((int) ($user['department_id'] ?? 0) === (int) ($department['id'] ?? 0)) ? 'selected' : ''; ?>><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
+                                                    <?php $departmentOptionId = (int) ($department['id'] ?? 0); ?>
+                                                    <option value="<?php echo $departmentOptionId; ?>" <?php echo in_array($departmentOptionId, $userDepartmentIds, true) ? 'selected' : ''; ?>><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
                                                 <?php endforeach; ?>
                                             </select>
+                                            <small class="settings-shift-create-hint"><?php echo e($isFrLocale ? 'Pour employee: selection multiple autorisee.' : 'For employee: multiple selection is allowed.'); ?></small>
                                         </label>
                                         <label class="settings-field"><?php echo e(t('common.status')); ?>
                                             <select data-field="status">
@@ -1772,6 +1806,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <?php endif; ?>
                             <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-field="range_start" type="date" value=""></label>
                             <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-field="range_end" type="date" value=""></label>
+                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Repos hebdomadaires' : 'Weekly rest days'); ?>
+                                <select data-field="weekly_rest_weekdays" multiple size="4">
+                                    <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
+                                        <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <small class="settings-shift-create-hint"><?php echo e($isFrLocale ? 'Les jours selectionnes ne generent pas de postes ouverts.' : 'Selected days will not generate open slots.'); ?></small>
+                            </label>
                         </div>
 
                         <div class="settings-shift-create-column settings-shift-create-column-right">

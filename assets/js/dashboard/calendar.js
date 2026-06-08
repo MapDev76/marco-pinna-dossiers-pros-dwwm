@@ -786,6 +786,7 @@
       userId: 0,
       workDate: '',
       anchorKey: '',
+      actionHandled: false,
     };
 
     function resolveTemplateIconPath(kind, fallbackIconFile) {
@@ -892,13 +893,17 @@
       badgeActionState.userId = Number(context.userId || 0);
       badgeActionState.workDate = String(context.workDate || '');
       badgeActionState.anchorKey = targetAnchorKey;
+      badgeActionState.actionHandled = false;
     }
 
-    badgeActionMenu.addEventListener('click', function (event) {
+    function handleBadgeAction(event) {
       var actionButton = event.target.closest('[data-calendar-badge-action]');
       if (!actionButton) return;
       event.preventDefault();
       event.stopPropagation();
+
+      if (badgeActionState.actionHandled) return;
+      badgeActionState.actionHandled = true;
 
       var action = String(actionButton.getAttribute('data-calendar-badge-action') || '').toLowerCase();
       var assignmentId = Number(badgeActionState.assignmentId || 0);
@@ -910,9 +915,11 @@
         return;
       }
 
+      // Close immediately so the popup never stays stuck on screen.
+      closeBadgeActionMenu();
+
       if (!workDate || isPastDateKey(workDate)) {
         notifyError('Past days are locked and cannot be edited.');
-        closeBadgeActionMenu();
         return;
       }
 
@@ -925,7 +932,6 @@
           try {
             await unassignAssignment(assignmentId);
             notifySuccess(tr('Shift unassigned successfully.', 'Poste desassigne avec succes.'));
-            closeBadgeActionMenu();
           } catch (error) {
             notifyError((error && error.message) || tr('Unable to unassign shift.', 'Impossible de desassigner le poste.'));
           }
@@ -954,11 +960,18 @@
             force_override: true,
           });
           notifySuccess(tr('Absence assigned successfully.', 'Absence assignee avec succes.'));
-          closeBadgeActionMenu();
         } catch (error) {
           notifyError((error && error.message) || tr('Unable to assign absence.', 'Impossible d assigner l absence.'));
         }
       })();
+    }
+
+    badgeActionMenu.addEventListener('click', handleBadgeAction);
+    badgeActionMenu.addEventListener('pointerdown', function (event) {
+      var actionButton = event.target.closest('[data-calendar-badge-action]');
+      if (!actionButton) return;
+      event.preventDefault();
+      handleBadgeAction(event);
     });
 
     document.addEventListener('click', function (event) {
