@@ -167,7 +167,7 @@ if ($route === 'home') {
         'type' => 'link',
         'href' => appUrl('logout'),
         'title' => t('common.logout'),
-        'icon' => 'logout.svg',
+        'icon' => 'log-out.svg',
         'alt' => t('common.logout'),
     ];
 }

@@ -33,6 +33,11 @@
   const employeeModalShiftsClearBtn = employeeModal?.querySelector('[data-assignment-modal-shifts-clear-selection]') || null;
   const employeeModalShiftsUnassignSelectedBtn = employeeModal?.querySelector('[data-assignment-modal-shifts-unassign-selected]') || null;
   const employeeModalShiftsUnassignAllBtn = employeeModal?.querySelector('[data-assignment-modal-shifts-unassign-all]') || null;
+  const employeeModalMonthWeekdays = employeeModal?.querySelector('[data-assignment-modal-month-weekdays]') || null;
+  const employeeModalRotateToggle = employeeModal?.querySelector('[data-assignment-modal-rotate-toggle]') || null;
+  const employeeModalRotationPreview = employeeModal?.querySelector('[data-assignment-modal-rotation-preview]') || null;
+  const employeeModalSaveMonthOverride = employeeModal?.querySelector('[data-assignment-modal-save-month-override]') || null;
+  const employeeModalClearMonthOverride = employeeModal?.querySelector('[data-assignment-modal-clear-month-override]') || null;
   const employeeModalWeekly = employeeModal?.querySelector('[data-assignment-modal-weekly]') || null;
   const employeeModalPeriodMode = employeeModal?.querySelector('[data-assignment-modal-period-mode]') || null;
   const employeeModalPeriodMonth = employeeModal?.querySelector('[data-assignment-modal-period-month]') || null;
@@ -50,6 +55,14 @@
   const employeeModalAbsenceFrom = employeeModal?.querySelector('[data-assignment-modal-absence-from]') || null;
   const employeeModalAbsenceTo = employeeModal?.querySelector('[data-assignment-modal-absence-to]') || null;
   const employeeModalAbsenceType = employeeModal?.querySelector('[data-assignment-modal-absence-type]') || null;
+  const globalAutoAssignShiftList = document.querySelector('[data-auto-assign-shift-list]');
+  const globalAutoAssignRestStrategy = document.querySelector('[data-auto-assign-rest-strategy]');
+  const globalAutoAssignForecast = document.querySelector('[data-auto-assign-forecast]');
+  const globalAutoAssignForecastSummary = document.querySelector('[data-auto-assign-forecast-summary]');
+  const globalAutoAssignImpact = document.querySelector('[data-auto-assign-impact]');
+  const globalAutoAssignForecastTips = document.querySelector('[data-auto-assign-forecast-tips]');
+  const globalAutoAssignPreviewModal = document.querySelector('[data-auto-assign-preview-modal]');
+  const globalAutoAssignPreviewGrid = document.querySelector('[data-auto-assign-preview-grid]');
   const shiftCatalogNode = document.querySelector('[data-assignment-shift-catalog]');
   const shiftCatalog = (() => {
     if (!shiftCatalogNode) return [];
@@ -68,6 +81,38 @@
   let employeeModalShiftRows = [];
   let selectedOpenSlotKeys = new Set();
   let selectedOpenShiftFilterIds = new Set();
+  let lastGlobalForecastResponse = null;
+  let isRunningConfirmedAutoAssign = false;
+
+  const AUTO_ASSIGN_POLICY_PRESETS = {
+    balanced: {
+      minEmployees: 1,
+      maxEmployees: 3,
+      minRestDays: 1,
+      maxRestDays: 2,
+      minWorkDays: 4,
+      maxWorkDays: 6,
+      restStrategy: 'staggered',
+    },
+    coverage: {
+      minEmployees: 1,
+      maxEmployees: 4,
+      minRestDays: 0,
+      maxRestDays: 1,
+      minWorkDays: 5,
+      maxWorkDays: 7,
+      restStrategy: 'fixed',
+    },
+    wellbeing: {
+      minEmployees: 1,
+      maxEmployees: 3,
+      minRestDays: 2,
+      maxRestDays: 3,
+      minWorkDays: 3,
+      maxWorkDays: 5,
+      restStrategy: 'staggered',
+    },
+  };
 
   function escapeHtml(value) {
     return String(value || '')
@@ -109,6 +154,87 @@
   function isAssignmentsPanelActive() {
     const panel = document.querySelector('.settings-panel[data-settings-panel="assignments"]');
     return !!panel && !panel.hidden;
+  }
+
+  function getPlannerRuntimeSnapshot() {
+    const runtime = window.DashboardPlannerRuntime;
+    if (!runtime || typeof runtime.getEvents !== 'function') {
+      return { events: [], departments: [] };
+    }
+    const events = Array.isArray(runtime.getEvents()) ? runtime.getEvents() : [];
+    const departments = typeof runtime.getDepartments === 'function' && Array.isArray(runtime.getDepartments())
+      ? runtime.getDepartments()
+      : [];
+    return { events, departments };
+  }
+
+  function refreshAssignmentEmployeeIndexStats() {
+    const indexNode = document.querySelector('[data-assignment-employee-index]');
+    if (!indexNode) return;
+
+    const employeeButtons = Array.from(indexNode.querySelectorAll('[data-assignment-employee-open]'));
+    if (!employeeButtons.length) return;
+
+    const monthPrefix = `${currentMonthKey()}-`;
+    const { events } = getPlannerRuntimeSnapshot();
+    const statsByUser = new Map();
+
+    employeeButtons.forEach((button) => {
+      const userId = parseInt(String(button.getAttribute('data-user-id') || '0'), 10) || 0;
+      const primaryDepartmentId = parseInt(String(button.getAttribute('data-user-department-id') || '0'), 10) || 0;
+      if (!userId) return;
+      statsByUser.set(userId, {
+        primaryDepartmentId,
+        crossDepartmentAssigned: 0,
+        restDone: 0,
+        workedDays: new Set(),
+      });
+    });
+
+    events.forEach((event) => {
+      const userId = parseInt(String(event?.user_id || '0'), 10) || 0;
+      if (!userId || !statsByUser.has(userId)) return;
+      const status = String(event?.status || '').toLowerCase();
+      if (status === 'cancelled' || status === 'open') return;
+
+      const workDate = normalizeDateKey(String(event?.work_date || ''));
+      if (!workDate || !workDate.startsWith(monthPrefix)) return;
+
+      const shiftKind = String(event?.shift_kind || 'work').toLowerCase();
+      const departmentId = parseInt(String(event?.department_id || '0'), 10) || 0;
+      const stat = statsByUser.get(userId);
+      if (!stat) return;
+
+      if (shiftKind === 'rest') {
+        stat.restDone += 1;
+        return;
+      }
+
+      if (shiftKind === 'work') {
+        stat.workedDays.add(workDate);
+        if (departmentId > 0 && stat.primaryDepartmentId > 0 && departmentId !== stat.primaryDepartmentId) {
+          stat.crossDepartmentAssigned += 1;
+        }
+      }
+    });
+
+    employeeButtons.forEach((button) => {
+      const userId = parseInt(String(button.getAttribute('data-user-id') || '0'), 10) || 0;
+      const stats = statsByUser.get(userId);
+      if (!stats) return;
+      const smallNode = button.querySelector('small');
+      if (!smallNode) return;
+      const workedDaysCount = stats.workedDays.size;
+      const crossClass = stats.crossDepartmentAssigned > 0 ? 'is-positive' : 'is-neutral';
+      const restClass = stats.restDone <= 0 ? 'is-negative' : stats.restDone <= 2 ? 'is-warning' : 'is-positive';
+      const workedClass = workedDaysCount < 12 ? 'is-warning' : workedDaysCount > 24 ? 'is-negative' : 'is-positive';
+      smallNode.classList.add('settings-assignment-employee-stats');
+      smallNode.innerHTML = [
+        `<span class="settings-assignment-employee-stat ${crossClass}">${escapeHtml(tr('Other dept', 'Autre departement'))}: ${stats.crossDepartmentAssigned}</span>`,
+        `<span class="settings-assignment-employee-stat ${restClass}">${escapeHtml(tr('Rest done', 'Repos faits'))}: ${stats.restDone}</span>`,
+        `<span class="settings-assignment-employee-stat ${workedClass}">${escapeHtml(tr('Worked days', 'Jours travailles'))}: ${workedDaysCount}</span>`
+      ].join(' ');
+    });
   }
 
   function getAssignmentsListWrap() {
@@ -261,18 +387,451 @@
   }
 
   function getOpenShiftSelection() {
-    const shiftMode = String(employeeModalShiftMode?.value || 'all');
-    if (shiftMode === 'one') {
-      const shiftId = parseInt(String(employeeModalOpenShift?.value || '0'), 10) || 0;
-      return { mode: shiftMode, scopeShiftId: shiftId, allowedShiftIds: shiftId > 0 ? [shiftId] : [] };
+    const allShiftIds = getDepartmentWorkShifts()
+      .map((item) => parseInt(String(item?.id || '0'), 10) || 0)
+      .filter((value) => value > 0);
+    const selectedIds = Array.from(selectedOpenShiftFilterIds)
+      .map((value) => parseInt(String(value || '0'), 10) || 0)
+      .filter((value) => value > 0);
+    const allowedShiftIds = selectedIds.length ? selectedIds : allShiftIds;
+    return { mode: 'some', scopeShiftId: 0, allowedShiftIds };
+  }
+
+  function getGlobalShiftSelection() {
+    const selectedShiftIds = Array.from(globalAutoAssignShiftList?.querySelectorAll('[data-auto-assign-shift-id]:checked') || [])
+      .map((input) => parseInt(String(input.getAttribute('data-auto-assign-shift-id') || '0'), 10) || 0)
+      .filter((value) => value > 0);
+
+    return {
+      mode: 'selected',
+      scopeShiftId: 0,
+      allowedShiftIds: selectedShiftIds,
+    };
+  }
+
+  function getGlobalAutoAssignParams() {
+    const range = normalizeCurrentMonthRange(
+      document.querySelector('[data-auto-assign-range-start]')?.value || '',
+      document.querySelector('[data-auto-assign-range-end]')?.value || ''
+    );
+    const minEmployeesRaw = parseInt(document.querySelector('[data-auto-assign-min-employees]')?.value || '1', 10);
+    const maxEmployeesRaw = parseInt(document.querySelector('[data-auto-assign-max-employees]')?.value || '3', 10);
+    const minRestDaysRaw = parseInt(document.querySelector('[data-auto-assign-min-rest-days]')?.value || '1', 10);
+    const maxRestDaysRaw = parseInt(document.querySelector('[data-auto-assign-max-rest-days]')?.value || '2', 10);
+    const minWorkDaysRaw = parseInt(document.querySelector('[data-auto-assign-min-work-days]')?.value || '4', 10);
+    const maxWorkDaysRaw = parseInt(document.querySelector('[data-auto-assign-max-work-days]')?.value || '6', 10);
+    const minEmployeesPerShiftDay = Number.isFinite(minEmployeesRaw) ? Math.max(0, minEmployeesRaw) : 1;
+    const maxEmployeesPerShiftDay = Number.isFinite(maxEmployeesRaw) ? Math.max(1, maxEmployeesRaw) : 3;
+    const normalizedMin = Math.min(minEmployeesPerShiftDay, maxEmployeesPerShiftDay);
+    const normalizedMax = Math.max(minEmployeesPerShiftDay, maxEmployeesPerShiftDay);
+    const normalizedMinRestDays = Number.isFinite(minRestDaysRaw) ? Math.min(6, Math.max(0, minRestDaysRaw)) : 1;
+    const normalizedMaxRestDays = Number.isFinite(maxRestDaysRaw) ? Math.min(6, Math.max(0, maxRestDaysRaw)) : 2;
+    const boundedMinRestDays = Math.min(normalizedMinRestDays, normalizedMaxRestDays);
+    const boundedMaxRestDays = Math.max(normalizedMinRestDays, normalizedMaxRestDays);
+    const normalizedMinWorkDays = Number.isFinite(minWorkDaysRaw) ? Math.min(7, Math.max(1, minWorkDaysRaw)) : 4;
+    const normalizedMaxWorkDays = Number.isFinite(maxWorkDaysRaw) ? Math.min(7, Math.max(1, maxWorkDaysRaw)) : 6;
+    const boundedMinWorkDays = Math.min(normalizedMinWorkDays, normalizedMaxWorkDays);
+    const boundedMaxWorkDays = Math.max(normalizedMinWorkDays, normalizedMaxWorkDays);
+    const globalShiftSelection = getGlobalShiftSelection();
+    const restStrategyRaw = String(globalAutoAssignRestStrategy?.value || 'fixed').toLowerCase();
+    const restDistributionMode = ['fixed', 'staggered', 'random'].includes(restStrategyRaw) ? restStrategyRaw : 'fixed';
+    return {
+      range,
+      normalizedMin,
+      normalizedMax,
+      boundedMinRestDays,
+      boundedMaxRestDays,
+      boundedMinWorkDays,
+      boundedMaxWorkDays,
+      globalShiftSelection,
+      restDistributionMode,
+    };
+  }
+
+  function evaluateCurrentOpenCoverage(rangeStart, rangeEnd, allowedShiftIds) {
+    const { events } = getPlannerRuntimeSnapshot();
+    const range = normalizeDateRange(rangeStart, rangeEnd);
+    if (!range) {
+      return { currentOpenSlots: 0, currentUncoveredDays: 0 };
     }
-    if (shiftMode === 'some') {
-      const ids = Array.from(selectedOpenShiftFilterIds)
-        .map((value) => parseInt(String(value || '0'), 10) || 0)
-        .filter((value) => value > 0);
-      return { mode: shiftMode, scopeShiftId: 0, allowedShiftIds: ids };
+
+    const allowed = new Set((Array.isArray(allowedShiftIds) ? allowedShiftIds : [])
+      .map((id) => parseInt(String(id || '0'), 10) || 0)
+      .filter((id) => id > 0));
+    const groups = new Map();
+    const uncoveredDays = new Set();
+
+    events.forEach((event) => {
+      const workDate = normalizeDateKey(String(event?.work_date || ''));
+      if (!workDate || workDate < range.start || workDate > range.end) return;
+      const shiftKind = String(event?.shift_kind || 'work').toLowerCase();
+      if (shiftKind !== 'work') return;
+      const shiftId = parseInt(String(event?.shift_id || '0'), 10) || 0;
+      if (allowed.size > 0 && (!shiftId || !allowed.has(shiftId))) return;
+      const departmentId = parseInt(String(event?.department_id || '0'), 10) || 0;
+      const userId = parseInt(String(event?.user_id || '0'), 10) || 0;
+      const status = String(event?.status || '').toLowerCase();
+      const assignmentSource = String(event?.assignment_source || '').toLowerCase();
+      const groupKey = `${workDate}|${departmentId}|${shiftId}`;
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          workDate,
+          hasAssignedEmployee: false,
+          hasOpenSlot: false,
+        });
+      }
+      const group = groups.get(groupKey);
+      if (!group) return;
+      if (userId > 0) {
+        group.hasAssignedEmployee = true;
+      }
+      if (status === 'open' || assignmentSource === 'open' || !!event?.is_virtual_open) {
+        group.hasOpenSlot = true;
+      }
+    });
+
+    let currentOpenSlots = 0;
+    groups.forEach((group) => {
+      if (group.hasAssignedEmployee) return;
+      if (!group.hasOpenSlot) return;
+      currentOpenSlots += 1;
+      uncoveredDays.add(group.workDate);
+    });
+
+    return {
+      currentOpenSlots,
+      currentUncoveredDays: uncoveredDays.size,
+    };
+  }
+
+  function estimateProjectedUncoveredDays(currentUncoveredDays, predictedRemainingOpenSlots) {
+    const normalizedCurrent = Math.max(0, Number(currentUncoveredDays || 0));
+    const normalizedRemaining = Math.max(0, Number(predictedRemainingOpenSlots || 0));
+    if (normalizedRemaining <= 0) return 0;
+    if (normalizedCurrent <= 0) return 0;
+    return Math.min(normalizedCurrent, normalizedRemaining);
+  }
+
+  function renderForecastImpact(data) {
+    if (!globalAutoAssignImpact) return;
+    const raw = data?.forecast && typeof data.forecast === 'object' ? data.forecast : null;
+    if (!raw) {
+      globalAutoAssignImpact.innerHTML = '';
+      return;
     }
-    return { mode: 'all', scopeShiftId: 0, allowedShiftIds: [] };
+    const predictedRemainingAtMin = Number(raw.predicted_remaining_at_min || 0);
+    const currentOpenSlots = Number(raw.slots_open || 0);
+    const projectedCovered = Math.max(0, currentOpenSlots - predictedRemainingAtMin);
+    const currentUncoveredDays = Number(raw.uncovered_days_open || 0);
+    const predictedUncoveredDays = estimateProjectedUncoveredDays(currentUncoveredDays, predictedRemainingAtMin);
+    const uncoveredDaysDelta = currentUncoveredDays - predictedUncoveredDays;
+    const params = getGlobalAutoAssignParams();
+
+    const chips = [
+      {
+        label: `${tr('Open now', 'Ouverts maintenant')}: ${currentOpenSlots}`,
+        className: currentOpenSlots > 0 ? 'is-warning' : 'is-positive',
+      },
+      {
+        label: `${tr('Projected covered', 'Couverture projetee')}: +${projectedCovered}`,
+        className: projectedCovered > 0 ? 'is-positive' : 'is-negative',
+      },
+      {
+        label: `${tr('Projected open after run', 'Ouverts projetes apres execution')}: ${predictedRemainingAtMin}`,
+        className: predictedRemainingAtMin > 0 ? 'is-warning' : 'is-positive',
+      },
+      {
+        label: `${tr('Uncovered days delta', 'Delta jours non couverts')}: ${uncoveredDaysDelta >= 0 ? '+' : ''}${uncoveredDaysDelta}`,
+        className: uncoveredDaysDelta > 0 ? 'is-positive' : uncoveredDaysDelta < 0 ? 'is-negative' : 'is-warning',
+      },
+      {
+        label: `${tr('Policy window', 'Fenetre policy')}: ${params.boundedMinWorkDays}-${params.boundedMaxWorkDays} ${tr('work', 'travail')} / ${params.boundedMinRestDays}-${params.boundedMaxRestDays} ${tr('rest', 'repos')}`,
+        className: 'is-warning',
+      },
+    ];
+
+    globalAutoAssignImpact.innerHTML = chips
+      .map((chip) => `<span class="settings-auto-assign-impact-chip ${chip.className}">${escapeHtml(String(chip.label || ''))}</span>`)
+      .join('');
+  }
+
+  function closeAutoAssignPreviewModal() {
+    if (globalAutoAssignPreviewModal) {
+      globalAutoAssignPreviewModal.hidden = true;
+    }
+  }
+
+  function renderAutoAssignPreviewModal(forecastResponse) {
+    if (!globalAutoAssignPreviewModal || !globalAutoAssignPreviewGrid) return false;
+    const raw = forecastResponse?.forecast && typeof forecastResponse.forecast === 'object' ? forecastResponse.forecast : null;
+    if (!raw) return false;
+    const currentOpenSlots = Number(raw.slots_open || 0);
+    const projectedOpenSlots = Number(raw.predicted_remaining_at_min || 0);
+    const currentUncoveredDays = Number(raw.uncovered_days_open || 0);
+    const projectedUncoveredDays = estimateProjectedUncoveredDays(currentUncoveredDays, projectedOpenSlots);
+    const currentNeedToMinimum = Number(raw.required_to_minimum || 0);
+    const projectedCovered = Math.max(0, currentOpenSlots - projectedOpenSlots);
+    const rows = [
+      {
+        label: tr('Open slots', 'Postes ouverts'),
+        before: currentOpenSlots,
+        after: projectedOpenSlots,
+        delta: projectedOpenSlots - currentOpenSlots,
+        positiveWhenLower: true,
+      },
+      {
+        label: tr('Uncovered days', 'Jours non couverts'),
+        before: currentUncoveredDays,
+        after: projectedUncoveredDays,
+        delta: projectedUncoveredDays - currentUncoveredDays,
+        positiveWhenLower: true,
+      },
+      {
+        label: tr('Assignments expected', 'Affectations attendues'),
+        before: 0,
+        after: projectedCovered,
+        delta: projectedCovered,
+        positiveWhenLower: false,
+      },
+      {
+        label: tr('Need to reach minimum', 'Besoin min'),
+        before: currentNeedToMinimum,
+        after: projectedOpenSlots,
+        delta: projectedOpenSlots - currentNeedToMinimum,
+        positiveWhenLower: true,
+      },
+    ];
+
+    globalAutoAssignPreviewGrid.innerHTML = rows.map((row) => {
+      const deltaValue = Number(row.delta || 0);
+      const className = deltaValue === 0
+        ? 'is-warning'
+        : row.positiveWhenLower
+          ? (deltaValue < 0 ? 'is-positive' : 'is-negative')
+          : (deltaValue > 0 ? 'is-positive' : 'is-negative');
+      const deltaLabel = `${deltaValue > 0 ? '+' : ''}${deltaValue}`;
+      return `
+        <div class="settings-auto-assign-preview-row">
+          <span class="settings-auto-assign-preview-row-label">${escapeHtml(row.label)}</span>
+          <span class="settings-auto-assign-preview-row-values">${escapeHtml(String(row.before))} -> ${escapeHtml(String(row.after))}</span>
+          <span class="settings-auto-assign-preview-row-delta ${className}">${escapeHtml(deltaLabel)}</span>
+        </div>
+      `;
+    }).join('');
+    globalAutoAssignPreviewModal.hidden = false;
+    return true;
+  }
+
+  function resolveMatchingPolicyPreset() {
+    const minEmployees = parseInt(document.querySelector('[data-auto-assign-min-employees]')?.value || '0', 10) || 0;
+    const maxEmployees = parseInt(document.querySelector('[data-auto-assign-max-employees]')?.value || '0', 10) || 0;
+    const minRestDays = parseInt(document.querySelector('[data-auto-assign-min-rest-days]')?.value || '0', 10) || 0;
+    const maxRestDays = parseInt(document.querySelector('[data-auto-assign-max-rest-days]')?.value || '0', 10) || 0;
+    const minWorkDays = parseInt(document.querySelector('[data-auto-assign-min-work-days]')?.value || '0', 10) || 0;
+    const maxWorkDays = parseInt(document.querySelector('[data-auto-assign-max-work-days]')?.value || '0', 10) || 0;
+    const restStrategy = String(globalAutoAssignRestStrategy?.value || 'fixed').toLowerCase();
+    const presetKey = Object.keys(AUTO_ASSIGN_POLICY_PRESETS).find((key) => {
+      const preset = AUTO_ASSIGN_POLICY_PRESETS[key];
+      return preset
+        && preset.minEmployees === minEmployees
+        && preset.maxEmployees === maxEmployees
+        && preset.minRestDays === minRestDays
+        && preset.maxRestDays === maxRestDays
+        && preset.minWorkDays === minWorkDays
+        && preset.maxWorkDays === maxWorkDays
+        && preset.restStrategy === restStrategy;
+    });
+    return presetKey || '';
+  }
+
+  function updatePolicyPresetUi(activePreset) {
+    const buttons = Array.from(document.querySelectorAll('[data-auto-assign-preset]'));
+    buttons.forEach((button) => {
+      const key = String(button.getAttribute('data-auto-assign-preset') || '');
+      const isActive = key !== '' && key === activePreset;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  }
+
+  function applyPolicyPreset(presetKey) {
+    const preset = AUTO_ASSIGN_POLICY_PRESETS[presetKey];
+    if (!preset) return;
+    const minEmployeesInput = document.querySelector('[data-auto-assign-min-employees]');
+    const maxEmployeesInput = document.querySelector('[data-auto-assign-max-employees]');
+    const minRestDaysInput = document.querySelector('[data-auto-assign-min-rest-days]');
+    const maxRestDaysInput = document.querySelector('[data-auto-assign-max-rest-days]');
+    const minWorkDaysInput = document.querySelector('[data-auto-assign-min-work-days]');
+    const maxWorkDaysInput = document.querySelector('[data-auto-assign-max-work-days]');
+    if (minEmployeesInput) minEmployeesInput.value = String(preset.minEmployees);
+    if (maxEmployeesInput) maxEmployeesInput.value = String(preset.maxEmployees);
+    if (minRestDaysInput) minRestDaysInput.value = String(preset.minRestDays);
+    if (maxRestDaysInput) maxRestDaysInput.value = String(preset.maxRestDays);
+    if (minWorkDaysInput) minWorkDaysInput.value = String(preset.minWorkDays);
+    if (maxWorkDaysInput) maxWorkDaysInput.value = String(preset.maxWorkDays);
+    if (globalAutoAssignRestStrategy) {
+      globalAutoAssignRestStrategy.value = preset.restStrategy;
+    }
+    updatePolicyPresetUi(presetKey);
+    refreshGlobalForecast();
+  }
+
+  function renderGlobalForecast(data) {
+    if (!globalAutoAssignForecast) return;
+    const status = String(data?.status || 'unknown');
+    const raw = data?.forecast && typeof data.forecast === 'object' ? data.forecast : null;
+    const tips = [];
+    let summary = '';
+
+    if (raw) {
+      const shiftDaysTotal = Number(raw.shift_days_total || 0);
+      const uncoveredByOpen = Number(raw.uncovered_days_open || 0);
+      const coveredAtMinGroups = Number(raw.covered_at_min_groups || 0);
+      const requiredToMinimum = Number(raw.required_to_minimum || 0);
+      const predictedRemainingAtMin = Number(raw.predicted_remaining_at_min || 0);
+      const predictedSurplusCapacity = Number(raw.predicted_surplus_capacity || 0);
+      const openSlots = Number(raw.slots_open || 0);
+      const restMode = String(data?.rest_distribution_mode || 'fixed');
+      const crossSuggestions = Array.isArray(data?.cross_department_suggestions) ? data.cross_department_suggestions : [];
+      const uncoveredDays = Array.isArray(data?.uncovered_days) ? data.uncovered_days : [];
+      const shiftCreationSuggestions = Array.isArray(data?.shift_creation_suggestions) ? data.shift_creation_suggestions : [];
+
+      if (status === 'shortage') {
+        summary = tr('Potential shortage detected for selected range.', 'Risque de manque detecte pour la plage selectionnee.');
+      } else if (status === 'surplus') {
+        summary = tr('Potential surplus detected for selected range.', 'Potentiel surplus detecte pour la plage selectionnee.');
+      } else {
+        summary = tr('Coverage looks balanced for selected range.', 'La couverture semble equilibree pour la plage selectionnee.');
+      }
+
+      if (Number(raw.employees_in_scope || 0) <= 0) {
+        tips.push(tr('No active employees in scope. Add employees or expand scope.', 'Aucun employe actif dans le scope. Ajoutez des employes ou elargissez le scope.'));
+      }
+      if (status === 'shortage') {
+        tips.push(tr('Reduce weekly rest days or increase max work days for this run.', 'Reduisez les jours de repos hebdomadaires ou augmentez les jours max de travail pour ce calcul.'));
+        tips.push(tr('Expand range and include more shift chips to rebalance load.', 'Elargissez la plage et incluez plus de chips de poste pour reequilibrer la charge.'));
+      } else if (status === 'surplus') {
+        tips.push(tr('Surplus detected: create extra shifts in departments with demand.', 'Surplus detecte: creez des postes supplementaires dans les departements en demande.'));
+        if (predictedSurplusCapacity > 0) {
+          tips.push(tr('Estimated extra assignable capacity', 'Capacite supplementaire estimable') + `: ${predictedSurplusCapacity}`);
+        }
+        if (openSlots > 0) {
+          tips.push(tr('Open slots may remain because assignment is department-scoped.', 'Des postes ouverts peuvent rester car l affectation est limitee au departement.'));
+        }
+      } else {
+        tips.push(tr('Coverage is near target. Run auto-assign and re-check remaining open slots.', 'La couverture est proche de la cible. Lancez l auto-assignation puis recontrolez les postes ouverts restants.'));
+      }
+
+      if (crossSuggestions.length > 0) {
+        crossSuggestions.slice(0, 4).forEach((item) => {
+          const dateValue = String(item?.work_date || '--');
+          const deptName = String(item?.department_name || tr('Department', 'Departement'));
+          const openCount = Number(item?.open_count || 0);
+          const candidateNames = Array.isArray(item?.candidates)
+            ? item.candidates.map((c) => String(c?.name || '').trim()).filter((v) => v !== '')
+            : [];
+          if (candidateNames.length > 0) {
+            tips.push(`${tr('Suggestion', 'Suggestion')} ${dateValue} - ${deptName} (${openCount} ${tr('open', 'ouverts')}): ${candidateNames.join(', ')}`);
+          }
+        });
+      }
+
+      if (uncoveredDays.length > 0) {
+        const topDays = uncoveredDays
+          .slice(0, 5)
+          .map((item) => `${String(item?.work_date || '--')} (${Number(item?.open_count || 0)})`)
+          .join(', ');
+        tips.push(`${tr('Most uncovered days', 'Jours les plus decouverts')}: ${topDays}`);
+      }
+
+      if (shiftCreationSuggestions.length > 0) {
+        shiftCreationSuggestions.slice(0, 4).forEach((item) => {
+          const deptName = String(item?.department_name || tr('Department', 'Departement'));
+          const shiftName = String(item?.shift_name || tr('Shift', 'Poste'));
+          const openCount = Number(item?.open_slots || 0);
+          tips.push(`${tr('Create extra shifts', 'Creer des postes en plus')}: ${deptName} - ${shiftName} (+${openCount})`);
+        });
+      }
+
+      if (restMode === 'fixed') {
+        tips.push(tr('Fixed rest keeps routine stable but can cluster uncovered days.', 'Le repos fixe stabilise la routine mais peut concentrer les jours non couverts.'));
+      } else if (restMode === 'staggered') {
+        tips.push(tr('Staggered rest helps distribute rest days across the week.', 'La rotation scalaire aide a repartir les repos dans la semaine.'));
+      } else {
+        tips.push(tr('Random rest may improve distribution but varies at each run.', 'La rotation aleatoire peut mieux repartir mais varie a chaque execution.'));
+      }
+    } else {
+      summary = String(data?.summary || '').trim() || tr('Forecast unavailable.', 'Prevision indisponible.');
+      (Array.isArray(data?.recommendations) ? data.recommendations : []).forEach((item) => tips.push(String(item || '')));
+    }
+
+    if (globalAutoAssignForecastSummary) {
+      globalAutoAssignForecastSummary.textContent = summary || tr('Forecast unavailable.', 'Prevision indisponible.');
+      globalAutoAssignForecastSummary.style.color = status === 'shortage' ? '#b42318' : status === 'surplus' ? '#1d4ed8' : '';
+    }
+    renderForecastImpact(data);
+    if (data?.ok || data?.success) {
+      lastGlobalForecastResponse = data;
+    }
+    if (globalAutoAssignForecastTips) {
+      if (!tips.length) {
+        globalAutoAssignForecastTips.innerHTML = '';
+      } else {
+        globalAutoAssignForecastTips.innerHTML = tips.map((tip) => `<li>${escapeHtml(String(tip || ''))}</li>`).join('');
+      }
+    }
+  }
+
+  async function refreshGlobalForecast() {
+    if (!apiUrl || !window.AppAPI || !globalAutoAssignForecast) return;
+    const params = getGlobalAutoAssignParams();
+    if (!params.globalShiftSelection.allowedShiftIds.length) {
+      renderGlobalForecast({
+        status: 'shortage',
+        summary: tr('Select at least one shift chip to run forecast.', 'Selectionnez au moins un poste pour la prevision.'),
+        metrics: [],
+        recommendations: [tr('Enable one or more shift chips before auto-assign.', 'Activez un ou plusieurs chips de poste avant l affectation automatique.')],
+      });
+      lastGlobalForecastResponse = null;
+      return;
+    }
+    if (globalAutoAssignForecastSummary) {
+      globalAutoAssignForecastSummary.textContent = tr('Calculating forecast...', 'Calcul de la prevision...');
+    }
+    try {
+      const res = await AppAPI.postJSON(apiUrl, {
+        action: 'auto_assign_forecast',
+        scope_shift_id: 0,
+        allowed_shift_ids: params.globalShiftSelection.allowedShiftIds,
+        range_start: params.range.start,
+        range_end: params.range.end,
+        min_employees_per_shift_day: params.normalizedMin,
+        max_employees_per_shift_day: params.normalizedMax,
+        min_rest_days_per_week: params.boundedMinRestDays,
+        max_rest_days_per_week: params.boundedMaxRestDays,
+        min_work_days_per_week: params.boundedMinWorkDays,
+        max_work_days_per_week: params.boundedMaxWorkDays,
+        rest_distribution_mode: params.restDistributionMode,
+      });
+      if (res?.ok || res?.success) {
+        renderGlobalForecast(res);
+      } else {
+        renderGlobalForecast({
+          status: 'unknown',
+          summary: tr('Forecast failed.', 'La prevision a echoue.'),
+          metrics: [],
+          recommendations: [String(res?.error || tr('Unknown error.', 'Erreur inconnue.'))],
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      renderGlobalForecast({
+        status: 'unknown',
+        summary: tr('Forecast unavailable.', 'Prevision indisponible.'),
+        metrics: [],
+        recommendations: [tr('Retry after updating period and limits.', 'Reessayez apres avoir ajuste la periode et les limites.')],
+      });
+    }
   }
 
   function getActiveAssignmentsMonthKey() {
@@ -453,10 +1012,35 @@
     return rules;
   }
 
+  function monthsDistance(fromMonthKey, toMonthKey) {
+    const f = String(fromMonthKey || '').split('-');
+    const t2 = String(toMonthKey || '').split('-');
+    if (f.length < 2 || t2.length < 2) return 0;
+    return (parseInt(t2[0], 10) - parseInt(f[0], 10)) * 12 + (parseInt(t2[1], 10) - parseInt(f[1], 10));
+  }
+
+  function getEffectiveOffWeekdaysForMonth(rule, targetMonthKey) {
+    const base = Array.isArray(rule?.off_weekdays)
+      ? rule.off_weekdays.map((x) => parseInt(x, 10)).filter((x) => x >= 0 && x <= 6)
+      : [];
+    const overrides = rule?.monthly_overrides;
+    if (overrides && Array.isArray(overrides[targetMonthKey])) {
+      return overrides[targetMonthKey].map((x) => parseInt(x, 10)).filter((x) => x >= 0 && x <= 6);
+    }
+    if (rule?.rotating?.enabled && base.length > 0) {
+      const startMonth = String(rule.rotating.start_month || currentMonthKey());
+      const shift = monthsDistance(startMonth, targetMonthKey);
+      if (shift > 0) {
+        return base.map((d) => (d + shift) % 7);
+      }
+    }
+    return base;
+  }
+
   function getRuleForUser(userId) {
     const normalizedId = String(userId || '').trim();
     if (!normalizedId) {
-      return { scope: 'all', off_weekdays: [], special_dates: [] };
+      return { scope: 'all', off_weekdays: [], special_dates: [], monthly_overrides: {}, rotating: { enabled: false, start_month: currentMonthKey() } };
     }
 
     const rules = loadRules();
@@ -465,21 +1049,35 @@
         scope: String(rules[normalizedId].scope || 'all'),
         off_weekdays: Array.isArray(rules[normalizedId].off_weekdays) ? rules[normalizedId].off_weekdays.map((x) => parseInt(x, 10)).filter((x) => x >= 0 && x <= 6) : [],
         special_dates: Array.isArray(rules[normalizedId].special_dates) ? rules[normalizedId].special_dates : [],
+        monthly_overrides: (rules[normalizedId].monthly_overrides && typeof rules[normalizedId].monthly_overrides === 'object') ? rules[normalizedId].monthly_overrides : {},
+        rotating: { enabled: !!(rules[normalizedId].rotating?.enabled), start_month: String(rules[normalizedId].rotating?.start_month || currentMonthKey()) },
       };
     }
 
     const row = getRuleRows().find((item) => String(item.dataset.autoRuleUserId || '') === normalizedId);
-    return readRuleFromRow(row)?.rule || { scope: 'all', off_weekdays: [], special_dates: [] };
+    return readRuleFromRow(row)?.rule || { scope: 'all', off_weekdays: [], special_dates: [], monthly_overrides: {}, rotating: { enabled: false, start_month: currentMonthKey() } };
   }
 
   function setRuleForUser(userId, nextRule) {
     const normalizedId = String(userId || '').trim();
     if (!normalizedId) return;
     const rules = loadRules();
+    const monthlyOverridesRaw = (nextRule?.monthly_overrides && typeof nextRule.monthly_overrides === 'object') ? nextRule.monthly_overrides : {};
+    const monthlyOverrides = {};
+    for (const [month, days] of Object.entries(monthlyOverridesRaw)) {
+      if (/^\d{4}-\d{2}$/.test(String(month)) && Array.isArray(days)) {
+        monthlyOverrides[String(month)] = days.map((x) => parseInt(x, 10)).filter((x) => x >= 0 && x <= 6);
+      }
+    }
     rules[normalizedId] = {
       scope: String(nextRule?.scope || 'all'),
       off_weekdays: Array.isArray(nextRule?.off_weekdays) ? Array.from(new Set(nextRule.off_weekdays.map((x) => parseInt(x, 10)).filter((x) => x >= 0 && x <= 6))).sort() : [],
       special_dates: Array.isArray(nextRule?.special_dates) ? nextRule.special_dates.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x?.date || ''))).map((x) => ({ date: String(x.date), reason: String(x.reason || 'special') })) : [],
+      monthly_overrides: monthlyOverrides,
+      rotating: {
+        enabled: !!(nextRule?.rotating?.enabled),
+        start_month: /^\d{4}-\d{2}$/.test(String(nextRule?.rotating?.start_month || '')) ? String(nextRule.rotating.start_month) : currentMonthKey(),
+      },
     };
     saveRules(rules);
     applyRulesToRows(rules);
@@ -489,10 +1087,10 @@
     const monthStart = monthStartKey(monthKey);
     const monthEnd = monthEndKey(monthKey);
     const unavailable = new Map();
-    const offWeekdays = new Set(Array.isArray(rule?.off_weekdays) ? rule.off_weekdays.map((value) => parseInt(value, 10)) : []);
+    const effectiveWeekdays = new Set(getEffectiveOffWeekdaysForMonth(rule, monthKey));
     getDateKeysInRange(monthStart, monthEnd).forEach((dateKey) => {
       const weekday = new Date(`${dateKey}T12:00:00`).getDay();
-      if (offWeekdays.has(weekday)) {
+      if (effectiveWeekdays.has(weekday)) {
         unavailable.set(dateKey, 'rest');
       }
     });
@@ -549,9 +1147,7 @@
   }
 
   function populateOpenShiftFilter() {
-    if (!employeeModalOpenShift) return;
     const options = getDepartmentWorkShifts();
-    const currentValue = String(employeeModalOpenShift.value || '0');
     const optionHtml = options
       .map((item) => {
         const id = parseInt(String(item?.id || '0'), 10) || 0;
@@ -561,11 +1157,15 @@
         return `<option value="${id}">${iconLabel} ${name}</option>`;
       })
       .join('');
-    employeeModalOpenShift.innerHTML = `<option value="0">Tous les postes du departement</option>${optionHtml}`;
-    employeeModalOpenShift.value = employeeModalOpenShift.querySelector(`option[value="${currentValue}"]`) ? currentValue : '0';
+    if (employeeModalOpenShift) {
+      employeeModalOpenShift.innerHTML = `<option value="0">Tous les postes du departement</option>${optionHtml}`;
+    }
 
     const availableIds = new Set(options.map((item) => parseInt(String(item?.id || '0'), 10) || 0));
     selectedOpenShiftFilterIds = new Set(Array.from(selectedOpenShiftFilterIds).filter((id) => availableIds.has(id)));
+    if (selectedOpenShiftFilterIds.size === 0) {
+      selectedOpenShiftFilterIds = new Set(Array.from(availableIds));
+    }
 
     if (employeeModalOpenShiftList) {
       if (!options.length) {
@@ -575,18 +1175,9 @@
           const id = parseInt(String(item?.id || '0'), 10) || 0;
           const checked = selectedOpenShiftFilterIds.has(id) ? 'checked' : '';
           const icon = renderShiftIcon(String(item?.icon || ''));
-          return `<label class="settings-assignment-open-shift-chip"><input type="checkbox" data-assignment-modal-open-shift-id="${id}" ${checked}>${icon} ${escapeHtml(String(item?.name || tr('Shift', 'Poste')))}</label>`;
+          return `<label class="settings-assignment-open-shift-chip dashboard-print-department-chip"><input type="checkbox" data-assignment-modal-open-shift-id="${id}" ${checked}>${icon} ${escapeHtml(String(item?.name || tr('Shift', 'Poste')))}</label>`;
         }).join('');
       }
-    }
-
-    const shiftMode = String(employeeModalShiftMode?.value || 'all');
-    if (employeeModalOpenShiftList) {
-      employeeModalOpenShiftList.hidden = shiftMode !== 'some';
-    }
-    const singleWrap = employeeModal?.querySelector('[data-assignment-modal-open-single-shift-wrap]');
-    if (singleWrap) {
-      singleWrap.hidden = shiftMode === 'some';
     }
   }
 
@@ -624,8 +1215,103 @@
 
   function resetRulesForActiveEmployee() {
     if (!activeEmployeeUserId) return;
-    setRuleForUser(activeEmployeeUserId, { scope: 'all', off_weekdays: [], special_dates: [] });
+    setRuleForUser(activeEmployeeUserId, { scope: 'all', off_weekdays: [], special_dates: [], monthly_overrides: {}, rotating: { enabled: false, start_month: currentMonthKey() } });
     openEmployeeModal(activeEmployeeUserId, activeEmployeeUserName, activeEmployeeDepartmentId, activeEmployeeDepartmentName);
+  }
+
+  function renderMonthWeekdaysForSelectedMonth(rule) {
+    if (!employeeModalMonthWeekdays) return;
+    const selectedMonth = getActiveRulesMonthKey();
+    const effectiveWeekdays = new Set(getEffectiveOffWeekdaysForMonth(rule, selectedMonth));
+    const hasOverride = !!(rule?.monthly_overrides && Array.isArray(rule.monthly_overrides[selectedMonth]));
+    employeeModalMonthWeekdays.innerHTML = WEEKDAY_OPTIONS.map((option) => {
+      const checked = effectiveWeekdays.has(option.value) ? 'checked' : '';
+      return `<label class="${hasOverride ? 'is-month-override' : ''}"><input type="checkbox" data-assignment-modal-month-weekday="${option.value}" ${checked}>${option.label}</label>`;
+    }).join('');
+    if (employeeModalClearMonthOverride) employeeModalClearMonthOverride.disabled = !hasOverride;
+  }
+
+  function renderRotationPreview(rule) {
+    if (!employeeModalRotationPreview) return;
+    const isEnabled = !!(rule?.rotating?.enabled);
+    if (employeeModalRotateToggle) {
+      employeeModalRotateToggle.textContent = isEnabled
+        ? tr('Disable rotation', 'Desactiver la rotation')
+        : tr('Rotation (+1 day/month)', 'Rotation (+1 j/mois)');
+      employeeModalRotateToggle.classList.toggle('is-active', isEnabled);
+    }
+    if (!isEnabled) {
+      employeeModalRotationPreview.hidden = true;
+      employeeModalRotationPreview.innerHTML = '';
+      return;
+    }
+    employeeModalRotationPreview.hidden = false;
+    const base = Array.isArray(rule.off_weekdays) ? rule.off_weekdays.map((x) => parseInt(x, 10)).filter((x) => x >= 0 && x <= 6) : [];
+    if (!base.length) {
+      employeeModalRotationPreview.innerHTML = `<span class="crud-modal-subtitle">${tr('No base rest days defined.', 'Aucun jour de repos de base defini.')}</span>`;
+      return;
+    }
+    const startMonth = String(rule.rotating?.start_month || currentMonthKey());
+    const [sy, sm] = startMonth.split('-').map(Number);
+    const monthFmt = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-US', { month: 'short', year: 'numeric' });
+    const items = [];
+    for (let i = 0; i <= 3; i++) {
+      const d = new Date(sy, sm - 1 + i, 1, 12, 0, 0);
+      const label = monthFmt.format(d);
+      const shiftedDays = base.map((day) => (day + i) % 7);
+      const dayLabels = shiftedDays.map((v) => WEEKDAY_OPTIONS.find((opt) => opt.value === v)?.label || v).join(' + ');
+      items.push(`<span class="settings-rotation-preview-item"><strong>${label}</strong> : ${dayLabels}</span>`);
+    }
+    employeeModalRotationPreview.innerHTML = items.join('');
+  }
+
+  function toggleRotation() {
+    if (!activeEmployeeUserId) return;
+    const rule = getRuleForUser(activeEmployeeUserId);
+    rule.rotating = {
+      enabled: !(rule.rotating?.enabled),
+      start_month: currentMonthKey(),
+    };
+    setRuleForUser(activeEmployeeUserId, rule);
+    renderRotationPreview(rule);
+    renderMonthWeekdaysForSelectedMonth(rule);
+    renderEmployeeWeeklyAvailability(rule);
+    renderSelectedMonthUnavailable(rule);
+    renderOpenSlotSelection();
+  }
+
+  function saveMonthWeekdayOverride() {
+    if (!activeEmployeeUserId || !employeeModalMonthWeekdays) return;
+    const selectedMonth = getActiveRulesMonthKey();
+    if (!selectedMonth) return;
+    const checkedWeekdays = Array.from(employeeModalMonthWeekdays.querySelectorAll('[data-assignment-modal-month-weekday]:checked'))
+      .map((cb) => parseInt(cb.getAttribute('data-assignment-modal-month-weekday') || '-1', 10))
+      .filter((v) => v >= 0 && v <= 6);
+    const rule = getRuleForUser(activeEmployeeUserId);
+    if (!rule.monthly_overrides || typeof rule.monthly_overrides !== 'object') rule.monthly_overrides = {};
+    rule.monthly_overrides[selectedMonth] = checkedWeekdays;
+    setRuleForUser(activeEmployeeUserId, rule);
+    renderMonthWeekdaysForSelectedMonth(rule);
+    renderRotationPreview(rule);
+    renderEmployeeWeeklyAvailability(rule);
+    renderSelectedMonthUnavailable(rule);
+    renderOpenSlotSelection();
+  }
+
+  function clearMonthWeekdayOverride() {
+    if (!activeEmployeeUserId) return;
+    const selectedMonth = getActiveRulesMonthKey();
+    if (!selectedMonth) return;
+    const rule = getRuleForUser(activeEmployeeUserId);
+    if (rule.monthly_overrides && rule.monthly_overrides[selectedMonth] !== undefined) {
+      delete rule.monthly_overrides[selectedMonth];
+      setRuleForUser(activeEmployeeUserId, rule);
+      renderMonthWeekdaysForSelectedMonth(rule);
+      renderRotationPreview(rule);
+      renderEmployeeWeeklyAvailability(rule);
+      renderSelectedMonthUnavailable(rule);
+      renderOpenSlotSelection();
+    }
   }
 
   async function assignAbsenceRange() {
@@ -646,6 +1332,23 @@
       notifyError('No editable dates found in selected range.');
       return;
     }
+
+    // Free existing work assignments in the selected absence period first.
+    const clearRes = await AppAPI.postJSON(apiUrl, {
+      action: 'clear_assignments_scope',
+      target_user_id: activeEmployeeUserId,
+      scope_shift_id: 0,
+      allowed_shift_ids: [],
+      range_mode: 'custom',
+      target_month: getActiveRulesMonthKey(),
+      range_start: range.start,
+      range_end: range.end,
+    });
+    if (!clearRes?.ok && !clearRes?.success) {
+      notifyError('Unable to clear existing work assignments before absence assignment.');
+      return;
+    }
+
     let assignedCount = 0;
     for (const dateKey of targetDates) {
       const success = await assignShiftForEmployee(shiftId, dateKey, '', { silent: true });
@@ -926,6 +1629,7 @@
     if (!employeeModalShiftsModal || !activeEmployeeUserId) return;
     employeeModalShiftsModal.hidden = false;
     syncAssignedShiftsToolbar();
+    employeeModalShiftsModal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function closeAssignedShiftsModal() {
@@ -1148,6 +1852,8 @@
     }
 
     renderEmployeeWeekdays(rule);
+    renderMonthWeekdaysForSelectedMonth(rule);
+    renderRotationPreview(rule);
     renderEmployeeSpecialDates(rule);
     renderEmployeeWeeklyAvailability(rule);
     renderSelectedMonthUnavailable(rule);
@@ -1163,7 +1869,7 @@
       employeeModalPeriodMonth.value = currentMonthKey();
     }
     if (employeeModalShiftMode && !employeeModalShiftMode.value) {
-      employeeModalShiftMode.value = 'all';
+      employeeModalShiftMode.value = 'some';
     }
     selectedOpenShiftFilterIds = new Set();
     syncRuleRangeDefaults();
@@ -1346,16 +2052,48 @@
       const rangeEndInput = document.querySelector('[data-auto-assign-range-end]');
       if (rangeStartInput) rangeStartInput.value = range.start;
       if (rangeEndInput) rangeEndInput.value = range.end;
-      const minEmployeesRaw = parseInt(document.querySelector('[data-auto-assign-min-employees]')?.value || '1', 10);
-      const maxEmployeesRaw = parseInt(document.querySelector('[data-auto-assign-max-employees]')?.value || '3', 10);
-      const restDaysPerWeekRaw = parseInt(document.querySelector('[data-auto-assign-rest-days]')?.value || '1', 10);
-      const workDaysPerWeekRaw = parseInt(document.querySelector('[data-auto-assign-work-days]')?.value || '6', 10);
-      const minEmployeesPerShiftDay = Number.isFinite(minEmployeesRaw) ? Math.max(0, minEmployeesRaw) : 1;
-      const maxEmployeesPerShiftDay = Number.isFinite(maxEmployeesRaw) ? Math.max(1, maxEmployeesRaw) : 3;
-      const normalizedMin = Math.min(minEmployeesPerShiftDay, maxEmployeesPerShiftDay);
-      const normalizedMax = Math.max(minEmployeesPerShiftDay, maxEmployeesPerShiftDay);
-      const normalizedRestDays = Number.isFinite(restDaysPerWeekRaw) ? Math.min(6, Math.max(0, restDaysPerWeekRaw)) : 1;
-      const normalizedWorkDays = Number.isFinite(workDaysPerWeekRaw) ? Math.min(7, Math.max(1, workDaysPerWeekRaw)) : 6;
+      const params = getGlobalAutoAssignParams();
+      if (!params.globalShiftSelection.allowedShiftIds.length) {
+        notifyError('Select at least one shift for selected-shifts mode.');
+        return;
+      }
+
+      if (!isRunningConfirmedAutoAssign) {
+        const forecastSource = lastGlobalForecastResponse || await (async () => {
+          try {
+            const previewRes = await AppAPI.postJSON(apiUrl, {
+              action: 'auto_assign_forecast',
+              scope_shift_id: 0,
+              allowed_shift_ids: params.globalShiftSelection.allowedShiftIds,
+              range_start: params.range.start,
+              range_end: params.range.end,
+              min_employees_per_shift_day: params.normalizedMin,
+              max_employees_per_shift_day: params.normalizedMax,
+              min_rest_days_per_week: params.boundedMinRestDays,
+              max_rest_days_per_week: params.boundedMaxRestDays,
+              min_work_days_per_week: params.boundedMinWorkDays,
+              max_work_days_per_week: params.boundedMaxWorkDays,
+              rest_distribution_mode: params.restDistributionMode,
+            });
+            if (previewRes?.ok || previewRes?.success) {
+              lastGlobalForecastResponse = previewRes;
+              return previewRes;
+            }
+          } catch (previewError) {
+            console.error(previewError);
+          }
+          return null;
+        })();
+
+        if (!forecastSource || !renderAutoAssignPreviewModal(forecastSource)) {
+          notifyError('Unable to open auto-assign simulation. Refresh forecast and retry.');
+          return;
+        }
+        return;
+      }
+
+      isRunningConfirmedAutoAssign = false;
+      closeAutoAssignPreviewModal();
 
       const employeeRules = {
         ...loadRules(),
@@ -1363,14 +2101,18 @@
       };
       const res = await AppAPI.postJSON(apiUrl, {
         action: 'auto_assign_open',
-        scope_shift_id: parseInt(document.querySelector('[data-auto-assign-shift]')?.value || '0', 10) || 0,
+        scope_shift_id: 0,
+        allowed_shift_ids: params.globalShiftSelection.allowedShiftIds,
         range_start: range.start,
         range_end: range.end,
         allow_reassign_conflicts: true,
-        min_employees_per_shift_day: normalizedMin,
-        max_employees_per_shift_day: normalizedMax,
-        rest_days_per_week: normalizedRestDays,
-        max_work_days_per_week: normalizedWorkDays,
+        min_employees_per_shift_day: params.normalizedMin,
+        max_employees_per_shift_day: params.normalizedMax,
+        min_rest_days_per_week: params.boundedMinRestDays,
+        max_rest_days_per_week: params.boundedMaxRestDays,
+        min_work_days_per_week: params.boundedMinWorkDays,
+        max_work_days_per_week: params.boundedMaxWorkDays,
+        rest_distribution_mode: params.restDistributionMode,
         employee_rules: employeeRules,
       });
       if (res?.ok || res?.success) {
@@ -1387,10 +2129,12 @@
           notifySuccess(message);
           location.reload();
         }
+        refreshGlobalForecast();
       } else {
         notifyError('Auto assignment failed: ' + (res?.error || 'unknown'));
       }
     } catch (e) {
+      isRunningConfirmedAutoAssign = false;
       console.error(e);
       notifyError('Error running auto assignment.');
     }
@@ -1408,10 +2152,14 @@
       const period = resolveEmployeePeriodRange();
       const shiftSelection = getOpenShiftSelection();
       const assignmentMode = document.querySelector('[data-assignment-modal-open-mode]')?.value || 'multiple';
-      const restDaysPerWeekRaw = parseInt(document.querySelector('[data-auto-assign-rest-days]')?.value || '1', 10);
-      const workDaysPerWeekRaw = parseInt(document.querySelector('[data-auto-assign-work-days]')?.value || '6', 10);
-      const normalizedRestDays = Number.isFinite(restDaysPerWeekRaw) ? Math.min(6, Math.max(0, restDaysPerWeekRaw)) : 1;
-      const normalizedWorkDays = Number.isFinite(workDaysPerWeekRaw) ? Math.min(7, Math.max(1, workDaysPerWeekRaw)) : 6;
+      const minRestDaysRaw = parseInt(document.querySelector('[data-auto-assign-min-rest-days]')?.value || '1', 10);
+      const maxRestDaysRaw = parseInt(document.querySelector('[data-auto-assign-max-rest-days]')?.value || '2', 10);
+      const minWorkDaysRaw = parseInt(document.querySelector('[data-auto-assign-min-work-days]')?.value || '4', 10);
+      const maxWorkDaysRaw = parseInt(document.querySelector('[data-auto-assign-max-work-days]')?.value || '6', 10);
+      const boundedMinRestDays = Math.min(Math.min(6, Math.max(0, Number.isFinite(minRestDaysRaw) ? minRestDaysRaw : 1)), Math.min(6, Math.max(0, Number.isFinite(maxRestDaysRaw) ? maxRestDaysRaw : 2)));
+      const boundedMaxRestDays = Math.max(Math.min(6, Math.max(0, Number.isFinite(minRestDaysRaw) ? minRestDaysRaw : 1)), Math.min(6, Math.max(0, Number.isFinite(maxRestDaysRaw) ? maxRestDaysRaw : 2)));
+      const boundedMinWorkDays = Math.min(Math.min(7, Math.max(1, Number.isFinite(minWorkDaysRaw) ? minWorkDaysRaw : 4)), Math.min(7, Math.max(1, Number.isFinite(maxWorkDaysRaw) ? maxWorkDaysRaw : 6)));
+      const boundedMaxWorkDays = Math.max(Math.min(7, Math.max(1, Number.isFinite(minWorkDaysRaw) ? minWorkDaysRaw : 4)), Math.min(7, Math.max(1, Number.isFinite(maxWorkDaysRaw) ? maxWorkDaysRaw : 6)));
       const employeeRules = {
         ...loadRules(),
         ...collectRulesFromRows(),
@@ -1433,8 +2181,10 @@
         allow_reassign_conflicts: true,
         min_employees_per_shift_day: 0,
         max_employees_per_shift_day: 50,
-        rest_days_per_week: normalizedRestDays,
-        max_work_days_per_week: normalizedWorkDays,
+        min_rest_days_per_week: boundedMinRestDays,
+        max_rest_days_per_week: boundedMaxRestDays,
+        min_work_days_per_week: boundedMinWorkDays,
+        max_work_days_per_week: boundedMaxWorkDays,
         target_user_id: activeEmployeeUserId,
         assignment_mode: assignmentMode,
         employee_rules: employeeRules,
@@ -1524,7 +2274,11 @@
   async function clearAssignedInScope() {
     if (!apiUrl || !window.AppAPI) return;
 
-    const scopeShiftId = parseInt(document.querySelector('[data-auto-assign-shift]')?.value || '0', 10) || 0;
+    const globalShiftSelection = getGlobalShiftSelection();
+    if (!globalShiftSelection.allowedShiftIds.length) {
+      notifyError('Select at least one shift for selected-shifts mode.');
+      return;
+    }
     const normalizedRange = normalizeCurrentMonthRange(
       document.querySelector('[data-auto-assign-range-start]')?.value || '',
       document.querySelector('[data-auto-assign-range-end]')?.value || ''
@@ -1535,11 +2289,11 @@
     if (rangeEndInput) rangeEndInput.value = normalizedRange.end;
     const rangeStart = normalizedRange.start;
     const rangeEnd = normalizedRange.end;
-    const shiftLabel = document.querySelector('[data-auto-assign-shift]')?.selectedOptions?.[0]?.textContent?.trim() || 'selected shifts';
+    const shiftLabel = `${globalShiftSelection.allowedShiftIds.length} selected shifts`;
     const rangeLabel = rangeStart && rangeEnd ? `${rangeStart} to ${rangeEnd}` : 'the selected range';
 
     const canClear = feedback?.confirm
-      ? await feedback.confirm(`Unassign all employees for ${scopeShiftId > 0 ? shiftLabel : 'all work shifts'} in ${rangeLabel}?`, 'Confirm action')
+      ? await feedback.confirm(`Unassign all employees for ${shiftLabel} in ${rangeLabel}?`, 'Confirm action')
       : false;
 
     if (!canClear) {
@@ -1552,7 +2306,8 @@
     try {
       const res = await AppAPI.postJSON(apiUrl, {
         action: 'clear_assignments_scope',
-        scope_shift_id: scopeShiftId,
+        scope_shift_id: 0,
+        allowed_shift_ids: globalShiftSelection.allowedShiftIds,
         range_start: rangeStart,
         range_end: rangeEnd,
       });
@@ -1638,6 +2393,32 @@
       return;
     }
 
+    const policyPresetBtn = ev.target.closest && ev.target.closest('[data-auto-assign-preset]');
+    if (policyPresetBtn) {
+      ev.preventDefault();
+      const presetKey = String(policyPresetBtn.getAttribute('data-auto-assign-preset') || '');
+      if (presetKey) {
+        applyPolicyPreset(presetKey);
+      }
+      return;
+    }
+
+    const autoAssignPreviewCancelBtn = ev.target.closest && ev.target.closest('[data-auto-assign-preview-cancel]');
+    if (autoAssignPreviewCancelBtn) {
+      ev.preventDefault();
+      isRunningConfirmedAutoAssign = false;
+      closeAutoAssignPreviewModal();
+      return;
+    }
+
+    const autoAssignPreviewConfirmBtn = ev.target.closest && ev.target.closest('[data-auto-assign-preview-confirm]');
+    if (autoAssignPreviewConfirmBtn) {
+      ev.preventDefault();
+      isRunningConfirmedAutoAssign = true;
+      autoAssignOpen();
+      return;
+    }
+
     const autoAssignEmployeeBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-open-auto-assign]');
     if (autoAssignEmployeeBtn) {
       ev.preventDefault();
@@ -1649,6 +2430,27 @@
     if (clearEmployeeAssignmentsBtn) {
       ev.preventDefault();
       clearAssignmentsForActiveEmployee();
+      return;
+    }
+
+    const rotateToggleBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-rotate-toggle]');
+    if (rotateToggleBtn && activeEmployeeUserId > 0) {
+      ev.preventDefault();
+      toggleRotation();
+      return;
+    }
+
+    const saveMonthOverrideBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-save-month-override]');
+    if (saveMonthOverrideBtn && activeEmployeeUserId > 0) {
+      ev.preventDefault();
+      saveMonthWeekdayOverride();
+      return;
+    }
+
+    const clearMonthOverrideBtn = ev.target.closest && ev.target.closest('[data-assignment-modal-clear-month-override]');
+    if (clearMonthOverrideBtn && activeEmployeeUserId > 0) {
+      ev.preventDefault();
+      clearMonthWeekdayOverride();
       return;
     }
 
@@ -1904,6 +2706,22 @@
       return;
     }
     if (
+      target.matches('[data-auto-assign-shift-id]')
+      || target.matches('[data-auto-assign-range-start]')
+      || target.matches('[data-auto-assign-range-end]')
+      || target.matches('[data-auto-assign-min-employees]')
+      || target.matches('[data-auto-assign-max-employees]')
+      || target.matches('[data-auto-assign-min-rest-days]')
+      || target.matches('[data-auto-assign-max-rest-days]')
+      || target.matches('[data-auto-assign-min-work-days]')
+      || target.matches('[data-auto-assign-max-work-days]')
+      || target.matches('[data-auto-assign-rest-strategy]')
+    ) {
+      updatePolicyPresetUi(resolveMatchingPolicyPreset());
+      refreshGlobalForecast();
+      return;
+    }
+    if (
       target.matches('[data-auto-rule-scope]')
       || target.matches('[data-auto-rule-weekday]')
       || target.matches('[data-auto-rule-special-reason]')
@@ -1928,6 +2746,7 @@
     if (target.matches('[data-assignment-modal-rules-month]') && activeEmployeeUserId > 0) {
       syncRuleRangeDefaults();
       const currentRule = getRuleForUser(activeEmployeeUserId);
+      renderMonthWeekdaysForSelectedMonth(currentRule);
       renderEmployeeWeeklyAvailability(currentRule);
       renderSelectedMonthUnavailable(currentRule);
       return;
@@ -1996,5 +2815,14 @@
     }
   });
 
+  document.addEventListener('dashboard:planner-updated', () => {
+    refreshAssignmentEmployeeIndexStats();
+    updatePolicyPresetUi(resolveMatchingPolicyPreset());
+    refreshGlobalForecast();
+  });
+
+  updatePolicyPresetUi(resolveMatchingPolicyPreset());
+  refreshAssignmentEmployeeIndexStats();
+  refreshGlobalForecast();
   applyRulesToRows(loadRules());
 })();

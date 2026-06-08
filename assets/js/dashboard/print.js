@@ -488,7 +488,6 @@
           attendanceTableHtml +
           '<div class="dashboard-print-sheet-footer">' +
             '<div class="dashboard-print-sheet-footer-left">' + attendanceLegendHtml + '</div>' +
-            '<div class="dashboard-print-sheet-footer-right">' + buildFooterMeta(generatedAt, generatedBy) + '</div>' +
           '</div>' +
         '</section>';
     }
@@ -501,7 +500,6 @@
         renderMonthTable(sectionState.section) +
         '<div class="dashboard-print-sheet-footer">' +
           '<div class="dashboard-print-sheet-footer-left">' + shiftLegendHtml + employeeLegendHtml + '</div>' +
-          '<div class="dashboard-print-sheet-footer-right">' + buildFooterMeta(generatedAt, generatedBy) + '</div>' +
         '</div>' +
       '</section>';
   }

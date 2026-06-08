@@ -89,7 +89,7 @@ $requestTypeLabels = [
                             <div class="dashboard-calendar-top-row">
                                 <div class="dashboard-calendar-range-actions">
                                     <input type="text" class="dashboard-calendar-navigator-range" value="<?php echo e(date('d/m/y')); ?> - <?php echo e(date('d/m/y')); ?>" readonly data-calendar-range-display>
-                                    <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="today"><?php echo e(t('common.today', ['fallback' => 'Today'])); ?></button>
+                                    <button type="button" class="dashboard-calendar-navigator-action is-square" data-calendar-nav="today"><?php echo e(date('d/m/Y', strtotime((string) ($dashboardCalendarToday ?? date('Y-m-d'))))); ?></button>
                                 </div>
                                 <div class="dashboard-calendar-title-nav">
                                     <button type="button" class="dashboard-calendar-navigator-action" data-calendar-nav="prev" aria-label="Prev">‹</button>

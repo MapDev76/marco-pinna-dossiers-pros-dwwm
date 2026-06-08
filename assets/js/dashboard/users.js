@@ -44,7 +44,107 @@
       Array.from(departments.options || []).forEach((option) => {
         option.selected = false;
       });
+      departments.dispatchEvent(new Event('change', { bubbles: true }));
     }
+  }
+
+  function getDepartmentDropdownLabel(select) {
+    const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+    const isFr = locale.startsWith('fr');
+    const selected = Array.from(select.selectedOptions || []).map((opt) => String(opt.textContent || '').trim()).filter((v) => v !== '');
+    if (!selected.length) {
+      return isFr ? 'Selectionner departement(s)' : 'Select department(s)';
+    }
+    if (selected.length === 1) {
+      return selected[0];
+    }
+    return isFr ? `${selected.length} departements selectionnes` : `${selected.length} departments selected`;
+  }
+
+  function syncDepartmentDropdown(select) {
+    if (!select) return;
+    const root = select.closest('.settings-multiselect');
+    if (!root) return;
+    const trigger = root.querySelector('.settings-multiselect-trigger');
+    const checkboxes = root.querySelectorAll('input[data-multiselect-option]');
+    if (trigger) {
+      trigger.textContent = getDepartmentDropdownLabel(select);
+    }
+    checkboxes.forEach((checkbox) => {
+      const value = parseInt(String(checkbox.getAttribute('data-multiselect-option') || '0'), 10) || 0;
+      const option = Array.from(select.options || []).find((opt) => (parseInt(opt.value || '0', 10) || 0) === value);
+      checkbox.checked = !!option?.selected;
+    });
+  }
+
+  function closeAllDepartmentDropdowns() {
+    document.querySelectorAll('.settings-multiselect.is-open').forEach((root) => root.classList.remove('is-open'));
+  }
+
+  function initDepartmentDropdowns() {
+    const panel = document.querySelector('.settings-panel[data-settings-panel="users"]');
+    if (!panel) return;
+    panel.querySelectorAll('select[data-field="department_ids"][multiple]').forEach((select) => {
+      if (select.closest('.settings-multiselect')) return;
+      const host = document.createElement('div');
+      host.className = 'settings-multiselect';
+
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'settings-multiselect-trigger';
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.textContent = getDepartmentDropdownLabel(select);
+
+      const menu = document.createElement('div');
+      menu.className = 'settings-multiselect-menu';
+
+      Array.from(select.options || []).forEach((option) => {
+        const value = parseInt(option.value || '0', 10) || 0;
+        if (value <= 0) return;
+        const row = document.createElement('label');
+        row.className = 'settings-multiselect-option';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.setAttribute('data-multiselect-option', String(value));
+        checkbox.checked = !!option.selected;
+        const text = document.createElement('span');
+        text.textContent = String(option.textContent || '').trim();
+        row.appendChild(checkbox);
+        row.appendChild(text);
+        menu.appendChild(row);
+      });
+
+      select.parentNode.insertBefore(host, select);
+      host.appendChild(trigger);
+      host.appendChild(menu);
+      host.appendChild(select);
+      select.classList.add('settings-native-multiselect-hidden');
+
+      trigger.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const open = host.classList.contains('is-open');
+        closeAllDepartmentDropdowns();
+        if (!open) {
+          host.classList.add('is-open');
+        }
+        trigger.setAttribute('aria-expanded', host.classList.contains('is-open') ? 'true' : 'false');
+      });
+
+      menu.addEventListener('change', (ev) => {
+        const input = ev.target;
+        if (!(input instanceof HTMLInputElement)) return;
+        const value = parseInt(String(input.getAttribute('data-multiselect-option') || '0'), 10) || 0;
+        if (!value) return;
+        const option = Array.from(select.options || []).find((opt) => (parseInt(opt.value || '0', 10) || 0) === value);
+        if (option) {
+          option.selected = !!input.checked;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+
+      select.addEventListener('change', () => syncDepartmentDropdown(select));
+      syncDepartmentDropdown(select);
+    });
   }
 
   function collectCreateData() {
@@ -200,6 +300,10 @@
   }
 
   document.addEventListener('click', (ev) => {
+    const insideMultiselect = ev.target.closest && ev.target.closest('.settings-multiselect');
+    if (!insideMultiselect) {
+      closeAllDepartmentDropdowns();
+    }
     const saveCompanyIpBtn = ev.target.closest && ev.target.closest('[data-company-signature-ip-save]');
     if (saveCompanyIpBtn) { ev.preventDefault(); saveCompanySignatureIp(); return; }
     const createBtn = ev.target.closest && ev.target.closest('.settings-user-create');
@@ -207,7 +311,7 @@
     const resetBtn = ev.target.closest && ev.target.closest('.settings-user-reset');
     if (resetBtn) { ev.preventDefault(); resetCreateUserForm(); return; }
     const editBtn = ev.target.closest && ev.target.closest('.settings-user-edit');
-    if (editBtn) { ev.preventDefault(); const card = getUserCard(editBtn); openDrawer(card); return; }
+    if (editBtn) { ev.preventDefault(); const card = getUserCard(editBtn); openDrawer(card); initDepartmentDropdowns(); return; }
     const cancelBtn = ev.target.closest && ev.target.closest('.settings-user-cancel');
     if (cancelBtn) { ev.preventDefault(); const card = getUserCard(cancelBtn); closeDrawer(card); return; }
     const saveBtn = ev.target.closest && ev.target.closest('.settings-user-save');
@@ -228,5 +332,6 @@
     select.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
+  initDepartmentDropdowns();
   resetCreateUserForm();
 })();

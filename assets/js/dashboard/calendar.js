@@ -1161,11 +1161,24 @@
         if (slotForceWorkButton) {
           event.preventDefault();
           var activeShift = getActiveShift ? (getActiveShift() || null) : null;
-          var activeWorkShiftId = Number(activeShift && String(activeShift.kind || '').toLowerCase() === 'work' ? (activeShift.id || 0) : 0);
           var forceUserId = Number(slotForceWorkButton.getAttribute('data-user-id') || 0);
           var forceDate = String(slotForceWorkButton.getAttribute('data-work-date') || '');
+          var currentShiftId = Number(slotForceWorkButton.getAttribute('data-shift-id') || 0);
+          var currentDepartmentId = Number(slotForceWorkButton.getAttribute('data-department-id') || 0);
+          var activeWorkShiftId = Number(activeShift && String(activeShift.kind || '').toLowerCase() === 'work' ? (activeShift.id || 0) : 0);
+
+          if (!activeWorkShiftId && forceDate) {
+            var fallbackShift = events.find(function (item) {
+              if (String(item.work_date || '') !== forceDate) return false;
+              if (String(item.shift_kind || '').toLowerCase() !== 'work') return false;
+              if (currentDepartmentId > 0 && Number(item.department_id || 0) !== currentDepartmentId) return false;
+              return Number(item.shift_id || 0) > 0 && Number(item.shift_id || 0) !== currentShiftId;
+            });
+            activeWorkShiftId = Number(fallbackShift && fallbackShift.shift_id ? fallbackShift.shift_id : 0);
+          }
+
           if (!activeWorkShiftId || !forceUserId || !forceDate || typeof assignShift !== 'function') {
-            notifyError('Select a work shift in sidebar before forcing work assignment.');
+            notifyError('Select a work shift in sidebar, or open another work slot in this day/department first.');
             return;
           }
           if (isPastDateKey(forceDate)) {

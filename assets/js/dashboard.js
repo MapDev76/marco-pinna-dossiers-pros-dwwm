@@ -1027,6 +1027,55 @@
 
     const isUserAvailableForDate = (userId, slotDate) => getUserAvailabilityStatus(userId, slotDate).available;
 
+    const getSuggestedAssignableUser = (slotDate, shiftId, departmentId, preferredUserId) => {
+      const normalizedDate = String(slotDate || '').trim();
+      const normalizedDepartmentId = Number(departmentId || 0);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) return null;
+
+      const seen = new Set();
+      const candidates = [];
+      const pushCandidatesFromDepartment = (department, priority) => {
+        const users = Array.isArray(department?.users) ? department.users : [];
+        users.forEach((user) => {
+          const userId = Number(user?.id || 0);
+          if (!userId || seen.has(userId)) return;
+          seen.add(userId);
+          const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || `${tr('Employee', 'Employe')} #${userId}`;
+          candidates.push({
+            id: userId,
+            name: fullName,
+            departmentId: Number(department?.id || 0),
+            departmentName: String(department?.name || tr('Department', 'Departement')),
+            priority,
+          });
+        });
+      };
+
+      const targetDepartment = getDepartmentById(normalizedDepartmentId);
+      if (targetDepartment) {
+        pushCandidatesFromDepartment(targetDepartment, 2);
+      }
+      departments.forEach((department) => {
+        if (Number(department?.id || 0) === normalizedDepartmentId) return;
+        pushCandidatesFromDepartment(department, 1);
+      });
+
+      const preferredId = Number(preferredUserId || 0);
+      let best = null;
+      candidates.forEach((candidate) => {
+        if (!isUserAvailableForDate(candidate.id, normalizedDate)) {
+          return;
+        }
+        const preferredBoost = candidate.id === preferredId ? 10 : 0;
+        const score = Number(candidate.priority || 0) + preferredBoost;
+        if (!best || score > best.score) {
+          best = { score, candidate };
+        }
+      });
+
+      return best ? best.candidate : null;
+    };
+
     const setActiveDepartment = (departmentId) => {
       const department = getDepartmentById(departmentId);
       if (!department) return;
@@ -1201,6 +1250,7 @@
         getActiveDepartment,
         isUserAvailableForDate,
         getUserAvailabilityStatus,
+        getSuggestedAssignableUser,
         getVisibleDateKeys,
       })
       : null;

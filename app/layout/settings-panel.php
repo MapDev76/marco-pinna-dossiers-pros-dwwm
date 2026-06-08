@@ -773,51 +773,102 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                 <div class="settings-create-row settings-auto-assign-row">
                     <div class="settings-list-cols settings-list-cols-shift-create">
-                            <label class="settings-field"><?php echo e(t('settings.auto_assign_shift')); ?>
-                            <select data-auto-assign-shift>
-                                <option value="0"><?php echo e(t('settings.all_open_work_shifts')); ?></option>
-                                <?php foreach ($shifts as $shift): ?>
-                                    <?php
-                                        $shiftOptionKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
-                                        $shiftOptionNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
-                                        $isWorkAssignable = $shiftOptionKindRaw === 'work'
-                                            && !in_array($shiftOptionNameRaw, ['rest day', 'vacation', 'sick leave'], true);
-                                        if (!$isWorkAssignable) {
-                                            continue;
-                                        }
-                                        $shiftOptionKind = (string) ($shift['kind'] ?? 'work');
-                                        $shiftOptionName = (string) ($shift['name'] ?? t('settings.shift_default'));
-                                        $shiftOptionDisplayName = $localizedSystemShiftName($shiftOptionKind, $shiftOptionName);
-                                        if ($shiftOptionDisplayName === '') {
-                                            $shiftOptionDisplayName = $shiftOptionName;
-                                        }
-                                    ?>
-                                    <option value="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e($shiftOptionDisplayName); ?></option>
+                        <?php
+                            $autoAssignableShiftOptions = [];
+                            foreach ($shifts as $shift) {
+                                $shiftOptionKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
+                                $shiftOptionNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
+                                $isWorkAssignable = $shiftOptionKindRaw === 'work'
+                                    && !in_array($shiftOptionNameRaw, ['rest day', 'vacation', 'sick leave'], true);
+                                if (!$isWorkAssignable) {
+                                    continue;
+                                }
+                                $shiftOptionKind = (string) ($shift['kind'] ?? 'work');
+                                $shiftOptionName = (string) ($shift['name'] ?? t('settings.shift_default'));
+                                $shiftOptionDisplayName = $localizedSystemShiftName($shiftOptionKind, $shiftOptionName);
+                                if ($shiftOptionDisplayName === '') {
+                                    $shiftOptionDisplayName = $shiftOptionName;
+                                }
+                                $autoAssignableShiftOptions[] = [
+                                    'id' => (int) ($shift['id'] ?? 0),
+                                    'name' => $shiftOptionDisplayName,
+                                ];
+                            }
+                        ?>
+                        <div class="settings-field settings-field-span-all" data-auto-assign-shift-selected-wrap>
+                            <span><?php echo e(t('settings.auto_assign_selected_shifts', ['fallback' => 'Allowed shifts for auto assignment'])); ?></span>
+                            <div class="settings-assignment-open-shift-list settings-auto-assign-shift-list" data-auto-assign-shift-list>
+                                <?php foreach ($autoAssignableShiftOptions as $shiftOption): ?>
+                                    <label class="settings-assignment-open-shift-chip dashboard-print-department-chip">
+                                        <input type="checkbox" data-auto-assign-shift-id="<?php echo (int) ($shiftOption['id'] ?? 0); ?>" checked>
+                                        <?php echo e($shiftOption['name'] ?? t('settings.shift_default')); ?>
+                                    </label>
                                 <?php endforeach; ?>
-                            </select>
-                        </label>
+                            </div>
+                        </div>
                         <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-auto-assign-range-start type="date" value="<?php echo e($autoAssignDefaultStart); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
                         <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-auto-assign-range-end type="date" value="<?php echo e($autoAssignDefaultEnd); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
                         <label class="settings-field"><?php echo e(t('settings.minimum_employees')); ?><input data-auto-assign-min-employees type="number" min="0" step="1" value="1"></label>
                         <label class="settings-field"><?php echo e(t('settings.maximum_employees')); ?><input data-auto-assign-max-employees type="number" min="1" step="1" value="3"></label>
-                        <label class="settings-field"><?php echo e(t('settings.rest_days_per_week')); ?><input data-auto-assign-rest-days type="number" min="0" max="6" step="1" value="1"></label>
-                        <label class="settings-field"><?php echo e(t('settings.work_days_per_week')); ?><input data-auto-assign-work-days type="number" min="1" max="7" step="1" value="6"></label>
-                        <div class="settings-inline-actions">
-                            <button
-                                type="button"
-                                class="admin-action-link settings-action-icon"
-                                data-auto-assign-open
-                                title="<?php echo e(t('settings.auto_assign_open')); ?>"
-                                aria-label="<?php echo e(t('settings.auto_assign_open')); ?>"
-                            >
-                                <img src="<?php echo $basePath; ?>/assets/icons/calendar-sync.svg" alt="" aria-hidden="true" class="settings-icon-image">
-                            </button>
-                            <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon" data-auto-assign-clear title="<?php echo e(t('settings.clear_assigned_shifts')); ?>" aria-label="<?php echo e(t('settings.clear_assigned_shifts')); ?>">
-                                <img src="<?php echo $basePath; ?>/assets/icons/calendar-x.svg" alt="" aria-hidden="true" class="settings-icon-image">
-                            </button>
+                        <label class="settings-field">
+                            <?php echo e(t('settings.auto_assign_rest_strategy', ['fallback' => 'Rest day strategy'])); ?>
+                            <select data-auto-assign-rest-strategy>
+                                <option value="fixed"><?php echo e(t('settings.rest_strategy_fixed', ['fallback' => 'Fixed weekly rest'])); ?></option>
+                                <option value="staggered"><?php echo e(t('settings.rest_strategy_staggered', ['fallback' => 'Staggered rotation'])); ?></option>
+                                <option value="random"><?php echo e(t('settings.rest_strategy_random', ['fallback' => 'Random rotation'])); ?></option>
+                            </select>
+                        </label>
+                        <label class="settings-field">Min rest days / week<input data-auto-assign-min-rest-days type="number" min="0" max="6" step="1" value="1"></label>
+                        <label class="settings-field">Max rest days / week<input data-auto-assign-max-rest-days type="number" min="0" max="6" step="1" value="2"></label>
+                        <label class="settings-field">Min work days / week<input data-auto-assign-min-work-days type="number" min="1" max="7" step="1" value="4"></label>
+                        <label class="settings-field">Max work days / week<input data-auto-assign-max-work-days type="number" min="1" max="7" step="1" value="6"></label>
+                        <div class="settings-field settings-field-span-all settings-auto-assign-presets" data-auto-assign-presets>
+                            <span>Policy presets</span>
+                            <div class="settings-auto-assign-presets-list">
+                                <button type="button" class="admin-action-link admin-action-link-secondary settings-auto-assign-preset" data-auto-assign-preset="balanced">Balanced</button>
+                                <button type="button" class="admin-action-link admin-action-link-secondary settings-auto-assign-preset" data-auto-assign-preset="coverage">Max coverage</button>
+                                <button type="button" class="admin-action-link admin-action-link-secondary settings-auto-assign-preset" data-auto-assign-preset="wellbeing">Staff wellbeing</button>
+                            </div>
                         </div>
-                        <small class="settings-shift-create-hint"><?php echo e(t('settings.auto_assign_open_help')); ?></small>
-                        <small class="settings-shift-create-hint"><?php echo e(t('settings.clear_assigned_shifts_help')); ?></small>
+                        <div class="settings-auto-assign-forecast" data-auto-assign-forecast>
+                            <strong><?php echo e(t('settings.auto_assign_forecast_title', ['fallback' => 'Auto-assign forecast'])); ?></strong>
+                            <p class="crud-modal-subtitle" data-auto-assign-forecast-summary><?php echo e(t('settings.auto_assign_forecast_loading', ['fallback' => 'Calculating forecast...'])); ?></p>
+                            <div class="settings-auto-assign-impact" data-auto-assign-impact></div>
+                            <ul class="settings-auto-assign-forecast-tips" data-auto-assign-forecast-tips></ul>
+                        </div>
+                        <div class="settings-auto-assign-action-hints">
+                            <div class="settings-auto-assign-action-hint-row">
+                                <button
+                                    type="button"
+                                    class="admin-action-link settings-action-icon"
+                                    data-auto-assign-open
+                                    title="<?php echo e(t('settings.auto_assign_open')); ?>"
+                                    aria-label="<?php echo e(t('settings.auto_assign_open')); ?>"
+                                >
+                                    <img src="<?php echo $basePath; ?>/assets/icons/calendar-sync.svg" alt="" aria-hidden="true" class="settings-icon-image">
+                                </button>
+                                <small class="settings-shift-create-hint"><?php echo e(t('settings.auto_assign_open_help')); ?></small>
+                            </div>
+                            <div class="settings-auto-assign-action-hint-row">
+                                <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon" data-auto-assign-clear title="<?php echo e(t('settings.clear_assigned_shifts')); ?>" aria-label="<?php echo e(t('settings.clear_assigned_shifts')); ?>">
+                                    <img src="<?php echo $basePath; ?>/assets/icons/calendar-x.svg" alt="" aria-hidden="true" class="settings-icon-image">
+                                </button>
+                                <small class="settings-shift-create-hint"><?php echo e(t('settings.clear_assigned_shifts_help')); ?></small>
+                            </div>
+                        </div>
+                        <div class="settings-auto-assign-preview-modal" data-auto-assign-preview-modal hidden>
+                            <div class="settings-auto-assign-preview-window">
+                                <div class="settings-auto-assign-preview-head">
+                                    <strong><?php echo e(t('settings.auto_assign_preview_title', ['fallback' => 'Auto-assign simulation'])); ?></strong>
+                                    <p class="crud-modal-subtitle"><?php echo e(t('settings.auto_assign_preview_subtitle', ['fallback' => 'Review projected impact before applying assignments.'])); ?></p>
+                                </div>
+                                <div class="settings-auto-assign-preview-grid" data-auto-assign-preview-grid></div>
+                                <div class="settings-auto-assign-preview-actions">
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-preview-cancel><?php echo e(t('common.cancel', ['fallback' => 'Cancel'])); ?></button>
+                                    <button type="button" class="admin-action-link" data-auto-assign-preview-confirm><?php echo e(t('settings.auto_assign_open', ['fallback' => 'Run auto assignment'])); ?></button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -926,30 +977,21 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="settings-assignment-employee-window-grid">
                             <section class="settings-analytics-card">
                                 <h5><?php echo e(t('settings.availability_rules')); ?></h5>
-                                <p class="crud-modal-subtitle"><?php echo e(t('settings.weekly_rest_and_dates')); ?></p>
+                                <p class="crud-modal-subtitle"><?php echo e(t('settings.weekly_rest_and_dates')); ?> — Jours par defaut, appliques a tous les mois.</p>
                                 <div class="settings-auto-rule-weekdays" data-assignment-modal-weekdays></div>
-                                <div class="settings-auto-rule-specials">
-                                    <label class="settings-field"><?php echo e(t('settings.unavailable_day')); ?><input type="date" data-assignment-modal-special-date></label>
-                                    <label class="settings-field"><?php echo e(t('settings.reason')); ?>
-                                        <select data-assignment-modal-special-reason>
-                                            <option value="rest"><?php echo e(t('settings.weekly_rest')); ?></option>
-                                            <option value="leave"><?php echo e(t('crud.request_leave')); ?></option>
-                                            <option value="vacation"><?php echo e(t('settings.vacation')); ?></option>
-                                            <option value="sick"><?php echo e(t('settings.sick')); ?></option>
-                                            <option value="special"><?php echo e(t('settings.special_day')); ?></option>
-                                        </select>
-                                    </label>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special><?php echo e(t('settings.add_date')); ?></button>
+                                <div class="settings-inline-actions">
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rotate-toggle>Rotation (+1 j/mois)</button>
                                 </div>
-                                <div class="settings-assignment-modal-range-row">
-                                    <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input type="date" data-assignment-modal-special-from></label>
-                                    <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input type="date" data-assignment-modal-special-to></label>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-add-special-range><?php echo e(t('settings.add_range')); ?></button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rules-reset><?php echo e(t('settings.reset_rules')); ?></button>
-                                </div>
-                                <div class="settings-auto-rule-special-list" data-assignment-modal-special-list></div>
+                                <div class="settings-assignment-rotation-preview" data-assignment-modal-rotation-preview hidden></div>
+                                <p class="crud-modal-subtitle settings-month-override-label">Exception pour un mois specifique</p>
                                 <div class="settings-assignment-modal-range-row settings-assignment-modal-month-row">
                                     <label class="settings-field"><?php echo e(t('settings.rules_month')); ?><input type="month" data-assignment-modal-rules-month></label>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-rules-reset><?php echo e(t('settings.reset_rules')); ?></button>
+                                </div>
+                                <div class="settings-auto-rule-weekdays" data-assignment-modal-month-weekdays></div>
+                                <div class="settings-inline-actions">
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-save-month-override>Sauvegarder ce mois</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-clear-month-override disabled>Effacer l'exception</button>
                                 </div>
                                 <h5><?php echo e(t('settings.selected_month_availability')); ?></h5>
                                 <div class="settings-assignment-weekly-grid" data-assignment-modal-weekly></div>
@@ -978,30 +1020,12 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <label class="settings-field"><?php echo e(t('settings.target_month')); ?><input type="month" data-assignment-modal-period-month></label>
                                     <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input type="date" data-assignment-modal-open-from></label>
                                     <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input type="date" data-assignment-modal-open-to></label>
-                                    <label class="settings-field"><?php echo e(t('settings.shift_selection')); ?>
-                                        <select data-assignment-modal-shift-mode>
-                                            <option value="all"><?php echo e(t('settings.shift_selection_all')); ?></option>
-                                            <option value="one"><?php echo e(t('settings.shift_selection_one')); ?></option>
-                                            <option value="some"><?php echo e(t('settings.shift_selection_some')); ?></option>
-                                        </select>
-                                    </label>
-                                    <label class="settings-field" data-assignment-modal-open-single-shift-wrap><?php echo e(t('common.shift')); ?>
-                                        <select data-assignment-modal-open-shift>
-                                            <option value="0"><?php echo e(t('settings.all_department_shifts')); ?></option>
-                                        </select>
-                                    </label>
                                 </div>
-                                <div class="settings-assignment-open-shift-list" data-assignment-modal-open-shift-list hidden></div>
+                                <div class="settings-assignment-open-shift-list" data-assignment-modal-open-shift-list></div>
                                 <div class="settings-inline-actions">
                                     <button type="button" class="admin-action-link" data-assignment-modal-open-auto-assign><?php echo e(t('settings.auto_assign_for_employee')); ?></button>
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-clear-assigned><?php echo e(t('settings.clear_employee_assignments')); ?></button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-reassign><?php echo e(t('settings.reassign_employee')); ?></button>
-                                    <button type="button" class="admin-action-link" data-assignment-modal-open-cover-all><?php echo e(t('settings.cover_all_dates')); ?></button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-clear><?php echo e(t('settings.clear_selection')); ?></button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-reselect><?php echo e(t('settings.reselect_available')); ?></button>
-                                    <button type="button" class="admin-action-link" data-assignment-modal-open-assign><?php echo e(t('settings.assign_selected')); ?></button>
                                 </div>
-                                <div class="settings-assignment-open-slot-list" data-assignment-modal-open-list></div>
                             </section>
                             <section class="settings-analytics-card settings-assignment-modal-open-slots">
                                 <h5><?php echo e(t('settings.assign_absence_range')); ?></h5>
@@ -1013,7 +1037,6 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <select data-assignment-modal-absence-type>
                                             <option value="vacation"><?php echo e(t('settings.vacation')); ?></option>
                                             <option value="sick"><?php echo e(t('settings.sick')); ?></option>
-                                            <option value="rest"><?php echo e(t('settings.rest')); ?></option>
                                         </select>
                                     </label>
                                 </div>
@@ -1752,7 +1775,6 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <option value="<?php echo (int) ($department['id'] ?? 0); ?>"><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <small class="settings-shift-create-hint"><?php echo e($isFrLocale ? 'Pour employee: selection multiple autorisee.' : 'For employee: multiple selection is allowed.'); ?></small>
                         </label>
                         <label class="settings-field"><?php echo e(t('crud.password')); ?><input data-field="password" type="text" value=""></label>
                         <div class="settings-inline-actions">
@@ -1823,7 +1845,6 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                                     <option value="<?php echo $departmentOptionId; ?>" <?php echo in_array($departmentOptionId, $userDepartmentIds, true) ? 'selected' : ''; ?>><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
                                                 <?php endforeach; ?>
                                             </select>
-                                            <small class="settings-shift-create-hint"><?php echo e($isFrLocale ? 'Pour employee: selection multiple autorisee.' : 'For employee: multiple selection is allowed.'); ?></small>
                                         </label>
                                         <label class="settings-field"><?php echo e(t('common.status')); ?>
                                             <select data-field="status">

@@ -730,9 +730,6 @@ body.sidebar-expanded .app-sidebar {
 .dashboard-calendar-navigator-action.is-square {
     min-width: 112px;
     padding: 0 1.15rem;
-    background: #ffffff;
-    color: #1d1d1d;
-    border-color: rgba(0, 0, 0, 0.08);
 }
 
 .dashboard-calendar-frame {
@@ -1132,6 +1129,22 @@ body.sidebar-expanded .app-sidebar {
     font-weight: var(--font-weight-extra-bold);
 }
 
+.calendar-event-slot-suggestion-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    margin-top: 0.08rem;
+    padding: 0.12rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid rgba(157, 121, 16, 0.42);
+    background: rgba(157, 121, 16, 0.14);
+    color: #6a4d0a;
+    font-size: 0.66rem;
+    font-weight: var(--font-weight-bold);
+    line-height: 1.2;
+}
+
 @keyframes calendar-sidebar-assign-pulse {
     0%,
     100% {
@@ -1176,6 +1189,14 @@ body.sidebar-expanded .app-sidebar {
     color: #8b1b1b;
     background: rgba(139, 27, 27, 0.12);
     border-color: rgba(139, 27, 27, 0.22);
+}
+
+[data-calendar-slot-force-active-shift] {
+    order: -2;
+}
+
+[data-calendar-unassign] {
+    order: -1;
 }
 
 .calendar-bulk-assign-overlay {
