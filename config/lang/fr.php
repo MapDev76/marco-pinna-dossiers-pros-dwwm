@@ -194,7 +194,7 @@ return [
         'auto_assign_shift_mode_all' => 'Tous les postes de travail ouverts',
         'auto_assign_shift_mode_single' => 'Un seul poste',
         'auto_assign_shift_mode_selected' => 'Seulement les postes selectionnes',
-        'auto_assign_selected_shifts' => 'Postes autorises pour l affectation automatique',
+        'auto_assign_selected_shifts' => 'Postes autorises pour l\'affectation automatique',
         'auto_assign_rest_strategy' => 'Strategie des jours de repos',
         'rest_strategy_fixed' => 'Repos hebdomadaire fixe',
         'rest_strategy_staggered' => 'Rotation scalaire',

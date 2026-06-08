@@ -333,6 +333,37 @@ if (is_array($primaryShift)) {
                 </div>
                 <span class="employee-metric-pill"><?php echo count($incomingDocuments); ?> <?php echo e(t('employee.files_suffix')); ?></span>
             </div>
+            <form method="post" enctype="multipart/form-data" class="admin-form" style="margin-bottom:0.8rem;">
+                <input type="hidden" name="action" value="share_document_no_signature">
+                <label>
+                    Titre
+                    <input type="text" name="title" maxlength="255" placeholder="Partage document" required>
+                </label>
+                <label class="span-2">
+                    Message
+                    <textarea name="message" rows="3" placeholder="Ajoutez un court message pour les responsables."></textarea>
+                </label>
+                <label class="span-2">
+                    Document
+                    <input type="file" name="document_file" required>
+                </label>
+                <?php if (!empty($documentShareRecipients ?? [])): ?>
+                    <label class="span-2">
+                        Destinataires
+                        <select name="recipient_ids[]" multiple size="4">
+                            <?php foreach (($documentShareRecipients ?? []) as $recipient): ?>
+                                <option value="<?php echo (int) ($recipient['id'] ?? 0); ?>">
+                                    <?php echo e((string) ($recipient['full_name'] ?? ('User #' . (int) ($recipient['id'] ?? 0)))); ?>
+                                    (<?php echo e((string) ($recipient['role'] ?? 'manager')); ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                <?php endif; ?>
+                <div class="form-actions span-2">
+                    <button type="submit" class="admin-action-link">Envoyer le document</button>
+                </div>
+            </form>
             <div class="table-wrap employee-table-wrap">
                 <table class="admin-table employee-table-compact">
                     <thead>
@@ -357,6 +388,18 @@ if (is_array($primaryShift)) {
                                 <td>
                                     <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
                                         <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id']]); ?>"><?php echo e(t('employee.download')); ?></a>
+                                        <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id']]); ?>"><?php echo e(t('employee.print', ['fallback' => 'Print'])); ?></a>
+                                        <?php if (!empty($documentMessage['can_sign'])): ?>
+                                            <button type="button"
+                                                    class="admin-action-link"
+                                                    data-document-sign-open
+                                                    data-document-sign-request-id="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>"
+                                                    data-document-sign-title="<?php echo e((string) ($documentMessage['file_name'] ?? t('employee.document'))); ?>">
+                                                <?php echo e(t('employee.sign_document', ['fallback' => 'Sign'])); ?>
+                                            </button>
+                                        <?php elseif ((string) ($documentMessage['type'] ?? '') === 'document_signature' && (string) ($documentMessage['status'] ?? '') === 'approved'): ?>
+                                            <span class="employee-status-chip"><?php echo e(t('employee.signed', ['fallback' => 'Signed'])); ?></span>
+                                        <?php endif; ?>
                                     <?php elseif (!empty($documentMessage['document_id'])): ?>
                                         <span class="employee-status-chip"><?php echo e(t('employee.file_not_available')); ?></span>
                                     <?php else: ?>
@@ -402,6 +445,38 @@ if (is_array($primaryShift)) {
                 <div class="employee-attendance-dialog-actions">
                     <button type="button" class="admin-action-link admin-action-link-secondary" data-attendance-modal-close><?php echo e(t('employee.cancel')); ?></button>
                     <button type="submit" <?php echo (empty($todaySignableShifts) || !$canSignNow) ? 'disabled' : ''; ?>><?php echo e(t('employee.sign_attendance')); ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="employee-attendance-modal" data-document-sign-modal hidden>
+        <div class="employee-attendance-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-document-sign-title">
+            <div class="employee-attendance-dialog-head">
+                <div>
+                    <span class="employee-stage-eyebrow"><?php echo e(t('employee.documents')); ?></span>
+                    <h3 id="employee-document-sign-title"><?php echo e(t('employee.sign_document', ['fallback' => 'Sign document'])); ?></h3>
+                    <p class="crud-modal-subtitle" data-document-sign-name></p>
+                </div>
+            </div>
+
+            <form method="post" class="admin-form employee-sign-form" data-document-signature-form>
+                <input type="hidden" name="action" value="sign_document">
+                <input type="hidden" name="request_id" value="" data-document-request-id>
+                <input type="hidden" name="signature_data" value="" data-signature-data>
+
+                <div class="employee-signature-pad-shell">
+                    <canvas width="520" height="180" data-signature-canvas aria-label="<?php echo e(t('employee.digital_signature')); ?>"></canvas>
+                    <small class="employee-signature-error" data-signature-error></small>
+                    <div class="employee-signature-pad-actions">
+                        <button type="button" class="admin-action-link admin-action-link-secondary" data-signature-clear><?php echo e(t('employee.clear_signature')); ?></button>
+                        <small><?php echo e(t('employee.sign_hint')); ?></small>
+                    </div>
+                </div>
+
+                <div class="employee-attendance-dialog-actions">
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-document-sign-close><?php echo e(t('employee.cancel')); ?></button>
+                    <button type="submit"><?php echo e(t('employee.sign_document', ['fallback' => 'Sign document'])); ?></button>
                 </div>
             </form>
         </div>

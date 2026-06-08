@@ -160,6 +160,99 @@
           }
         };
 
+        const uploadForm = crudBody.querySelector('#crud-document-share-form');
+        const uploadFileInput = crudBody.querySelector('#crud-document-file');
+        const uploadScopeInput = crudBody.querySelector('#crud-document-recipient-scope');
+        const uploadTitleInput = crudBody.querySelector('#crud-document-title');
+        const uploadMessageInput = crudBody.querySelector('#crud-document-message');
+        const uploadRecipientsLabel = crudBody.querySelector('#crud-document-recipient-label');
+        const uploadRecipientsInput = crudBody.querySelector('#crud-document-recipient-ids');
+        const uploadRequireSignatureInput = crudBody.querySelector('#crud-document-require-signature');
+        const uploadSubmitButton = crudBody.querySelector('#crud-document-share-submit');
+
+        const syncUploadRecipientMode = () => {
+          if (!uploadScopeInput || !uploadRecipientsInput || !uploadRecipientsLabel) return;
+          const isAll = uploadScopeInput.value === 'all';
+          uploadRecipientsInput.disabled = isAll;
+          uploadRecipientsLabel.classList.toggle('is-hidden', isAll);
+          if (isAll) {
+            Array.from(uploadRecipientsInput.options || []).forEach((option) => {
+              option.selected = false;
+            });
+          }
+        };
+
+        const toBase64 = (file) => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = String(reader.result || '');
+            const commaIdx = result.indexOf(',');
+            resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result);
+          };
+          reader.onerror = () => reject(new Error(tr('Unable to read file.', 'Impossible de lire le fichier.')));
+          reader.readAsDataURL(file);
+        });
+
+        if (uploadScopeInput) {
+          uploadScopeInput.addEventListener('change', syncUploadRecipientMode);
+          syncUploadRecipientMode();
+        }
+
+        if (uploadForm && uploadFileInput) {
+          uploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+              return;
+            }
+
+            const file = uploadFileInput.files && uploadFileInput.files[0] ? uploadFileInput.files[0] : null;
+            if (!file) {
+              notifyError(tr('Please choose a document to upload.', 'Veuillez choisir un document a televerser.'));
+              return;
+            }
+
+            const recipientScope = uploadScopeInput ? String(uploadScopeInput.value || 'selected') : 'selected';
+            const recipientIds = uploadRecipientsInput
+              ? Array.from(uploadRecipientsInput.selectedOptions || []).map((option) => Number(option.value || 0)).filter((id) => Number.isInteger(id) && id > 0)
+              : [];
+
+            if (recipientScope !== 'all' && recipientIds.length === 0) {
+              notifyError(tr('Select at least one recipient.', 'Selectionnez au moins un destinataire.'));
+              return;
+            }
+
+            uploadSubmitButton && (uploadSubmitButton.disabled = true);
+            try {
+              const fileContentB64 = await toBase64(file);
+              const response = await window.AppAPI.postJSON(apiDashboard, {
+                action: 'upload_and_share_document',
+                file_name: file.name,
+                file_content_b64: fileContentB64,
+                file_mime_type: file.type || 'application/octet-stream',
+                document_type: 'other',
+                title: uploadTitleInput ? String(uploadTitleInput.value || '').trim() : '',
+                message: uploadMessageInput ? String(uploadMessageInput.value || '').trim() : '',
+                recipient_scope: recipientScope,
+                recipient_ids: recipientIds,
+                require_signature: !!(uploadRequireSignatureInput && uploadRequireSignatureInput.checked),
+              });
+
+              if (!response || response.ok === false || response.success === false) {
+                throw new Error((response && (response.error || response.message)) || tr('Unable to share document.', 'Impossible de partager le document.'));
+              }
+
+              notifySuccess(tr('Document uploaded and shared successfully.', 'Document televerse et partage avec succes.'));
+              window.location.reload();
+            } catch (error) {
+              notifyError((error && error.message) || tr('Unable to share document.', 'Impossible de partager le document.'));
+            } finally {
+              uploadSubmitButton && (uploadSubmitButton.disabled = false);
+            }
+          });
+        }
+
         crudBody.querySelectorAll('[data-document-send-id]').forEach((button) => {
           button.addEventListener('click', () => {
             requestedMessageDocument = {

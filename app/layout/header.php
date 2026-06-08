@@ -78,9 +78,10 @@ if (!$isPublicPage && $currentUser !== null) {
 if (!$isPublicPage && $currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
     if (in_array($role, ['admin', 'department_manager'], true)) {
+        $isMySpaceRoute = $route === 'my-space';
         $leftMySpaceIcon = [
-            'href' => appUrl('my-space'),
-            'title' => t('common.my_attendance'),
+            'href' => $isMySpaceRoute ? appUrl('dashboard') : appUrl('my-space'),
+            'title' => $isMySpaceRoute ? t('common.back_to_dashboard') : t('common.my_attendance'),
             'icon' => 'signature.svg',
             'alt' => t('common.my_attendance'),
         ];
@@ -142,13 +143,15 @@ if ($route === 'home') {
             ];
         }
         if ($role !== 'employee') {
-            $rightIcons[] = [
-                'type' => 'link',
-                'href' => appUrl('dashboard'),
-                'title' => $route === 'my-space' ? t('common.back_to_dashboard') : t('common.dashboard'),
-                'icon' => $route === 'my-space' ? 'clipboard-pen.svg' : 'setting.svg',
-                'alt' => t('common.dashboard'),
-            ];
+            if ($route !== 'my-space') {
+                $rightIcons[] = [
+                    'type' => 'link',
+                    'href' => appUrl('dashboard'),
+                    'title' => t('common.dashboard'),
+                    'icon' => 'setting.svg',
+                    'alt' => t('common.dashboard'),
+                ];
+            }
 
             if (in_array($role, ['admin', 'department_manager'], true)) {
                 if ($route === 'my-space') {

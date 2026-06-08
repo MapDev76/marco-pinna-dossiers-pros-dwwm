@@ -57,6 +57,8 @@
   const employeeModalAbsenceType = employeeModal?.querySelector('[data-assignment-modal-absence-type]') || null;
   const globalAutoAssignShiftList = document.querySelector('[data-auto-assign-shift-list]');
   const globalAutoAssignRestStrategy = document.querySelector('[data-auto-assign-rest-strategy]');
+  const globalAutoAssignPriorityList = document.querySelector('[data-auto-assign-priority-list]');
+  const globalAutoAssignPriorityStrict = document.querySelector('[data-auto-assign-priority-strict]');
   const globalAutoAssignForecast = document.querySelector('[data-auto-assign-forecast]');
   const globalAutoAssignForecastSummary = document.querySelector('[data-auto-assign-forecast-summary]');
   const globalAutoAssignImpact = document.querySelector('[data-auto-assign-impact]');
@@ -409,6 +411,13 @@
     };
   }
 
+  function getGlobalPriorityDepartmentSelection() {
+    const selectedButton = globalAutoAssignPriorityList?.querySelector('[data-auto-assign-priority-department-id][aria-pressed="true"]') || null;
+    const id = parseInt(String(selectedButton?.getAttribute('data-auto-assign-priority-department-id') || '0'), 10) || 0;
+    const label = String(selectedButton?.textContent || '').trim();
+    return { id, label };
+  }
+
   function getGlobalAutoAssignParams() {
     const range = normalizeCurrentMonthRange(
       document.querySelector('[data-auto-assign-range-start]')?.value || '',
@@ -433,6 +442,7 @@
     const boundedMinWorkDays = Math.min(normalizedMinWorkDays, normalizedMaxWorkDays);
     const boundedMaxWorkDays = Math.max(normalizedMinWorkDays, normalizedMaxWorkDays);
     const globalShiftSelection = getGlobalShiftSelection();
+    const priorityDepartment = getGlobalPriorityDepartmentSelection();
     const restStrategyRaw = String(globalAutoAssignRestStrategy?.value || 'fixed').toLowerCase();
     const restDistributionMode = ['fixed', 'staggered', 'random'].includes(restStrategyRaw) ? restStrategyRaw : 'fixed';
     return {
@@ -444,6 +454,8 @@
       boundedMinWorkDays,
       boundedMaxWorkDays,
       globalShiftSelection,
+      priorityDepartment,
+      priorityDepartmentStrictInternal: !!(globalAutoAssignPriorityStrict && globalAutoAssignPriorityStrict.checked),
       restDistributionMode,
     };
   }
@@ -535,6 +547,18 @@
       {
         label: `${tr('Projected covered', 'Couverture projetee')}: +${projectedCovered}`,
         className: projectedCovered > 0 ? 'is-positive' : 'is-negative',
+      },
+      {
+        className: params.priorityDepartment.id > 0 ? 'is-warning' : 'is-positive',
+        label: params.priorityDepartment.id > 0
+          ? `${tr('Priority dept', 'Departement prioritaire')}: ${params.priorityDepartment.label || '#' + params.priorityDepartment.id}`
+          : tr('Priority dept: none', 'Departement prioritaire: aucun'),
+      },
+      {
+        className: params.priorityDepartmentStrictInternal ? 'is-warning' : 'is-positive',
+        label: params.priorityDepartmentStrictInternal
+          ? tr('Priority dept protected from external staff', 'Departement prioritaire protege des employes externes')
+          : tr('Priority dept can use external staff', 'Departement prioritaire peut utiliser des employes externes'),
       },
       {
         label: `${tr('Projected open after run', 'Ouverts projetes apres execution')}: ${predictedRemainingAtMin}`,
@@ -812,6 +836,8 @@
         min_work_days_per_week: params.boundedMinWorkDays,
         max_work_days_per_week: params.boundedMaxWorkDays,
         rest_distribution_mode: params.restDistributionMode,
+        priority_department_id: params.priorityDepartment.id,
+        priority_department_strict_internal: params.priorityDepartmentStrictInternal,
       });
       if (res?.ok || res?.success) {
         renderGlobalForecast(res);
@@ -2074,6 +2100,8 @@
               min_work_days_per_week: params.boundedMinWorkDays,
               max_work_days_per_week: params.boundedMaxWorkDays,
               rest_distribution_mode: params.restDistributionMode,
+              priority_department_id: params.priorityDepartment.id,
+              priority_department_strict_internal: params.priorityDepartmentStrictInternal,
             });
             if (previewRes?.ok || previewRes?.success) {
               lastGlobalForecastResponse = previewRes;
@@ -2113,6 +2141,8 @@
         min_work_days_per_week: params.boundedMinWorkDays,
         max_work_days_per_week: params.boundedMaxWorkDays,
         rest_distribution_mode: params.restDistributionMode,
+        priority_department_id: params.priorityDepartment.id,
+        priority_department_strict_internal: params.priorityDepartmentStrictInternal,
         employee_rules: employeeRules,
       });
       if (res?.ok || res?.success) {
@@ -2400,6 +2430,17 @@
       if (presetKey) {
         applyPolicyPreset(presetKey);
       }
+      return;
+    }
+
+    const priorityDeptBtn = ev.target.closest && ev.target.closest('[data-auto-assign-priority-department-id]');
+    if (priorityDeptBtn && globalAutoAssignPriorityList) {
+      ev.preventDefault();
+      Array.from(globalAutoAssignPriorityList.querySelectorAll('[data-auto-assign-priority-department-id]')).forEach((button) => {
+        const isActive = button === priorityDeptBtn;
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+      refreshGlobalForecast();
       return;
     }
 
@@ -2716,6 +2757,7 @@
       || target.matches('[data-auto-assign-min-work-days]')
       || target.matches('[data-auto-assign-max-work-days]')
       || target.matches('[data-auto-assign-rest-strategy]')
+      || target.matches('[data-auto-assign-priority-strict]')
     ) {
       updatePolicyPresetUi(resolveMatchingPolicyPreset());
       refreshGlobalForecast();

@@ -177,6 +177,153 @@ if ($action === 'delete_document') {
     ]);
 }
 
+if ($action === 'upload_and_share_document') {
+    if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $fileName = trim((string) ($input['file_name'] ?? ''));
+    $fileContentB64 = trim((string) ($input['file_content_b64'] ?? ''));
+    $fileMimeType = trim((string) ($input['file_mime_type'] ?? ''));
+    $documentType = trim((string) ($input['document_type'] ?? 'other'));
+    $requestTitle = trim((string) ($input['title'] ?? ''));
+    $requestMessage = trim((string) ($input['message'] ?? ''));
+    $recipientScope = trim((string) ($input['recipient_scope'] ?? 'selected'));
+    $recipientIdsRaw = $input['recipient_ids'] ?? [];
+    $requireSignature = !empty($input['require_signature']);
+
+    if ($fileName === '' || $fileContentB64 === '') {
+        jsonResponse(['success' => false, 'error' => 'file_name and file_content_b64 are required'], 400);
+    }
+
+    if (!in_array($documentType, ['contract', 'medical_certificate', 'id_scan', 'other'], true)) {
+        $documentType = 'other';
+    }
+
+    $decoded = base64_decode($fileContentB64, true);
+    if (!is_string($decoded) || $decoded === '') {
+        jsonResponse(['success' => false, 'error' => 'Invalid file payload'], 400);
+    }
+    if (strlen($decoded) > 8 * 1024 * 1024) {
+        jsonResponse(['success' => false, 'error' => 'File payload too large'], 400);
+    }
+
+    $safeBaseName = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $fileName) ?: ('document-' . date('Ymd-His'));
+    if (mb_strlen($safeBaseName) > 180) {
+        $safeBaseName = mb_substr($safeBaseName, 0, 180);
+    }
+
+    $allowedRecipientsSql = 'SELECT u.id
+                            FROM users u
+                            LEFT JOIN departments d ON d.id = u.department_id
+                            WHERE u.status = "active"
+                              AND u.role = "employee"';
+    $allowedRecipientsParams = [];
+
+    if ($role === 'admin') {
+        $allowedRecipientsSql .= ' AND d.company_id = :company_id';
+        $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
+    } elseif ($role === 'department_manager') {
+        $allowedRecipientsSql .= ' AND u.department_id = :department_id';
+        $allowedRecipientsParams['department_id'] = (int) ($profile['department_id'] ?? 0);
+    }
+
+    $allowedRecipientsStmt = $pdo->prepare($allowedRecipientsSql);
+    $allowedRecipientsStmt->execute($allowedRecipientsParams);
+    $allowedRecipientIds = array_map('intval', $allowedRecipientsStmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
+    $allowedRecipientSet = array_fill_keys($allowedRecipientIds, true);
+
+    $recipientIds = [];
+    if ($recipientScope === 'all') {
+        $recipientIds = $allowedRecipientIds;
+    } else {
+        $recipientIds = array_values(array_filter(array_map('intval', is_array($recipientIdsRaw) ? $recipientIdsRaw : [$recipientIdsRaw])));
+        $recipientIds = array_values(array_filter($recipientIds, static fn (int $id): bool => isset($allowedRecipientSet[$id])));
+    }
+
+    if (empty($recipientIds)) {
+        jsonResponse(['success' => false, 'error' => 'At least one valid recipient is required'], 400);
+    }
+
+    if ($requestTitle === '') {
+        $requestTitle = $requireSignature ? 'Document to sign' : 'Shared document';
+    }
+    if ($requestMessage === '') {
+        $requestMessage = $requireSignature
+            ? 'Please review and sign the attached document.'
+            : 'Please review the attached document.';
+    }
+
+    if ($fileMimeType === '') {
+        $extension = strtolower(pathinfo($safeBaseName, PATHINFO_EXTENSION));
+        $mimeByExtension = [
+            'pdf' => 'application/pdf',
+            'png' => 'image/png',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'txt' => 'text/plain; charset=utf-8',
+            'csv' => 'text/csv; charset=utf-8',
+            'html' => 'text/html; charset=utf-8',
+            'htm' => 'text/html; charset=utf-8',
+        ];
+        $fileMimeType = $mimeByExtension[$extension] ?? 'application/octet-stream';
+    }
+
+    $insertDocument = $pdo->prepare(
+        'INSERT INTO documents (user_id, document_type, file_name, file_path, file_blob, file_mime_type, status)
+         VALUES (:user_id, :document_type, :file_name, :file_path, :file_blob, :file_mime_type, :status)'
+    );
+    $insertRequest = $pdo->prepare(
+        'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
+         VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
+    );
+
+    $pdo->beginTransaction();
+    try {
+        $insertDocument->execute([
+            'user_id' => (int) ($user['id'] ?? 0),
+            'document_type' => $documentType,
+            'file_name' => $safeBaseName,
+            'file_path' => '',
+            'file_blob' => $decoded,
+            'file_mime_type' => $fileMimeType,
+            'status' => 'valid',
+        ]);
+
+        $documentId = (int) $pdo->lastInsertId();
+        $requestType = $requireSignature ? 'document_signature' : 'notification';
+        $requestStatus = $requireSignature ? 'pending' : 'unread';
+        foreach ($recipientIds as $recipientId) {
+            $insertRequest->execute([
+                'user_id' => (int) ($user['id'] ?? 0),
+                'recipient_id' => $recipientId,
+                'type' => $requestType,
+                'title' => $requestTitle,
+                'message' => $requestMessage,
+                'status' => $requestStatus,
+                'document_id' => $documentId,
+            ]);
+        }
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        jsonResponse(['success' => false, 'error' => 'Unable to upload and share document'], 500);
+    }
+
+    jsonResponse([
+        'success' => true,
+        'ok' => true,
+        'document_id' => $documentId,
+        'file_name' => $safeBaseName,
+        'recipient_count' => count($recipientIds),
+        'requires_signature' => $requireSignature,
+        'download_url' => appUrl('document-download', ['id' => $documentId]),
+    ]);
+}
+
 if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_assign_open', 'clear_assignments_scope', 'auto_assign_forecast', 'employee_assignments', 'record_attendance_signature', 'update_attendance', 'cancel_attendance'], true)) {
     $allowedRoles = in_array($action, ['record_attendance_signature', 'update_attendance', 'cancel_attendance'], true)
         ? ['super_admin', 'admin', 'department_manager']
@@ -701,8 +848,17 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         $restDaysPerWeek = min($minRestDaysPerWeek, $effectiveMaxRestDaysPerWeek);
         $allowReassignConflicts = !array_key_exists('allow_reassign_conflicts', $input)
             || !in_array(strtolower(trim((string) $input['allow_reassign_conflicts'])), ['0', 'false', 'no', 'off'], true);
-        $allowCrossDepartmentFallback = !array_key_exists('allow_cross_department_fallback', $input)
-            || !in_array(strtolower(trim((string) $input['allow_cross_department_fallback'])), ['0', 'false', 'no', 'off'], true);
+        $allowCrossDepartmentFallback = false;
+        if (array_key_exists('allow_cross_department_fallback', $input)) {
+            $allowCrossDepartmentFallback = in_array(
+                strtolower(trim((string) $input['allow_cross_department_fallback'])),
+                ['1', 'true', 'yes', 'on'],
+                true
+            );
+        }
+        $priorityDepartmentId = max(0, (int) ($input['priority_department_id'] ?? 0));
+        $priorityDepartmentStrictInternal = !array_key_exists('priority_department_strict_internal', $input)
+            || !in_array(strtolower(trim((string) $input['priority_department_strict_internal'])), ['0', 'false', 'no', 'off'], true);
         $assignmentMode = strtolower(trim((string) ($input['assignment_mode'] ?? 'multiple')));
         if (!in_array($assignmentMode, ['single', 'multiple'], true)) {
             $assignmentMode = 'multiple';
@@ -1252,7 +1408,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         }
 
         $openStmt = $pdo->prepare(
-            'SELECT us.id, us.work_date, s.id AS shift_id, s.start_time, s.end_time, s.kind AS shift_kind, d.id AS department_id
+            'SELECT us.id, us.work_date, s.id AS shift_id, s.start_time, s.end_time, s.kind AS shift_kind, d.id AS department_id, d.name AS department_name
              FROM user_shifts us
              INNER JOIN shifts s ON s.id = us.shift_id
              INNER JOIN departments d ON d.id = s.department_id
@@ -1293,35 +1449,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
 
         $userIdsInScope = array_values(array_filter(array_map(static fn (array $row): int => (int) ($row['id'] ?? 0), $users), static fn (int $id): bool => $id > 0));
         if (!empty($userIdsInScope)) {
-            $userInPlaceholders = [];
-            $userInParams = [
-                'range_start' => $rangeStart,
-                'range_end' => $rangeEnd,
-            ];
-            foreach ($userIdsInScope as $idx => $uidInScope) {
-                $ph = ':uid_scope_' . $idx;
-                $userInPlaceholders[] = $ph;
-                $userInParams[ltrim($ph, ':')] = $uidInScope;
-            }
-            $adminShiftUsersStmt = $pdo->prepare(
-                'SELECT DISTINCT us.user_id
-                 FROM user_shifts us
-                 INNER JOIN shifts s ON s.id = us.shift_id
-                 WHERE us.user_id IN (' . implode(', ', $userInPlaceholders) . ')
-                   AND us.work_date BETWEEN :range_start AND :range_end
-                   AND us.status <> "cancelled"
-                   AND s.kind = "work"
-                   AND REPLACE(LOWER(TRIM(s.name)), " ", "") IN ("amministration", "administration")'
-            );
-            $adminShiftUsersStmt->execute($userInParams);
-            foreach ($adminShiftUsersStmt->fetchAll(PDO::FETCH_ASSOC) as $adminShiftUserRow) {
-                $adminUserId = (int) ($adminShiftUserRow['user_id'] ?? 0);
-                if ($adminUserId <= 0) {
-                    continue;
-                }
-                // Fixed profile for Administration shift: Sunday (0) and Monday (1) are rest days.
-                $implicitFixedOffWeekdaysByUser[$adminUserId] = [0 => true, 1 => true];
-            }
+            // Keep implicit fixed off map empty unless explicitly derived from user rules.
         }
 
         $nonWorkTemplateParams = $scopeOnlyParams;
@@ -1389,6 +1517,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             $assignmentByUserDate[$uid][$date] = [
                 'assignment_id' => (int) ($row['assignment_id'] ?? 0),
                 'shift_id' => (int) ($row['shift_id'] ?? 0),
+                'department_id' => $departmentId,
                 'shift_kind' => $kind,
                 'hours' => $hours,
                 'week' => $week,
@@ -1399,6 +1528,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                 $workAssignmentByUserDate[$uid][$date] = [
                     'assignment_id' => (int) ($row['assignment_id'] ?? 0),
                     'shift_id' => (int) ($row['shift_id'] ?? 0),
+                    'department_id' => $departmentId,
                     'work_date' => $date,
                     'hours' => $hours,
                     'week' => $week,
@@ -1766,10 +1896,39 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             }
         }
 
+        $isEssentialDepartment = static function (string $departmentName): bool {
+            $normalized = strtolower(trim($departmentName));
+            if ($normalized === '') {
+                return false;
+            }
+            $normalized = str_replace([' ', "'", '-', '_'], '', $normalized);
+            foreach (['ricevimento', 'reception', 'recepcion', 'accueil', 'frontoffice', 'frontdesk'] as $needle) {
+                if (str_contains($normalized, $needle)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
         $groupOrder = array_keys($openRowsByShiftDate);
-        usort($groupOrder, static function (string $a, string $b) use ($coverageByShiftDate, $minEmployeesPerShiftDay): int {
+        usort($groupOrder, static function (string $a, string $b) use ($coverageByShiftDate, $minEmployeesPerShiftDay, $openRowsByShiftDate, $isEssentialDepartment, $priorityDepartmentId): int {
             [$aShift, $aDate] = array_pad(explode('|', $a, 2), 2, '');
             [$bShift, $bDate] = array_pad(explode('|', $b, 2), 2, '');
+            $aDepartmentId = (int) (($openRowsByShiftDate[$a][0]['department_id'] ?? 0) ?: 0);
+            $bDepartmentId = (int) (($openRowsByShiftDate[$b][0]['department_id'] ?? 0) ?: 0);
+            $aPriority = ($priorityDepartmentId > 0 && $aDepartmentId === $priorityDepartmentId) ? 1 : 0;
+            $bPriority = ($priorityDepartmentId > 0 && $bDepartmentId === $priorityDepartmentId) ? 1 : 0;
+            if ($aPriority !== $bPriority) {
+                return $bPriority <=> $aPriority;
+            }
+            $aDepartmentName = (string) (($openRowsByShiftDate[$a][0]['department_name'] ?? '') ?: '');
+            $bDepartmentName = (string) (($openRowsByShiftDate[$b][0]['department_name'] ?? '') ?: '');
+            $aEssential = $isEssentialDepartment($aDepartmentName) ? 1 : 0;
+            $bEssential = $isEssentialDepartment($bDepartmentName) ? 1 : 0;
+            if ($aEssential !== $bEssential) {
+                return $bEssential <=> $aEssential;
+            }
             $aAssigned = (int) ($coverageByShiftDate[$a] ?? 0);
             $bAssigned = (int) ($coverageByShiftDate[$b] ?? 0);
             $aDeficit = max($minEmployeesPerShiftDay - $aAssigned, 0);
@@ -1795,6 +1954,24 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         $crossDepartmentAssignedCount = 0;
         $skippedByRules = 0;
         $assignedForTargetUser = false;
+        $priorityOpenSlotsByDate = [];
+        if ($priorityDepartmentId > 0) {
+            foreach ($openRowsByShiftDate as $priorityGroupRows) {
+                $firstPriorityRow = $priorityGroupRows[0] ?? null;
+                if (!$firstPriorityRow) {
+                    continue;
+                }
+                $priorityDeptInGroup = (int) ($firstPriorityRow['department_id'] ?? 0);
+                if ($priorityDeptInGroup !== $priorityDepartmentId) {
+                    continue;
+                }
+                $priorityDate = (string) ($firstPriorityRow['work_date'] ?? '');
+                if ($priorityDate === '') {
+                    continue;
+                }
+                $priorityOpenSlotsByDate[$priorityDate] = (int) ($priorityOpenSlotsByDate[$priorityDate] ?? 0) + count($priorityGroupRows);
+            }
+        }
 
         // Hard rule: keep at most one rest assignment per department/day.
         foreach ($restAssignedByDepartmentDate as $deptDateKey => $restCountForDeptDay) {
@@ -1895,6 +2072,8 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                 $candidatePreviousAssignment = null;
                 $candidateHours = PHP_FLOAT_MAX;
                 $candidateDepartmentPriority = -1;
+                $isEssentialSlot = $isEssentialDepartment((string) ($openRow['department_name'] ?? ''));
+                $isPrioritySlot = $priorityDepartmentId > 0 && $slotDepartmentId === $priorityDepartmentId;
                 foreach ($users as $candidateUser) {
                     $uid = (int) ($candidateUser['id'] ?? 0);
                     if ($uid <= 0) {
@@ -1902,6 +2081,9 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                     }
                     $candidateDepartmentIds = $userDepartmentIdsById[$uid] ?? [];
                     $isSameDepartment = in_array($slotDepartmentId, $candidateDepartmentIds, true);
+                    if ($isPrioritySlot && $priorityDepartmentStrictInternal && !$isSameDepartment) {
+                        continue;
+                    }
                     if (!$isSameDepartment && !$allowCrossDepartmentFallback) {
                         continue;
                     }
@@ -1909,6 +2091,21 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                     $existingAssignment = $assignmentByUserDate[$uid][$slotDate] ?? null;
                     $existingKind = (string) ($existingAssignment['shift_kind'] ?? '');
                     $hasProtectedAbsence = in_array($existingKind, ['vacation', 'sick'], true);
+
+                    if (!$isPrioritySlot && $priorityDepartmentId > 0 && $priorityDepartmentStrictInternal) {
+                        $candidateBelongsToPriorityDepartment = in_array($priorityDepartmentId, $candidateDepartmentIds, true);
+                        if ($candidateBelongsToPriorityDepartment && (int) ($priorityOpenSlotsByDate[$slotDate] ?? 0) > 0) {
+                            continue;
+                        }
+                        if (
+                            $candidateBelongsToPriorityDepartment
+                            && $existingAssignment
+                            && (string) ($existingAssignment['shift_kind'] ?? '') === 'work'
+                            && (int) ($existingAssignment['department_id'] ?? 0) === $priorityDepartmentId
+                        ) {
+                            continue;
+                        }
+                    }
 
                     if (!empty($dayBusy[$uid][$slotDate])) {
                         if (!$allowReassignConflicts || !$existingAssignment || $hasProtectedAbsence) {
@@ -1943,6 +2140,46 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                         $candidatePreviousAssignment = !empty($dayBusy[$uid][$slotDate]) ? $existingAssignment : null;
                         $candidateHours = $monthHours;
                         $candidateDepartmentPriority = $departmentPriority;
+                    }
+                }
+
+                // For essential departments, run a relaxed second pass to maximize coverage.
+                // Still same-department only; never uses automatic cross-department fallback.
+                if (!$candidate && $isEssentialSlot) {
+                    foreach ($users as $candidateUser) {
+                        $uid = (int) ($candidateUser['id'] ?? 0);
+                        if ($uid <= 0) {
+                            continue;
+                        }
+                        $candidateDepartmentIds = $userDepartmentIdsById[$uid] ?? [];
+                        if (!in_array($slotDepartmentId, $candidateDepartmentIds, true)) {
+                            continue;
+                        }
+
+                        $existingAssignment = $assignmentByUserDate[$uid][$slotDate] ?? null;
+                        $existingKind = (string) ($existingAssignment['shift_kind'] ?? '');
+                        if (in_array($existingKind, ['vacation', 'sick'], true)) {
+                            continue;
+                        }
+
+                        $ruleReason = $getRuleReasonByDate($uid, $slotDate);
+                        if (in_array($ruleReason, ['vacation', 'sick'], true)) {
+                            continue;
+                        }
+
+                        if (!empty($dayBusy[$uid][$slotDate])) {
+                            if (!$allowReassignConflicts || !$existingAssignment || in_array($existingKind, ['vacation', 'sick'], true)) {
+                                continue;
+                            }
+                        }
+
+                        $monthHours = (float) ($hoursByUserMonth[$uid][$slotMonth] ?? 0.0);
+                        if ($monthHours < $candidateHours) {
+                            $candidate = $uid;
+                            $candidatePreviousAssignment = !empty($dayBusy[$uid][$slotDate]) ? $existingAssignment : null;
+                            $candidateHours = $monthHours;
+                            $candidateDepartmentPriority = 1;
+                        }
                     }
                 }
 
@@ -2014,6 +2251,9 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                     $assignedInGroup++;
                     $coverageByShiftDate[$groupKey] = $assignedInGroup;
                     $assignedCount++;
+                    if ($isPrioritySlot && isset($priorityOpenSlotsByDate[$slotDate])) {
+                        $priorityOpenSlotsByDate[$slotDate] = max(0, (int) $priorityOpenSlotsByDate[$slotDate] - 1);
+                    }
 
                     if ($targetUserId > 0 && $assignmentMode === 'single' && (int) $candidate === $targetUserId) {
                         $assignedForTargetUser = true;

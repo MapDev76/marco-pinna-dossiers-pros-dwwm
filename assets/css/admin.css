@@ -121,6 +121,32 @@
     resize: vertical;
 }
 
+.crud-inline-choice {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0.55rem;
+    justify-content: flex-start;
+}
+
+.crud-inline-choice > input[type="checkbox"] {
+    width: 18px;
+    min-height: 18px;
+    height: 18px;
+    padding: 0;
+    margin: 0;
+    border-radius: 5px;
+    accent-color: #9d7910;
+    background: #fff;
+    border: 1px solid rgba(157, 121, 16, 0.48);
+    flex: 0 0 auto;
+}
+
+.crud-inline-choice > .company-card-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+}
+
 /* =============================================
     ADMIN TABLES
    ============================================= */
@@ -1727,6 +1753,37 @@
     overflow: auto;
 }
 
+.settings-auto-assign-priority-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.settings-auto-assign-priority-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid rgba(157, 121, 16, 0.32);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    padding: 0.22rem 0.56rem;
+    min-height: 32px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.settings-auto-assign-priority-chip[aria-pressed="true"] {
+    background: rgba(157, 121, 16, 0.14);
+    border-color: rgba(157, 121, 16, 0.55);
+}
+
+.settings-auto-assign-priority-guard-chip {
+    margin-top: 0.3rem;
+}
+
 .settings-auto-assign-forecast {
     grid-column: 1 / -1;
     display: grid;
@@ -2758,6 +2815,14 @@
 .settings-icon-image,
 .settings-icon-inline-image {
     filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.85));
+}
+
+.company-card-action-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: inline-block;
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.75));
 }
 
 .dashboard-modal .admin-action-link,

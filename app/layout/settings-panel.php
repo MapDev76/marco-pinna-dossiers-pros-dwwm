@@ -806,6 +806,46 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <?php endforeach; ?>
                             </div>
                         </div>
+                        <?php
+                            $autoAssignDepartmentOptions = [];
+                            foreach ($visibleDepartments as $departmentOption) {
+                                $departmentOptionId = (int) ($departmentOption['id'] ?? 0);
+                                if ($departmentOptionId <= 0) {
+                                    continue;
+                                }
+                                $autoAssignDepartmentOptions[] = [
+                                    'id' => $departmentOptionId,
+                                    'name' => (string) ($departmentOption['name'] ?? t('settings.department_default')),
+                                ];
+                            }
+                        ?>
+                        <div class="settings-field settings-field-span-all" data-auto-assign-priority-wrap>
+                            <span><?php echo e($isFrLocale ? 'Priorite de departement pour l affectation automatique' : 'Department priority for auto assignment'); ?></span>
+                            <div class="settings-auto-assign-priority-list" data-auto-assign-priority-list>
+                                <button
+                                    type="button"
+                                    class="settings-auto-assign-priority-chip"
+                                    data-auto-assign-priority-department-id="0"
+                                    aria-pressed="true"
+                                >
+                                    <?php echo e($isFrLocale ? 'Aucune priorite' : 'No priority'); ?>
+                                </button>
+                                <?php foreach ($autoAssignDepartmentOptions as $departmentOption): ?>
+                                    <button
+                                        type="button"
+                                        class="settings-auto-assign-priority-chip"
+                                        data-auto-assign-priority-department-id="<?php echo (int) ($departmentOption['id'] ?? 0); ?>"
+                                        aria-pressed="false"
+                                    >
+                                        <?php echo e($departmentOption['name'] ?? t('settings.department_default')); ?>
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+                            <label class="settings-assignment-open-shift-chip settings-auto-assign-priority-guard-chip">
+                                <input type="checkbox" data-auto-assign-priority-strict checked>
+                                <?php echo e($isFrLocale ? 'Exclure les employes externes a ce departement prioritaire' : 'Exclude employees outside prioritized department'); ?>
+                            </label>
+                        </div>
                         <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-auto-assign-range-start type="date" value="<?php echo e($autoAssignDefaultStart); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
                         <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-auto-assign-range-end type="date" value="<?php echo e($autoAssignDefaultEnd); ?>" min="<?php echo e($currentMonthStart); ?>"></label>
                         <label class="settings-field"><?php echo e(t('settings.minimum_employees')); ?><input data-auto-assign-min-employees type="number" min="0" step="1" value="1"></label>
