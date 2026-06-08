@@ -19,6 +19,65 @@
 
   const modalControllers = [];
 
+  const initSimpleModal = ({
+    modalSelector,
+    openButtonsSelector,
+    closeButtonsSelector,
+  }) => {
+    const modal = document.querySelector(modalSelector);
+    if (!modal) return null;
+
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
+
+    const openButtons = Array.from(document.querySelectorAll(openButtonsSelector));
+    const closeButtons = Array.from(document.querySelectorAll(closeButtonsSelector));
+    let isModalOpen = !modal.hidden;
+
+    const openModal = () => {
+      modal.hidden = false;
+      document.documentElement.classList.add('modal-open');
+      document.body.classList.add('modal-open');
+      isModalOpen = true;
+    };
+
+    const closeModal = () => {
+      modal.hidden = true;
+      document.documentElement.classList.remove('modal-open');
+      document.body.classList.remove('modal-open');
+      isModalOpen = false;
+    };
+
+    openButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        openModal();
+      });
+    });
+
+    closeButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        closeModal();
+      });
+    });
+
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && isModalOpen && !modal.hidden) {
+        closeModal();
+      }
+    });
+
+    return { closeModal };
+  };
+
   const initSignatureModal = ({
     modalSelector,
     formSelector,
@@ -256,6 +315,15 @@
   });
   if (documentModal) {
     modalControllers.push(documentModal);
+  }
+
+  const employeeDocumentsModal = initSimpleModal({
+    modalSelector: '[data-employee-documents-modal]',
+    openButtonsSelector: '[data-modal-target="employee-documents-modal"], [data-employee-documents-modal-open]',
+    closeButtonsSelector: '[data-employee-documents-modal-close]',
+  });
+  if (employeeDocumentsModal) {
+    modalControllers.push(employeeDocumentsModal);
   }
 
   scrollButtons.forEach((button) => {

@@ -333,37 +333,6 @@ if (is_array($primaryShift)) {
                 </div>
                 <span class="employee-metric-pill"><?php echo count($incomingDocuments); ?> <?php echo e(t('employee.files_suffix')); ?></span>
             </div>
-            <form method="post" enctype="multipart/form-data" class="admin-form" style="margin-bottom:0.8rem;">
-                <input type="hidden" name="action" value="share_document_no_signature">
-                <label>
-                    Titre
-                    <input type="text" name="title" maxlength="255" placeholder="Partage document" required>
-                </label>
-                <label class="span-2">
-                    Message
-                    <textarea name="message" rows="3" placeholder="Ajoutez un court message pour les responsables."></textarea>
-                </label>
-                <label class="span-2">
-                    Document
-                    <input type="file" name="document_file" required>
-                </label>
-                <?php if (!empty($documentShareRecipients ?? [])): ?>
-                    <label class="span-2">
-                        Destinataires
-                        <select name="recipient_ids[]" multiple size="4">
-                            <?php foreach (($documentShareRecipients ?? []) as $recipient): ?>
-                                <option value="<?php echo (int) ($recipient['id'] ?? 0); ?>">
-                                    <?php echo e((string) ($recipient['full_name'] ?? ('User #' . (int) ($recipient['id'] ?? 0)))); ?>
-                                    (<?php echo e((string) ($recipient['role'] ?? 'manager')); ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </label>
-                <?php endif; ?>
-                <div class="form-actions span-2">
-                    <button type="submit" class="admin-action-link">Envoyer le document</button>
-                </div>
-            </form>
             <div class="table-wrap employee-table-wrap">
                 <table class="admin-table employee-table-compact">
                     <thead>
@@ -477,6 +446,54 @@ if (is_array($primaryShift)) {
                 <div class="employee-attendance-dialog-actions">
                     <button type="button" class="admin-action-link admin-action-link-secondary" data-document-sign-close><?php echo e(t('employee.cancel')); ?></button>
                     <button type="submit"><?php echo e(t('employee.sign_document', ['fallback' => 'Sign document'])); ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="employee-attendance-modal" data-employee-documents-modal hidden>
+        <div class="employee-attendance-dialog employee-documents-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-documents-manage-title">
+            <div class="employee-attendance-dialog-head">
+                <div>
+                    <span class="employee-stage-eyebrow"><?php echo e(t('employee.documents')); ?></span>
+                    <h3 id="employee-documents-manage-title"><?php echo e(t('common.documents')); ?></h3>
+                    <p class="crud-modal-subtitle">Partagez un document avec les responsables sans demande de signature.</p>
+                </div>
+                <button type="button" class="dashboard-modal-close" data-employee-documents-modal-close aria-label="<?php echo e(t('employee.cancel')); ?>">
+                    <img src="<?php echo appUrl('assets/icons/x.svg'); ?>" alt="">
+                </button>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="admin-form employee-documents-form">
+                <input type="hidden" name="action" value="share_document_no_signature">
+                <label>
+                    Titre
+                    <input type="text" name="title" maxlength="255" placeholder="Partage document" required>
+                </label>
+                <label class="span-2">
+                    Message
+                    <textarea name="message" rows="3" placeholder="Ajoutez un court message pour les responsables."></textarea>
+                </label>
+                <label class="span-2">
+                    Document
+                    <input type="file" name="document_file" required>
+                </label>
+                <?php if (!empty($documentShareRecipients ?? [])): ?>
+                    <label class="span-2">
+                        Destinataires
+                        <select name="recipient_ids[]" multiple size="6">
+                            <?php foreach (($documentShareRecipients ?? []) as $recipient): ?>
+                                <option value="<?php echo (int) ($recipient['id'] ?? 0); ?>">
+                                    <?php echo e((string) ($recipient['full_name'] ?? ('User #' . (int) ($recipient['id'] ?? 0)))); ?>
+                                    (<?php echo e((string) ($recipient['role'] ?? 'manager')); ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                <?php endif; ?>
+                <div class="employee-attendance-dialog-actions span-2">
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-employee-documents-modal-close><?php echo e(t('employee.cancel')); ?></button>
+                    <button type="submit" class="admin-action-link">Envoyer le document</button>
                 </div>
             </form>
         </div>

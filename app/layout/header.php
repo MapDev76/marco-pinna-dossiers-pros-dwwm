@@ -133,6 +133,16 @@ if ($route === 'home') {
         ];
 
     } else {
+        if ($route === 'my-space') {
+            $rightIcons[] = [
+                'type' => 'button',
+                'title' => t('common.documents'),
+                'target' => 'employee-documents-modal',
+                'icon' => 'document.svg',
+                'alt' => t('common.documents'),
+            ];
+        }
+
         if ($role === 'employee') {
             $rightIcons[] = [
                 'type' => 'link',
