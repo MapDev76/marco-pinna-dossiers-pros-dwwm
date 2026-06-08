@@ -76,6 +76,21 @@
       }, new Map());
     };
 
+    var shiftRunsOnWeekday = function (shiftId, weekday, departmentId) {
+      var normalizedShiftId = Number(shiftId || 0);
+      var normalizedWeekday = Number(weekday);
+      var normalizedDepartmentId = Number(departmentId || 0);
+      if (!normalizedShiftId || normalizedWeekday < 0 || normalizedWeekday > 6) return false;
+
+      return getVisibleEvents().some(function (event) {
+        if (Number(event.shift_id || 0) !== normalizedShiftId) return false;
+        if (normalizedDepartmentId > 0 && Number(event.department_id || 0) !== normalizedDepartmentId) return false;
+        var eventDate = toLocalDate(event.work_date || '');
+        if (!eventDate) return false;
+        return eventDate.getDay() === normalizedWeekday;
+      });
+    };
+
     var groupEventsByShiftDate = function (items) {
       return items.reduce(function (groups, event) {
         var shiftKey = String(event.shift_id || '') + '|' + String(event.work_date || '');
@@ -106,6 +121,9 @@
       var assignedEmployees = (group.events || []).filter(function (event) {
         return Number(event.user_id || 0) > 0;
       });
+      if (shiftKind !== 'work' && assignedEmployees.length === 0) {
+        return '';
+      }
       var isOpenSlot = assignedEmployees.length === 0 && shiftKind === 'work';
       var isPastSlot = String(baseEvent.work_date || '') < String(todayKey || '');
       var isSidebarAssignCandidate = isOpenSlot
@@ -170,7 +188,10 @@
       shiftTemplates.forEach(function (shift) {
         var shiftId = Number(shift.id || 0);
         var shiftKind = String(shift.kind || 'work').toLowerCase();
+        var activeDepartmentId = Number(activeDepartment && activeDepartment.id ? activeDepartment.id : 0);
+        var currentWeekday = date.getDay();
         if (!shiftId || shiftKind !== 'work' || scheduledShiftIds[String(shiftId)]) return;
+        if (!shiftRunsOnWeekday(shiftId, currentWeekday, activeDepartmentId)) return;
 
         dayEvents.push({
           assignment_id: 0,
