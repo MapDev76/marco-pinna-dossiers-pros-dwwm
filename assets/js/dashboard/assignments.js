@@ -716,10 +716,10 @@
           tips.push(tr('Estimated extra assignable capacity', 'Capacite supplementaire estimable') + `: ${predictedSurplusCapacity}`);
         }
         if (openSlots > 0) {
-          tips.push(tr('Open slots may remain because assignment is department-scoped.', 'Des postes ouverts peuvent rester car l affectation est limitee au departement.'));
+          tips.push(tr('Open slots may remain because assignment is department-scoped.', 'Des postes ouverts peuvent rester car l\'affectation est limitee au departement.'));
         }
       } else {
-        tips.push(tr('Coverage is near target. Run auto-assign and re-check remaining open slots.', 'La couverture est proche de la cible. Lancez l auto-assignation puis recontrolez les postes ouverts restants.'));
+        tips.push(tr('Coverage is near target. Run auto-assign and re-check remaining open slots.', 'La couverture est proche de la cible. Lancez l\'auto-assignation puis recontrolez les postes ouverts restants.'));
       }
 
       if (crossSuggestions.length > 0) {
@@ -790,7 +790,7 @@
         status: 'shortage',
         summary: tr('Select at least one shift chip to run forecast.', 'Selectionnez au moins un poste pour la prevision.'),
         metrics: [],
-        recommendations: [tr('Enable one or more shift chips before auto-assign.', 'Activez un ou plusieurs chips de poste avant l affectation automatique.')],
+        recommendations: [tr('Enable one or more shift chips before auto-assign.', 'Activez un ou plusieurs chips de poste avant l\'affectation automatique.')],
       });
       lastGlobalForecastResponse = null;
       return;
@@ -1511,7 +1511,7 @@
       }
     } catch (error) {
       console.error(error);
-      notifyError(tr('Error assigning selected open shifts.', 'Erreur lors de l affectation des postes ouverts selectionnes.'));
+      notifyError(tr('Error assigning selected open shifts.', 'Erreur lors de l\'affectation des postes ouverts selectionnes.'));
     }
   }
 
@@ -1596,14 +1596,14 @@
         if (options?.silent) {
           return false;
         }
-        notifyError(tr('Assignment failed: ', 'Echec de l affectation : ') + (res?.error || tr('unknown', 'inconnue')));
+        notifyError(tr('Assignment failed: ', 'Echec de l\'affectation : ') + (res?.error || tr('unknown', 'inconnue')));
       }
     } catch (error) {
       if (options?.silent) {
         throw error;
       }
       console.error(error);
-      notifyError(tr('Error assigning shift.', 'Erreur lors de l affectation du poste.'));
+      notifyError(tr('Error assigning shift.', 'Erreur lors de l\'affectation du poste.'));
     }
   }
 

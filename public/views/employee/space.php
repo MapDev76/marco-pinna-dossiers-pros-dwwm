@@ -44,10 +44,21 @@ $shiftKindLabels = [
 $shiftKindIcons = [
     'work' => '',
     'overtime' => '',
-    'rest' => '💤',
-    'vacation' => '🏖',
-    'sick' => '🤒',
+    'rest' => 'moon.svg',
+    'vacation' => 'parasol.svg',
+    'sick' => 'stethoscope.svg',
 ];
+$renderEmployeeKindIcon = static function (string $iconFile, string $className = 'employee-kind-icon') use ($basePath): string {
+    $iconFile = trim($iconFile);
+    if ($iconFile === '') {
+        return '';
+    }
+
+    return '<img src="' . e($basePath . '/assets/icons/' . $iconFile) . '" alt="" aria-hidden="true" class="' . e($className) . '">';
+};
+$stripLeadingEmoji = static function (string $label): string {
+    return trim((string) preg_replace('/^[^\p{L}\p{N}]+/u', '', $label));
+};
 $formatLongDate = static function (?string $dateValue): string {
     if (empty($dateValue)) {
         return '--';
@@ -155,10 +166,10 @@ if (is_array($primaryShift)) {
                     $primaryKind = strtolower(trim((string) ($primaryShift['shift_kind'] ?? 'work')));
                     $primaryKindIcon = $shiftKindIcons[$primaryKind] ?? '';
                     $primaryShiftName = trim((string) ($primaryShift['shift_name'] ?? t('employee.shift')));
-                    $primaryPillText = $primaryKindIcon !== '' ? ($primaryKindIcon . ' ' . $primaryShiftName) : $primaryShiftName;
+                    $primaryPillIcon = $renderEmployeeKindIcon($primaryKindIcon, 'employee-kind-icon employee-stage-pill-icon');
                 ?>
                 <div class="employee-shift-stage-head">
-                    <span class="employee-stage-pill"><?php echo e($primaryPillText); ?></span>
+                    <span class="employee-stage-pill"><?php echo $primaryPillIcon; ?><?php echo e($primaryShiftName); ?></span>
                 </div>
             <?php endif; ?>
 
@@ -246,13 +257,13 @@ if (is_array($primaryShift)) {
                         $shiftBadge = t('employee.badge_cancelled');
                         $shiftBadgeClass = 'is-rest';
                     } elseif ($shiftKind === 'rest') {
-                        $shiftBadge = t('employee.badge_rest');
+                        $shiftBadge = $stripLeadingEmoji((string) t('employee.badge_rest'));
                         $shiftBadgeClass = 'is-rest';
                     } elseif ($shiftKind === 'vacation') {
-                        $shiftBadge = t('employee.badge_vacation');
+                        $shiftBadge = $stripLeadingEmoji((string) t('employee.badge_vacation'));
                         $shiftBadgeClass = 'is-vacation';
                     } elseif ($shiftKind === 'sick') {
-                        $shiftBadge = t('employee.badge_sick');
+                        $shiftBadge = $stripLeadingEmoji((string) t('employee.badge_sick'));
                         $shiftBadgeClass = 'is-sick';
                     } elseif (!empty($shift['attendance_recorded'])) {
                         $shiftBadge = t('employee.badge_signed');
@@ -260,15 +271,17 @@ if (is_array($primaryShift)) {
                     }
                     $shiftCardClass = $isNonWorkShift ? 'is-non-work' : 'is-work';
                     $shiftColor = trim((string) ($shift['shift_color'] ?? '#b58e14'));
+                    $shiftKindIconHtml = $renderEmployeeKindIcon($shiftKindIcon, 'employee-kind-icon employee-upcoming-kind-icon');
+                    $shiftBadgeIconHtml = $renderEmployeeKindIcon($shiftKindIcon, 'employee-kind-icon employee-upcoming-badge-icon');
                 ?>
                 <article class="employee-upcoming-item <?php echo e($shiftCardClass); ?>" <?php if (!$isNonWorkShift): ?>style="--employee-shift-color: <?php echo e($shiftColor); ?>;"<?php endif; ?>>
                     <div>
                         <strong><?php echo e($formatLongDate($shift['work_date'] ?? null)); ?></strong>
                         <span><?php echo e($formatTimeRange($shift)); ?></span>
                         <small><?php echo e($shift['department_name'] ?? t('employee.default_department')); ?></small>
-                        <small><?php echo e(($shiftKindIcon !== '' ? ($shiftKindIcon . ' ') : '') . $shiftKindLabel); ?></small>
+                        <small class="employee-upcoming-kind"><?php echo $shiftKindIconHtml; ?><?php echo e($shiftKindLabel); ?></small>
                     </div>
-                    <span class="employee-upcoming-badge <?php echo e($shiftBadgeClass); ?>"><?php echo e($shiftBadge); ?></span>
+                    <span class="employee-upcoming-badge <?php echo e($shiftBadgeClass); ?>"><?php echo $shiftBadgeIconHtml; ?><?php echo e($shiftBadge); ?></span>
                 </article>
             <?php endforeach; ?>
         </div>

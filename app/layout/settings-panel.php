@@ -859,13 +859,13 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="settings-auto-assign-preview-modal" data-auto-assign-preview-modal hidden>
                             <div class="settings-auto-assign-preview-window">
                                 <div class="settings-auto-assign-preview-head">
-                                    <strong><?php echo e(t('settings.auto_assign_preview_title', ['fallback' => 'Auto-assign simulation'])); ?></strong>
-                                    <p class="crud-modal-subtitle"><?php echo e(t('settings.auto_assign_preview_subtitle', ['fallback' => 'Review projected impact before applying assignments.'])); ?></p>
+                                    <strong>Simulation avant l'affectation</strong>
+                                    <p class="crud-modal-subtitle">Verifiez l'impact prevu avant de lancer l'affectation automatique.</p>
                                 </div>
                                 <div class="settings-auto-assign-preview-grid" data-auto-assign-preview-grid></div>
                                 <div class="settings-auto-assign-preview-actions">
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-preview-cancel><?php echo e(t('common.cancel', ['fallback' => 'Cancel'])); ?></button>
-                                    <button type="button" class="admin-action-link" data-auto-assign-preview-confirm><?php echo e(t('settings.auto_assign_open', ['fallback' => 'Run auto assignment'])); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-preview-cancel>Annuler</button>
+                                    <button type="button" class="admin-action-link" data-auto-assign-preview-confirm>Lancer l'affectation automatique</button>
                                 </div>
                             </div>
                         </div>
