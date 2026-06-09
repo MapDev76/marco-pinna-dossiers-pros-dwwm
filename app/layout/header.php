@@ -82,7 +82,7 @@ if (!$isPublicPage && $currentUser !== null) {
         $leftMySpaceIcon = [
             'href' => $isMySpaceRoute ? appUrl('dashboard') : appUrl('my-space'),
             'title' => $isMySpaceRoute ? t('common.back_to_dashboard') : t('common.my_attendance'),
-            'icon' => 'signature.svg',
+            'icon' => $isMySpaceRoute ? 'chart-candlestick.svg' : 'signature.svg',
             'alt' => t('common.my_attendance'),
         ];
     }
