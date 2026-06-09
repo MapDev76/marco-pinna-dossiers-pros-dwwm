@@ -775,6 +775,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         }
 
         if ($action === 'clear_assignments_scope') {
+            $includeRestAssignments = !empty($input['include_rest_assignments']);
             $scopeWhere = '1=1';
             $scopeParams = [
                 'range_start' => $rangeStart,
@@ -798,9 +799,16 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                 }
             }
 
+            $clearUserFilter = '';
             if ($targetUserId > 0) {
-                $clearShiftFilter .= ' AND us.user_id = :target_user_id';
+                $clearUserFilter .= ' AND us.user_id = :target_user_id';
                 $scopeParams['target_user_id'] = $targetUserId;
+            }
+
+            $clearKindFilter = ' AND s.kind = "work"' . $clearShiftFilter;
+            if ($includeRestAssignments && $scopeShiftId <= 0) {
+                // When requested from global clear action, include all rest template assignments too.
+                $clearKindFilter = ' AND ((s.kind = "work"' . $clearShiftFilter . ') OR s.kind = "rest")';
             }
 
             $clearStmt = $pdo->prepare(
@@ -814,7 +822,8 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                    AND us.work_date BETWEEN :range_start AND :range_end
                    AND us.user_id IS NOT NULL
                    AND us.status <> "cancelled"
-                   AND s.kind = "work"' . $clearShiftFilter
+                                     ' . $clearUserFilter . '
+                                     ' . $clearKindFilter
             );
             $clearStmt->execute($scopeParams);
 

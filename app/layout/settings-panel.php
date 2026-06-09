@@ -820,7 +820,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             }
                         ?>
                         <div class="settings-field settings-field-span-all" data-auto-assign-priority-wrap>
-                            <span><?php echo e($isFrLocale ? 'Priorite de departement pour l affectation automatique' : 'Department priority for auto assignment'); ?></span>
+                            <span><?php echo e($isFrLocale ? 'Priorite de departement pour l\'affectation automatique' : 'Department priority for auto assignment'); ?></span>
                             <div class="settings-auto-assign-priority-list" data-auto-assign-priority-list>
                                 <button
                                     type="button"

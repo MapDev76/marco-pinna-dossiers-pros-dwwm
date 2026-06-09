@@ -254,6 +254,66 @@ try {
             jsonResponse(['ok' => true]);
             break;
 
+        case 'transfer_department':
+            $userId = (int) ($input['user_id'] ?? 0);
+            $departmentId = (int) ($input['department_id'] ?? 0);
+            if ($userId <= 0 || $departmentId <= 0) {
+                jsonResponse(['ok' => false, 'error' => 'user_id and department_id are required'], 400);
+            }
+
+            $targetUser = $userModel->findById($userId);
+            if (!$targetUser) {
+                jsonResponse(['ok' => false, 'error' => 'User not found'], 404);
+            }
+
+            if (($targetUser['role'] ?? '') !== 'employee') {
+                jsonResponse(['ok' => false, 'error' => 'Only employees can be transferred from sidebar'], 400);
+            }
+
+            $targetDepartment = $departmentModel->findById($departmentId);
+            if (!$targetDepartment) {
+                jsonResponse(['ok' => false, 'error' => 'Department not found'], 404);
+            }
+
+            $targetCompanyId = (int) ($targetDepartment['company_id'] ?? 0);
+            $sourceDepartment = $departmentModel->findById((int) ($targetUser['department_id'] ?? 0));
+            $sourceCompanyId = (int) ($sourceDepartment['company_id'] ?? 0);
+
+            if ($isAdmin) {
+                $adminCompanyId = $effectiveAdminCompanyId > 0 ? $effectiveAdminCompanyId : $targetCompanyId;
+                if ($adminCompanyId <= 0) {
+                    jsonResponse(['ok' => false, 'error' => 'company_id is required'], 400);
+                }
+                if ($targetCompanyId !== $adminCompanyId || ($sourceCompanyId > 0 && $sourceCompanyId !== $adminCompanyId)) {
+                    jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+                }
+            }
+
+            if ($sourceCompanyId > 0 && $targetCompanyId > 0 && $sourceCompanyId !== $targetCompanyId) {
+                jsonResponse(['ok' => false, 'error' => 'Cross-company transfer is not allowed'], 400);
+            }
+
+            $payload = [
+                'department_id' => $departmentId,
+                'company_id' => $targetCompanyId > 0 ? $targetCompanyId : null,
+                'first_name' => (string) ($targetUser['first_name'] ?? ''),
+                'last_name' => (string) ($targetUser['last_name'] ?? ''),
+                'email' => (string) ($targetUser['email'] ?? ''),
+                'phone' => $targetUser['phone'] ?? null,
+                'role' => (string) ($targetUser['role'] ?? 'employee'),
+                'status' => (string) ($targetUser['status'] ?? 'active'),
+            ];
+
+            $userModel->update($userId, $payload);
+            $userModel->setDepartmentLinks($userId, [$departmentId]);
+
+            jsonResponse([
+                'ok' => true,
+                'user_id' => $userId,
+                'department_id' => $departmentId,
+            ]);
+            break;
+
         case 'delete':
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) jsonResponse(['ok' => false, 'error' => 'id required'], 400);

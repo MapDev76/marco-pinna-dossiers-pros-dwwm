@@ -1046,11 +1046,30 @@
       const match = getAbsenceTemplateShift(kind);
       return Number(match?.id || 0);
     };
+
+    const resolveUserRecordById = (userId) => {
+      const normalizedUserId = Number(userId || 0);
+      if (!normalizedUserId) return null;
+
+      const plannerUser = Array.isArray(plannerData?.users)
+        ? plannerData.users.find((entry) => Number(entry?.id || 0) === normalizedUserId)
+        : null;
+      if (plannerUser) return plannerUser;
+
+      for (const department of departments) {
+        const users = Array.isArray(department?.users) ? department.users : [];
+        const match = users.find((entry) => Number(entry?.id || 0) === normalizedUserId);
+        if (match) return match;
+      }
+
+      return null;
+    };
+
     const getUserAvailabilityStatus = (userId, slotDate) => {
       const normalizedUserId = Number(userId || 0);
       const normalizedDate = String(slotDate || '').trim();
       if (!normalizedUserId || !/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) {
-        return { available: true, reason: '' };
+        return { available: true, reason: '', reasonCode: '' };
       }
 
       const assignedOnDate = events.find((item) =>
@@ -1061,15 +1080,15 @@
       if (assignedOnDate) {
         const assignedKind = String(assignedOnDate.shift_kind || 'work').toLowerCase();
         if (assignedKind === 'rest') {
-          return { available: false, reason: 'Unavailable: rest day.' };
+          return { available: false, reason: 'Unavailable: rest day.', reasonCode: 'rest' };
         }
         if (assignedKind === 'sick') {
-          return { available: false, reason: 'Unavailable: sick leave.' };
+          return { available: false, reason: 'Unavailable: sick leave.', reasonCode: 'sick' };
         }
         if (assignedKind === 'vacation') {
-          return { available: false, reason: 'Unavailable: vacation.' };
+          return { available: false, reason: 'Unavailable: vacation.', reasonCode: 'vacation' };
         }
-        return { available: false, reason: 'Unavailable: employee already assigned for this day.' };
+        return { available: false, reason: 'Unavailable: employee already assigned for this day.', reasonCode: 'assigned' };
       }
 
       const rules = loadAssignmentRules();
@@ -1084,10 +1103,10 @@
       const nextMonth = dateKey(nextMonthDate).slice(0, 7);
       const scope = String(rule.scope || 'all');
       if (scope === 'current' && slotMonth !== currentMonth) {
-        return { available: true, reason: '' };
+        return { available: true, reason: '', reasonCode: '' };
       }
       if (scope === 'next' && slotMonth < nextMonth) {
-        return { available: true, reason: '' };
+        return { available: true, reason: '', reasonCode: '' };
       }
 
       const specialDates = Array.isArray(rule.special_dates) ? rule.special_dates : [];
@@ -1095,27 +1114,27 @@
       if (specialMatch) {
         const reason = String(specialMatch.reason || 'special').toLowerCase();
         if (reason === 'rest') {
-          return { available: false, reason: 'Unavailable: rest day.' };
+          return { available: false, reason: 'Unavailable: rest day.', reasonCode: 'rest' };
         }
         if (reason === 'sick') {
-          return { available: false, reason: 'Unavailable: sick leave.' };
+          return { available: false, reason: 'Unavailable: sick leave.', reasonCode: 'sick' };
         }
         if (reason === 'vacation') {
-          return { available: false, reason: 'Unavailable: vacation.' };
+          return { available: false, reason: 'Unavailable: vacation.', reasonCode: 'vacation' };
         }
         if (reason === 'leave') {
-          return { available: false, reason: 'Unavailable: leave.' };
+          return { available: false, reason: 'Unavailable: leave.', reasonCode: 'leave' };
         }
-        return { available: false, reason: 'Unavailable.' };
+        return { available: false, reason: 'Unavailable.', reasonCode: reason || 'special' };
       }
 
       const offWeekdays = Array.isArray(rule.off_weekdays) ? rule.off_weekdays.map((value) => Number(value)) : [];
       const weekday = new Date(`${normalizedDate}T12:00:00`).getDay();
       if (offWeekdays.includes(weekday)) {
-        return { available: false, reason: 'Unavailable: rest day.' };
+        return { available: false, reason: 'Unavailable: rest day.', reasonCode: 'rest' };
       }
 
-      return { available: true, reason: '' };
+      return { available: true, reason: '', reasonCode: '' };
     };
 
     const isUserAvailableForDate = (userId, slotDate) => getUserAvailabilityStatus(userId, slotDate).available;
@@ -1137,6 +1156,7 @@
           candidates.push({
             id: userId,
             name: fullName,
+            role: String(user?.role || '').toLowerCase(),
             departmentId: Number(department?.id || 0),
             departmentName: String(department?.name || tr('Department', 'Departement')),
             priority,
@@ -1154,8 +1174,23 @@
       });
 
       const preferredId = Number(preferredUserId || 0);
+      const preferredUser = resolveUserRecordById(preferredId);
+      const preferredRole = String(preferredUser?.role || '').toLowerCase();
+      const preferredAvailability = preferredId > 0
+        ? getUserAvailabilityStatus(preferredId, normalizedDate)
+        : { available: true, reason: '', reasonCode: '' };
+      const isPreferredAdmin = preferredRole === 'admin';
+      const adminReplacementAllowed = preferredAvailability.reasonCode === 'sick' || preferredAvailability.reasonCode === 'vacation';
+
+      if (isPreferredAdmin && !adminReplacementAllowed) {
+        return null;
+      }
+
       let best = null;
       candidates.forEach((candidate) => {
+        if (isPreferredAdmin && adminReplacementAllowed && candidate.role !== 'department_manager') {
+          return;
+        }
         if (!isUserAvailableForDate(candidate.id, normalizedDate)) {
           return;
         }
@@ -1200,6 +1235,106 @@
       }
       renderSidebarPlanner();
       renderCalendar();
+    };
+
+    const sortDepartmentUsers = (users) => {
+      return (Array.isArray(users) ? users : []).slice().sort((left, right) => {
+        const leftName = `${left?.first_name || ''} ${left?.last_name || ''}`.trim().toLowerCase();
+        const rightName = `${right?.first_name || ''} ${right?.last_name || ''}`.trim().toLowerCase();
+        return leftName.localeCompare(rightName);
+      });
+    };
+
+    const transferEmployeeToDepartment = async ({ userId, targetDepartmentId, targetDepartmentName }) => {
+      const normalizedUserId = Number(userId || 0);
+      const normalizedTargetDepartmentId = Number(targetDepartmentId || 0);
+      if (!normalizedUserId || !normalizedTargetDepartmentId) return;
+
+      const currentRole = String(currentUser?.role || '').toLowerCase();
+      if (!['super_admin', 'admin'].includes(currentRole)) {
+        notifyError(tr('Only admin profiles can transfer employees between departments.', 'Seuls les profils admin peuvent transferer des employes entre departements.'));
+        return;
+      }
+
+      if (!apiUsers || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
+        notifyError(tr('Users API is not available.', 'API utilisateurs indisponible.'));
+        return;
+      }
+
+      const sourceDepartment = departments.find((department) =>
+        Array.isArray(department?.users) && department.users.some((entry) => Number(entry?.id || 0) === normalizedUserId)
+      ) || null;
+      const targetDepartment = departments.find((department) => Number(department?.id || 0) === normalizedTargetDepartmentId) || null;
+      if (!targetDepartment) {
+        notifyError(tr('Target department not found.', 'Departement cible introuvable.'));
+        return;
+      }
+      if (sourceDepartment && Number(sourceDepartment.id || 0) === normalizedTargetDepartmentId) {
+        return;
+      }
+
+      const userRecord = (plannerData.users || []).find((entry) => Number(entry?.id || 0) === normalizedUserId)
+        || (sourceDepartment?.users || []).find((entry) => Number(entry?.id || 0) === normalizedUserId)
+        || null;
+      if (!userRecord) {
+        notifyError(tr('Employee not found.', 'Employe introuvable.'));
+        return;
+      }
+
+      const userName = `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim()
+        || `${tr('Employee', 'Employe')} #${normalizedUserId}`;
+      const response = await window.AppAPI.postJSON(apiUsers, {
+        action: 'transfer_department',
+        user_id: normalizedUserId,
+        department_id: normalizedTargetDepartmentId,
+      });
+
+      if (!response || response.ok === false || response.success === false) {
+        notifyError((response && (response.error || response.message))
+          || tr('Unable to transfer employee.', 'Impossible de transferer l employe.'));
+        return;
+      }
+
+      const nextDepartmentName = String(targetDepartmentName || targetDepartment?.name || tr('Department', 'Departement'));
+
+      departments.forEach((department) => {
+        if (!Array.isArray(department.users)) {
+          department.users = [];
+        }
+        department.users = department.users.filter((entry) => Number(entry?.id || 0) !== normalizedUserId);
+      });
+
+      const movedUser = {
+        ...userRecord,
+        department_id: normalizedTargetDepartmentId,
+        department_ids: [normalizedTargetDepartmentId],
+      };
+      targetDepartment.users = sortDepartmentUsers([...(Array.isArray(targetDepartment.users) ? targetDepartment.users : []), movedUser]);
+
+      if (Array.isArray(plannerData.users)) {
+        plannerData.users = plannerData.users.map((entry) => {
+          if (Number(entry?.id || 0) !== normalizedUserId) return entry;
+          return {
+            ...entry,
+            department_id: normalizedTargetDepartmentId,
+            department_ids: [normalizedTargetDepartmentId],
+          };
+        });
+      }
+
+      if (Number(state.activeDepartmentId || 0) !== Number(targetDepartment.id || 0) && Number(state.activeUserId || 0) === normalizedUserId) {
+        state.activeUserId = 0;
+        state.activeUserName = '';
+      }
+
+      renderSidebarPlanner();
+      renderCalendar();
+      if (feedback?.success) {
+        feedback.success(tr('Done', 'Termine'), tr(
+          `${userName} moved to ${nextDepartmentName}.`,
+          `${userName} transfere vers ${nextDepartmentName}.`
+        ));
+      }
     };
 
     const formatShiftTime = (shift) => {
@@ -1637,6 +1772,7 @@
         sidebarHandle,
         plannerDepartmentButtons,
         setActiveDepartment,
+        onTransferEmployeeDepartment: transferEmployeeToDepartment,
       });
     }
 

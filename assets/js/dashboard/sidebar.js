@@ -24,6 +24,7 @@
     var sidebarHandle = options.sidebarHandle;
     var plannerDepartmentButtons = options.plannerDepartmentButtons || [];
     var setActiveDepartment = options.setActiveDepartment;
+    var onTransferEmployeeDepartment = options.onTransferEmployeeDepartment;
     var departmentToggle = document.querySelector('[data-sidebar-department-toggle]');
     var departmentList = document.querySelector('.dashboard-sidebar-department-list');
     var currentDepartment = document.querySelector('[data-sidebar-current-department]');
@@ -36,6 +37,25 @@
       return getDepartmentButtons().find(function (button) {
         return button.classList.contains('is-active');
       }) || null;
+    };
+
+    var parseDragUserId = function (event) {
+      if (!event || !event.dataTransfer) return 0;
+      var raw = event.dataTransfer.getData('application/json') || event.dataTransfer.getData('text/plain') || '';
+      if (!raw) return 0;
+      try {
+        var payload = JSON.parse(raw);
+        var userId = parseInt(String(payload && payload.userId || '0'), 10) || 0;
+        return userId > 0 ? userId : 0;
+      } catch (_error) {
+        return 0;
+      }
+    };
+
+    var clearDepartmentDropTargets = function () {
+      getDepartmentButtons().forEach(function (button) {
+        button.classList.remove('is-drop-target');
+      });
     };
 
     var syncDepartmentToggleState = function (expanded) {
@@ -171,6 +191,44 @@
         setActiveDepartment(deptId);
       }
     });
+
+    getDepartmentButtons().forEach(function (button) {
+      button.addEventListener('dragover', function (event) {
+        if (typeof onTransferEmployeeDepartment !== 'function') return;
+        var userId = parseDragUserId(event);
+        if (userId <= 0) return;
+        event.preventDefault();
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = 'move';
+        }
+        clearDepartmentDropTargets();
+        button.classList.add('is-drop-target');
+      });
+
+      button.addEventListener('dragleave', function () {
+        button.classList.remove('is-drop-target');
+      });
+
+      button.addEventListener('drop', function (event) {
+        if (typeof onTransferEmployeeDepartment !== 'function') return;
+        var userId = parseDragUserId(event);
+        var targetDepartmentId = parseInt(String(button.getAttribute('data-planner-department-id') || '0'), 10) || 0;
+        if (userId <= 0 || targetDepartmentId <= 0) {
+          clearDepartmentDropTargets();
+          return;
+        }
+
+        event.preventDefault();
+        clearDepartmentDropTargets();
+        onTransferEmployeeDepartment({
+          userId: userId,
+          targetDepartmentId: targetDepartmentId,
+          targetDepartmentName: String(button.getAttribute('data-planner-department-name') || '').trim(),
+        });
+      });
+    });
+
+    document.addEventListener('dragend', clearDepartmentDropTargets);
 
     plannerDepartmentButtons.forEach(function (button) {
       button.addEventListener('click', function () {

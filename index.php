@@ -140,5 +140,7 @@ require $viewFile;
 <script src="<?php echo $basePath; ?>/assets/js/employee-space.js?v=<?php echo filemtime(__DIR__ . '/assets/js/employee-space.js'); ?>"></script>
 <?php endif; ?>
 
+<script src="<?php echo $basePath; ?>/assets/js/ui-hints.js?v=<?php echo filemtime(__DIR__ . '/assets/js/ui-hints.js'); ?>"></script>
+
 </body>
 </html>

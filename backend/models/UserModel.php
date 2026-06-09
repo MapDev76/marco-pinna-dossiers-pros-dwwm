@@ -300,10 +300,20 @@ class UserModel
                         d.name AS department_name
                  FROM users u
                  LEFT JOIN departments d ON d.id = u.department_id
-                 WHERE COALESCE(u.company_id, d.company_id) = :company_id
+                 WHERE COALESCE(u.company_id, d.company_id) = :company_id_primary
+                    OR EXISTS (
+                        SELECT 1
+                        FROM user_department_links udl
+                        INNER JOIN departments dl ON dl.id = udl.department_id
+                        WHERE udl.user_id = u.id
+                          AND dl.company_id = :company_id_link
+                    )
                  ORDER BY u.last_name, u.first_name'
             );
-            $statement->execute(['company_id' => $companyId]);
+            $statement->execute([
+                'company_id_primary' => $companyId,
+                'company_id_link' => $companyId,
+            ]);
 
             return $this->attachDepartmentAssignments($statement->fetchAll());
         }
@@ -314,10 +324,20 @@ class UserModel
                     d.name AS department_name
              FROM users u
              LEFT JOIN departments d ON d.id = u.department_id
-             WHERE d.company_id = :company_id
+             WHERE d.company_id = :company_id_primary
+                                OR EXISTS (
+                                        SELECT 1
+                                        FROM user_department_links udl
+                                        INNER JOIN departments dl ON dl.id = udl.department_id
+                                        WHERE udl.user_id = u.id
+                      AND dl.company_id = :company_id_link
+                                )
              ORDER BY u.last_name, u.first_name'
         );
-        $statement->execute(['company_id' => $companyId]);
+        $statement->execute([
+            'company_id_primary' => $companyId,
+            'company_id_link' => $companyId,
+        ]);
         $rows = $statement->fetchAll();
 
         // Fallback for legacy schemas: only when the company has no departments at all.

@@ -253,7 +253,9 @@
     if (!wrap || !toggle) return;
     wrap.hidden = !visible;
     toggle.setAttribute('aria-expanded', visible ? 'true' : 'false');
-    toggle.textContent = visible ? 'Hide daily assignments list' : 'Show daily assignments list';
+    toggle.textContent = visible
+      ? tr('Hide daily assignments list', 'Masquer la liste quotidienne des affectations')
+      : tr('Show daily assignments list', 'Afficher la liste quotidienne des affectations');
   }
 
   function todayKey() {
@@ -2338,6 +2340,7 @@
         action: 'clear_assignments_scope',
         scope_shift_id: 0,
         allowed_shift_ids: globalShiftSelection.allowedShiftIds,
+        include_rest_assignments: true,
         range_start: rangeStart,
         range_end: rangeEnd,
       });

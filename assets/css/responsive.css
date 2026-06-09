@@ -10,7 +10,7 @@
         position: fixed;
         top: 100px;
         left: 8px;
-        width: 196px;
+        width: 236px;
         margin: 0;
         transform: translateX(calc(-100% + 6px));
     }
@@ -361,7 +361,7 @@
     .app-sidebar {
         top: 68px;
         left: 6px;
-        width: 178px;
+        width: 218px;
         margin: 0;
         transform: translateX(calc(-100% + 6px));
     }

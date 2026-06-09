@@ -272,6 +272,7 @@ return [
         'workload_month_hint' => 'Current Month {month}: hours, days, and most frequent shifts assigned to each user.',
         'no_user_workload_data' => 'No user workload data available.',
         'show_daily_assignments' => 'Show daily assignments list',
+        'hide_daily_assignments' => 'Hide daily assignments list',
         'daily_assignments_month' => 'Daily assignments list for Current Month {month}.',
         'user_label' => 'User',
         'workload_label' => 'Workload',
