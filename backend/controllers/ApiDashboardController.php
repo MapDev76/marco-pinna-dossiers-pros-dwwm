@@ -1213,7 +1213,48 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             $endDt = new DateTimeImmutable($rangeEnd);
             $daysInRange = max(1, ((int) $startDt->diff($endDt)->format('%a')) + 1);
             $weekBlocks = max(1, (int) ceil($daysInRange / 7));
-            $estimatedCapacity = $activeUsers * $effectiveMaxWorkDaysPerWeek * $weekBlocks;
+            
+            // Calculate capacity per week more accurately
+            $weeklyCapacityStmt = $pdo->prepare(
+                'SELECT 
+                    WEEK(us.work_date, 1) AS week_num,
+                    YEAR(us.work_date) AS year_num,
+                                     COUNT(DISTINCT CASE WHEN s.kind = "work" THEN u.id END) AS assigned_work_users,
+                    COUNT(DISTINCT u.id) AS total_active_users
+                 FROM user_shifts us
+                 INNER JOIN shifts s ON s.id = us.shift_id
+                 INNER JOIN users u ON u.id = us.user_id
+                 LEFT JOIN departments d ON d.id = u.department_id
+                 WHERE u.status = "active"
+                   AND us.status <> "cancelled"
+                   AND us.work_date BETWEEN :range_start AND :range_end
+                                    AND s.kind = "work"' . $openShiftFilter . '
+                                    AND ' . $scopeWhere . ($targetUserId > 0 ? ' AND u.id = :target_user_id' : '') . '
+                 GROUP BY YEAR(us.work_date), WEEK(us.work_date, 1)'
+            );
+                     $weeklyCapacityParams = $forecastParams;
+            $weeklyCapacityStmt->execute($weeklyCapacityParams);
+            $weeklyCapacityData = $weeklyCapacityStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Build conservative capacity estimate
+            $totalRealCapacity = 0;
+            foreach ($weeklyCapacityData as $weekRow) {
+                $totalActiveInWeek = (int) ($weekRow['total_active_users'] ?? 0);
+                $alreadyAssignedUsers = (int) ($weekRow['assigned_work_users'] ?? 0);
+                
+                // Conservative: assume max 70% of available slots can actually be filled
+                // remaining 30% are lost to conflicts, rules, availability, rest days
+                $weekCapacity = max(0, ($totalActiveInWeek - $alreadyAssignedUsers) * $effectiveMaxWorkDaysPerWeek * 0.7);
+                $totalRealCapacity += $weekCapacity;
+            }
+            
+            // If no weekly data (no existing assignments), use conservative estimate
+            if (empty($weeklyCapacityData) || $totalRealCapacity <= 0) {
+                $estimatedCapacity = $activeUsers * $effectiveMaxWorkDaysPerWeek * $weekBlocks * 0.65;
+            } else {
+                $estimatedCapacity = $totalRealCapacity;
+            }
+            
             $potentialAdditional = max(0, $estimatedCapacity - $currentAssignedByUsers);
             $predictedCoverableToMin = min($requiredAtMin, $potentialAdditional, $slotsOpen);
             $predictedRemainingAtMin = max(0, $requiredAtMin - $predictedCoverableToMin);
@@ -1963,6 +2004,47 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         $crossDepartmentAssignedCount = 0;
         $skippedByRules = 0;
         $assignedForTargetUser = false;
+        $userMetaById = [];
+        $departmentNameById = [];
+        foreach ($users as $userRowMeta) {
+            $metaUserId = (int) ($userRowMeta['id'] ?? 0);
+            if ($metaUserId <= 0) {
+                continue;
+            }
+            $fallbackDepartmentId = (int) ($userRowMeta['department_id'] ?? 0);
+            $primaryDepartmentId = (int) (($userDepartmentIdsById[$metaUserId][0] ?? 0) ?: $fallbackDepartmentId);
+            $userMetaById[$metaUserId] = [
+                'id' => $metaUserId,
+                'name' => trim(((string) ($userRowMeta['first_name'] ?? '')) . ' ' . ((string) ($userRowMeta['last_name'] ?? ''))) ?: ('User #' . $metaUserId),
+                'department_id' => $primaryDepartmentId,
+                'department_name' => '',
+            ];
+        }
+        $departmentIdsForMeta = [];
+        foreach ($userMetaById as $metaRow) {
+            $metaDepartmentId = (int) ($metaRow['department_id'] ?? 0);
+            if ($metaDepartmentId > 0) {
+                $departmentIdsForMeta[$metaDepartmentId] = $metaDepartmentId;
+            }
+        }
+        if (!empty($departmentIdsForMeta)) {
+            $departmentMetaPlaceholders = implode(', ', array_fill(0, count($departmentIdsForMeta), '?'));
+            $departmentMetaStmt = $pdo->prepare(
+                'SELECT id, name FROM departments WHERE id IN (' . $departmentMetaPlaceholders . ')'
+            );
+            $departmentMetaStmt->execute(array_values($departmentIdsForMeta));
+            foreach ($departmentMetaStmt->fetchAll(PDO::FETCH_ASSOC) as $departmentRowMeta) {
+                $metaDepartmentId = (int) ($departmentRowMeta['id'] ?? 0);
+                if ($metaDepartmentId <= 0) {
+                    continue;
+                }
+                $departmentNameById[$metaDepartmentId] = (string) ($departmentRowMeta['name'] ?? ('Department #' . $metaDepartmentId));
+            }
+        }
+        foreach ($userMetaById as $metaUserId => $metaRow) {
+            $resolvedDepartmentId = (int) ($metaRow['department_id'] ?? 0);
+            $userMetaById[$metaUserId]['department_name'] = (string) ($departmentNameById[$resolvedDepartmentId] ?? '');
+        }
         $priorityOpenSlotsByDate = [];
         if ($priorityDepartmentId > 0) {
             foreach ($openRowsByShiftDate as $priorityGroupRows) {
@@ -2081,6 +2163,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                 $candidatePreviousAssignment = null;
                 $candidateHours = PHP_FLOAT_MAX;
                 $candidateDepartmentPriority = -1;
+                $candidatePenalty = PHP_FLOAT_MAX;
                 $isEssentialSlot = $isEssentialDepartment((string) ($openRow['department_name'] ?? ''));
                 $isPrioritySlot = $priorityDepartmentId > 0 && $slotDepartmentId === $priorityDepartmentId;
                 foreach ($users as $candidateUser) {
@@ -2123,32 +2206,44 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                     }
                     $currentWorkDays = count($workDaysByUserWeek[$uid][$slotWeek] ?? []);
                     $currentProtectedDays = count($protectedAbsenceDaysByUserWeek[$uid][$slotWeek] ?? []);
-                    if ($currentWorkDays >= $effectiveMaxWorkDaysPerWeek) {
-                        continue;
-                    }
-                    if ($restDaysPerWeek > 0 && (7 - ($currentWorkDays + $currentProtectedDays)) <= 0) {
-                        continue;
-                    }
-                    if ($effectiveMaxRestDaysPerWeek > 0) {
-                        $currentRestDays = count($restDaysByUserWeek[$uid][$slotWeek] ?? []);
-                        if ($currentRestDays >= $effectiveMaxRestDaysPerWeek && (!$existingAssignment || (string) ($existingAssignment['shift_kind'] ?? '') !== 'rest')) {
-                            continue;
-                        }
-                    }
-                    if ($existingAssignment && (string) ($existingAssignment['shift_kind'] ?? '') === 'rest' && $currentWorkDays <= $effectiveMinWorkDaysPerWeek) {
-                        continue;
-                    }
+                    $currentRestDays = count($restDaysByUserWeek[$uid][$slotWeek] ?? []);
+                    $existingIsRest = $existingAssignment && (string) ($existingAssignment['shift_kind'] ?? '') === 'rest';
+                    $existingIsWork = $existingAssignment && (string) ($existingAssignment['shift_kind'] ?? '') === 'work';
+                    $projectedWorkDays = $currentWorkDays + ($existingIsWork ? 0 : 1);
+                    $projectedRestDays = max(0, $currentRestDays - ($existingIsRest ? 1 : 0));
+                    $wouldExceedWorkDays = $projectedWorkDays > $effectiveMaxWorkDaysPerWeek;
+                    $wouldDropBelowMinRest = $minRestDaysPerWeek > 0 && $projectedRestDays < $minRestDaysPerWeek;
+                    $wouldDropBelowMinWork = $existingIsRest && $currentWorkDays <= $effectiveMinWorkDaysPerWeek;
                     if ($isBlockedByRule($uid, $slotDate)) {
                         $skippedByRules++;
                         continue;
                     }
                     $monthHours = (float) ($hoursByUserMonth[$uid][$slotMonth] ?? 0.0);
                     $departmentPriority = $isSameDepartment ? 1 : 0;
-                    if ($departmentPriority > $candidateDepartmentPriority || ($departmentPriority === $candidateDepartmentPriority && $monthHours < $candidateHours)) {
+                    $violationPenalty = 0;
+                    if ($wouldExceedWorkDays) {
+                        $violationPenalty += 1000 * ($projectedWorkDays - $effectiveMaxWorkDaysPerWeek);
+                    }
+                    if ($wouldDropBelowMinRest) {
+                        $violationPenalty += 500 * ($minRestDaysPerWeek - $projectedRestDays);
+                    }
+                    if ($wouldDropBelowMinWork) {
+                        $violationPenalty += 250;
+                    }
+                    if (!$isSameDepartment) {
+                        $violationPenalty += 40;
+                    }
+
+                    if (
+                        $departmentPriority > $candidateDepartmentPriority
+                        || ($departmentPriority === $candidateDepartmentPriority && $violationPenalty < $candidatePenalty)
+                        || ($departmentPriority === $candidateDepartmentPriority && $violationPenalty === $candidatePenalty && $monthHours < $candidateHours)
+                    ) {
                         $candidate = $uid;
                         $candidatePreviousAssignment = !empty($dayBusy[$uid][$slotDate]) ? $existingAssignment : null;
                         $candidateHours = $monthHours;
                         $candidateDepartmentPriority = $departmentPriority;
+                        $candidatePenalty = $violationPenalty;
                     }
                 }
 
@@ -2188,6 +2283,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                             $candidatePreviousAssignment = !empty($dayBusy[$uid][$slotDate]) ? $existingAssignment : null;
                             $candidateHours = $monthHours;
                             $candidateDepartmentPriority = 1;
+                            $candidatePenalty = min($candidatePenalty, 0);
                         }
                     }
                 }
@@ -2283,6 +2379,112 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             }
         }
 
+        $overworkedUsers = [];
+        foreach ($users as $overworkedUserRow) {
+            $overworkedUserId = (int) ($overworkedUserRow['id'] ?? 0);
+            if ($overworkedUserId <= 0) {
+                continue;
+            }
+
+            $userWeeks = array_values(array_unique(array_merge(
+                array_keys($workDaysByUserWeek[$overworkedUserId] ?? []),
+                array_keys($restDaysByUserWeek[$overworkedUserId] ?? [])
+            )));
+
+            foreach ($userWeeks as $overworkedWeekKey) {
+                $workDays = array_keys($workDaysByUserWeek[$overworkedUserId][$overworkedWeekKey] ?? []);
+                $restDays = array_keys($restDaysByUserWeek[$overworkedUserId][$overworkedWeekKey] ?? []);
+                $workDaysCount = count($workDays);
+                $restDaysCount = count($restDays);
+                $isOverworked = $workDaysCount > $effectiveMaxWorkDaysPerWeek
+                    || ($minRestDaysPerWeek > 0 && $restDaysCount < $minRestDaysPerWeek);
+                if (!$isOverworked || empty($workDays)) {
+                    continue;
+                }
+
+                $overworkedDepartmentIds = $userDepartmentIdsById[$overworkedUserId] ?? [];
+                $replacementSuggestions = [];
+                foreach ($users as $replacementUserRow) {
+                    $replacementUserId = (int) ($replacementUserRow['id'] ?? 0);
+                    if ($replacementUserId <= 0 || $replacementUserId === $overworkedUserId) {
+                        continue;
+                    }
+
+                    $replacementDepartmentIds = $userDepartmentIdsById[$replacementUserId] ?? [];
+                    if (empty($replacementDepartmentIds) || !empty(array_intersect($overworkedDepartmentIds, $replacementDepartmentIds))) {
+                        continue;
+                    }
+
+                    $replacementWorkCount = count($workDaysByUserWeek[$replacementUserId][$overworkedWeekKey] ?? []);
+                    $replacementRestCount = count($restDaysByUserWeek[$replacementUserId][$overworkedWeekKey] ?? []);
+                    $replacementProtectedCount = count($protectedAbsenceDaysByUserWeek[$replacementUserId][$overworkedWeekKey] ?? []);
+                    $coverableDates = [];
+                    foreach ($workDays as $reliefDate) {
+                        $replacementExisting = $assignmentByUserDate[$replacementUserId][$reliefDate] ?? null;
+                        $replacementExistingKind = strtolower(trim((string) ($replacementExisting['shift_kind'] ?? '')));
+                        if (!empty($dayBusy[$replacementUserId][$reliefDate]) || in_array($replacementExistingKind, ['vacation', 'sick', 'rest'], true)) {
+                            continue;
+                        }
+                        if ($isBlockedByRule($replacementUserId, $reliefDate)) {
+                            continue;
+                        }
+
+                        $projectedReplacementWork = $replacementWorkCount + 1;
+                        $projectedReplacementRest = $replacementRestCount;
+                        if ($projectedReplacementWork > ($effectiveMaxWorkDaysPerWeek + 1)) {
+                            continue;
+                        }
+                        if ($minRestDaysPerWeek > 0 && (7 - ($projectedReplacementWork + $replacementProtectedCount)) < max(0, $minRestDaysPerWeek - 1)) {
+                            continue;
+                        }
+                        if ($minRestDaysPerWeek > 0 && $projectedReplacementRest < max(0, $minRestDaysPerWeek - 1)) {
+                            continue;
+                        }
+
+                        $coverableDates[] = $reliefDate;
+                    }
+
+                    if (empty($coverableDates)) {
+                        continue;
+                    }
+
+                    $replacementMonthKey = substr((string) ($coverableDates[0] ?? ''), 0, 7);
+                    $replacementSuggestions[] = [
+                        'user_id' => $replacementUserId,
+                        'name' => (string) ($userMetaById[$replacementUserId]['name'] ?? ('User #' . $replacementUserId)),
+                        'department_id' => (int) ($userMetaById[$replacementUserId]['department_id'] ?? 0),
+                        'department_name' => (string) ($userMetaById[$replacementUserId]['department_name'] ?? ''),
+                        'coverable_days' => count($coverableDates),
+                        'dates' => array_slice(array_values($coverableDates), 0, 3),
+                        'month_hours' => (float) ($hoursByUserMonth[$replacementUserId][$replacementMonthKey] ?? 0.0),
+                    ];
+                }
+
+                usort($replacementSuggestions, static function (array $a, array $b): int {
+                    if ((int) ($a['coverable_days'] ?? 0) === (int) ($b['coverable_days'] ?? 0)) {
+                        if ((float) ($a['month_hours'] ?? 0.0) === (float) ($b['month_hours'] ?? 0.0)) {
+                            return ((int) ($a['user_id'] ?? 0)) <=> ((int) ($b['user_id'] ?? 0));
+                        }
+                        return ((float) ($a['month_hours'] ?? 0.0)) <=> ((float) ($b['month_hours'] ?? 0.0));
+                    }
+                    return ((int) ($b['coverable_days'] ?? 0)) <=> ((int) ($a['coverable_days'] ?? 0));
+                });
+
+                $primaryDepartmentId = (int) ($userMetaById[$overworkedUserId]['department_id'] ?? 0);
+                $overworkedUsers[] = [
+                    'user_id' => $overworkedUserId,
+                    'name' => (string) ($userMetaById[$overworkedUserId]['name'] ?? ('User #' . $overworkedUserId)),
+                    'department_id' => $primaryDepartmentId,
+                    'department_name' => (string) ($userMetaById[$overworkedUserId]['department_name'] ?? ''),
+                    'week' => (string) $overworkedWeekKey,
+                    'work_days' => $workDaysCount,
+                    'rest_days' => $restDaysCount,
+                    'worked_dates' => array_slice(array_values($workDays), 0, 5),
+                    'replacement_suggestions' => array_slice($replacementSuggestions, 0, 3),
+                ];
+            }
+        }
+
         jsonResponse([
             'success' => true,
             'ok' => true,
@@ -2300,6 +2502,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             'min_work_days_per_week' => $effectiveMinWorkDaysPerWeek,
             'max_work_days_per_week' => $effectiveMaxWorkDaysPerWeek,
             'rest_distribution_mode' => $restDistributionMode,
+            'overworked_users' => $overworkedUsers,
         ]);
     }
 

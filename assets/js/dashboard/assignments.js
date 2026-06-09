@@ -383,15 +383,29 @@
     }
   }
 
-  function getDepartmentWorkShifts() {
+  function getAssignableWorkShiftsForEmployee() {
     return shiftCatalog
-      .filter((item) => Number(item?.department_id || 0) === Number(activeEmployeeDepartmentId || 0))
       .filter((item) => String(item?.kind || '').toLowerCase() === 'work')
-      .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+      .sort((a, b) => {
+        const aDeptId = Number(a?.department_id || 0);
+        const bDeptId = Number(b?.department_id || 0);
+        const aOwnDept = aDeptId === Number(activeEmployeeDepartmentId || 0) ? 1 : 0;
+        const bOwnDept = bDeptId === Number(activeEmployeeDepartmentId || 0) ? 1 : 0;
+        if (aOwnDept !== bOwnDept) {
+          return bOwnDept - aOwnDept;
+        }
+        const aDeptName = String(a?.department_name || '');
+        const bDeptName = String(b?.department_name || '');
+        const deptCompare = aDeptName.localeCompare(bDeptName);
+        if (deptCompare !== 0) {
+          return deptCompare;
+        }
+        return String(a?.name || '').localeCompare(String(b?.name || ''));
+      });
   }
 
   function getOpenShiftSelection() {
-    const allShiftIds = getDepartmentWorkShifts()
+    const allShiftIds = getAssignableWorkShiftsForEmployee()
       .map((item) => parseInt(String(item?.id || '0'), 10) || 0)
       .filter((value) => value > 0);
     const selectedIds = Array.from(selectedOpenShiftFilterIds)
@@ -838,6 +852,7 @@
         min_work_days_per_week: params.boundedMinWorkDays,
         max_work_days_per_week: params.boundedMaxWorkDays,
         rest_distribution_mode: params.restDistributionMode,
+        allow_cross_department_fallback: true,
         priority_department_id: params.priorityDepartment.id,
         priority_department_strict_internal: params.priorityDepartmentStrictInternal,
       });
@@ -1175,18 +1190,19 @@
   }
 
   function populateOpenShiftFilter() {
-    const options = getDepartmentWorkShifts();
+    const options = getAssignableWorkShiftsForEmployee();
     const optionHtml = options
       .map((item) => {
         const id = parseInt(String(item?.id || '0'), 10) || 0;
         const icon = String(item?.icon || '🕒');
         const iconLabel = isIconAsset(icon) ? '•' : icon;
         const name = String(item?.name || tr('Shift', 'Poste'));
-        return `<option value="${id}">${iconLabel} ${name}</option>`;
+        const departmentName = String(item?.department_name || '');
+        return `<option value="${id}">${iconLabel} ${name}${departmentName ? ` • ${departmentName}` : ''}</option>`;
       })
       .join('');
     if (employeeModalOpenShift) {
-      employeeModalOpenShift.innerHTML = `<option value="0">Tous les postes du departement</option>${optionHtml}`;
+      employeeModalOpenShift.innerHTML = `<option value="0">${tr('All visible work shifts', 'Tous les postes de travail visibles')}</option>${optionHtml}`;
     }
 
     const availableIds = new Set(options.map((item) => parseInt(String(item?.id || '0'), 10) || 0));
@@ -1197,13 +1213,14 @@
 
     if (employeeModalOpenShiftList) {
       if (!options.length) {
-        employeeModalOpenShiftList.innerHTML = '<span class="crud-modal-subtitle">No work shifts available in this department.</span>';
+        employeeModalOpenShiftList.innerHTML = `<span class="crud-modal-subtitle">${tr('No work shifts available in current scope.', 'Aucun poste de travail disponible dans le scope actuel.')}</span>`;
       } else {
         employeeModalOpenShiftList.innerHTML = options.map((item) => {
           const id = parseInt(String(item?.id || '0'), 10) || 0;
           const checked = selectedOpenShiftFilterIds.has(id) ? 'checked' : '';
           const icon = renderShiftIcon(String(item?.icon || ''));
-          return `<label class="settings-assignment-open-shift-chip dashboard-print-department-chip"><input type="checkbox" data-assignment-modal-open-shift-id="${id}" ${checked}>${icon} ${escapeHtml(String(item?.name || tr('Shift', 'Poste')))}</label>`;
+          const departmentName = String(item?.department_name || '');
+          return `<label class="settings-assignment-open-shift-chip dashboard-print-department-chip"><input type="checkbox" data-assignment-modal-open-shift-id="${id}" ${checked}>${icon} ${escapeHtml(String(item?.name || tr('Shift', 'Poste')))}${departmentName ? ` • ${escapeHtml(departmentName)}` : ''}</label>`;
         }).join('');
       }
     }
@@ -1431,7 +1448,6 @@
     const todayKey = dateKeyFromDate(new Date());
     const rangeStart = period.start;
     const rangeEnd = period.end;
-    const selectedDepartmentId = Number(activeEmployeeDepartmentId || 0);
     const shiftSelection = getOpenShiftSelection();
 
     return Array.from(document.querySelectorAll('[data-calendar-date] .calendar-event.is-open[data-is-open-slot="1"]'))
@@ -1448,7 +1464,6 @@
       })
       .filter((slot) => {
         if (!slot.workDate || !slot.shiftId) return false;
-        if (selectedDepartmentId <= 0 || slot.departmentId !== selectedDepartmentId) return false;
         if (shiftSelection.mode === 'one' && shiftSelection.scopeShiftId > 0 && slot.shiftId !== shiftSelection.scopeShiftId) return false;
         if (shiftSelection.mode === 'some' && shiftSelection.allowedShiftIds.length > 0 && !shiftSelection.allowedShiftIds.includes(slot.shiftId)) return false;
         if (shiftSelection.mode === 'some' && shiftSelection.allowedShiftIds.length === 0) return false;
@@ -2102,6 +2117,7 @@
               min_work_days_per_week: params.boundedMinWorkDays,
               max_work_days_per_week: params.boundedMaxWorkDays,
               rest_distribution_mode: params.restDistributionMode,
+              allow_cross_department_fallback: true,
               priority_department_id: params.priorityDepartment.id,
               priority_department_strict_internal: params.priorityDepartmentStrictInternal,
             });
@@ -2136,6 +2152,7 @@
         range_start: range.start,
         range_end: range.end,
         allow_reassign_conflicts: true,
+        allow_cross_department_fallback: true,
         min_employees_per_shift_day: params.normalizedMin,
         max_employees_per_shift_day: params.normalizedMax,
         min_rest_days_per_week: params.boundedMinRestDays,
@@ -2151,10 +2168,23 @@
         const skippedByRules = parseInt(res.skipped_by_rules || '0', 10) || 0;
         const groupsBelowMin = parseInt(res.groups_below_min || '0', 10) || 0;
         const reassignedCount = parseInt(res.reassigned_count || '0', 10) || 0;
+        const overworkedUsers = Array.isArray(res?.overworked_users) ? res.overworked_users : [];
+        const overloadSummary = overworkedUsers.slice(0, 2).map((item) => {
+          const employeeName = String(item?.name || tr('Employee', 'Employe')).trim();
+          const weekLabel = String(item?.week || '').trim();
+          const workDays = Number(item?.work_days || 0);
+          const restDays = Number(item?.rest_days || 0);
+          const replacements = Array.isArray(item?.replacement_suggestions)
+            ? item.replacement_suggestions.slice(0, 2).map((candidate) => String(candidate?.name || '').trim()).filter(Boolean)
+            : [];
+          return `${employeeName}${weekLabel ? ` (${weekLabel})` : ''} ${workDays}/${restDays}${replacements.length ? ` -> ${replacements.join(', ')}` : ''}`;
+        }).filter(Boolean);
         const message = `Assigned ${res.assigned_count || 0} shifts. Open remaining: ${res.open_remaining || 0}.`
           + (reassignedCount > 0 ? ` Reassigned: ${reassignedCount}.` : '')
           + (skippedByRules > 0 ? ` Skipped by rules: ${skippedByRules}.` : '')
-          + (groupsBelowMin > 0 ? ` Shift-days below minimum: ${groupsBelowMin}.` : '');
+          + (groupsBelowMin > 0 ? ` Shift-days below minimum: ${groupsBelowMin}.` : '')
+          + (overworkedUsers.length > 0 ? ` ${tr('Overloaded employees', 'Employes surcharges')}: ${overworkedUsers.length}.` : '')
+          + (overloadSummary.length > 0 ? ` ${overloadSummary.join(' | ')}` : '');
         if (feedback?.reloadSettingsTabWithSuccess) {
           feedback.reloadSettingsTabWithSuccess('assignments', 'Done', message);
         } else {
@@ -2192,6 +2222,8 @@
       const boundedMaxRestDays = Math.max(Math.min(6, Math.max(0, Number.isFinite(minRestDaysRaw) ? minRestDaysRaw : 1)), Math.min(6, Math.max(0, Number.isFinite(maxRestDaysRaw) ? maxRestDaysRaw : 2)));
       const boundedMinWorkDays = Math.min(Math.min(7, Math.max(1, Number.isFinite(minWorkDaysRaw) ? minWorkDaysRaw : 4)), Math.min(7, Math.max(1, Number.isFinite(maxWorkDaysRaw) ? maxWorkDaysRaw : 6)));
       const boundedMaxWorkDays = Math.max(Math.min(7, Math.max(1, Number.isFinite(minWorkDaysRaw) ? minWorkDaysRaw : 4)), Math.min(7, Math.max(1, Number.isFinite(maxWorkDaysRaw) ? maxWorkDaysRaw : 6)));
+      const restStrategyRaw = String(globalAutoAssignRestStrategy?.value || 'fixed').toLowerCase();
+      const restDistributionMode = ['fixed', 'staggered', 'random'].includes(restStrategyRaw) ? restStrategyRaw : 'fixed';
       const employeeRules = {
         ...loadRules(),
         ...collectRulesFromRows(),
@@ -2211,12 +2243,15 @@
         range_start: period.start,
         range_end: period.end,
         allow_reassign_conflicts: true,
+        allow_cross_department_fallback: true,
         min_employees_per_shift_day: 0,
         max_employees_per_shift_day: 50,
         min_rest_days_per_week: boundedMinRestDays,
         max_rest_days_per_week: boundedMaxRestDays,
         min_work_days_per_week: boundedMinWorkDays,
         max_work_days_per_week: boundedMaxWorkDays,
+        rest_distribution_mode: restDistributionMode,
+        priority_department_id: Number(activeEmployeeDepartmentId || 0),
         target_user_id: activeEmployeeUserId,
         assignment_mode: assignmentMode,
         employee_rules: employeeRules,
@@ -2224,7 +2259,16 @@
 
       if (res?.ok || res?.success) {
         const reassignedCount = parseInt(res.reassigned_count || '0', 10) || 0;
-        const message = `Assigned ${res.assigned_count || 0} shifts to employee.` + (reassignedCount > 0 ? ` Reassigned: ${reassignedCount}.` : '');
+        const overloadedUser = Array.isArray(res?.overworked_users)
+          ? res.overworked_users.find((item) => Number(item?.user_id || 0) === Number(activeEmployeeUserId || 0))
+          : null;
+        const replacementSummary = Array.isArray(overloadedUser?.replacement_suggestions)
+          ? overloadedUser.replacement_suggestions.slice(0, 2).map((candidate) => String(candidate?.name || '').trim()).filter(Boolean)
+          : [];
+        const message = `Assigned ${res.assigned_count || 0} shifts to employee.`
+          + (reassignedCount > 0 ? ` Reassigned: ${reassignedCount}.` : '')
+          + (overloadedUser ? ` ${tr('Employee overload detected', 'Surcharge employee detectee')}: ${Number(overloadedUser?.work_days || 0)}/${Number(overloadedUser?.rest_days || 0)}.` : '')
+          + (replacementSummary.length > 0 ? ` ${tr('Suggested replacements', 'Remplacements suggérés')}: ${replacementSummary.join(', ')}.` : '');
         if (feedback?.reloadSettingsTabWithSuccess) {
           feedback.reloadSettingsTabWithSuccess('assignments', 'Done', message);
         } else {

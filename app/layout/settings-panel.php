@@ -903,6 +903,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <p class="crud-modal-subtitle">Verifiez l'impact prevu avant de lancer l'affectation automatique.</p>
                                 </div>
                                 <div class="settings-auto-assign-preview-grid" data-auto-assign-preview-grid></div>
+                                <div class="settings-auto-assign-preview-warning" style="margin-top: 0.6rem; padding: 0.7rem; background: rgba(255,193,7,0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 11px; color: #666;">
+                                    <strong style="display: block; color: #ffc107; margin-bottom: 0.3rem;">⚠ Previsione conservativa</strong>
+                                    <span>La simulazione usa stime conservative per tenere conto di vincoli settimanali, regole dipendenti e disponibilità. Alcuni slot potrebbero comunque rimanere scoperti se i dipendenti raggiungono il massimo di giorni lavorativi.</span>
+                                </div>
                                 <div class="settings-auto-assign-preview-actions">
                                     <button type="button" class="admin-action-link admin-action-link-secondary" data-auto-assign-preview-cancel>Annuler</button>
                                     <button type="button" class="admin-action-link" data-auto-assign-preview-confirm>Lancer l'affectation automatique</button>
