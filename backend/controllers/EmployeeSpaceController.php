@@ -117,14 +117,13 @@ try {
          FROM users u
          LEFT JOIN departments d ON d.id = u.department_id
          WHERE u.status = "active"
-           AND u.id <> :current_user_id
-           AND (u.role = "super_admin" OR u.role = "admin" OR u.role = "department_manager")';
+           AND u.id <> :current_user_id';
 
     if ($employeeCompanyId > 0) {
-        $recipientSql .= ' AND (u.role = "super_admin" OR d.company_id = :company_id)';
+        $recipientSql .= ' AND d.company_id = :company_id';
     }
 
-    $recipientSql .= ' ORDER BY FIELD(u.role, "department_manager", "admin", "super_admin"), full_name ASC';
+    $recipientSql .= ' ORDER BY FIELD(u.role, "employee", "department_manager", "admin", "super_admin"), full_name ASC';
 
     $recipientStmt = $pdo->prepare($recipientSql);
     $recipientParams = ['current_user_id' => (int) $currentUser['id']];

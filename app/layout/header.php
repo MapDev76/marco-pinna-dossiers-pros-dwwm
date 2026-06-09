@@ -89,6 +89,7 @@ if (!$isPublicPage && $currentUser !== null) {
 }
 
 $rightIcons = [];
+$logoutIcon = null;
 if ($route === 'home') {
     $rightIcons[] = [
         'type' => 'link',
@@ -176,7 +177,7 @@ if ($route === 'home') {
             }
         }
     }
-    $rightIcons[] = [
+    $logoutIcon = [
         'type' => 'link',
         'href' => appUrl('logout'),
         'title' => t('common.logout'),
@@ -227,17 +228,6 @@ if ($route === 'home') {
             </div>
 
             <div class="site-navbar-right">
-                <div class="site-lang-switch" aria-label="<?php echo e(t('common.language')); ?>">
-                    <details class="site-lang-dropdown">
-                        <summary class="site-icon-btn site-lang-trigger" title="<?php echo e(t('common.language')); ?>" aria-label="<?php echo e(t('common.language')); ?>">
-                            <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="<?php echo e(t('common.language')); ?>" class="site-icon">
-                        </summary>
-                        <div class="site-lang-menu" role="menu" aria-label="<?php echo e(t('common.language')); ?>">
-                            <a href="<?php echo e(appCurrentUrl(['lang' => 'en'])); ?>" class="site-lang-link <?php echo $locale === 'en' ? 'is-active' : ''; ?>" role="menuitem">English</a>
-                            <a href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" class="site-lang-link <?php echo $locale === 'fr' ? 'is-active' : ''; ?>" role="menuitem">Francais</a>
-                        </div>
-                    </details>
-                </div>
                 <div class="site-icon-group" role="toolbar" aria-label="<?php echo e(t('common.quick_actions')); ?>">
                     <?php foreach ($rightIcons as $iconItem): ?>
                         <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
@@ -254,6 +244,24 @@ if ($route === 'home') {
                             </a>
                         <?php endif; ?>
                     <?php endforeach; ?>
+
+                    <div class="site-lang-switch" aria-label="<?php echo e(t('common.language')); ?>">
+                        <details class="site-lang-dropdown">
+                            <summary class="site-icon-btn site-lang-trigger" title="<?php echo e(t('common.language')); ?>" aria-label="<?php echo e(t('common.language')); ?>">
+                                <img src="<?php echo $basePath; ?>/assets/icons/language.svg" alt="<?php echo e(t('common.language')); ?>" class="site-icon">
+                            </summary>
+                            <div class="site-lang-menu" role="menu" aria-label="<?php echo e(t('common.language')); ?>">
+                                <a href="<?php echo e(appCurrentUrl(['lang' => 'en'])); ?>" class="site-lang-link <?php echo $locale === 'en' ? 'is-active' : ''; ?>" role="menuitem">English</a>
+                                <a href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" class="site-lang-link <?php echo $locale === 'fr' ? 'is-active' : ''; ?>" role="menuitem">Francais</a>
+                            </div>
+                        </details>
+                    </div>
+
+                    <?php if (is_array($logoutIcon)): ?>
+                        <a href="<?php echo e($logoutIcon['href']); ?>" class="site-icon-btn" title="<?php echo e($logoutIcon['title']); ?>">
+                            <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($logoutIcon['icon']); ?>" alt="<?php echo e($logoutIcon['alt']); ?>" class="site-icon">
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
