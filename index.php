@@ -12,7 +12,7 @@ if (str_starts_with($targetFile, __DIR__ . '/backend/controllers/')) {
 } else {
         $viewFile = $targetFile;
 }
-
+// Controllers can set $viewFile to override the default view for the route.
 $pageTitle = $pageTitle ?? 'StaffEase Pro';
 $viewFile = $viewFile ?? $targetFile;
 $flashSuccess = getFlash('success');
@@ -22,6 +22,7 @@ $isHomeRoute = $route === 'home';
 $isLoginRoute = $route === 'login';
 $isMySpaceRoute = $route === 'my-space';
 $locale = appLocale();
+// Compact dashboard mode: removes padding and some UI elements for admins/managers to show more content.
 $isCompactDashboard = $isDashboardRoute && isLoggedIn() && in_array((currentUser()['role'] ?? ''), ['admin', 'department_manager'], true);
 $bodyClasses = [];
 if ($isDashboardRoute) {
@@ -36,6 +37,7 @@ if ($isLoginRoute) {
 if ($isMySpaceRoute) {
         $bodyClasses[] = 'route-my-space';
 }
+// Precompute CSS version based on file modification time for cache busting. If the file is missing, use current time to avoid caching issues during development.
 $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time());
 ?>
 <!DOCTYPE html>
@@ -49,6 +51,7 @@ $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time())
         <link rel="stylesheet" href="<?php echo $basePath; ?>/assets/css/style.css?v=<?php echo e($cssVersion); ?>">
         <script defer src="<?php echo $basePath; ?>/assets/js/flash.js?v=<?php echo filemtime(__DIR__ . '/assets/js/flash.js'); ?>"></script>
 </head>
+//
 <body class="<?php echo e(implode(' ', $bodyClasses)); ?>">
 
 <?php

@@ -25,14 +25,18 @@ function getPDO(): PDO
     $config = getConfig();
 
     // Build the Data Source Name (DSN) used by PDO.
-    $dsn = sprintf(
-        '%s:host=%s;port=%d;dbname=%s;charset=%s',
-        $config['driver'],
-        $config['host'],
-        $config['port'],
-        $config['database'],
-        $config['charset']
-    );
+    $dsnParts = [
+        sprintf('%s:host=%s', $config['driver'], $config['host']),
+    ];
+
+    $port = (int) ($config['port'] ?? 0);
+    if ($port > 0) {
+        $dsnParts[] = 'port=' . $port;
+    }
+
+    $dsnParts[] = 'dbname=' . (string) $config['database'];
+    $dsnParts[] = 'charset=' . (string) $config['charset'];
+    $dsn = implode(';', $dsnParts);
 
     $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

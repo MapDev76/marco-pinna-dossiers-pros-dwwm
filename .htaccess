@@ -1,0 +1,22 @@
+DirectoryIndex index.php
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block direct access to internal source folders.
+    RewriteRule ^(?:backend|config|db|scripts)(?:/|$) - [F,L]
+    RewriteRule (^|/)\. - [F,L]
+
+    # Keep existing files and folders accessible, otherwise route to the front controller.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
