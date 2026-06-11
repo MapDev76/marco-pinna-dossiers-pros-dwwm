@@ -197,6 +197,10 @@ if (is_array($primaryShift)) {
                     <img src="<?php echo $basePath; ?>/assets/icons/clock.svg" alt="" aria-hidden="true" class="employee-shift-stage-meta-icon">
                     <span><strong>Horaire:</strong> <?php echo e($todayCardShiftTime); ?></span>
                 </div>
+                <div class="employee-shift-stage-meta-item">
+                    <img src="<?php echo $basePath; ?>/assets/icons/wifi-high.svg" alt="" aria-hidden="true" class="employee-shift-stage-meta-icon" style="color: <?php echo $isCurrentNetworkAuthorized ? 'green' : 'red'; ?>;">
+                    <span><strong><?php echo e(t('employee.status_connected')); ?>:</strong> <?php echo e($isCurrentNetworkAuthorized ? t('employee.status_connected') : t('employee.status_restricted_network')); ?></span>
+                </div>
             </div>
 
             <div class="employee-shift-stage-actions">
@@ -459,9 +463,6 @@ if (is_array($primaryShift)) {
                     <h3 id="employee-documents-manage-title"><?php echo e(t('common.documents')); ?></h3>
                     <p class="crud-modal-subtitle">Partagez un document avec les responsables sans demande de signature.</p>
                 </div>
-                <button type="button" class="dashboard-modal-close" data-employee-documents-modal-close aria-label="<?php echo e(t('employee.cancel')); ?>">
-                    <img src="<?php echo appUrl('assets/icons/x.svg'); ?>" alt="">
-                </button>
             </div>
 
             <form method="post" enctype="multipart/form-data" class="admin-form employee-documents-form">

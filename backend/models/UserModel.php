@@ -272,16 +272,19 @@ class UserModel
             'SELECT u.id, u.department_id, ' . $companySelect . ', u.first_name, u.last_name, u.email, u.role, u.status
              FROM users u
                LEFT JOIN departments d ON d.id = u.department_id
-               WHERE u.department_id = :department_id
+               WHERE u.department_id = :department_id_1
                  OR EXISTS (
                     SELECT 1
                     FROM user_department_links udl
                     WHERE udl.user_id = u.id
-                      AND udl.department_id = :department_id
+                      AND udl.department_id = :department_id_2
                  )
              ORDER BY u.last_name, u.first_name'
         );
-        $statement->execute(['department_id' => $departmentId]);
+        $statement->execute([
+            'department_id_1' => $departmentId,
+            'department_id_2' => $departmentId
+        ]);
 
            return $this->attachDepartmentAssignments($statement->fetchAll());
     }
