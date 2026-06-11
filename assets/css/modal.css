@@ -603,6 +603,20 @@
     display: inline-block;
 }
 
+.dashboard-print-signature-missing {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 22px;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    border: 1px solid rgba(157, 121, 16, 0.42);
+    background: rgba(157, 121, 16, 0.1);
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #6f5608;
+}
+
 .dashboard-print-grid td.is-work {
     background: color-mix(in srgb, var(--print-shift-color, #16a34a) 20%, #ffffff 80%);
     border-color: color-mix(in srgb, var(--print-shift-color, #16a34a) 48%, #ffffff 52%);
@@ -1012,12 +1026,17 @@
 /* Button used to close the modal */
 .dashboard-modal-close {
     float: right;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 34px;
     height: 34px;
+    padding: 0;
     border-radius: var(--border-radius-full);
     border: 1px solid rgba(0, 0, 0, 0.18);
     font-size: 1.2rem;
     line-height: 1;
+    text-align: center;
     cursor: pointer;
     color: #222222;
     background: #ffffff;

@@ -25,7 +25,7 @@ $basePath = $basePath ?? (function () {
 $headerLeft = '';
 $leftMySpaceIcon = null;
 $wifiAuthorizationKnown = isset($isCurrentNetworkAuthorized);
-$showWifiStatus = $route === 'my-space' && $wifiAuthorizationKnown;
+$showWifiStatus = false;
 $isWifiConnected = $showWifiStatus && (bool) ($isCurrentNetworkAuthorized ?? false);
 if (!$isPublicPage && $currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
@@ -145,13 +145,6 @@ if ($route === 'home') {
         }
 
         if ($role === 'employee') {
-            $rightIcons[] = [
-                'type' => 'link',
-                'href' => appUrl('my-space', ['print' => 'documents']) . '#employee-received-documents',
-                'title' => t('common.print_documents'),
-                'icon' => 'print-outline.svg',
-                'alt' => t('common.print_documents'),
-            ];
         }
         if ($role !== 'employee') {
             if ($route !== 'my-space') {
@@ -165,15 +158,6 @@ if ($route === 'home') {
             }
 
             if (in_array($role, ['admin', 'department_manager'], true)) {
-                if ($route === 'my-space') {
-                    $rightIcons[] = [
-                        'type' => 'link',
-                        'href' => appUrl('my-space', ['print' => 'documents']) . '#employee-received-documents',
-                        'title' => t('common.print_documents'),
-                        'icon' => 'print-outline.svg',
-                        'alt' => t('common.print_documents'),
-                    ];
-                }
             }
         }
     }

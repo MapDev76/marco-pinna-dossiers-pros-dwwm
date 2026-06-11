@@ -42,6 +42,20 @@
       .replace(/'/g, '&#39;');
   }
 
+  function normalizeSignatureDataUri(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+    if (raw.indexOf('data:image/') === 0) return raw;
+    if (raw.indexOf('<svg') === 0) {
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(raw);
+    }
+    // Some legacy rows can store only the base64 payload.
+    if (/^[A-Za-z0-9+/=\s]+$/.test(raw) && raw.replace(/\s+/g, '').length > 120) {
+      return 'data:image/png;base64,' + raw.replace(/\s+/g, '');
+    }
+    return '';
+  }
+
   function pad(value) {
     return String(value).padStart(2, '0');
   }
@@ -352,6 +366,7 @@
       .map(function (row) {
         var userId = Number(row && row.user_id || 0);
         var fullName = userMap[userId] || String(row && row.user_name || '').trim() || (tr('Employee', 'Employe') + ' #' + userId);
+        var signatureDataUri = normalizeSignatureDataUri(row && row.signature_data || '');
         return {
           workDate: String(row && row.work_date || ''),
           initials: employeeInitialsFromName(fullName),
@@ -361,8 +376,8 @@
           checkIn: String(row && row.check_in_time || '').slice(0, 5) || '--:--',
           checkOut: String(row && row.check_out_time || '').slice(0, 5) || '--:--',
           status: String(row && row.status || 'present'),
-          signed: Number(row && row.digital_signature_id || 0) > 0,
-          signatureData: String(row && row.signature_data || ''),
+          signatureData: signatureDataUri,
+          signed: Number(row && row.digital_signature_id || 0) > 0 || !!signatureDataUri,
         };
       })
       .sort(function (left, right) {
@@ -376,7 +391,7 @@
     var bodyRows = rows.map(function (row) {
       var signatureHtml = row.signatureData
         ? ('<img class="dashboard-print-signature-image" src="' + escapeHtml(row.signatureData) + '" alt="' + escapeHtml(tr('Digital signature of ', 'Signature numerique de ') + row.fullName) + '">')
-        : (row.signed ? tr('Signed', 'Signe') : '&nbsp;');
+        : (row.signed ? ('<span class="dashboard-print-signature-missing">' + escapeHtml(tr('Signed', 'Signe')) + '</span>') : '&nbsp;');
       return '' +
         '<tr>' +
           '<td>' + escapeHtml(row.workDate) + '</td>' +

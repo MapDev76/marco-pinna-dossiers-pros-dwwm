@@ -229,7 +229,12 @@ if (is_array($primaryShift)) {
 
     <section class="employee-network-status-grid">
         <div class="employee-network-status-card <?php echo $isCurrentNetworkAuthorized ? 'is-ok' : 'is-blocked'; ?>">
-            <strong><?php echo e(t('employee.network_policy')); ?></strong>
+            <div class="employee-network-status-head">
+                <strong><?php echo e(t('employee.network_policy')); ?></strong>
+                <span class="site-wifi-status <?php echo $isCurrentNetworkAuthorized ? 'is-connected' : 'is-blocked'; ?>" title="<?php echo e($isCurrentNetworkAuthorized ? t('employee.status_connected') : t('employee.status_restricted_network')); ?>" aria-label="<?php echo e($isCurrentNetworkAuthorized ? t('employee.status_connected') : t('employee.status_restricted_network')); ?>">
+                    <img src="<?php echo $basePath; ?>/assets/icons/wifi-high.svg" alt="" aria-hidden="true" class="site-wifi-icon">
+                </span>
+            </div>
             <?php if (!$isCurrentNetworkAuthorized): ?>
                 <span class="employee-network-status-alert"><?php echo e(t('employee.network_blocked')); ?></span>
                 <span><?php echo e(t('employee.required_wifi_ip')); ?>: <?php echo e($requiredSignatureIp); ?></span>

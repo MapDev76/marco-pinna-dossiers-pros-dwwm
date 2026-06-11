@@ -1090,6 +1090,17 @@ body.route-my-space {
     background: linear-gradient(180deg, #f3e1ab 0%, #e7cb82 100%);
 }
 
+.employee-network-status-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.employee-network-status-head .site-wifi-status {
+    flex: 0 0 auto;
+}
+
 .employee-network-status-card.is-ok {
     border-color: rgba(17, 148, 63, 0.3);
     background: linear-gradient(180deg, #edfdf2 0%, #dff8e9 100%);

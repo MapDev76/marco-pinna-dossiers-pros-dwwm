@@ -19,6 +19,10 @@ if (!isLoggedIn()) {
 }
 
 $modalCurrentRole = currentUser()['role'] ?? 'employee';
+$basePath = $basePath ?? (function () {
+    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
+})();
 ?>
 <div class="dashboard-overlay" id="dashboard-overlay" hidden></div>
 <section class="crud-modal" id="crud-modal" hidden role="dialog" aria-modal="true" aria-labelledby="crud-modal-title">
@@ -384,17 +388,17 @@ $modalCurrentRole = currentUser()['role'] ?? 'employee';
                                     title="<?php echo e(t('crud.attach_send_employees')); ?>"
                                     data-document-send-id="<?php echo (int) ($document['id'] ?? 0); ?>"
                                     data-document-send-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
-                                <img src="<?php echo appUrl('assets/icons/mail-open.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                <img src="<?php echo $basePath; ?>/assets/icons/mail-open.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                             </button>
                             <button type="button"
                                     class="company-card-action"
                                     title="<?php echo e(t('crud.attach_send_department')); ?>"
                                     data-document-send-all-id="<?php echo (int) ($document['id'] ?? 0); ?>"
                                     data-document-send-all-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
-                                <img src="<?php echo appUrl('assets/icons/mails.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                <img src="<?php echo $basePath; ?>/assets/icons/mails.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                             </button>
                             <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $document['id']]); ?>" title="<?php echo e(t('crud.download_document')); ?>">
-                                <img src="<?php echo appUrl('assets/icons/circle-arrow-out-up-left.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                <img src="<?php echo $basePath; ?>/assets/icons/circle-arrow-out-up-left.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                             </a>
                             <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
                                 <button type="button"
