@@ -359,25 +359,33 @@ if (is_array($primaryShift)) {
                                 <td><?php echo e((string) ($documentMessage['sender_name'] ?? '-')); ?></td>
                                 <td><?php echo e((string) ($documentMessage['file_name'] ?? t('employee.document'))); ?></td>
                                 <td>
-                                    <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
-                                        <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id']]); ?>"><?php echo e(t('employee.download')); ?></a>
-                                        <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id']]); ?>"><?php echo e(t('employee.print', ['fallback' => 'Print'])); ?></a>
-                                        <?php if (!empty($documentMessage['can_sign'])): ?>
-                                            <button type="button"
-                                                    class="admin-action-link"
-                                                    data-document-sign-open
-                                                    data-document-sign-request-id="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>"
-                                                    data-document-sign-title="<?php echo e((string) ($documentMessage['file_name'] ?? t('employee.document'))); ?>">
-                                                <?php echo e(t('employee.sign_document', ['fallback' => 'Sign'])); ?>
-                                            </button>
-                                        <?php elseif ((string) ($documentMessage['type'] ?? '') === 'document_signature' && (string) ($documentMessage['status'] ?? '') === 'approved'): ?>
-                                            <span class="employee-status-chip"><?php echo e(t('employee.signed', ['fallback' => 'Signed'])); ?></span>
+                                    <div class="employee-document-actions">
+                                        <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
+                                            <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id']]); ?>"><?php echo e(t('employee.download')); ?></a>
+                                            <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'disposition' => 'inline']); ?>"><?php echo e(t('employee.print', ['fallback' => 'Print'])); ?></a>
+                                            <?php if (!empty($documentMessage['can_sign'])): ?>
+                                                <button type="button"
+                                                        class="admin-action-link"
+                                                        data-document-sign-open
+                                                        data-document-sign-request-id="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>"
+                                                        data-document-sign-title="<?php echo e((string) ($documentMessage['file_name'] ?? t('employee.document'))); ?>">
+                                                    <?php echo e(t('employee.sign_document', ['fallback' => 'Sign'])); ?>
+                                                </button>
+                                            <?php elseif ((string) ($documentMessage['type'] ?? '') === 'document_signature' && (string) ($documentMessage['status'] ?? '') === 'approved'): ?>
+                                                <span class="employee-status-chip"><?php echo e(t('employee.signed', ['fallback' => 'Signed'])); ?></span>
+                                            <?php endif; ?>
+                                        <?php elseif (!empty($documentMessage['document_id'])): ?>
+                                            <span class="employee-status-chip"><?php echo e(t('employee.file_not_available')); ?></span>
+                                        <?php else: ?>
+                                            <span class="employee-status-chip">-</span>
                                         <?php endif; ?>
-                                    <?php elseif (!empty($documentMessage['document_id'])): ?>
-                                        <span class="employee-status-chip"><?php echo e(t('employee.file_not_available')); ?></span>
-                                    <?php else: ?>
-                                        -
-                                    <?php endif; ?>
+
+                                        <form method="post">
+                                            <input type="hidden" name="action" value="archive_received_document">
+                                            <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
+                                            <button type="submit" class="admin-action-link admin-action-link-secondary"><?php echo e(t('employee.archive_document', ['fallback' => 'Archive'])); ?></button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

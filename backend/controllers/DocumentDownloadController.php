@@ -18,6 +18,8 @@ ensureDocumentStorageSchema($pdo);
 $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 $documentId = (int) ($_GET['id'] ?? 0);
+$contentDisposition = strtolower(trim((string) ($_GET['disposition'] ?? '')));
+$serveInline = $contentDisposition === 'inline';
 
 if ($documentId <= 0) {
     setFlash('error', t('common.document_not_found'));
@@ -95,7 +97,7 @@ if ($resolvedPath !== null) {
     $mimeType = mime_content_type($resolvedPath) ?: 'application/octet-stream';
     header('Content-Type: ' . $mimeType);
     header('Content-Length: ' . (string) filesize($resolvedPath));
-    header('Content-Disposition: attachment; filename="' . str_replace('"', '', $downloadName) . '"');
+    header('Content-Disposition: ' . ($serveInline ? 'inline' : 'attachment') . '; filename="' . str_replace('"', '', $downloadName) . '"');
     readfile($resolvedPath);
     exit;
 }
@@ -105,7 +107,7 @@ if (is_string($blobContent) && $blobContent !== '') {
     $mimeType = trim((string) ($document['file_mime_type'] ?? '')) ?: 'application/octet-stream';
     header('Content-Type: ' . $mimeType);
     header('Content-Length: ' . (string) strlen($blobContent));
-    header('Content-Disposition: attachment; filename="' . str_replace('"', '', $downloadName) . '"');
+    header('Content-Disposition: ' . ($serveInline ? 'inline' : 'attachment') . '; filename="' . str_replace('"', '', $downloadName) . '"');
     echo $blobContent;
     exit;
 }

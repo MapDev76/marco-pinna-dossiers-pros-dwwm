@@ -506,6 +506,8 @@ return [
         'no_documents' => 'Aucun document recu pour le moment.',
         'document_notification' => 'Notification document',
         'download' => 'Telecharger',
+        'archive_document' => 'Archiver',
+        'document_archived' => 'Document archive.',
         'file_not_available' => 'Fichier non disponible',
         'attendance_label' => 'Presence',
         'digital_signature' => 'Signature numerique',

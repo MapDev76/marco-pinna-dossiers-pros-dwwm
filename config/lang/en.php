@@ -506,6 +506,8 @@ return [
         'no_documents' => 'No documents received yet.',
         'document_notification' => 'Document notification',
         'download' => 'Download',
+        'archive_document' => 'Archive',
+        'document_archived' => 'Document archived.',
         'file_not_available' => 'File not available',
         'attendance_label' => 'Attendance',
         'digital_signature' => 'Digital signature',

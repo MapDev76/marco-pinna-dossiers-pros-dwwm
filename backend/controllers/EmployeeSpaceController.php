@@ -194,6 +194,7 @@ $incomingDocumentsStatement = $pdo->prepare(
          WHERE r.recipient_id = :user_id
              AND r.document_id IS NOT NULL
              AND r.type IN ("notification", "document_signature")
+             AND COALESCE(r.status, "") <> "archived"
          ORDER BY r.created_at DESC, r.id DESC'
 );
 $incomingDocumentsStatement->execute(['user_id' => (int) $currentUser['id']]);
@@ -224,6 +225,7 @@ foreach ($incomingDocuments as &$incomingDocument) {
     $hasDbContent = !empty($incomingDocument['has_db_content']);
     $incomingDocument['is_download_available'] = $hasDbContent || ($resolveStoredDocumentPath($incomingDocument) !== null);
     $incomingDocument['can_sign'] = (string) ($incomingDocument['type'] ?? '') === 'document_signature'
+    && !empty($incomingDocument['is_download_available'])
         && in_array((string) ($incomingDocument['status'] ?? ''), ['pending', 'unread'], true)
         && (int) ($incomingDocument['recipient_id'] ?? 0) === (int) ($currentUser['id'] ?? 0);
 }
@@ -335,6 +337,36 @@ $employeeUiState = [
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+
+    if ($action === 'archive_received_document') {
+        $requestId = (int) ($_POST['request_id'] ?? 0);
+        if ($requestId <= 0) {
+            setFlash('error', t('employee.select_valid_document', ['fallback' => 'Please select a valid document.']));
+            redirectTo('my-space', ['print' => 'documents']);
+        }
+
+        $archiveStatement = $pdo->prepare(
+            'UPDATE requests
+             SET status = :status,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id
+               AND recipient_id = :recipient_id
+               AND type IN ("notification", "document_signature")
+             LIMIT 1'
+        );
+        $archiveStatement->execute([
+            'status' => 'archived',
+            'id' => $requestId,
+            'recipient_id' => (int) $currentUser['id'],
+        ]);
+
+        if ($archiveStatement->rowCount() > 0) {
+            setFlash('success', t('employee.document_archived', ['fallback' => 'Document archived.']));
+        } else {
+            setFlash('error', t('common.unauthorized'));
+        }
+        redirectTo('my-space', ['print' => 'documents']);
+    }
 
     if ($action === 'share_document_no_signature') {
         $title = trim((string) ($_POST['title'] ?? ''));
@@ -498,6 +530,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$signatureRequest) {
                 $error = t('common.unauthorized');
+            } elseif (empty($signatureRequest['file_blob']) && $resolveStoredDocumentPath($signatureRequest) === null) {
+                $error = t('common.file_not_available');
             } elseif (in_array((string) ($signatureRequest['status'] ?? ''), ['approved', 'rejected', 'cancelled'], true)) {
                 $error = t('employee.document_already_signed', ['fallback' => 'This signature request has already been processed.']);
             } else {

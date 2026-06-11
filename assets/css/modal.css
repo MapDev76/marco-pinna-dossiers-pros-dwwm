@@ -261,6 +261,8 @@
 .dashboard-print-modal {
     width: calc(100vw - 16px);
     max-width: none;
+    height: calc(100vh - 16px);
+    max-height: calc(100vh - 16px);
 }
 
 /* ── Print department chip picker ───────────────────── */
@@ -301,9 +303,11 @@
 .dashboard-print-shell {
     position: relative;
     width: 100%;
-    max-height: calc(100vh - 36px);
+    height: 100%;
+    max-height: 100%;
     overflow: auto;
     padding: 0.75rem 1rem 1rem;
+    box-sizing: border-box;
     border-radius: 24px;
     background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
     border: 1px solid rgba(157, 121, 16, 0.24);
@@ -311,11 +315,11 @@
 }
 
 .dashboard-print-shell > .dashboard-modal-close {
-    position: sticky;
-    float: right;
-    top: 0;
-    margin: 0 34px -34px auto;
-    display: block;
+    position: absolute;
+    top: 0.75rem;
+    right: 0.9rem;
+    margin: 0;
+    display: inline-flex;
     z-index: 10;
     flex-shrink: 0;
 }
@@ -344,8 +348,8 @@
 }
 
 .dashboard-print-actions {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 0.32rem;
     align-items: center;
 }
@@ -354,6 +358,8 @@
     font-size: 0.74rem;
     padding: 0.26rem 0.58rem;
     white-space: nowrap;
+    width: 100%;
+    min-width: 0;
 }
 
 .dashboard-print-feedback {
@@ -667,6 +673,7 @@
     .dashboard-print-head {
         flex-direction: column;
         gap: 0.55rem;
+        padding-right: 52px;
     }
 
     .dashboard-print-head > div:first-child {
@@ -674,7 +681,8 @@
     }
 
     .dashboard-print-actions {
-        justify-content: flex-start;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
     }
 
     .dashboard-print-actions .dashboard-sidebar-control-button {
@@ -738,12 +746,25 @@
         border-radius: 18px;
     }
 
+    .dashboard-print-shell > .dashboard-modal-close {
+        top: 0.55rem;
+        right: 0.55rem;
+    }
+
     .dashboard-print-head h2 {
         font-size: 0.88rem;
     }
 
     .dashboard-print-subtitle {
         display: none;
+    }
+
+    .dashboard-print-head {
+        padding-right: 46px;
+    }
+
+    .dashboard-print-actions {
+        grid-template-columns: 1fr;
     }
 
     .dashboard-print-actions .dashboard-sidebar-control-button {

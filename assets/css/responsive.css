@@ -688,6 +688,15 @@
         overflow: visible;
     }
 
+    .route-my-space .content {
+        left: auto;
+        top: auto;
+        transform: none;
+        width: min(940px, calc(100vw - 28px));
+        max-width: calc(100vw - 28px);
+        margin: 16px auto 14px;
+    }
+
     /* Keep text centered while allowing page vertical scroll */
     .content > * {
         text-align: center;
@@ -707,8 +716,8 @@
     .route-my-space .content {
         width: calc(100% - 18px);
         max-width: none;
-        margin: 68px auto 12px;
-        top: 0;
+        margin: 16px auto 12px;
+        top: auto;
         max-height: none;
         padding: 0.85rem;
     }
@@ -914,8 +923,8 @@
 
     .route-my-space .content {
         width: calc(100% - 10px);
-        margin: 46px auto 8px;
-        top: 0;
+        margin: 16px auto 8px;
+        top: auto;
         padding: 0.55rem;
         border-radius: 24px;
     }
@@ -1011,8 +1020,8 @@
     .route-my-space .content {
         left: auto !important;
         transform: none !important;
-        top: 0 !important;
-        margin: 50px auto 10px !important;
+        top: auto !important;
+        margin: 16px auto 10px !important;
     }
 
     .employee-attendance-modal {
@@ -1044,6 +1053,6 @@
 
 @media (max-width: 560px) {
     .route-my-space .content {
-        margin: 42px auto 8px !important;
+        margin: 16px auto 8px !important;
     }
 }

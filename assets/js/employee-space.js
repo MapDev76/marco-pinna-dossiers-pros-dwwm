@@ -5,16 +5,54 @@
   const scrollButtons = Array.from(document.querySelectorAll('[data-scroll-target]'));
 
   if (shouldPrintDocuments && documentsSection) {
+    let printModeCleaned = false;
+    const cleanupPrintMode = () => {
+      if (printModeCleaned) {
+        return;
+      }
+
+      printModeCleaned = true;
+      document.body.classList.remove('employee-documents-print-mode');
+
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.searchParams.get('print') === 'documents') {
+        currentUrl.searchParams.delete('print');
+        const nextUrl = currentUrl.pathname
+          + (currentUrl.searchParams.toString() ? `?${currentUrl.searchParams.toString()}` : '')
+          + currentUrl.hash;
+        window.history.replaceState({}, document.title, nextUrl);
+      }
+
+      window.removeEventListener('afterprint', cleanupPrintMode);
+      window.removeEventListener('focus', handleFocusRestore);
+      document.removeEventListener('visibilitychange', handleVisibilityRestore);
+    };
+
+    const handleFocusRestore = () => {
+      window.setTimeout(cleanupPrintMode, 160);
+    };
+
+    const handleVisibilityRestore = () => {
+      if (!document.hidden) {
+        window.setTimeout(cleanupPrintMode, 160);
+      }
+    };
+
     document.body.classList.add('employee-documents-print-mode');
+    window.addEventListener('afterprint', cleanupPrintMode);
+    window.addEventListener('focus', handleFocusRestore);
+    document.addEventListener('visibilitychange', handleVisibilityRestore);
+
     window.requestAnimationFrame(() => {
       documentsSection.scrollIntoView({ behavior: 'auto', block: 'start' });
       window.setTimeout(() => {
-        window.print();
+        try {
+          window.print();
+        } finally {
+          window.setTimeout(cleanupPrintMode, 1400);
+        }
       }, 120);
     });
-    window.addEventListener('afterprint', () => {
-      document.body.classList.remove('employee-documents-print-mode');
-    }, { once: true });
   }
 
   const modalControllers = [];
