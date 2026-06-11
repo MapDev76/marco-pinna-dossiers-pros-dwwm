@@ -364,6 +364,15 @@
     modalControllers.push(employeeDocumentsModal);
   }
 
+  const employeeDocumentsInboxModal = initSimpleModal({
+    modalSelector: '[data-employee-documents-inbox-modal]',
+    openButtonsSelector: '[data-employee-documents-inbox-open]',
+    closeButtonsSelector: '[data-employee-documents-inbox-close]',
+  });
+  if (employeeDocumentsInboxModal) {
+    modalControllers.push(employeeDocumentsInboxModal);
+  }
+
   scrollButtons.forEach((button) => {
     button.addEventListener('click', (event) => {
       event.preventDefault();

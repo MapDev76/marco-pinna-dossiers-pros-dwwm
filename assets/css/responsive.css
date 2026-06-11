@@ -659,7 +659,7 @@
         width: calc(100% - 24px);
         max-width: 720px;
         max-height: none;
-        margin: 84px auto 16px;
+        margin: 16px auto 16px;
         padding: 1rem;
         overflow: auto;
         -webkit-overflow-scrolling: touch;
@@ -680,7 +680,7 @@
         top: auto;
         left: 50%;
         transform: translateX(-50%);
-        margin: 84px auto 18px;
+        margin: 16px auto 18px;
         width: calc(100% - 32px);
         max-width: calc(100% - 32px);
         padding: 1rem;
@@ -771,7 +771,7 @@
     .route-login .content {
         width: calc(100% - 12px);
         max-width: none;
-        margin: 78px auto 10px;
+        margin: 16px auto 10px;
         padding: 0.95rem;
     }
 
@@ -917,7 +917,7 @@
 
     .route-home .content,
     .route-login .content {
-        margin: 72px auto 8px;
+        margin: 16px auto 8px;
         padding: 0.9rem;
     }
 
@@ -1048,6 +1048,17 @@
         width: 100% !important;
         max-width: 100% !important;
         height: clamp(190px, 36vh, 300px);
+    }
+
+    .employee-documents-inbox-dialog .employee-document-actions-inline {
+        flex-wrap: wrap;
+        overflow: visible;
+    }
+
+    .employee-documents-inbox-dialog .employee-document-actions-inline .admin-action-link,
+    .employee-documents-inbox-dialog .employee-document-actions-inline .admin-action-link-secondary {
+        min-height: 34px;
+        padding-inline: 0.72rem;
     }
 }
 

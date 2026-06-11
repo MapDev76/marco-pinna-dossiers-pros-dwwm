@@ -133,7 +133,7 @@
 }
 /* Keep home content near top so intro is visible */
 .content:has(.home-page) {
-    top: 108px;
+    top: 116px;
     transform: translateX(-50%);
     max-height: calc(100vh - 128px);
 }

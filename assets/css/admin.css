@@ -84,6 +84,13 @@
     color: var(--color-text);
 }
 
+button.admin-action-link,
+button.admin-action-link-secondary,
+a.admin-action-link,
+a.admin-action-link-secondary {
+    border: 1px solid rgba(157, 121, 16, 0.58) !important;
+}
+
 :where(
     .site-icon-btn,
     .admin-action-link,
@@ -874,6 +881,14 @@ body.route-my-space {
     gap: 0.9rem;
 }
 
+.employee-card-head-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .employee-shift-stage-head h1,
 .employee-card-head h2,
 .employee-upcoming-head h2,
@@ -1185,10 +1200,24 @@ body.route-my-space {
     background: rgba(255, 255, 255, 0.92);
 }
 
+.employee-documents-unread-alert {
+    margin: 0.3rem 0 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #7a5a07;
+}
+
 .employee-document-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+    align-items: center;
+}
+
+.employee-document-status-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
     align-items: center;
 }
 
@@ -1198,10 +1227,43 @@ body.route-my-space {
     margin: 0;
 }
 
+.employee-document-delete-btn {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 999px;
+}
+
+.employee-document-delete-btn img {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+
 .employee-document-actions .admin-action-link,
 .employee-document-actions .admin-action-link-secondary,
 .employee-document-actions .employee-status-chip {
     margin: 0;
+}
+
+.employee-document-actions-inline {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.1rem;
+}
+
+.employee-document-actions-inline form {
+    flex: 0 0 auto;
+}
+
+.employee-document-actions-inline .admin-action-link,
+.employee-document-actions-inline .admin-action-link-secondary,
+.employee-document-actions-inline .employee-status-chip,
+.employee-document-actions-inline .employee-document-delete-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .employee-table-compact {
@@ -1221,10 +1283,12 @@ body.route-my-space {
     inset: 0;
     z-index: 12050;
     display: grid;
-    place-items: center;
+    justify-items: center;
+    align-items: start;
     padding: 1rem;
     background: rgba(0, 0, 0, 0.52);
     backdrop-filter: blur(8px);
+    overflow-y: auto;
 }
 
 .employee-attendance-dialog {
@@ -1237,6 +1301,8 @@ body.route-my-space {
     background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
     box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
     overflow-x: hidden;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
 }
 
 .employee-attendance-dialog-head {
@@ -1309,6 +1375,44 @@ body.route-my-space {
 
 .employee-documents-form select[multiple] {
     min-height: 140px;
+}
+
+.employee-documents-signature-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 600;
+}
+
+.employee-documents-signature-toggle input {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    min-height: 16px;
+}
+
+.employee-documents-inbox-dialog {
+    width: min(1040px, calc(100vw - 1.6rem));
+    max-height: calc(100vh - 2rem);
+}
+
+.employee-documents-inbox-sections {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.employee-documents-inbox-section {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.employee-documents-table-wrap {
+    max-height: 240px;
+    overflow: auto;
+}
+
+.employee-documents-request-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .settings-assignment-employee-modal[hidden] {
