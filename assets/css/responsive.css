@@ -654,8 +654,8 @@
     .route-login .content {
         position: relative;
         top: auto;
-        left: 50%;
-        transform: translateX(-50%);
+        left: 0;
+        transform: none;
         width: calc(100% - 24px);
         max-width: 720px;
         max-height: none;
