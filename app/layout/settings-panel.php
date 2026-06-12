@@ -954,8 +954,47 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             ksort($usersByDepartment);
                         ?>
                         <?php foreach ($usersByDepartment as $departmentGroup): ?>
+                            <?php $deptGroupId = (int) ($departmentGroup['department_id'] ?? 0); ?>
                             <section class="settings-assignment-employee-group">
-                                <div class="settings-assignment-employee-group-title"><?php echo $renderGroupIcon((int) ($departmentGroup['department_id'] ?? 0), (string) ($departmentGroup['icon'] ?? ''), (string) ($departmentGroup['label'] ?? t('settings.unassigned'))); ?> <?php echo e($departmentGroup['label'] ?? t('settings.unassigned')); ?></div>
+                                <div class="settings-assignment-employee-group-head">
+                                    <div class="settings-assignment-employee-group-title"><?php echo $renderGroupIcon($deptGroupId, (string) ($departmentGroup['icon'] ?? ''), (string) ($departmentGroup['label'] ?? t('settings.unassigned'))); ?> <?php echo e($departmentGroup['label'] ?? t('settings.unassigned')); ?></div>
+                                    <?php if ($deptGroupId > 0): ?>
+                                        <?php
+                                            $deptShiftIds = [];
+                                            foreach ($shifts as $shiftItem) {
+                                                if ((int) ($shiftItem['department_id'] ?? 0) === $deptGroupId && strtolower(trim((string) ($shiftItem['kind'] ?? 'work'))) === 'work') {
+                                                    $deptShiftIds[] = (int) ($shiftItem['id'] ?? 0);
+                                                }
+                                            }
+                                        ?>
+                                        <div class="settings-assignment-employee-group-actions">
+                                            <button
+                                                type="button"
+                                                class="admin-action-link admin-action-link-secondary"
+                                                data-dept-assign-open="1"
+                                                data-dept-id="<?php echo $deptGroupId; ?>"
+                                                data-dept-name="<?php echo e((string) ($departmentGroup['label'] ?? '')); ?>"
+                                                data-dept-shift-ids="<?php echo e(implode(',', $deptShiftIds)); ?>"
+                                                title="<?php echo e($isFrLocale ? 'Assigner automatiquement ce departement' : 'Auto-assign this department'); ?>"
+                                            >
+                                                <img src="<?php echo $basePath; ?>/assets/icons/calendar-sync.svg" alt="" aria-hidden="true" class="settings-icon-image" style="width:13px;height:13px;vertical-align:middle;">
+                                                <?php echo e($isFrLocale ? 'Assigner' : 'Assign dept'); ?>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="admin-action-link admin-action-link-secondary"
+                                                data-dept-assign-clear="1"
+                                                data-dept-id="<?php echo $deptGroupId; ?>"
+                                                data-dept-name="<?php echo e((string) ($departmentGroup['label'] ?? '')); ?>"
+                                                data-dept-shift-ids="<?php echo e(implode(',', $deptShiftIds)); ?>"
+                                                title="<?php echo e($isFrLocale ? 'Effacer les affectations de ce departement' : 'Clear this department assignments'); ?>"
+                                            >
+                                                <img src="<?php echo $basePath; ?>/assets/icons/calendar-x.svg" alt="" aria-hidden="true" class="settings-icon-image" style="width:13px;height:13px;vertical-align:middle;">
+                                                <?php echo e($isFrLocale ? 'Effacer' : 'Clear dept'); ?>
+                                            </button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                                 <div class="settings-assignment-employee-list">
                                     <?php foreach ($departmentGroup['users'] as $employeeItem): ?>
                                         <?php

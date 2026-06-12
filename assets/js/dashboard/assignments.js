@@ -2405,6 +2405,134 @@
     }
   }
 
+  // ── Department-level quick-assign / clear ─────────────────────────────────
+
+  function getDeptShiftIds(btn) {
+    const raw = String(btn.getAttribute('data-dept-shift-ids') || '').trim();
+    if (!raw) return [];
+    return raw.split(',').map((v) => parseInt(v.trim(), 10) || 0).filter((v) => v > 0);
+  }
+
+  async function autoAssignForDepartment(departmentId, departmentName, shiftIds) {
+    if (!apiUrl || !window.AppAPI) return;
+    const deptId = parseInt(String(departmentId || '0'), 10) || 0;
+    if (!deptId) {
+      notifyError(tr('Invalid department.', 'Departement invalide.'));
+      return;
+    }
+    const allowedShiftIds = Array.isArray(shiftIds) && shiftIds.length
+      ? shiftIds
+      : shiftCatalog.filter((s) => Number(s?.department_id || 0) === deptId && String(s?.kind || '').toLowerCase() === 'work').map((s) => parseInt(String(s?.id || '0'), 10) || 0).filter(Boolean);
+
+    if (!allowedShiftIds.length) {
+      notifyError(tr('No work shifts found for this department.', 'Aucun poste de travail trouve pour ce departement.'));
+      return;
+    }
+
+    const range = normalizeCurrentMonthRange(
+      document.querySelector('[data-auto-assign-range-start]')?.value || '',
+      document.querySelector('[data-auto-assign-range-end]')?.value || ''
+    );
+    const params = getGlobalAutoAssignParams ? getGlobalAutoAssignParams() : null;
+    const minRest = params?.boundedMinRestDays ?? 1;
+    const maxRest = params?.boundedMaxRestDays ?? 2;
+    const minWork = params?.boundedMinWorkDays ?? 4;
+    const maxWork = params?.boundedMaxWorkDays ?? 6;
+    const restMode = params?.restDistributionMode ?? 'staggered';
+    const employeeRules = { ...loadRules(), ...collectRulesFromRows() };
+
+    try {
+      const res = await AppAPI.postJSON(apiUrl, {
+        action: 'auto_assign_open',
+        scope_shift_id: 0,
+        allowed_shift_ids: allowedShiftIds,
+        range_start: range.start,
+        range_end: range.end,
+        allow_reassign_conflicts: true,
+        allow_cross_department_fallback: false,
+        min_employees_per_shift_day: params?.normalizedMin ?? 1,
+        max_employees_per_shift_day: params?.normalizedMax ?? 3,
+        min_rest_days_per_week: minRest,
+        max_rest_days_per_week: maxRest,
+        min_work_days_per_week: minWork,
+        max_work_days_per_week: maxWork,
+        rest_distribution_mode: restMode,
+        priority_department_id: deptId,
+        priority_department_strict_internal: true,
+        employee_rules: employeeRules,
+      });
+      if (res?.ok || res?.success) {
+        const msg = `${departmentName || tr('Department', 'Departement')}: ${res.assigned_count || 0} ${tr('shifts assigned', 'postes assignes')}. ${tr('Open remaining', 'Postes ouverts restants')}: ${res.open_remaining || 0}.`;
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine'), msg);
+        } else {
+          notifySuccess(msg);
+          location.reload();
+        }
+      } else {
+        notifyError(tr('Department auto-assign failed: ', 'Echec affectation departement : ') + (res?.error || tr('unknown', 'inconnue')));
+      }
+    } catch (e) {
+      console.error(e);
+      notifyError(tr('Error during department auto-assign.', 'Erreur lors de l\'affectation automatique du departement.'));
+    }
+  }
+
+  async function clearAssignmentsForDepartment(departmentId, departmentName, shiftIds) {
+    if (!apiUrl || !window.AppAPI) return;
+    const deptId = parseInt(String(departmentId || '0'), 10) || 0;
+    if (!deptId) {
+      notifyError(tr('Invalid department.', 'Departement invalide.'));
+      return;
+    }
+    const allowedShiftIds = Array.isArray(shiftIds) && shiftIds.length
+      ? shiftIds
+      : shiftCatalog.filter((s) => Number(s?.department_id || 0) === deptId && String(s?.kind || '').toLowerCase() === 'work').map((s) => parseInt(String(s?.id || '0'), 10) || 0).filter(Boolean);
+
+    const canClear = feedback?.confirm
+      ? await feedback.confirm(tr(`Clear all assignments for department "${departmentName}"?`, `Effacer les affectations du departement "${departmentName}" ?`), tr('Confirm', 'Confirmer'))
+      : false;
+
+    if (!canClear) {
+      if (!feedback?.confirm) {
+        notifyError(tr('Confirmation dialog not available.', 'Fenetre de confirmation non disponible.'));
+      }
+      return;
+    }
+
+    const range = normalizeCurrentMonthRange(
+      document.querySelector('[data-auto-assign-range-start]')?.value || '',
+      document.querySelector('[data-auto-assign-range-end]')?.value || ''
+    );
+
+    try {
+      const res = await AppAPI.postJSON(apiUrl, {
+        action: 'clear_assignments_scope',
+        scope_shift_id: 0,
+        allowed_shift_ids: allowedShiftIds,
+        include_rest_assignments: false,
+        range_start: range.start,
+        range_end: range.end,
+      });
+      if (res?.ok || res?.success) {
+        const msg = `${departmentName || tr('Department', 'Departement')}: ${res.cleared_count || 0} ${tr('assignment(s) cleared.', 'affectation(s) effacee(s).')}`;
+        if (feedback?.reloadSettingsTabWithSuccess) {
+          feedback.reloadSettingsTabWithSuccess('assignments', tr('Done', 'Termine'), msg);
+        } else {
+          notifySuccess(msg);
+          location.reload();
+        }
+      } else {
+        notifyError(tr('Clear department failed: ', 'Echec effacement departement : ') + (res?.error || tr('unknown', 'inconnue')));
+      }
+    } catch (e) {
+      console.error(e);
+      notifyError(tr('Error clearing department assignments.', 'Erreur lors de l\'effacement des affectations du departement.'));
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   document.addEventListener('click', (ev) => {
     if (!isAssignmentsPanelActive()) return;
 
@@ -2477,6 +2605,26 @@
       if (presetKey) {
         applyPolicyPreset(presetKey);
       }
+      return;
+    }
+
+    const deptAssignBtn = ev.target.closest && ev.target.closest('[data-dept-assign-open]');
+    if (deptAssignBtn) {
+      ev.preventDefault();
+      const deptId = parseInt(String(deptAssignBtn.getAttribute('data-dept-id') || '0'), 10) || 0;
+      const deptName = String(deptAssignBtn.getAttribute('data-dept-name') || tr('Department', 'Departement'));
+      const deptShiftIds = getDeptShiftIds(deptAssignBtn);
+      autoAssignForDepartment(deptId, deptName, deptShiftIds);
+      return;
+    }
+
+    const deptClearBtn = ev.target.closest && ev.target.closest('[data-dept-assign-clear]');
+    if (deptClearBtn) {
+      ev.preventDefault();
+      const deptId = parseInt(String(deptClearBtn.getAttribute('data-dept-id') || '0'), 10) || 0;
+      const deptName = String(deptClearBtn.getAttribute('data-dept-name') || tr('Department', 'Departement'));
+      const deptShiftIds = getDeptShiftIds(deptClearBtn);
+      clearAssignmentsForDepartment(deptId, deptName, deptShiftIds);
       return;
     }
 

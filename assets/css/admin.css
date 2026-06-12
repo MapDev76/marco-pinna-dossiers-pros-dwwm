@@ -518,6 +518,27 @@ a.admin-action-link-secondary {
     gap: 0.38rem;
 }
 
+.settings-assignment-employee-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.settings-assignment-employee-group-actions {
+    display: inline-flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    flex: 0 0 auto;
+}
+
+.settings-assignment-employee-group-actions .admin-action-link {
+    min-height: 28px;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.74rem;
+}
+
 .settings-assignment-employee-group-title {
     margin: 0;
     font-size: 0.76rem;
