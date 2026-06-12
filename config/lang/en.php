@@ -597,4 +597,7 @@ return [
     'session' => [
         'use_cookies' => 'Please enable cookies to continue.',
     ],
+    'loading' => [
+        'message' => 'Loading in progress...',
+    ],
 ];

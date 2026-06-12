@@ -598,4 +598,7 @@ return [
     'session' => [
         'use_cookies' => 'Veuillez activer les cookies pour continuer.',
     ],
+    'loading' => [
+        'message' => 'Chargement en cours...',
+    ],
 ];
