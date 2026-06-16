@@ -46,7 +46,7 @@ $shiftKindLabels = [
 $shiftKindIcons = [
     'work' => '',
     'overtime' => '',
-    'rest' => 'moon.svg',
+    'rest' => 'popcorn.svg',
     'vacation' => 'parasol.svg',
     'sick' => 'stethoscope.svg',
 ];
@@ -67,7 +67,14 @@ $formatLongDate = static function (?string $dateValue): string {
     }
 
     try {
-        return (new DateTimeImmutable((string) $dateValue))->format('l, j F Y');
+        $locale = appLocale();
+        $date = new DateTimeImmutable((string) $dateValue);
+        if ($locale === 'fr') {
+            $formatter = new IntlDateFormatter('fr_FR', IntlDateFormatter::FULL, IntlDateFormatter::NONE);
+            return $formatter->format($date);
+        } else {
+            return $date->format('l, j F Y');
+        }
     } catch (Throwable $e) {
         return (string) $dateValue;
     }
@@ -247,7 +254,6 @@ if (is_array($primaryShift)) {
             <?php endif; ?>
         </div>
     </section>
-
     <section class="employee-upcoming-shell" id="employee-next-shifts">
         <div class="employee-upcoming-head">
             <h2><?php echo e(t('employee.next_shifts')); ?></h2>
@@ -290,8 +296,6 @@ if (is_array($primaryShift)) {
                     <div>
                         <strong><?php echo e($formatLongDate($shift['work_date'] ?? null)); ?></strong>
                         <span><?php echo e($formatTimeRange($shift)); ?></span>
-                        <small><?php echo e($shift['department_name'] ?? t('employee.default_department')); ?></small>
-                        <small class="employee-upcoming-kind"><?php echo $shiftKindIconHtml; ?><?php echo e($shiftKindLabel); ?></small>
                     </div>
                     <span class="employee-upcoming-badge <?php echo e($shiftBadgeClass); ?>"><?php echo $shiftBadgeIconHtml; ?><?php echo e($shiftBadge); ?></span>
                 </article>
@@ -348,7 +352,6 @@ if (is_array($primaryShift)) {
                 </div>
                 <div class="employee-card-head-actions">
                     <span class="employee-metric-pill"><?php echo count($incomingDocuments); ?> <?php echo e(t('employee.files_suffix')); ?></span>
-                    <button type="button" class="admin-action-link admin-action-link-secondary" data-employee-documents-inbox-open><?php echo e(t('employee.manage_documents', ['fallback' => 'Manage'])); ?></button>
                 </div>
             </div>
             <div class="table-wrap employee-table-wrap">
@@ -524,6 +527,8 @@ if (is_array($primaryShift)) {
             </form>
         </div>
     </div>
+
+
 
     <div class="employee-attendance-modal" data-employee-documents-inbox-modal hidden>
         <div class="employee-attendance-dialog employee-documents-dialog employee-documents-inbox-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-documents-inbox-title">

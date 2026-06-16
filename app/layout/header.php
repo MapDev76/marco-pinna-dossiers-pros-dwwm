@@ -142,6 +142,13 @@ if ($route === 'home') {
                 'icon' => 'document.svg',
                 'alt' => t('common.documents'),
             ];
+            $rightIcons[] = [
+                'type' => 'button',
+                'title' => t('employee.messages', ['fallback' => 'Messages']),
+                'target' => 'employee-messages-modal',
+                'icon' => 'mail.svg',
+                'alt' => t('employee.messages', ['fallback' => 'Messages']),
+            ];
         }
 
         if ($role === 'employee') {
