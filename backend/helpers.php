@@ -28,7 +28,7 @@ function appBasePath(): string
 
 function appSupportedLocales(): array
 {
-    return ['fr', 'en'];
+    return ['fr', 'en', 'it'];
 }
 
 function appDefaultLocale(): string

@@ -244,6 +244,7 @@ if ($route === 'home') {
                             <div class="site-lang-menu" role="menu" aria-label="<?php echo e(t('common.language')); ?>">
                                 <a href="<?php echo e(appCurrentUrl(['lang' => 'en'])); ?>" class="site-lang-link <?php echo $locale === 'en' ? 'is-active' : ''; ?>" role="menuitem">English</a>
                                 <a href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" class="site-lang-link <?php echo $locale === 'fr' ? 'is-active' : ''; ?>" role="menuitem">Francais</a>
+                                <a href="<?php echo e(appCurrentUrl(['lang' => 'it'])); ?>" class="site-lang-link <?php echo $locale === 'it' ? 'is-active' : ''; ?>" role="menuitem">Italiano</a>
                             </div>
                         </details>
                     </div>
