@@ -70,6 +70,25 @@ return [
         'page_not_found' => 'Page introuvable',
         'route_not_available' => 'La route demandee n existe pas ou n a pas encore ete implementee.',
         'back_to_home' => 'Retour a l accueil',
+        'alert' => [
+            'success' => 'Succès',
+            'error' => 'Erreur',
+            'warning' => 'Attention',
+            'info' => 'Information',
+        ],
+        'error' => [
+            'generic' => 'Une erreur est survenue. Veuillez réessayer plus tard.',
+            'not_found' => 'Ressource introuvable.',
+            'unauthorized' => 'Vous n\'êtes pas autorisé à voir cette page.',
+            'forbidden' => 'Accès refusé.',
+            'server_error' => 'Erreur serveur. Veuillez réessayer plus tard.',
+        ],
+        'success' => [
+            'generic' => 'Opération réussie.',
+            'saved' => 'Données enregistrées avec succès.',
+            'updated' => 'Données mises à jour avec succès.',
+            'deleted' => 'Données supprimées avec succès.',
+        ],
     ],
     'flash' => [
         'company_name_required' => 'Le nom de l entreprise est obligatoire.',
@@ -609,3 +628,4 @@ return [
         'message' => 'Chargement en cours...',
     ],
 ];
+

@@ -70,6 +70,25 @@ return [
         'page_not_found' => 'Pagina non trovata',
         'route_not_available' => 'La route richiesta non esiste o non è ancora stata implementata.',
         'back_to_home' => 'Torna alla Home',
+        'alert' => [
+            'success' => 'Successo',
+            'error' => 'Errore',
+            'warning' => 'Attenzione',
+            'info' => 'Informazione',
+        ],
+        'error' => [
+            'generic' => 'Si è verificato un errore. Riprova più tardi.',
+            'not_found' => 'Risorsa non trovata.',
+            'unauthorized' => 'Non sei autorizzato a visualizzare questa pagina.',
+            'forbidden' => 'Accesso negato.',
+            'server_error' => 'Errore del server. Riprova più tardi.',
+        ],
+        'success' => [
+            'generic' => 'Operazione completata con successo.',
+            'saved' => 'Dati salvati con successo.',
+            'updated' => 'Dati aggiornati con successo.',
+            'deleted' => 'Dati eliminati con successo.',
+        ],
     ],
     'flash' => [
         'company_name_required' => 'Il nome dell\'azienda è obbligatorio.',

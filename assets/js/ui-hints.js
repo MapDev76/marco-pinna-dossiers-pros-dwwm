@@ -1,6 +1,14 @@
 (() => {
   const root = document.documentElement;
-  const lang = String(root.getAttribute('lang') || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en';
+  const lang = String(root.getAttribute('lang') || 'en').toLowerCase();
+
+  let currentLang = 'en'; // Default language
+
+  if (lang.startsWith('fr')) {
+    currentLang = 'fr';
+  } else if (lang.startsWith('it')) {
+    currentLang = 'it';
+  }
 
   const copy = {
     en: {
@@ -12,10 +20,16 @@
     fr: {
       actionPrefix: 'Action :',
       inputPrefix: 'Saisie :',
-      actionFallback: 'Activer ce controle.',
+      actionFallback: 'Activer ce contrôle.',
       inputFallback: 'Saisissez une valeur dans ce champ.',
     },
-  }[lang];
+    it: {
+      actionPrefix: 'Azione:',
+      inputPrefix: 'Input:',
+      actionFallback: 'Attiva questo controllo.',
+      inputFallback: 'Inserisci un valore in questo campo.',
+    },
+  }[currentLang];
 
   const clickableSelector = [
     'button',

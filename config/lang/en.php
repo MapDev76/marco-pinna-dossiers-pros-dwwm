@@ -70,6 +70,25 @@ return [
         'page_not_found' => 'Page not found',
         'route_not_available' => 'The requested route does not exist or has not been implemented yet.',
         'back_to_home' => 'Back to home',
+        'alert' => [
+            'success' => 'Success',
+            'error' => 'Error',
+            'warning' => 'Warning',
+            'info' => 'Info',
+        ],
+        'error' => [
+            'generic' => 'An error occurred. Please try again later.',
+            'not_found' => 'Resource not found.',
+            'unauthorized' => 'You are not authorized to view this page.',
+            'forbidden' => 'Access denied.',
+            'server_error' => 'Server error. Please try again later.',
+        ],
+        'success' => [
+            'generic' => 'Operation completed successfully.',
+            'saved' => 'Data saved successfully.',
+            'updated' => 'Data updated successfully.',
+            'deleted' => 'Data deleted successfully.',
+        ],
     ],
     'flash' => [
         'company_name_required' => 'Company name is required.',
@@ -608,3 +627,4 @@ return [
         'message' => 'Loading in progress...',
     ],
 ];
+

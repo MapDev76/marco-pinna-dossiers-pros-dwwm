@@ -182,8 +182,9 @@ if ($route === 'home') {
         <div class="site-navbar-inner">
             <div class="site-navbar-left">
                 <?php if (is_array($leftMySpaceIcon)): ?>
-                    <a href="<?php echo e($leftMySpaceIcon['href']); ?>" class="site-icon-btn site-left-myspace-btn" title="<?php echo e($leftMySpaceIcon['title']); ?>">
-                        <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($leftMySpaceIcon['icon']); ?>" alt="<?php echo e($leftMySpaceIcon['alt']); ?>" class="site-icon">
+                    <a href="<?php echo e($leftMySpaceIcon['href']); ?>" class="site-icon-btn site-left-myspace-btn" title="
+                    <?php echo e($leftMySpaceIcon['title']); ?>">
+            <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($leftMySpaceIcon['icon']); ?>" alt="<?php echo e($leftMySpaceIcon['alt']); ?>" class="site-icon">
                     </a>
                 <?php endif; ?>
                 <?php if (is_array($headerLeft)): ?>
@@ -191,8 +192,10 @@ if ($route === 'home') {
                         <div class="site-header-title-row">
                             <div class="site-header-title"><?php echo e($headerLeft['title']); ?></div>
                             <?php if ($showWifiStatus): ?>
-                                <span class="site-wifi-status <?php echo $isWifiConnected ? 'is-connected' : 'is-blocked'; ?>" title="<?php echo e($isWifiConnected ? t('employee.status_connected') : t('employee.status_restricted_network')); ?>" aria-label="<?php echo e($isWifiConnected ? t('employee.status_connected') : t('employee.status_restricted_network')); ?>">
-                                    <img src="<?php echo $basePath; ?>/assets/icons/wifi-high.svg" alt="" aria-hidden="true" class="site-wifi-icon">
+                                <span class="site-wifi-status <?php echo $isWifiConnected ? 'is-connected' : 'is-blocked';
+                                 ?>" title="<?php echo e($isWifiConnected ? t('employee.status_connected') : t('employee.status_restricted_network')); 
+                                 ?>" aria-label="<?php echo e($isWifiConnected ? t('employee.status_connected') : t('employee.status_restricted_network')); 
+                                 ?>"><img src="<?php echo $basePath; ?>/assets/icons/wifi-high.svg" alt="" aria-hidden="true" class="site-wifi-icon">
                                 </span>
                             <?php endif; ?>
                         </div>
@@ -203,7 +206,6 @@ if ($route === 'home') {
                     </div>
                 <?php endif; ?>
             </div>
-
             <div class="site-navbar-center">
                 <a href="<?php
                     if ($isPublicPage) {
@@ -217,12 +219,16 @@ if ($route === 'home') {
                     <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="<?php echo e(t('common.app_name')); ?>" class="site-brand-logo">
                 </a>
             </div>
-
             <div class="site-navbar-right">
                 <div class="site-icon-group" role="toolbar" aria-label="<?php echo e(t('common.quick_actions')); ?>">
                     <?php foreach ($rightIcons as $iconItem): ?>
                         <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
-                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>"<?php if (($iconItem['toggle'] ?? '') === 'calendar-navigator'): ?> data-calendar-navigator-toggle="true" aria-controls="dashboard-calendar-navigator" aria-expanded="false"<?php else: ?> data-modal-target="<?php echo e($iconItem['target']); ?>"<?php if (!empty($iconItem['entity'])): ?> data-modal-entity="<?php echo e($iconItem['entity']); ?>"<?php endif; ?><?php endif; ?>>
+                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); 
+                            ?>"<?php if (($iconItem['toggle'] ?? '') === 'calendar-navigator'): 
+                            ?> data-calendar-navigator-toggle="true" aria-controls="dashboard-calendar-navigator" aria-expanded="false"<?php else: ?> data-modal-target="
+                            <?php echo e($iconItem['target']); ?>"<?php if (!empty($iconItem['entity'])): ?> data-modal-entity="
+                                <?php echo e($iconItem['entity']); ?>"<?php endif; ?>
+                                <?php endif; ?>>
                                 <?php if (!empty($iconItem['toggle'])): ?>
                                     <img src="<?php echo $basePath; ?>/assets/icons/menu.svg" alt="" class="site-icon" aria-hidden="true">
                                 <?php else: ?>
@@ -235,7 +241,6 @@ if ($route === 'home') {
                             </a>
                         <?php endif; ?>
                     <?php endforeach; ?>
-
                     <div class="site-lang-switch" aria-label="<?php echo e(t('common.language')); ?>">
                         <details class="site-lang-dropdown">
                             <summary class="site-icon-btn site-lang-trigger" title="<?php echo e(t('common.language')); ?>" aria-label="<?php echo e(t('common.language')); ?>">
@@ -248,7 +253,6 @@ if ($route === 'home') {
                             </div>
                         </details>
                     </div>
-
                     <?php if (is_array($logoutIcon)): ?>
                         <a href="<?php echo e($logoutIcon['href']); ?>" class="site-icon-btn" title="<?php echo e($logoutIcon['title']); ?>">
                             <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($logoutIcon['icon']); ?>" alt="<?php echo e($logoutIcon['alt']); ?>" class="site-icon">
