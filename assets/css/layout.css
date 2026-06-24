@@ -240,18 +240,32 @@ body {
         inset 0 -2px 0 rgba(0, 0, 0, 0.35);
 }
 
+
  
- 
-/* Styles for editable feature boxes on the home page */
-.editable-features { margin-top: 1rem; }
-.editable-grid {
+/* Styles feature boxes on the home page */
+
+.simple-div {
+    padding: 1rem;
+    margin: 1rem;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--border-radius-md);
+}
+
+.simple-div-container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
 }
-.feature-box { background: rgba(255,255,255,0.98); padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.06); }
-.feature-box label { display: block; margin-bottom: 6px; font-weight: 700; }
-.feature-input {
+
+.simple-div-title {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.simple-div-content {
     display: block;
     width: 100%;
     min-height: 88px;
@@ -267,8 +281,3 @@ body {
     word-break: break-word;
     color: inherit;
 }
-
-
-
-/* Ensure the main content stays visible and readable on small and medium screens */
-

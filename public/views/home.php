@@ -38,42 +38,32 @@
 		</ul>
 
 
-		<!-- Feature panels: read-only summaries for each area -->
-		<section class="editable-features">
-			<div class="editable-grid">
-				<div class="feature-box" style="border: 1px solid var(--color-primary); border-radius: var(--border-radius-md); padding: 1rem; background-color: var(--color-bg-card);">
-					<label for="f_reporting" style="color: var(--color-primary);"><strong><?php echo e(t('home.feature_reporting_title')); ?></strong></label>
-					<div id="f_reporting" class="feature-input" aria-readonly="true" role="textbox" style="color: var(--color-text);"><?php echo e(t('home.feature_reporting_body')); ?></div>
-				</div>
-
-				<div class="feature-box" style="border: 1px solid var(--color-primary); border-radius: var(--border-radius-md); padding: 1rem; background-color: var(--color-bg-card);">
-					<label for="f_attendance" style="color: var(--color-primary);"><strong><?php echo e(t('home.feature_attendance_title')); ?></strong></label>
-					<div id="f_attendance" class="feature-input" aria-readonly="true" role="textbox" style="color: var(--color-text);"><?php echo e(t('home.feature_attendance_body')); ?></div>
-				</div>
-
-				<div class="feature-box" style="border: 1px solid var(--color-primary); border-radius: var(--border-radius-md); padding: 1rem; background-color: var(--color-bg-card);">
-					<label for="f_documents" style="color: var(--color-primary);"><strong><?php echo e(t('home.feature_documents_title')); ?></strong></label>
-					<div id="f_documents" class="feature-input" aria-readonly="true" role="textbox" style="color: var(--color-text);"><?php echo e(t('home.feature_documents_body')); ?></div>
-				</div>
-
-				<div class="feature-box" style="border: 1px solid var(--color-primary); border-radius: var(--border-radius-md); padding: 1rem; background-color: var(--color-bg-card);">
-					<label for="f_roles" style="color: var(--color-primary);"><strong><?php echo e(t('home.feature_roles_title')); ?></strong></label>
-					<div id="f_roles" class="feature-input" aria-readonly="true" role="textbox" style="color: var(--color-text);"><?php echo e(t('home.feature_roles_body')); ?></div>
-				</div>
-
-				<div class="feature-box" style="border: 1px solid var(--color-primary); border-radius: var(--border-radius-md); padding: 1rem; background-color: var(--color-bg-card);">
-					<label for="f_security" style="color: var(--color-primary);"><strong><?php echo e(t('home.feature_security_title')); ?></strong></label>
-					<div id="f_security" class="feature-input" aria-readonly="true" role="textbox" style="color: var(--color-text);"><?php echo e(t('home.feature_security_body')); ?></div>
-				</div>
-
-				<div class="feature-box" style="border: 1px solid var(--color-primary); border-radius: var(--border-radius-md); padding: 1rem; background-color: var(--color-bg-card);">
-					<label for="f_shifts" style="color: var(--color-primary);"><strong><?php echo e(t('home.feature_shifts_title')); ?></strong></label>
-					<div id="f_shifts" class="feature-input" aria-readonly="true" role="textbox" style="color: var(--color-text);"><?php echo e(t('home.feature_shifts_body')); ?></div>
-				</div>
+		<!-- Feature panels -->
+		 <div class="simple-div-container">
+			<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_reporting_title')); ?></p>
+				<p><?php echo e(t('home.feature_reporting_body')); ?></p>
 			</div>
-		</section>
-
+				<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_attendance_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_attendance_body')); ?></p>
+			</div>
+				<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_documents_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_documents_body')); ?></p>
+			</div>
+				<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_roles_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_roles_body')); ?></p>
+			</div>
+				<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_security_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_security_body')); ?></p>
+			</div>
+				<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_shifts_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_shifts_body')); ?></p>
+			</div>
+		</div>
 	</section>
-
-	
 </div>
