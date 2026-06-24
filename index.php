@@ -44,6 +44,7 @@ $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time())
 <html lang="<?php echo e($locale); ?>">
 <head>
         <!-- Base metadata and main stylesheet -->
+         <meta name="description" content="StaffEase Pro - Manage your staff efficiently">
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title><?php echo e($pageTitle); ?></title>
