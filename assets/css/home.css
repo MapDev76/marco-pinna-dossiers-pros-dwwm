@@ -1,0 +1,207 @@
+/*  */
+
+.home-page {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* Home route should flow naturally in page height: avoid clipped card + inner scroll. */
+.route-home .content {
+    position: relative;
+    top: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    justify-content: flex-start;
+    margin: 16px auto;
+    padding: 1rem;
+}
+
+.route-home .home-page {
+    width: 100%;
+    max-width: 1260px;
+}
+
+.route-home .home-intro {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.route-home .home-page h1 {
+    margin-bottom: 0.3rem;
+    font-size: 1.65rem;
+}
+
+.route-home .home-intro h2 {
+    margin: 0.15rem 0;
+    font-size: 1.22rem;
+    line-height: 1.2;
+}
+
+.route-home .home-intro h3 {
+    margin: 0.25rem 0 0.15rem;
+    font-size: 1.38rem;
+}
+
+.route-home .home-intro > p {
+    margin: 0.15rem 0;
+    line-height: 1.24;
+    font-size: 0.97rem;
+}
+
+.route-home .home-intro ul {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
+    gap: 8px;
+    margin: 0.35rem auto 0;
+    padding: 0;
+    width: 100%;
+}
+
+.route-home .home-intro ul li {
+    flex: 0 1 calc(33.333% - 6px);
+    max-width: calc(33.333% - 6px);
+    box-sizing: border-box;
+    margin: 0 !important;
+    padding: 0.34rem 0.48rem !important;
+    min-height: 0;
+    font-size: 0.88rem;
+    line-height: 1.12;
+}
+
+.simple-div-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
+    gap: 14px;
+    margin-top: 1rem;
+}
+
+.simple-div {
+    padding: 0.85rem;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.2s;
+    margin: 0;
+    flex: 1 1 300px;
+    max-width: 390px;
+    min-height: 118px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Keep 3 cards on first row, and visually center the last two by widening them. */
+.simple-div-container .simple-div:nth-last-child(2),
+.simple-div-container .simple-div:nth-last-child(1) {
+    flex-basis: 420px;
+    max-width: 460px;
+}
+
+.simple-div:hover {
+    transform: translateY(-3px);
+}
+
+.simple-div-title {
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 6px;
+    font-size: 0.98rem;
+}
+
+.simple-div-content {
+    font-size: 0.82rem;
+    line-height: 1.2;
+    color: var(--color-text);
+}
+
+.route-legal .content {
+    position: relative;
+    top: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    justify-content: flex-start;
+    margin: 16px auto;
+    max-width: 980px;
+}
+
+@media (max-width: 1024px) {
+    .route-home .content {
+        width: calc(100% - 20px);
+        max-width: none;
+        padding: 0.9rem;
+    }
+
+    .simple-div {
+        flex-basis: 270px;
+        max-width: 360px;
+        min-height: 132px;
+    }
+
+    .simple-div-container .simple-div:nth-last-child(2),
+    .simple-div-container .simple-div:nth-last-child(1) {
+        flex-basis: 360px;
+        max-width: 420px;
+    }
+
+    .route-home .home-intro ul {
+        gap: 7px;
+    }
+
+    .route-home .home-intro ul li {
+        flex-basis: calc(50% - 4px);
+        max-width: calc(50% - 4px);
+    }
+}
+
+@media (max-width: 760px) {
+    .route-home .content {
+        margin: 12px auto;
+        padding: 0.82rem;
+    }
+
+    .simple-div-container {
+        gap: 12px;
+    }
+
+    .simple-div,
+    .simple-div-container .simple-div:nth-last-child(2),
+    .simple-div-container .simple-div:nth-last-child(1) {
+        flex-basis: 100%;
+        max-width: 100%;
+        min-height: 0;
+    }
+
+    .simple-div-title {
+        font-size: 1rem;
+    }
+
+    .simple-div-content {
+        font-size: 0.9rem;
+    }
+
+    .route-home .home-intro ul li {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Short desktop/laptop screens: scale the whole Home panel to keep all sections visible without scrolling. */
+@media (min-width: 980px) and (max-height: 900px) {
+    .route-home .content {
+        margin: 8px auto 0;
+        transform: translateX(-50%) scale(0.87);
+        transform-origin: top center;
+        width: min(1280px, calc((100vw - 18px) / 0.87));
+    }
+}

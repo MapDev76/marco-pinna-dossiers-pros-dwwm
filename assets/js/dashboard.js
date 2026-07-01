@@ -829,10 +829,10 @@
             if (action === 'delete') {
               if (!await confirmAction(tr('Confirm deletion of this company?', 'Confirmer la suppression de cette entreprise ?'))) return;
               const j = await AppAPI.companies.delete(apiCompanies, companyId);
-                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ') + (jr.error || tr('unknown', 'inconnue'))); else location.reload();
+              if (!j.ok) notifyError(tr('Error: ', 'Erreur : ') + (j.error || tr('unknown', 'inconnue'))); else location.reload();
               return;
             }
-                if (!jr.ok) notifyError(tr('Error: ', 'Erreur : ') + (jr.error || tr('unknown', 'inconnue'))); else location.reload();
+
             if (action === 'manage-departments') {
               const j = await AppAPI.departments.list(apiDepartments, companyId);
               if (!j.ok) { notifyError('Error: ' + (j.error || 'unknown')); return; }
@@ -885,6 +885,21 @@
    * drag-and-drop shift assignments.
    */
   (function setupSidebarAndCalendar(){
+    const feedback = window.DashboardFeedback;
+    const notifyError = (message) => {
+      if (feedback?.error) {
+        feedback.error(tr('Oops!', 'Erreur'), message);
+        return;
+      }
+      console.error(message);
+    };
+    const notifySuccess = (message) => {
+      if (feedback?.success) {
+        feedback.success(tr('Done', 'Termine'), message);
+        return;
+      }
+      console.info(message);
+    };
     const sidebar = document.getElementById('dashboard-sidebar');
     const sidebarHandle = document.querySelector('[data-sidebar-hover-handle]');
     const navigatorToggleButtons = document.querySelectorAll('[data-calendar-navigator-toggle]');
@@ -897,6 +912,7 @@
     const plannerData = window.DashboardPlannerData || {};
     const apiDashboard = (window.DashboardConfig || {}).apiDashboard;
     const RULES_STORAGE_KEY = 'staffease:auto-assign-rules:v1';
+    const SIDEBAR_PLAN_WIDE_CLASS = 'sidebar-plan-wide';
 
     if (!sidebar && !calendarShell && !navigatorPanel) {
       return;
@@ -955,6 +971,7 @@
     const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(localeForDates, { month: 'short' }).format(new Date(2024, index, 1)));
     const weekdayNames = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(localeForDates, { weekday: 'short' }).format(new Date(2024, 0, 1 + index)));
     const fullDateFormatter = new Intl.DateTimeFormat(localeForDates, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const weekdayShortFormatter = new Intl.DateTimeFormat(localeForDates, { weekday: 'short' });
     const shortDateFormatter = new Intl.DateTimeFormat(isFr ? 'fr-FR' : 'en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
     const monthYearFormatter = new Intl.DateTimeFormat(localeForDates, { month: 'long', year: 'numeric' });
     const monthLabelFormatter = new Intl.DateTimeFormat(localeForDates, { month: 'long' });
@@ -980,6 +997,20 @@
       calendarExpanded: false,
       draggingUserId: null,
       draggingAssignmentId: null,
+    };
+
+    const sidebarPlanState = {
+      departmentId: 0,
+      countsByShiftId: {},
+      restDays: 2,
+      distribution: 'balanced',
+      periodMode: 'auto',
+      weekStart: dateKey(startOfWeek(calendarToday)),
+      monthKey: dateKey(calendarToday).slice(0, 7),
+      allowOverride: false,
+      preview: [],
+      summary: null,
+      applying: false,
     };
 
     const publishPlannerRuntime = () => {
@@ -1391,6 +1422,551 @@
       return keys;
     };
 
+    const getDateRangeKeys = (startDate, endDate) => {
+      const keys = [];
+      for (let cursor = new Date(startDate); cursor <= endDate; cursor = addDays(cursor, 1)) {
+        keys.push(dateKey(cursor));
+      }
+      return keys;
+    };
+
+    const parseDateKeyToLocalDate = (value) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return null;
+      const parsed = new Date(`${value}T12:00:00`);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    const normalizeMonthKey = (value) => {
+      const normalized = String(value || '').trim();
+      return /^\d{4}-\d{2}$/.test(normalized) ? normalized : dateKey(state.focusDate).slice(0, 7);
+    };
+
+    const isPastDate = (dateValue) => {
+      const todayValue = dateKey(new Date());
+      return String(dateValue || '') < todayValue;
+    };
+
+    const summarizeShiftName = (shift) => {
+      if (!shift) return tr('Shift', 'Poste');
+      const name = String(shift.name || tr('Shift', 'Poste'));
+      return `${name} ${formatShiftTime(shift)}`;
+    };
+
+    const getActiveRestTemplateShift = () => {
+      const activeDepartment = getActiveDepartment();
+      if (!activeDepartment) return null;
+      return (activeDepartment.shifts || []).find((shift) => String(shift?.kind || '').toLowerCase() === 'rest') || null;
+    };
+
+    const ensureSidebarPlanDefaults = (activeDepartment) => {
+      if (!activeDepartment) return;
+      const departmentId = Number(activeDepartment.id || 0);
+      const workShifts = (activeDepartment.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+
+      if (sidebarPlanState.departmentId !== departmentId) {
+        const firstShiftId = Number(workShifts[0]?.id || 0);
+        const countsByShiftId = {};
+        workShifts.forEach((shift, index) => {
+          countsByShiftId[String(shift.id)] = index === 0 ? 5 : 0;
+        });
+        sidebarPlanState.departmentId = departmentId;
+        sidebarPlanState.countsByShiftId = countsByShiftId;
+        sidebarPlanState.restDays = 2;
+        sidebarPlanState.distribution = 'balanced';
+        sidebarPlanState.periodMode = 'auto';
+        sidebarPlanState.weekStart = dateKey(startOfWeek(state.focusDate));
+        sidebarPlanState.monthKey = dateKey(state.focusDate).slice(0, 7);
+        sidebarPlanState.allowOverride = false;
+        sidebarPlanState.preview = [];
+        sidebarPlanState.summary = null;
+        if (!state.activeShiftId && firstShiftId > 0) {
+          state.activeShiftId = firstShiftId;
+        }
+        return;
+      }
+
+      const nextCounts = {};
+      workShifts.forEach((shift) => {
+        const key = String(shift.id);
+        nextCounts[key] = Number(sidebarPlanState.countsByShiftId[key] || 0);
+      });
+
+      const currentTotal = Object.values(nextCounts).reduce((sum, value) => sum + Number(value || 0), 0);
+      if (currentTotal === 0 && workShifts.length > 0) {
+        nextCounts[String(workShifts[0].id)] = Math.max(0, 7 - Number(sidebarPlanState.restDays || 0));
+      }
+      sidebarPlanState.countsByShiftId = nextCounts;
+    };
+
+    const getSidebarPlanRange = () => {
+      const mode = String(sidebarPlanState.periodMode || 'auto');
+
+      if (mode === 'week') {
+        const weekStartDate = parseDateKeyToLocalDate(sidebarPlanState.weekStart) || startOfWeek(state.focusDate);
+        const startDate = startOfWeek(weekStartDate);
+        const endDate = addDays(startDate, 6);
+        return { startDate, endDate, label: tr('Selected week', 'Semaine selectionnee') };
+      }
+
+      if (mode === 'month') {
+        const monthKey = normalizeMonthKey(sidebarPlanState.monthKey);
+        const [yearRaw, monthRaw] = monthKey.split('-');
+        const year = Number(yearRaw);
+        const month = Number(monthRaw);
+        const startDate = new Date(year, month - 1, 1, 12, 0, 0, 0);
+        const endDate = new Date(year, month, 0, 12, 0, 0, 0);
+        return { startDate, endDate, label: tr('Selected month', 'Mois selectionne') };
+      }
+
+      const range = getVisibleRange();
+      return { startDate: new Date(range.start), endDate: new Date(range.end), label: tr('Current calendar view', 'Vue calendrier courante') };
+    };
+
+    const buildWeekPattern = (entries, strategy) => {
+      const list = Array.isArray(entries) ? entries.filter((entry) => Number(entry.count || 0) > 0) : [];
+      if (!list.length) return [];
+
+      if (strategy === 'consecutive') {
+        const sequence = [];
+        list.forEach((entry) => {
+          for (let index = 0; index < Number(entry.count || 0); index += 1) {
+            sequence.push({ type: entry.type, shiftId: Number(entry.shiftId || 0), label: entry.label });
+          }
+        });
+        return sequence;
+      }
+
+      const buckets = list.map((entry) => ({
+        type: entry.type,
+        shiftId: Number(entry.shiftId || 0),
+        label: entry.label,
+        remaining: Number(entry.count || 0),
+      }));
+
+      const sequence = [];
+      let previousType = '';
+      let previousShiftId = 0;
+
+      while (sequence.length < 7) {
+        const available = buckets.filter((entry) => entry.remaining > 0);
+        if (!available.length) break;
+
+        available.sort((left, right) => {
+          if (strategy === 'alternating') {
+            const leftPenalty = (left.type === previousType && left.shiftId === previousShiftId) ? 1 : 0;
+            const rightPenalty = (right.type === previousType && right.shiftId === previousShiftId) ? 1 : 0;
+            if (leftPenalty !== rightPenalty) return leftPenalty - rightPenalty;
+          }
+          if (right.remaining !== left.remaining) return right.remaining - left.remaining;
+          if (left.type !== right.type) return left.type.localeCompare(right.type);
+          return left.shiftId - right.shiftId;
+        });
+
+        const picked = available[0];
+        picked.remaining -= 1;
+        sequence.push({ type: picked.type, shiftId: picked.shiftId, label: picked.label });
+        previousType = picked.type;
+        previousShiftId = picked.shiftId;
+      }
+
+      return sequence;
+    };
+
+    const getExistingAssignmentsByUserAndDate = (userId, dateValue) => {
+      return events.filter((event) =>
+        Number(event.user_id || 0) === Number(userId || 0)
+        && String(event.work_date || '') === String(dateValue || '')
+        && String(event.status || '').toLowerCase() !== 'cancelled'
+      );
+    };
+
+    const makeSidebarPlanPreview = () => {
+      const activeDepartment = getActiveDepartment();
+      const activeUser = getActiveUser();
+      if (!activeDepartment || !activeUser) {
+        return {
+          items: [],
+          summary: {
+            total: 0,
+            planned: 0,
+            available: 0,
+            conflicts: 0,
+            past: 0,
+            unavailable: 0,
+            alreadyAssigned: 0,
+            rangeLabel: '',
+          },
+          error: tr('Select an employee first.', 'Selectionnez d abord un employe.'),
+        };
+      }
+
+      const workShifts = (activeDepartment.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+      const restShift = getActiveRestTemplateShift();
+      const countsByShift = workShifts.map((shift) => ({
+        type: 'work',
+        shiftId: Number(shift.id || 0),
+        count: Math.max(0, Number(sidebarPlanState.countsByShiftId[String(shift.id)] || 0)),
+        label: summarizeShiftName(shift),
+      }));
+      const restDays = Math.max(0, Number(sidebarPlanState.restDays || 0));
+      const totalDays = countsByShift.reduce((sum, entry) => sum + Number(entry.count || 0), 0) + restDays;
+
+      if (totalDays !== 7) {
+        return {
+          items: [],
+          summary: {
+            total: 0,
+            planned: 0,
+            available: 0,
+            conflicts: 0,
+            past: 0,
+            unavailable: 0,
+            alreadyAssigned: 0,
+            rangeLabel: '',
+          },
+          error: tr('Weekly distribution must equal 7 days.', 'La distribution hebdomadaire doit etre egale a 7 jours.'),
+        };
+      }
+
+      const distributionEntries = [...countsByShift, {
+        type: 'rest',
+        shiftId: Number(restShift?.id || 0),
+        count: restDays,
+        label: tr('Rest day', 'Repos'),
+      }];
+      const weekPattern = buildWeekPattern(distributionEntries, String(sidebarPlanState.distribution || 'balanced'));
+      if (weekPattern.length !== 7) {
+        return {
+          items: [],
+          summary: {
+            total: 0,
+            planned: 0,
+            available: 0,
+            conflicts: 0,
+            past: 0,
+            unavailable: 0,
+            alreadyAssigned: 0,
+            rangeLabel: '',
+          },
+          error: tr('Unable to build a weekly pattern. Adjust the distribution.', 'Impossible de generer un schema hebdomadaire. Ajustez la distribution.'),
+        };
+      }
+
+      const range = getSidebarPlanRange();
+      const dates = getDateRangeKeys(range.startDate, range.endDate);
+      const items = [];
+      const summary = {
+        total: dates.length,
+        planned: 0,
+        available: 0,
+        conflicts: 0,
+        past: 0,
+        unavailable: 0,
+        alreadyAssigned: 0,
+        rangeLabel: `${range.label}: ${shortDateFormatter.format(range.startDate)} - ${shortDateFormatter.format(range.endDate)}`,
+      };
+
+      dates.forEach((dateValue) => {
+        const dateObj = parseDateKeyToLocalDate(dateValue);
+        if (!dateObj) return;
+        const weekdayIndex = (dateObj.getDay() + 6) % 7;
+        const dayPlan = weekPattern[weekdayIndex] || null;
+        if (!dayPlan) return;
+
+        const isPast = isPastDate(dateValue);
+        const existingAssignments = getExistingAssignmentsByUserAndDate(activeUser.id, dateValue);
+        const availability = getUserAvailabilityStatus(activeUser.id, dateValue);
+        const plannedShift = dayPlan.type === 'work'
+          ? workShifts.find((shift) => Number(shift.id) === Number(dayPlan.shiftId)) || null
+          : restShift;
+        const targetShiftId = Number(plannedShift?.id || dayPlan.shiftId || 0);
+        const plannedLabel = dayPlan.type === 'rest'
+          ? tr('Rest day', 'Repos')
+          : summarizeShiftName(plannedShift);
+
+        let status = 'available';
+        let note = tr('Ready to assign.', 'Pret a assigner.');
+        let actionable = true;
+
+        if (isPast) {
+          status = 'past';
+          note = tr('Past day: skipped.', 'Jour passe : ignore.');
+          actionable = false;
+          summary.past += 1;
+        } else if (dayPlan.type === 'rest' && !restShift) {
+          status = 'unavailable';
+          note = tr('No rest shift template configured for this department.', 'Aucun modele de repos configure pour ce departement.');
+          actionable = false;
+          summary.unavailable += 1;
+        } else if (existingAssignments.length > 1) {
+          status = 'conflict';
+          note = tr('Employee already has multiple assignments on this day.', 'Employe deja affecte plusieurs fois ce jour.');
+          actionable = !!sidebarPlanState.allowOverride;
+          summary.conflicts += 1;
+        } else if (existingAssignments.length === 1) {
+          const existing = existingAssignments[0];
+          const existingShiftId = Number(existing.shift_id || 0);
+          const existingKind = String(existing.shift_kind || 'work').toLowerCase();
+          const sameAsPlan = existingShiftId === targetShiftId || (dayPlan.type === 'rest' && existingKind === 'rest');
+          if (sameAsPlan) {
+            status = 'already';
+            note = tr('Already assigned with the same plan.', 'Deja affecte avec le meme plan.');
+            actionable = false;
+            summary.alreadyAssigned += 1;
+          } else {
+            status = 'conflict';
+            note = sidebarPlanState.allowOverride
+              ? tr('Will replace existing assignment.', 'Remplacera l affectation existante.')
+              : tr('Existing assignment found. Enable override to replace.', 'Affectation existante detectee. Activez le remplacement.');
+            actionable = !!sidebarPlanState.allowOverride;
+            summary.conflicts += 1;
+          }
+        } else if (!availability.available) {
+          status = 'unavailable';
+          note = availability.reason || tr('Unavailable by rules.', 'Indisponible selon les regles.');
+          actionable = false;
+          summary.unavailable += 1;
+        } else {
+          summary.available += 1;
+        }
+
+        summary.planned += 1;
+        items.push({
+          date: dateValue,
+          weekday: weekdayShortFormatter.format(dateObj),
+          targetShiftId,
+          targetShiftKind: dayPlan.type,
+          targetLabel: plannedLabel,
+          status,
+          note,
+          actionable,
+          existingCount: existingAssignments.length,
+        });
+      });
+
+      return { items, summary, error: '' };
+    };
+
+    const renderSidebarPlanPreview = (host, result) => {
+      if (!host) return;
+      const previewWrap = host.querySelector('[data-sidebar-plan-preview]');
+      const summaryWrap = host.querySelector('[data-sidebar-plan-summary]');
+      const applyBtn = host.querySelector('[data-sidebar-plan-apply]');
+      if (!previewWrap || !summaryWrap || !applyBtn) return;
+
+      if (result.error) {
+        summaryWrap.innerHTML = `<div class="dashboard-sidebar-plan-alert is-error">${escapeHtml(result.error)}</div>`;
+        previewWrap.innerHTML = '';
+        applyBtn.disabled = true;
+        return;
+      }
+
+      const summary = result.summary || {};
+      summaryWrap.innerHTML = `
+        <div class="dashboard-sidebar-plan-stats">
+          <span>${escapeHtml(summary.rangeLabel || '')}</span>
+          <span>${tr('Planned', 'Planifies')}: <strong>${Number(summary.planned || 0)}</strong></span>
+          <span>${tr('Assignable', 'A affecter')}: <strong>${Number(summary.available || 0)}</strong></span>
+          <span>${tr('Conflicts', 'Conflits')}: <strong>${Number(summary.conflicts || 0)}</strong></span>
+        </div>
+      `;
+
+      previewWrap.innerHTML = result.items.map((item) => {
+        const statusLabel = item.status === 'available'
+          ? tr('Available', 'Disponible')
+          : item.status === 'already'
+            ? tr('Already assigned', 'Deja affecte')
+            : item.status === 'past'
+              ? tr('Past day', 'Jour passe')
+              : item.status === 'conflict'
+                ? tr('Conflict', 'Conflit')
+                : tr('Unavailable', 'Indisponible');
+        return `
+          <article class="dashboard-sidebar-plan-row is-${escapeHtml(item.status)}">
+            <div>
+              <strong>${escapeHtml(item.date)}</strong>
+              <small>${escapeHtml(String(item.weekday || ''))}</small>
+            </div>
+            <div>
+              <strong>${escapeHtml(item.targetLabel)}</strong>
+              <small>${escapeHtml(item.note || '')}</small>
+            </div>
+            <span class="dashboard-sidebar-plan-tag is-${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
+          </article>
+        `;
+      }).join('') || `<div class="dashboard-sidebar-plan-alert">${tr('No days in selected range.', 'Aucun jour dans la plage selectionnee.')}</div>`;
+
+      const actionableCount = result.items.filter((item) => item.actionable).length;
+      applyBtn.disabled = actionableCount <= 0;
+      applyBtn.textContent = tr('Apply plan', 'Appliquer le plan') + ` (${actionableCount})`;
+    };
+
+    const handleSidebarPlanPreview = (host) => {
+      const result = makeSidebarPlanPreview();
+      sidebarPlanState.preview = Array.isArray(result.items) ? result.items : [];
+      sidebarPlanState.summary = result.summary || null;
+      renderSidebarPlanPreview(host, result);
+    };
+
+    const applySidebarPlan = async (host) => {
+      if (sidebarPlanState.applying) return;
+      const activeUser = getActiveUser();
+      if (!activeUser) {
+        notifyError(tr('Select an employee first.', 'Selectionnez d abord un employe.'));
+        return;
+      }
+      if (!Array.isArray(sidebarPlanState.preview) || sidebarPlanState.preview.length === 0) {
+        notifyError(tr('Generate a preview before applying.', 'Generez un apercu avant d appliquer.'));
+        return;
+      }
+
+      const tasks = sidebarPlanState.preview.filter((item) => item.actionable && Number(item.targetShiftId || 0) > 0);
+      if (!tasks.length) {
+        notifyError(tr('No assignable days in the current preview.', 'Aucun jour affectable dans l apercu courant.'));
+        return;
+      }
+
+      const applyBtn = host?.querySelector('[data-sidebar-plan-apply]') || null;
+      if (applyBtn) applyBtn.disabled = true;
+      sidebarPlanState.applying = true;
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const task of tasks) {
+        try {
+          await assignShift({
+            user_id: Number(activeUser.id || 0),
+            shift_id: Number(task.targetShiftId || 0),
+            work_date: task.date,
+            status: 'assigned',
+            force_override: sidebarPlanState.allowOverride ? 1 : 0,
+          });
+          successCount += 1;
+        } catch (_error) {
+          errorCount += 1;
+        }
+      }
+
+      sidebarPlanState.applying = false;
+      if (successCount > 0) {
+        notifySuccess(tr(
+          `Shift plan applied on ${successCount} day(s).`,
+          `Plan de postes applique sur ${successCount} jour(s).`
+        ));
+      }
+      if (errorCount > 0) {
+        notifyError(tr(
+          `${errorCount} day(s) could not be assigned.`,
+          `${errorCount} jour(s) n ont pas pu etre affectes.`
+        ));
+      }
+
+      renderSidebarPlanner();
+      renderCalendar();
+    };
+
+    const clearAssignmentsForActiveUserInPlanRange = async () => {
+      if (!apiDashboard || !window.AppAPI) {
+        notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+        return;
+      }
+      const activeUser = getActiveUser();
+      if (!activeUser) {
+        notifyError(tr('Select an employee first.', 'Selectionnez d abord un employe.'));
+        return;
+      }
+
+      const range = getSidebarPlanRange();
+      const start = dateKey(range.startDate);
+      const end = dateKey(range.endDate);
+      const canClear = feedback?.confirm
+        ? await feedback.confirm(
+          tr(
+            `Clear all assignments for ${activeUser.first_name || ''} ${activeUser.last_name || ''} in selected period?`,
+            `Effacer toutes les affectations pour ${activeUser.first_name || ''} ${activeUser.last_name || ''} sur la periode selectionnee ?`
+          ),
+          tr('Confirm action', 'Confirmer l action')
+        )
+        : window.confirm(tr('Clear all assignments for selected employee in this period?', 'Effacer toutes les affectations de l employe selectionne sur cette periode ?'));
+
+      if (!canClear) return;
+
+      try {
+        const response = await AppAPI.postJSON(apiDashboard, {
+          action: 'clear_assignments_scope',
+          target_user_id: Number(activeUser.id || 0),
+          scope_shift_id: 0,
+          allowed_shift_ids: [],
+          include_rest_assignments: true,
+          range_start: start,
+          range_end: end,
+        });
+
+        if (!response || response.ok === false || response.success === false) {
+          throw new Error(response?.error || response?.message || tr('Unable to clear assignments.', 'Impossible d effacer les affectations.'));
+        }
+
+        const clearedCount = Number(response.cleared_count || 0);
+        if (clearedCount > 0) {
+          events.forEach((event) => {
+            if (
+              Number(event.user_id || 0) === Number(activeUser.id || 0)
+              && String(event.work_date || '') >= start
+              && String(event.work_date || '') <= end
+            ) {
+              event.user_id = 0;
+              event.user_name = '';
+              event.status = 'open';
+              event.assignment_source = 'open';
+            }
+          });
+        }
+
+        sidebarPlanState.preview = [];
+        sidebarPlanState.summary = null;
+        notifySuccess(tr(
+          `Cleared ${clearedCount} assignment(s) for selected employee.`,
+          `${clearedCount} affectation(s) effacee(s) pour l employe selectionne.`
+        ));
+        renderSidebarPlanner();
+        renderCalendar();
+      } catch (error) {
+        notifyError((error && error.message) || tr('Unable to clear assignments.', 'Impossible d effacer les affectations.'));
+      }
+    };
+
+    const setExpandedPlanStep = (planFlow, stepValue) => {
+      if (!planFlow) return;
+      const activeUser = getActiveUser();
+      const workDayTotal = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, value) => sum + Math.max(0, Number(value || 0)), 0);
+      const restDays = Math.max(0, Number(sidebarPlanState.restDays || 0));
+      const distributionValid = (workDayTotal + restDays) === 7;
+      const hasPreview = Array.isArray(sidebarPlanState.preview) && sidebarPlanState.preview.length > 0;
+      const maxUnlockedStep = !activeUser ? 1 : (!distributionValid ? 2 : (!hasPreview ? 3 : 4));
+
+      const requestedStep = Number(stepValue || 0);
+      const normalizedRequested = Number.isFinite(requestedStep) ? requestedStep : 0;
+      const resolvedStep = normalizedRequested > 0 ? Math.min(normalizedRequested, maxUnlockedStep) : 0;
+
+      const steps = Array.from(planFlow.querySelectorAll('[data-plan-step]'));
+      steps.forEach((step) => {
+        const stepNo = Number(step.getAttribute('data-plan-step') || '0');
+        const isLocked = stepNo > maxUnlockedStep;
+        const isExpanded = stepNo === resolvedStep;
+        step.classList.toggle('is-expanded', isExpanded);
+        step.classList.toggle('is-locked', isLocked);
+        const titleButton = step.querySelector('[data-sidebar-plan-step-title]');
+        if (titleButton) {
+          titleButton.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+          titleButton.setAttribute('aria-disabled', isLocked ? 'true' : 'false');
+          titleButton.tabIndex = isLocked ? -1 : 0;
+        }
+      });
+      const shouldWide = resolvedStep > 0;
+      document.body.classList.toggle(SIDEBAR_PLAN_WIDE_CLASS, shouldWide);
+      document.body.classList.add('sidebar-expanded');
+    };
+
     const getCalendarCounters = () => {
       const activeDepartment = getActiveDepartment();
       if (!activeDepartment) {
@@ -1509,6 +2085,7 @@
       const users = activeDepartment.users || [];
       const shifts = activeDepartment.shifts || [];
       const workShifts = shifts.filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+      ensureSidebarPlanDefaults(activeDepartment);
       if (workShifts.length > 0 && !workShifts.some((shift) => Number(shift.id) === Number(state.activeShiftId))) {
         state.activeShiftId = Number(workShifts[0].id || 0);
       }
@@ -1516,6 +2093,20 @@
       const deptIcon = (activeDepartment.icon || '').toString().trim() || '🏷️';
       const deptColor = (activeDepartment.color || '#b98b12').toString();
       const activeShift = getActiveShift();
+      const activeUser = getActiveUser();
+      const activeUserName = activeUser
+        ? `${activeUser.first_name || ''} ${activeUser.last_name || ''}`.trim() || `${tr('Employee', 'Employe')} #${activeUser.id}`
+        : '';
+      const distributionOptions = [
+        { value: 'balanced', label: tr('Balanced', 'Equilibre') },
+        { value: 'alternating', label: tr('Alternating', 'Alterne') },
+        { value: 'consecutive', label: tr('Consecutive blocks', 'Blocs consecutifs') },
+      ];
+      const periodOptions = [
+        { value: 'auto', label: tr('Current calendar view', 'Vue calendrier courante') },
+        { value: 'week', label: tr('Specific week', 'Semaine specifique') },
+        { value: 'month', label: tr('Full month', 'Mois complet') },
+      ];
       plannerDetail.innerHTML = `
         <div class="dashboard-sidebar-planner-title">
           <span style="color:${escapeHtml(deptColor)}">${renderIconHtml(deptIcon, deptColor)} ${escapeHtml(deptName)}</span>
@@ -1550,6 +2141,77 @@
             `).join('') : `<div class="dashboard-sidebar-planner-placeholder">${tr('No work shifts configured.', 'Aucun poste de travail configure.')}</div>`}
           </div>
         </div>
+        <section class="dashboard-sidebar-plan-flow ${activeUser ? 'is-ready' : 'is-disabled'}" data-sidebar-plan-flow>
+          <div class="dashboard-sidebar-group-title"><span>🧩</span> ${tr('Shift Assignment Wizard', 'Assistant d affectation des postes')}</div>
+          <div class="dashboard-sidebar-plan-step" data-plan-step="1">
+            <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="1" role="button" tabindex="0" aria-expanded="false">
+              <span>${tr('Step 1', 'Etape 1')}: ${tr('Choose employee', 'Choisir un employe')}</span>
+              <span class="dashboard-sidebar-plan-step-chevron" aria-hidden="true">▸</span>
+            </strong>
+            <p>${activeUser
+              ? `${tr('Selected', 'Selectionne')} : ${escapeHtml(activeUserName)}`
+              : tr('Select an employee above to continue.', 'Selectionnez un employe ci-dessus pour continuer.')}</p>
+          </div>
+          <div class="dashboard-sidebar-plan-step" data-plan-step="2">
+            <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="2" role="button" tabindex="0" aria-expanded="false">
+              <span>${tr('Step 2', 'Etape 2')}: ${tr('Define weekly distribution', 'Definir la distribution hebdomadaire')}</span>
+              <span class="dashboard-sidebar-plan-step-chevron" aria-hidden="true">▸</span>
+            </strong>
+            <div class="dashboard-sidebar-plan-grid">
+              ${workShifts.map((shift) => `
+                <label class="dashboard-sidebar-plan-count-row">
+                  <span>${escapeHtml(shift.name || tr('Shift', 'Poste'))}</span>
+                  <input type="number" min="0" max="7" step="1" value="${Math.max(0, Number(sidebarPlanState.countsByShiftId[String(shift.id)] || 0))}" data-sidebar-plan-shift-count="${shift.id}">
+                </label>
+              `).join('')}
+              <label class="dashboard-sidebar-plan-count-row">
+                <span>${tr('Rest days / week', 'Jours de repos / semaine')}</span>
+                <input type="number" min="0" max="7" step="1" value="${Math.max(0, Number(sidebarPlanState.restDays || 0))}" data-sidebar-plan-rest-days>
+              </label>
+            </div>
+            <label class="dashboard-sidebar-plan-select-row">
+              <span>${tr('Distribution mode', 'Mode de distribution')}</span>
+              <select data-sidebar-plan-distribution>
+                ${distributionOptions.map((option) => `<option value="${option.value}" ${option.value === sidebarPlanState.distribution ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+              </select>
+            </label>
+          </div>
+          <div class="dashboard-sidebar-plan-step" data-plan-step="3">
+            <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="3" role="button" tabindex="0" aria-expanded="false">
+              <span>${tr('Step 3', 'Etape 3')}: ${tr('Choose period and conflict policy', 'Choisir la periode et la politique de conflit')}</span>
+              <span class="dashboard-sidebar-plan-step-chevron" aria-hidden="true">▸</span>
+            </strong>
+            <label class="dashboard-sidebar-plan-select-row">
+              <span>${tr('Planning period', 'Periode de planification')}</span>
+              <select data-sidebar-plan-period>
+                ${periodOptions.map((option) => `<option value="${option.value}" ${option.value === sidebarPlanState.periodMode ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+              </select>
+            </label>
+            <label class="dashboard-sidebar-plan-select-row">
+              <span>${tr('Week start', 'Debut semaine')}</span>
+              <input type="date" value="${escapeHtml(sidebarPlanState.weekStart || dateKey(startOfWeek(state.focusDate)))}" data-sidebar-plan-week-start>
+            </label>
+            <label class="dashboard-sidebar-plan-select-row">
+              <span>${tr('Month', 'Mois')}</span>
+              <input type="month" value="${escapeHtml(sidebarPlanState.monthKey || dateKey(state.focusDate).slice(0, 7))}" data-sidebar-plan-month>
+            </label>
+            <label class="dashboard-sidebar-plan-toggle-row">
+              <input type="checkbox" ${sidebarPlanState.allowOverride ? 'checked' : ''} data-sidebar-plan-override>
+              <span>${tr('Allow override on double assignment days', 'Autoriser le remplacement sur les jours de double affectation')}</span>
+            </label>
+            <button type="button" class="dashboard-sidebar-control-button" data-sidebar-plan-preview-trigger>${tr('Preview availability and conflicts', 'Apercu disponibilites et conflits')}</button>
+          </div>
+          <div class="dashboard-sidebar-plan-step" data-plan-step="4">
+            <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="4" role="button" tabindex="0" aria-expanded="false">
+              <span>${tr('Step 4', 'Etape 4')}: ${tr('Review and apply', 'Verifier et appliquer')}</span>
+              <span class="dashboard-sidebar-plan-step-chevron" aria-hidden="true">▸</span>
+            </strong>
+            <div class="dashboard-sidebar-plan-summary" data-sidebar-plan-summary></div>
+            <div class="dashboard-sidebar-plan-preview" data-sidebar-plan-preview></div>
+            <button type="button" class="dashboard-sidebar-control-button" data-sidebar-plan-clear-employee>${tr('Clear all assignments for this employee', 'Effacer toutes les affectations de cet employe')}</button>
+            <button type="button" class="dashboard-sidebar-control-button is-active" data-sidebar-plan-apply disabled>${tr('Apply plan', 'Appliquer le plan')}</button>
+          </div>
+        </section>
       `;
 
       plannerDetail.querySelectorAll('[data-sidebar-user-card]').forEach((card) => {
@@ -1571,6 +2233,145 @@
       plannerDetail.querySelectorAll('[data-shift-id]').forEach((button) => {
         button.addEventListener('click', () => setActiveShift(button.getAttribute('data-shift-id')));
       });
+
+      const planFlow = plannerDetail.querySelector('[data-sidebar-plan-flow]');
+      if (!planFlow) return;
+
+      planFlow.querySelectorAll('[data-sidebar-plan-step-title]').forEach((title) => {
+        const toggleStep = (event) => {
+          event.preventDefault();
+          if (title.getAttribute('aria-disabled') === 'true') {
+            return;
+          }
+          const stepValue = String(title.getAttribute('data-sidebar-plan-step-title') || '');
+          const parentStep = title.closest('[data-plan-step]');
+          const isExpanded = parentStep?.classList.contains('is-expanded');
+          setExpandedPlanStep(planFlow, isExpanded ? '' : stepValue);
+        };
+        title.addEventListener('click', toggleStep);
+        title.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          toggleStep(event);
+        });
+      });
+
+      if (!activeUser) {
+        const summaryNode = planFlow.querySelector('[data-sidebar-plan-summary]');
+        if (summaryNode) {
+          summaryNode.innerHTML = `<div class="dashboard-sidebar-plan-alert">${tr('Select an employee to unlock planning steps.', 'Selectionnez un employe pour activer les etapes de planification.')}</div>`;
+        }
+        setExpandedPlanStep(planFlow, '1');
+        return;
+      }
+
+      planFlow.querySelectorAll('[data-sidebar-plan-shift-count]').forEach((input) => {
+        input.addEventListener('change', () => {
+          const shiftId = String(input.getAttribute('data-sidebar-plan-shift-count') || '0');
+          const value = Math.max(0, Math.min(7, Number(input.value || 0)));
+          sidebarPlanState.countsByShiftId[shiftId] = value;
+          sidebarPlanState.preview = [];
+          sidebarPlanState.summary = null;
+          const total = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0) + Math.max(0, Number(sidebarPlanState.restDays || 0));
+          setExpandedPlanStep(planFlow, total === 7 ? '3' : '2');
+        });
+      });
+
+      const restDaysInput = planFlow.querySelector('[data-sidebar-plan-rest-days]');
+      if (restDaysInput) {
+        restDaysInput.addEventListener('change', () => {
+          sidebarPlanState.restDays = Math.max(0, Math.min(7, Number(restDaysInput.value || 0)));
+          sidebarPlanState.preview = [];
+          sidebarPlanState.summary = null;
+          const total = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0) + Math.max(0, Number(sidebarPlanState.restDays || 0));
+          setExpandedPlanStep(planFlow, total === 7 ? '3' : '2');
+        });
+      }
+
+      const distributionInput = planFlow.querySelector('[data-sidebar-plan-distribution]');
+      if (distributionInput) {
+        distributionInput.addEventListener('change', () => {
+          sidebarPlanState.distribution = distributionInput.value || 'balanced';
+          sidebarPlanState.preview = [];
+          sidebarPlanState.summary = null;
+          setExpandedPlanStep(planFlow, '3');
+        });
+      }
+
+      const periodInput = planFlow.querySelector('[data-sidebar-plan-period]');
+      if (periodInput) {
+        periodInput.addEventListener('change', () => {
+          sidebarPlanState.periodMode = periodInput.value || 'auto';
+          sidebarPlanState.preview = [];
+          sidebarPlanState.summary = null;
+          setExpandedPlanStep(planFlow, '3');
+        });
+      }
+
+      const weekStartInput = planFlow.querySelector('[data-sidebar-plan-week-start]');
+      if (weekStartInput) {
+        weekStartInput.addEventListener('change', () => {
+          sidebarPlanState.weekStart = String(weekStartInput.value || dateKey(startOfWeek(state.focusDate)));
+          sidebarPlanState.preview = [];
+          sidebarPlanState.summary = null;
+          setExpandedPlanStep(planFlow, '3');
+        });
+      }
+
+      const monthInput = planFlow.querySelector('[data-sidebar-plan-month]');
+      if (monthInput) {
+        monthInput.addEventListener('change', () => {
+          sidebarPlanState.monthKey = normalizeMonthKey(monthInput.value || dateKey(state.focusDate).slice(0, 7));
+          sidebarPlanState.preview = [];
+          sidebarPlanState.summary = null;
+          setExpandedPlanStep(planFlow, '3');
+        });
+      }
+
+      const overrideInput = planFlow.querySelector('[data-sidebar-plan-override]');
+      if (overrideInput) {
+        overrideInput.addEventListener('change', () => {
+          sidebarPlanState.allowOverride = !!overrideInput.checked;
+          sidebarPlanState.preview = [];
+          sidebarPlanState.summary = null;
+          setExpandedPlanStep(planFlow, '3');
+        });
+      }
+
+      const previewTrigger = planFlow.querySelector('[data-sidebar-plan-preview-trigger]');
+      if (previewTrigger) {
+        previewTrigger.addEventListener('click', () => {
+          handleSidebarPlanPreview(planFlow);
+          const hasPreview = Array.isArray(sidebarPlanState.preview) && sidebarPlanState.preview.length > 0;
+          setExpandedPlanStep(planFlow, hasPreview ? '4' : '3');
+        });
+      }
+
+      const applyTrigger = planFlow.querySelector('[data-sidebar-plan-apply]');
+      if (applyTrigger) {
+        applyTrigger.addEventListener('click', async () => {
+          await applySidebarPlan(planFlow);
+        });
+      }
+
+      const clearEmployeeTrigger = planFlow.querySelector('[data-sidebar-plan-clear-employee]');
+      if (clearEmployeeTrigger) {
+        clearEmployeeTrigger.addEventListener('click', async () => {
+          await clearAssignmentsForActiveUserInPlanRange();
+        });
+      }
+
+      if (Array.isArray(sidebarPlanState.preview) && sidebarPlanState.preview.length > 0) {
+        renderSidebarPlanPreview(planFlow, {
+          items: sidebarPlanState.preview,
+          summary: sidebarPlanState.summary || {},
+          error: '',
+        });
+      }
+      const total = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0) + Math.max(0, Number(sidebarPlanState.restDays || 0));
+      const initialStep = Array.isArray(sidebarPlanState.preview) && sidebarPlanState.preview.length > 0
+        ? '4'
+        : (total === 7 ? '3' : '2');
+      setExpandedPlanStep(planFlow, initialStep);
     };
 
     const upsertAssignment = (assignment) => {

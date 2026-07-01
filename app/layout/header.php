@@ -223,12 +223,19 @@ if ($route === 'home') {
                 <div class="site-icon-group" role="toolbar" aria-label="<?php echo e(t('common.quick_actions')); ?>">
                     <?php foreach ($rightIcons as $iconItem): ?>
                         <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
-                            <button type="button" class="site-icon-btn" title="<?php echo e($iconItem['title']); 
-                            ?>"<?php if (($iconItem['toggle'] ?? '') === 'calendar-navigator'): 
-                            ?> data-calendar-navigator-toggle="true" aria-controls="dashboard-calendar-navigator" aria-expanded="false"<?php else: ?> data-modal-target="
-                            <?php echo e($iconItem['target']); ?>"<?php if (!empty($iconItem['entity'])): ?> data-modal-entity="
-                                <?php echo e($iconItem['entity']); ?>"<?php endif; ?>
-                                <?php endif; ?>>
+                            <button
+                                type="button"
+                                class="site-icon-btn"
+                                title="<?php echo e($iconItem['title']); ?>"
+                                <?php if (($iconItem['toggle'] ?? '') === 'calendar-navigator'): ?>
+                                    data-calendar-navigator-toggle="true"
+                                    aria-controls="dashboard-calendar-navigator"
+                                    aria-expanded="false"
+                                <?php else: ?>
+                                    data-modal-target="<?php echo e($iconItem['target']); ?>"
+                                    <?php if (!empty($iconItem['entity'])): ?>data-modal-entity="<?php echo e($iconItem['entity']); ?>"<?php endif; ?>
+                                <?php endif; ?>
+                            >
                                 <?php if (!empty($iconItem['toggle'])): ?>
                                     <img src="<?php echo $basePath; ?>/assets/icons/menu.svg" alt="" class="site-icon" aria-hidden="true">
                                 <?php else: ?>

@@ -2,6 +2,7 @@
 <div class="home-page">
 	<h1><?php echo e(t('home.welcome_title')); ?></h1>
 	<p><?php echo e(t('home.welcome_subtitle')); ?></p>
+	
 	<section class="home-intro">
 		<h2><?php echo e(t('home.intro_title')); ?></h2>
 
@@ -37,33 +38,32 @@
 			</li>
 		</ul>
 
-
 		<!-- Feature panels -->
-		 <div class="simple-div-container">
+		<div class="simple-div-container">
 			<div class="simple-div">
-				<p class="simple-div-title"><?php echo e(t('home.feature_reporting_title')); ?></p>
-				<p><?php echo e(t('home.feature_reporting_body')); ?></p>
-			</div>
-				<div class="simple-div">
-				<p class="simple-div-title"><?php echo e(t('home.feature_attendance_title')); ?></p>
-				<p class="simple-div-content"><?php echo e(t('home.feature_attendance_body')); ?></p>
-			</div>
-				<div class="simple-div">
-				<p class="simple-div-title"><?php echo e(t('home.feature_documents_title')); ?></p>
-				<p class="simple-div-content"><?php echo e(t('home.feature_documents_body')); ?></p>
-			</div>
-				<div class="simple-div">
-				<p class="simple-div-title"><?php echo e(t('home.feature_roles_title')); ?></p>
-				<p class="simple-div-content"><?php echo e(t('home.feature_roles_body')); ?></p>
-			</div>
-				<div class="simple-div">
-				<p class="simple-div-title"><?php echo e(t('home.feature_security_title')); ?></p>
-				<p class="simple-div-content"><?php echo e(t('home.feature_security_body')); ?></p>
-			</div>
-				<div class="simple-div">
 				<p class="simple-div-title"><?php echo e(t('home.feature_shifts_title')); ?></p>
 				<p class="simple-div-content"><?php echo e(t('home.feature_shifts_body')); ?></p>
 			</div>
+			<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_attendance_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_attendance_body')); ?></p>
+			</div>
+			<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_documents_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_documents_body')); ?></p>
+			</div>
+			<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_reporting_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_reporting_body')); ?></p>
+			</div>
+			<div class="simple-div">
+				<p class="simple-div-title"><?php echo e(t('home.feature_requests_title')); ?></p>
+				<p class="simple-div-content"><?php echo e(t('home.feature_requests_body')); ?></p>
+			</div>
 		</div>
+
+		<p style="margin-top: 1.5rem;">
+			<a href="<?php echo e(appUrl('legal')); ?>" style="color: var(--color-accent); text-decoration: underline;"><?php echo e(t('common.legal_mentions')); ?></a>
+		</p>
 	</section>
 </div>

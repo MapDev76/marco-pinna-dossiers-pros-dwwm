@@ -20,6 +20,7 @@ $scopeCompanySignatureIp = trim((string) ($plannerCompany['signature_ip'] ?? '')
 $scopeCompanies = is_array($planner['companies'] ?? null) ? $planner['companies'] : [];
 $visibleUsers = $users;
 $currentRole = $currentUser['role'] ?? '';
+$settingsSimpleMode = true;
 $canCreateDepartments = in_array($currentRole, ['super_admin', 'admin'], true);
 $canCreateShifts = in_array($currentRole, ['super_admin', 'admin'], true);
 $canManageDepartments = in_array($currentRole, ['super_admin', 'admin'], true);
@@ -622,7 +623,9 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <button type="button" class="settings-tab" data-settings-tab="departments"><?php echo e(t('settings.departments')); ?></button>
             <?php endif; ?>
             <button type="button" class="settings-tab" data-settings-tab="shifts"><?php echo e(t('settings.shifts')); ?></button>
-            <button type="button" class="settings-tab" data-settings-tab="assignments"><?php echo e(t('settings.assignments')); ?></button>
+            <?php if (!$settingsSimpleMode): ?>
+                <button type="button" class="settings-tab" data-settings-tab="assignments"><?php echo e(t('settings.assignments')); ?></button>
+            <?php endif; ?>
             <button type="button" class="settings-tab" data-settings-tab="attendances"><?php echo e(t('settings.attendances')); ?></button>
         </div>
 
@@ -726,6 +729,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
             </section>
             <?php endif; ?>
 
+            <?php if (!$settingsSimpleMode): ?>
             <section class="crud-panel settings-panel" data-settings-panel="assignments" hidden>
                 <?php
                     $employeeAssignmentStats = [];
@@ -1362,6 +1366,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 </div>
 
             </section>
+            <?php endif; ?>
 
             <section class="crud-panel settings-panel" data-settings-panel="attendances" hidden>
                 <div class="settings-panel-head">

@@ -4,6 +4,7 @@ $route = $_GET['route'] ?? 'home';
 
 $routes = [
     'home' => realpath(__DIR__ . '/../public/views/home.php'),
+    'legal' => realpath(__DIR__ . '/../public/legal.php'),
     'login' => realpath(__DIR__ . '/../backend/controllers/AuthController.php'),
     'logout' => realpath(__DIR__ . '/../backend/controllers/AuthController.php'),
     'dashboard' => realpath(__DIR__ . '/../backend/controllers/DashboardController.php'),

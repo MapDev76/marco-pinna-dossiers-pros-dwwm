@@ -63,25 +63,10 @@
       departmentToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     };
 
-    var syncCurrentDepartment = function (button) {
+    var syncCurrentDepartment = function (_button) {
       if (!currentDepartment) return;
-      if (!button) {
-        currentDepartment.hidden = true;
-        currentDepartment.innerHTML = '';
-        return;
-      }
-
-      var icon = button.getAttribute('data-planner-department-icon') || '🏷️';
-      var name = button.getAttribute('data-planner-department-name') || 'Department';
-      var color = button.getAttribute('data-planner-department-color') || '#b98b12';
-      currentDepartment.hidden = false;
-      currentDepartment.innerHTML = '<button type="button" class="dashboard-sidebar-current-department-button" style="color:' + escapeHtml(color) + ';">' + renderIconHtml(icon) + ' ' + escapeHtml(name) + '</button>';
-      var currentButton = currentDepartment.querySelector('button');
-      if (currentButton) {
-        currentButton.addEventListener('click', function () {
-          expandDepartments();
-        });
-      }
+      currentDepartment.hidden = true;
+      currentDepartment.innerHTML = '';
     };
 
     var expandDepartments = function () {
@@ -111,6 +96,7 @@
 
     var closeSidebar = function () {
       document.body.classList.remove('sidebar-expanded');
+      document.body.classList.remove('sidebar-plan-wide');
     };
 
     var bindToggleSidebar = function () {

@@ -21,6 +21,7 @@ $isDashboardRoute = $route === 'dashboard';
 $isHomeRoute = $route === 'home';
 $isLoginRoute = $route === 'login';
 $isMySpaceRoute = $route === 'my-space';
+$isLegalRoute = $route === 'legal';
 $locale = appLocale();
 // Compact dashboard mode: removes padding and some UI elements for admins/managers to show more content.
 $isCompactDashboard = $isDashboardRoute && isLoggedIn() && in_array((currentUser()['role'] ?? ''), ['admin', 'department_manager'], true);
@@ -37,13 +38,15 @@ if ($isLoginRoute) {
 if ($isMySpaceRoute) {
         $bodyClasses[] = 'route-my-space';
 }
+if ($isLegalRoute) {
+        $bodyClasses[] = 'route-legal';
+}
 // Precompute CSS version based on file modification time for cache busting. If the file is missing, use current time to avoid caching issues during development.
 $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time());
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo e($locale); ?>">
 <head>
-        <!-- Base metadata and main stylesheet -->
          <meta name="description" content="StaffEase Pro - Manage your staff efficiently">
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -151,7 +154,6 @@ require $viewFile;
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/companies.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/companies.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/assignments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/assignments.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/attendances.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/attendances.js'); ?>"></script>
 <script src="<?php echo $basePath; ?>/assets/js/dashboard/print.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/print.js'); ?>"></script>
 <?php endif; ?>

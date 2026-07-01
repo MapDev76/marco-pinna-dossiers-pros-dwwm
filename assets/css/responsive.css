@@ -1067,3 +1067,20 @@
         margin: 16px auto 8px !important;
     }
 }
+
+
+@media (max-width: 768px) {
+    .simple-div-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 1100px) {
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .feature-card {
+        padding: 1rem 1.1rem;
+    }
+}
