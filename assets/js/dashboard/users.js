@@ -78,7 +78,11 @@
   }
 
   function closeAllDepartmentDropdowns() {
-    document.querySelectorAll('.settings-multiselect.is-open').forEach((root) => root.classList.remove('is-open'));
+    document.querySelectorAll('.settings-multiselect.is-open').forEach((root) => {
+      root.classList.remove('is-open');
+      const trigger = root.querySelector('.settings-multiselect-trigger');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    });
   }
 
   function initDepartmentDropdowns() {

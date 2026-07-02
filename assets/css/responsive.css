@@ -485,6 +485,10 @@
         padding: 0.65rem;
     }
 
+    .settings-assignment-employee-window .settings-analytics-card {
+        grid-template-columns: 1fr;
+    }
+
     .settings-assignment-week-days {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
@@ -529,8 +533,19 @@
         align-items: stretch;
     }
 
+    .settings-edit-drawer .settings-inline-actions {
+        flex-direction: column;
+        align-items: stretch;
+        flex-wrap: nowrap;
+    }
+
     [data-user-create-row] .settings-inline-actions .admin-action-link,
     [data-shift-create-row] .settings-inline-actions .admin-action-link {
+        width: 100%;
+        max-width: none;
+    }
+
+    .settings-edit-drawer .settings-inline-actions .admin-action-link {
         width: 100%;
         max-width: none;
     }

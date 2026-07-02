@@ -93,6 +93,7 @@
       const shouldKeepOpen = exceptPopover && popover === exceptPopover;
       popover.hidden = !shouldKeepOpen;
       const stack = popover.closest('.settings-picker-stack');
+      if (stack) stack.classList.toggle('is-open', shouldKeepOpen);
       const toggle = stack ? stack.querySelector('[data-picker-toggle]') : null;
       if (toggle) toggle.setAttribute('aria-expanded', shouldKeepOpen ? 'true' : 'false');
     });
@@ -106,6 +107,8 @@
     const willOpen = popover.hidden;
     closeAllPickers(willOpen ? popover : null);
     popover.hidden = !willOpen;
+    const stack = toggle.closest('.settings-picker-stack');
+    if (stack) stack.classList.toggle('is-open', willOpen);
     toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
   }
 

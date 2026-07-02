@@ -15,6 +15,7 @@
   const config = window.DashboardConfig || {};
   const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
   const isFr = locale.startsWith('fr');
+  const isIt = locale.startsWith('it');
   const tr = (enText, frText) => (isFr ? frText : enText);
   const apiCompanies = config.apiCompanies;
   const apiDepartments = config.apiDepartments;
@@ -608,6 +609,7 @@
         modal.hidden = true;
         modal.classList.remove('is-open');
       });
+      openButtons.forEach((item) => item.classList.remove('is-active'));
       if (overlay) {
         overlay.hidden = true;
         overlay.classList.remove('is-open');
@@ -719,7 +721,70 @@
       const panels = Array.from(settingsModal.querySelectorAll('[data-settings-panel]'));
       const tabInput = settingsModal.querySelector('[data-settings-tab-input]');
       const companySelect = settingsModal.querySelector('[data-settings-company-select]');
+      const collapsiblePanelNames = new Set(['users', 'departments', 'shifts', 'attendances']);
+      const panelListExpandedState = {};
+      const tr3 = (enText, frText, itText) => (isFr ? frText : (isIt ? itText : enText));
       if (tabButtons.length === 0 || panels.length === 0) return;
+
+      const getPanelName = (panel) => String(panel?.getAttribute('data-settings-panel') || '');
+
+      const getCollapsibleListWrap = (panel) => {
+        const panelName = getPanelName(panel);
+        if (!collapsiblePanelNames.has(panelName)) return null;
+        return panel.querySelector(':scope > .settings-list-wrap') || panel.querySelector('.settings-list-wrap');
+      };
+
+      const getOrCreatePanelToggleHost = (panel) => {
+        const panelHead = panel.querySelector('.settings-panel-head');
+        if (!panelHead) return null;
+        const existingPillRow = panelHead.querySelector('.settings-pill-row');
+        if (existingPillRow) return existingPillRow;
+        const pillRow = document.createElement('div');
+        pillRow.className = 'settings-pill-row';
+        panelHead.appendChild(pillRow);
+        return pillRow;
+      };
+
+      const applyPanelListVisibility = (panel) => {
+        const panelName = getPanelName(panel);
+        const listWrap = getCollapsibleListWrap(panel);
+        const toggleButton = panel.querySelector('[data-settings-list-toggle]');
+        if (!listWrap || !toggleButton || !collapsiblePanelNames.has(panelName)) return;
+        const isExpanded = !!panelListExpandedState[panelName];
+        listWrap.hidden = !isExpanded;
+        toggleButton.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+        toggleButton.textContent = isExpanded
+          ? tr3('Hide list', 'Masquer la liste', 'Nascondi lista')
+          : tr3('Show list', 'Afficher la liste', 'Mostra lista');
+      };
+
+      const ensurePanelListToggle = (panel) => {
+        const panelName = getPanelName(panel);
+        const listWrap = getCollapsibleListWrap(panel);
+        if (!listWrap || !collapsiblePanelNames.has(panelName)) return;
+        listWrap.classList.add('settings-panel-list-collapsible');
+
+        if (typeof panelListExpandedState[panelName] !== 'boolean') {
+          panelListExpandedState[panelName] = false;
+        }
+
+        let toggleButton = panel.querySelector('[data-settings-list-toggle]');
+        if (!toggleButton) {
+          const host = getOrCreatePanelToggleHost(panel);
+          if (!host) return;
+          toggleButton = document.createElement('button');
+          toggleButton.type = 'button';
+          toggleButton.className = 'admin-action-link admin-action-link-secondary settings-list-collapse-toggle';
+          toggleButton.setAttribute('data-settings-list-toggle', panelName);
+          toggleButton.addEventListener('click', () => {
+            panelListExpandedState[panelName] = !panelListExpandedState[panelName];
+            applyPanelListVisibility(panel);
+          });
+          host.appendChild(toggleButton);
+        }
+
+        applyPanelListVisibility(panel);
+      };
 
       const activateTab = (tabName) => {
         tabButtons.forEach((button) => {
@@ -732,6 +797,9 @@
           const isActive = panel.getAttribute('data-settings-panel') === tabName;
           panel.classList.toggle('is-active', isActive);
           panel.hidden = !isActive;
+          if (isActive) {
+            ensurePanelListToggle(panel);
+          }
         });
 
         if (tabInput) {
@@ -766,8 +834,22 @@
       // Start with all panels closed; open only when a tab is clicked.
       resetTabs();
 
+      // Initialize toggles for list-based panels in collapsed state.
+      panels.forEach((panel) => {
+        const panelName = getPanelName(panel);
+        if (!collapsiblePanelNames.has(panelName)) return;
+        panelListExpandedState[panelName] = false;
+        ensurePanelListToggle(panel);
+      });
+
       // Each time settings modal opens, keep all panels closed until a tab click.
       settingsModal.addEventListener('modal:open', () => {
+        panels.forEach((panel) => {
+          const panelName = getPanelName(panel);
+          if (!collapsiblePanelNames.has(panelName)) return;
+          panelListExpandedState[panelName] = false;
+          ensurePanelListToggle(panel);
+        });
         resetTabs();
         const requestedTab = window.__dashboardRequestedSettingsTab || '';
         if (requestedTab && panels.some((panel) => panel.getAttribute('data-settings-panel') === requestedTab)) {
@@ -1010,6 +1092,7 @@
       allowOverride: false,
       preview: [],
       summary: null,
+      dayOverrides: {},
       applying: false,
     };
 
@@ -1479,6 +1562,7 @@
         sidebarPlanState.allowOverride = false;
         sidebarPlanState.preview = [];
         sidebarPlanState.summary = null;
+        sidebarPlanState.dayOverrides = {};
         if (!state.activeShiftId && firstShiftId > 0) {
           state.activeShiftId = firstShiftId;
         }
@@ -1601,6 +1685,7 @@
       }
 
       const workShifts = (activeDepartment.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+      const allShifts = (activeDepartment.shifts || []).slice();
       const restShift = getActiveRestTemplateShift();
       const countsByShift = workShifts.map((shift) => ({
         type: 'work',
@@ -1676,12 +1761,32 @@
         const isPast = isPastDate(dateValue);
         const existingAssignments = getExistingAssignmentsByUserAndDate(activeUser.id, dateValue);
         const availability = getUserAvailabilityStatus(activeUser.id, dateValue);
-        const plannedShift = dayPlan.type === 'work'
+        const basePlannedShift = dayPlan.type === 'work'
           ? workShifts.find((shift) => Number(shift.id) === Number(dayPlan.shiftId)) || null
           : restShift;
-        const targetShiftId = Number(plannedShift?.id || dayPlan.shiftId || 0);
-        const plannedLabel = dayPlan.type === 'rest'
-          ? tr('Rest day', 'Repos')
+        const overrideValue = sidebarPlanState.dayOverrides[dateValue];
+        let plannedShift = basePlannedShift;
+        let targetShiftId = Number(basePlannedShift?.id || dayPlan.shiftId || 0);
+        let targetShiftKind = String(dayPlan.type || 'work');
+
+        if (overrideValue === 'skip') {
+          plannedShift = null;
+          targetShiftId = 0;
+          targetShiftKind = 'skip';
+        } else if (overrideValue !== undefined && overrideValue !== null && String(overrideValue) !== '') {
+          const overrideShiftId = Number(overrideValue || 0);
+          if (overrideShiftId > 0) {
+            const overrideShift = allShifts.find((shift) => Number(shift.id || 0) === overrideShiftId) || null;
+            if (overrideShift) {
+              plannedShift = overrideShift;
+              targetShiftId = Number(overrideShift.id || 0);
+              targetShiftKind = String(overrideShift.kind || 'work').toLowerCase();
+            }
+          }
+        }
+
+        const plannedLabel = targetShiftId <= 0
+          ? tr('Skip day', 'Ignorer le jour')
           : summarizeShiftName(plannedShift);
 
         let status = 'available';
@@ -1693,6 +1798,10 @@
           note = tr('Past day: skipped.', 'Jour passe : ignore.');
           actionable = false;
           summary.past += 1;
+        } else if (targetShiftId <= 0) {
+          status = 'skip';
+          note = tr('No assignment planned for this day.', 'Aucune affectation prevue pour ce jour.');
+          actionable = false;
         } else if (dayPlan.type === 'rest' && !restShift) {
           status = 'unavailable';
           note = tr('No rest shift template configured for this department.', 'Aucun modele de repos configure pour ce departement.');
@@ -1707,7 +1816,7 @@
           const existing = existingAssignments[0];
           const existingShiftId = Number(existing.shift_id || 0);
           const existingKind = String(existing.shift_kind || 'work').toLowerCase();
-          const sameAsPlan = existingShiftId === targetShiftId || (dayPlan.type === 'rest' && existingKind === 'rest');
+          const sameAsPlan = existingShiftId === targetShiftId || (targetShiftKind === 'rest' && existingKind === 'rest');
           if (sameAsPlan) {
             status = 'already';
             note = tr('Already assigned with the same plan.', 'Deja affecte avec le meme plan.');
@@ -1721,13 +1830,33 @@
             actionable = !!sidebarPlanState.allowOverride;
             summary.conflicts += 1;
           }
-        } else if (!availability.available) {
+        } else if (targetShiftKind === 'work' && !availability.available) {
           status = 'unavailable';
           note = availability.reason || tr('Unavailable by rules.', 'Indisponible selon les regles.');
           actionable = false;
           summary.unavailable += 1;
         } else {
-          summary.available += 1;
+          const otherAssignedSameShift = events.filter((event) =>
+            Number(event.user_id || 0) > 0
+            && Number(event.user_id || 0) !== Number(activeUser.id || 0)
+            && Number(event.shift_id || 0) === Number(targetShiftId || 0)
+            && String(event.work_date || '') === String(dateValue || '')
+            && String(event.status || '').toLowerCase() !== 'cancelled'
+          );
+          if (otherAssignedSameShift.length > 0) {
+            const firstName = String(otherAssignedSameShift[0].user_name || '').trim();
+            status = 'conflict';
+            note = firstName
+              ? tr(
+                `Shift already assigned to ${firstName}.`,
+                `Poste deja assigne a ${firstName}.`
+              )
+              : tr('Shift already assigned to another employee.', 'Poste deja assigne a un autre employe.');
+            actionable = !!sidebarPlanState.allowOverride;
+            summary.conflicts += 1;
+          } else {
+            summary.available += 1;
+          }
         }
 
         summary.planned += 1;
@@ -1735,7 +1864,7 @@
           date: dateValue,
           weekday: weekdayShortFormatter.format(dateObj),
           targetShiftId,
-          targetShiftKind: dayPlan.type,
+          targetShiftKind,
           targetLabel: plannedLabel,
           status,
           note,
@@ -1771,6 +1900,8 @@
         </div>
       `;
 
+      const activeDepartment = getActiveDepartment();
+      const editableShifts = (activeDepartment?.shifts || []).slice();
       previewWrap.innerHTML = result.items.map((item) => {
         const statusLabel = item.status === 'available'
           ? tr('Available', 'Disponible')
@@ -1778,9 +1909,23 @@
             ? tr('Already assigned', 'Deja affecte')
             : item.status === 'past'
               ? tr('Past day', 'Jour passe')
+              : item.status === 'skip'
+                ? tr('Skipped', 'Ignore')
               : item.status === 'conflict'
                 ? tr('Conflict', 'Conflit')
                 : tr('Unavailable', 'Indisponible');
+
+        const options = [
+          `<option value="skip" ${Number(item.targetShiftId || 0) <= 0 ? 'selected' : ''}>${escapeHtml(tr('Skip day', 'Ignorer le jour'))}</option>`,
+          ...editableShifts.map((shift) => {
+            const shiftId = Number(shift.id || 0);
+            const selected = shiftId === Number(item.targetShiftId || 0) ? 'selected' : '';
+            const kind = String(shift.kind || 'work').toLowerCase();
+            const shiftLabel = `${summarizeShiftName(shift)}${kind !== 'work' ? ` (${kind})` : ''}`;
+            return `<option value="${shiftId}" ${selected}>${escapeHtml(shiftLabel)}</option>`;
+          })
+        ].join('');
+
         return `
           <article class="dashboard-sidebar-plan-row is-${escapeHtml(item.status)}">
             <div>
@@ -1790,11 +1935,29 @@
             <div>
               <strong>${escapeHtml(item.targetLabel)}</strong>
               <small>${escapeHtml(item.note || '')}</small>
+              <select class="dashboard-sidebar-plan-row-select" data-sidebar-plan-row-shift="${escapeHtml(item.date)}" ${item.status === 'past' ? 'disabled' : ''}>
+                ${options}
+              </select>
             </div>
             <span class="dashboard-sidebar-plan-tag is-${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
           </article>
         `;
       }).join('') || `<div class="dashboard-sidebar-plan-alert">${tr('No days in selected range.', 'Aucun jour dans la plage selectionnee.')}</div>`;
+
+      previewWrap.querySelectorAll('[data-sidebar-plan-row-shift]').forEach((select) => {
+        select.addEventListener('change', () => {
+          const dateValue = String(select.getAttribute('data-sidebar-plan-row-shift') || '');
+          const rawValue = String(select.value || '');
+          if (!dateValue) return;
+          if (rawValue === 'skip') {
+            sidebarPlanState.dayOverrides[dateValue] = 'skip';
+          } else {
+            const shiftId = Number(rawValue || 0);
+            sidebarPlanState.dayOverrides[dateValue] = shiftId > 0 ? shiftId : 'skip';
+          }
+          handleSidebarPlanPreview(host);
+        });
+      });
 
       const actionableCount = result.items.filter((item) => item.actionable).length;
       applyBtn.disabled = actionableCount <= 0;
@@ -2085,6 +2248,7 @@
       const users = activeDepartment.users || [];
       const shifts = activeDepartment.shifts || [];
       const workShifts = shifts.filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+
       ensureSidebarPlanDefaults(activeDepartment);
       if (workShifts.length > 0 && !workShifts.some((shift) => Number(shift.id) === Number(state.activeShiftId))) {
         state.activeShiftId = Number(workShifts[0].id || 0);
@@ -2217,6 +2381,8 @@
       plannerDetail.querySelectorAll('[data-sidebar-user-card]').forEach((card) => {
         card.addEventListener('pointerdown', (event) => {
           if (event.button !== 0) return;
+          const chip = card.querySelector('.dashboard-sidebar-user-chip');
+          if (chip && (chip.disabled || chip.getAttribute('aria-disabled') === 'true')) return;
           setActiveUser(card.getAttribute('data-user-id'), card.getAttribute('data-user-name'));
         });
       });
@@ -2271,6 +2437,7 @@
           sidebarPlanState.countsByShiftId[shiftId] = value;
           sidebarPlanState.preview = [];
           sidebarPlanState.summary = null;
+          sidebarPlanState.dayOverrides = {};
           const total = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0) + Math.max(0, Number(sidebarPlanState.restDays || 0));
           setExpandedPlanStep(planFlow, total === 7 ? '3' : '2');
         });
@@ -2282,6 +2449,7 @@
           sidebarPlanState.restDays = Math.max(0, Math.min(7, Number(restDaysInput.value || 0)));
           sidebarPlanState.preview = [];
           sidebarPlanState.summary = null;
+          sidebarPlanState.dayOverrides = {};
           const total = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0) + Math.max(0, Number(sidebarPlanState.restDays || 0));
           setExpandedPlanStep(planFlow, total === 7 ? '3' : '2');
         });
@@ -2293,6 +2461,7 @@
           sidebarPlanState.distribution = distributionInput.value || 'balanced';
           sidebarPlanState.preview = [];
           sidebarPlanState.summary = null;
+          sidebarPlanState.dayOverrides = {};
           setExpandedPlanStep(planFlow, '3');
         });
       }
@@ -2303,6 +2472,7 @@
           sidebarPlanState.periodMode = periodInput.value || 'auto';
           sidebarPlanState.preview = [];
           sidebarPlanState.summary = null;
+          sidebarPlanState.dayOverrides = {};
           setExpandedPlanStep(planFlow, '3');
         });
       }
@@ -2313,6 +2483,7 @@
           sidebarPlanState.weekStart = String(weekStartInput.value || dateKey(startOfWeek(state.focusDate)));
           sidebarPlanState.preview = [];
           sidebarPlanState.summary = null;
+          sidebarPlanState.dayOverrides = {};
           setExpandedPlanStep(planFlow, '3');
         });
       }
@@ -2323,6 +2494,7 @@
           sidebarPlanState.monthKey = normalizeMonthKey(monthInput.value || dateKey(state.focusDate).slice(0, 7));
           sidebarPlanState.preview = [];
           sidebarPlanState.summary = null;
+          sidebarPlanState.dayOverrides = {};
           setExpandedPlanStep(planFlow, '3');
         });
       }
@@ -2333,6 +2505,7 @@
           sidebarPlanState.allowOverride = !!overrideInput.checked;
           sidebarPlanState.preview = [];
           sidebarPlanState.summary = null;
+          sidebarPlanState.dayOverrides = {};
           setExpandedPlanStep(planFlow, '3');
         });
       }

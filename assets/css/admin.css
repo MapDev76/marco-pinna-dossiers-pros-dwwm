@@ -365,11 +365,15 @@ a.admin-action-link-secondary {
 .settings-modal-body {
     display: grid;
     gap: var(--spacing-md);
+    width: 100%;
+    min-width: 0;
 }
 
 .settings-panel {
     display: none;
     gap: var(--spacing-md);
+    width: 100%;
+    min-width: 0;
 }
 
 .settings-panel[hidden] {
@@ -397,6 +401,10 @@ a.admin-action-link-secondary {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+}
+
+.settings-panel-head .settings-pill-row > .settings-pill {
+    display: none !important;
 }
 
 .settings-pill {
@@ -438,6 +446,19 @@ a.admin-action-link-secondary {
 .settings-list-wrap {
     display: grid;
     gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.settings-panel-list-collapsible[hidden] {
+    display: none !important;
+}
+
+.settings-list-collapse-toggle {
+    min-height: 30px;
+    padding: 0.3rem 0.72rem;
+    font-size: 0.74rem;
+    line-height: 1.1;
 }
 
 .settings-list-wrap[data-assignment-list-wrap][hidden] {
@@ -450,10 +471,16 @@ a.admin-action-link-secondary {
 }
 
 .settings-list-item-wrap {
+    position: relative;
     border: 1px solid var(--color-border-light);
     border-radius: 12px;
     background: #fff;
     overflow: visible;
+}
+
+.settings-list-item-wrap:has(.settings-picker-stack.is-open),
+.settings-list-item-wrap:has(.settings-multiselect.is-open) {
+    z-index: 42000;
 }
 
 .settings-list-row {
@@ -1453,7 +1480,7 @@ body.route-my-space {
 
 .settings-assignment-employee-window {
     box-sizing: border-box;
-    width: min(1120px, calc(100vw - 2.4rem));
+    width: min(1480px, calc(100vw - 1.2rem));
     max-height: calc(100vh - 2.4rem);
     overflow: auto;
     display: grid;
@@ -1516,13 +1543,35 @@ body.route-my-space {
 
 .settings-assignment-employee-window-grid {
     display: grid;
-    grid-template-columns: minmax(260px, 1fr) minmax(340px, 1.2fr);
-    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 0.6rem;
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+}
+
+.settings-assignment-employee-window-grid > * {
+    min-width: 0;
+    width: 100%;
+}
+
+.settings-assignment-employee-window-grid > .settings-analytics-card:only-child {
+    grid-column: 1 / -1;
 }
 
 .settings-assignment-employee-window .settings-analytics-card {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    align-items: end;
     padding: 0.62rem;
     gap: 0.42rem;
+}
+
+.settings-assignment-employee-window .settings-analytics-card:has(.settings-assignment-modal-range-row) > .settings-field:first-of-type,
+.settings-assignment-employee-window .settings-assignment-modal-range-row,
+.settings-assignment-employee-window .employee-signature-pad-shell,
+.settings-assignment-employee-window .settings-inline-actions {
+    grid-column: 1 / -1;
 }
 
 .settings-assignment-employee-window .settings-field input,
@@ -1924,6 +1973,7 @@ body.route-my-space {
     display: grid;
     gap: 0.65rem;
     align-items: center;
+    grid-auto-flow: row dense;
 }
 
 .settings-list-cols-user {
@@ -2198,16 +2248,46 @@ body.route-my-space {
     position: relative;
 }
 
+.settings-multiselect.is-open {
+    z-index: 69000;
+}
+
 .settings-multiselect-trigger {
     width: 100%;
     min-height: 44px;
-    padding: 0.65rem 0.8rem;
-    border-radius: var(--border-radius-md);
-    border: 1px solid var(--color-border);
-    background: rgba(255, 255, 255, 0.96);
+    padding: 0.55rem 0.8rem;
+    border-radius: var(--border-radius-full);
+    border: 1px solid rgba(157, 121, 16, 0.58);
+    background: #ffffff;
+    color: #1f1f1f;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.98),
+        0 4px 8px rgba(0, 0, 0, 0.08);
     text-align: left;
     font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
     cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease,
+        filter 0.2s ease;
+}
+
+.settings-multiselect-trigger:hover,
+.settings-multiselect-trigger:focus-visible,
+.settings-multiselect.is-open .settings-multiselect-trigger {
+    background: var(--color-primary);
+    color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.20);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        0 8px 16px rgba(0, 0, 0, 0.14);
+    transform: translateY(-2px);
+    outline: none;
 }
 
 .settings-multiselect-menu {
@@ -2215,7 +2295,7 @@ body.route-my-space {
     top: calc(100% + 4px);
     left: 0;
     right: 0;
-    z-index: 40;
+    z-index: 71000;
     max-height: 220px;
     overflow: auto;
     border: 1px solid var(--color-border);
@@ -2245,16 +2325,19 @@ body.route-my-space {
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .settings-multiselect-option:hover {
-    background: rgba(157, 121, 16, 0.1);
+    background: var(--color-primary);
+    color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.20);
 }
 
 .settings-multiselect-option:has(input:checked) {
-    background: rgba(157, 121, 16, 0.14);
-    border-color: rgba(157, 121, 16, 0.55);
+    background: var(--color-primary);
+    color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.20);
 }
 
 .settings-multiselect-option input[type="checkbox"] {
@@ -2294,8 +2377,8 @@ body.route-my-space {
 
 @media (min-width: 1101px) {
     .settings-create-row.settings-create-row-shift .settings-list-cols.settings-list-cols-shift-create {
-        grid-template-columns: minmax(300px, 1.15fr) minmax(300px, 1.15fr) minmax(150px, 0.55fr);
-        align-items: start;
+        grid-template-columns: minmax(320px, 1.15fr) minmax(320px, 1.15fr) minmax(132px, 0.38fr);
+        align-items: stretch;
     }
 
     .settings-shift-create-column-left {
@@ -2310,7 +2393,20 @@ body.route-my-space {
     }
 
     .settings-shift-create-actions {
-        align-content: center;
+        align-self: stretch;
+        justify-self: stretch;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: flex-end;
+        gap: 0.45rem;
+        padding-bottom: 0.08rem;
+    }
+
+    .settings-shift-create-actions .admin-action-link {
+        width: min(100%, 138px);
+        max-width: 138px;
+        justify-self: auto;
     }
 }
 
@@ -2397,6 +2493,26 @@ body.route-my-space {
 .settings-create-row .settings-inline-actions,
 .settings-edit-drawer .settings-inline-actions {
     justify-self: start;
+}
+
+.settings-edit-drawer .settings-inline-actions {
+    grid-column: 1 / -1;
+    justify-self: center;
+    align-self: end;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    margin-top: 0.2rem;
+}
+
+.settings-edit-drawer .settings-inline-actions .admin-action-link {
+    min-width: 106px;
+    padding: 0.42rem 0.58rem;
+    font-size: 0.78rem;
 }
 
 .settings-meta-inline {
@@ -2497,7 +2613,9 @@ body.route-my-space {
 
 [data-user-create-row] .settings-inline-actions .admin-action-link,
 [data-shift-create-row] .settings-inline-actions .admin-action-link {
-    min-width: 140px;
+    min-width: 118px;
+    padding: 0.46rem 0.62rem;
+    font-size: 0.8rem;
 }
 
 .settings-card,
@@ -2623,7 +2741,7 @@ body.route-my-space {
 }
 
 .settings-picker-stack.is-open {
-    z-index: 25000;
+    z-index: 65000;
 }
 
 .settings-picker-row {
@@ -2636,25 +2754,44 @@ body.route-my-space {
 .settings-picker-toggle {
     min-height: 44px;
     padding: 0.55rem 0.8rem;
-    border-radius: var(--border-radius-md);
-    border: 1px solid rgba(157, 121, 16, 0.32);
-    background: #fff;
-    color: var(--color-text);
+    border-radius: var(--border-radius-full);
+    border: 1px solid rgba(157, 121, 16, 0.58);
+    background: #ffffff;
+    color: #1f1f1f;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.98),
+        0 4px 8px rgba(0, 0, 0, 0.08);
     font: inherit;
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-bold);
     cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease,
+        filter 0.2s ease;
 }
 
-.settings-picker-toggle:hover {
-    background: #efdbab;
+.settings-picker-toggle:hover,
+.settings-picker-toggle:focus-visible,
+.settings-picker-stack.is-open .settings-picker-toggle {
+    background: var(--color-primary);
+    color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.20);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        0 8px 16px rgba(0, 0, 0, 0.14);
+    transform: translateY(-2px);
+    outline: none;
 }
 
 .settings-picker-popover {
     position: absolute;
     top: calc(100% + 0.35rem);
     left: 0;
-    z-index: 25010;
+    z-index: 72000;
     width: min(320px, calc(100vw - 48px));
     max-height: min(64vh, 560px);
     overflow: auto;
@@ -2663,6 +2800,29 @@ body.route-my-space {
     background: #fff;
     border: 1px solid rgba(157, 121, 16, 0.25);
     box-shadow: 0 14px 26px rgba(0, 0, 0, 0.14);
+}
+
+.settings-create-row,
+.settings-create-row .settings-list-cols,
+.settings-shift-create-column,
+.settings-field {
+    position: relative;
+}
+
+.settings-create-row:has(.settings-picker-stack.is-open),
+.settings-create-row .settings-list-cols:has(.settings-picker-stack.is-open),
+.settings-shift-create-column:has(.settings-picker-stack.is-open),
+.settings-field:has(.settings-picker-stack.is-open),
+.settings-create-row:has(.settings-multiselect.is-open),
+.settings-create-row .settings-list-cols:has(.settings-multiselect.is-open),
+.settings-field:has(.settings-multiselect.is-open) {
+    z-index: 64000;
+    overflow: visible;
+}
+
+.settings-edit-drawer {
+    position: relative;
+    overflow: visible !important;
 }
 
 .settings-picker-popover[hidden] {
@@ -2892,6 +3052,82 @@ body.route-my-space {
     background: rgba(255, 255, 255, 0.96);
 }
 
+.settings-panel .settings-field select:not([multiple]) {
+    border-radius: var(--border-radius-full);
+    border: 1px solid rgba(157, 121, 16, 0.58);
+    background-color: #ffffff;
+    color: #1f1f1f;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.98),
+        0 4px 8px rgba(0, 0, 0, 0.08);
+    font-weight: var(--font-weight-bold);
+    padding-right: 2rem;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #9d7910 50%),
+        linear-gradient(135deg, #9d7910 50%, transparent 50%),
+        linear-gradient(to right, rgba(157, 121, 16, 0.24), rgba(157, 121, 16, 0.24));
+    background-position:
+        calc(100% - 18px) calc(50% - 3px),
+        calc(100% - 12px) calc(50% - 3px),
+        calc(100% - 34px) 50%;
+    background-size: 6px 6px, 6px 6px, 1px 60%;
+    background-repeat: no-repeat;
+}
+
+.settings-panel .settings-field select:not([multiple]):hover,
+.settings-panel .settings-field select:not([multiple]):focus-visible {
+    border-color: rgba(0, 0, 0, 0.20);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        0 8px 16px rgba(0, 0, 0, 0.14);
+    outline: none;
+}
+
+.settings-panel .settings-field select:not([multiple]) option {
+    padding: 0.3rem 0.45rem;
+    font-weight: var(--font-weight-semibold);
+    background: #ffffff;
+    color: #1f1f1f;
+}
+
+.settings-panel .settings-field select:not([multiple]) option:checked {
+    background: var(--color-primary);
+    color: #ffffff;
+}
+
+@media (min-width: 1280px) {
+    .settings-list-cols-user-create {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        align-items: end;
+    }
+
+    .settings-list-cols-user-edit {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        align-items: end;
+    }
+
+    [data-user-create-row] .settings-inline-actions,
+    .settings-edit-drawer .settings-inline-actions {
+        grid-column: auto;
+        width: 100%;
+        margin-top: 0;
+        justify-self: stretch;
+        justify-content: stretch;
+        align-self: end;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 0.35rem;
+    }
+
+    [data-user-create-row] .settings-inline-actions .admin-action-link,
+    .settings-edit-drawer .settings-inline-actions .admin-action-link {
+        width: auto;
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+    }
+}
+
 /* =============================================
     DIRECTORY
    ============================================= */
@@ -3048,6 +3284,8 @@ body.route-my-space {
 
 .site-icon-btn:hover,
 .site-icon-btn:focus-visible,
+.dashboard-sidebar-department-button:hover,
+.dashboard-sidebar-department-button:focus-visible,
 .dashboard-sidebar-user-chip:hover,
 .dashboard-sidebar-user-chip:focus-visible,
 .dashboard-sidebar-shift-chip:hover,
@@ -3169,7 +3407,7 @@ body.route-my-space {
 .dashboard-modal .company-card-action:focus-visible,
 .crud-modal .company-card-action:focus-visible {
     background: var(--color-primary);
-    color: #2b2107;
+    color: #ffffff;
     border-color: rgba(0, 0, 0, 0.20);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 1),
@@ -3185,7 +3423,7 @@ body.route-my-space {
 .dashboard-modal .dashboard-sidebar-control-button.is-active,
 .crud-modal .dashboard-sidebar-control-button.is-active {
     background: var(--color-primary);
-    color: #2b2107;
+    color: #ffffff;
     border-color: rgba(0, 0, 0, 0.20);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 1),
@@ -3231,6 +3469,7 @@ body.route-my-space {
 
 .dashboard-sidebar-user-chip.is-active,
 .dashboard-sidebar-shift-chip.is-active,
+.dashboard-sidebar-department-button.is-active,
 .dashboard-sidebar-control-button.is-active,
 .dashboard-sidebar-control-button[aria-pressed="true"],
 .dashboard-calendar-navigator-pill.is-active,
@@ -3253,6 +3492,31 @@ body.route-my-space {
         0 8px 16px rgba(0, 0, 0, 0.14) !important;
 }
 
+/* Keep control and navigator labels readable on active/hover golden backgrounds. */
+.dashboard-sidebar-control-button:hover,
+.dashboard-sidebar-control-button:focus-visible,
+.dashboard-sidebar-control-button.is-active,
+.dashboard-sidebar-control-button[aria-pressed="true"],
+.dashboard-sidebar-user-chip:hover,
+.dashboard-sidebar-user-chip:focus-visible,
+.dashboard-sidebar-user-chip.is-active,
+.dashboard-sidebar-shift-chip:hover,
+.dashboard-sidebar-shift-chip:focus-visible,
+.dashboard-sidebar-shift-chip.is-active,
+.dashboard-sidebar-department-button:hover,
+.dashboard-sidebar-department-button:focus-visible,
+.dashboard-sidebar-department-button.is-active,
+.dashboard-calendar-navigator-pill:hover,
+.dashboard-calendar-navigator-pill:focus-visible,
+.dashboard-calendar-navigator-pill.is-active,
+.dashboard-calendar-navigator-pill[aria-pressed="true"],
+.dashboard-calendar-navigator-action:hover,
+.dashboard-calendar-navigator-action:focus-visible,
+.dashboard-calendar-navigator-action.is-active,
+.dashboard-calendar-navigator-action[aria-pressed="true"] {
+    color: #ffffff !important;
+}
+
 /* Assignment employee cards: centered content */
 .settings-assignment-employee-item {
     text-align: center;
@@ -3268,4 +3532,124 @@ body.route-my-space {
 
 .settings-assignment-employee-stats {
     justify-content: center;
+}
+
+/* Keep locked planner chips visually disabled even on pointer hover. */
+.dashboard-sidebar-user-chip.is-locked,
+.dashboard-sidebar-user-card.is-locked .dashboard-sidebar-user-chip,
+.dashboard-sidebar-user-chip.is-locked:hover,
+.dashboard-sidebar-user-card.is-locked .dashboard-sidebar-user-chip:hover,
+.dashboard-sidebar-user-chip.is-locked:focus-visible,
+.dashboard-sidebar-user-card.is-locked .dashboard-sidebar-user-chip:focus-visible {
+    background: #ffffff !important;
+    color: #6b6b6b !important;
+    border-color: rgba(157, 121, 16, 0.42) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.98),
+        0 4px 8px rgba(0, 0, 0, 0.08) !important;
+    transform: none !important;
+}
+
+/* Keep icons white on golden interactive states. */
+:where(
+    .site-icon-btn,
+    .dashboard-sidebar-department-button,
+    .dashboard-sidebar-user-chip,
+    .dashboard-sidebar-shift-chip,
+    .dashboard-sidebar-control-button,
+    .dashboard-calendar-navigator-pill,
+    .dashboard-calendar-navigator-action,
+    .settings-tab,
+    .schedule-pill,
+    .admin-action-link,
+    .admin-action-link-secondary,
+    .company-card-action,
+    .settings-assignment-employee-item,
+    .settings-auto-assign-preset
+):not([disabled]):not([aria-disabled="true"]):hover :is(img, svg),
+:where(
+    .site-icon-btn,
+    .dashboard-sidebar-department-button,
+    .dashboard-sidebar-user-chip,
+    .dashboard-sidebar-shift-chip,
+    .dashboard-sidebar-control-button,
+    .dashboard-calendar-navigator-pill,
+    .dashboard-calendar-navigator-action,
+    .settings-tab,
+    .schedule-pill,
+    .admin-action-link,
+    .admin-action-link-secondary,
+    .company-card-action,
+    .settings-assignment-employee-item,
+    .settings-auto-assign-preset
+):not([disabled]):not([aria-disabled="true"]):focus-visible :is(img, svg),
+:where(
+    .site-icon-btn,
+    .dashboard-sidebar-department-button,
+    .dashboard-sidebar-user-chip,
+    .dashboard-sidebar-shift-chip,
+    .dashboard-sidebar-control-button,
+    .dashboard-calendar-navigator-pill,
+    .dashboard-calendar-navigator-action,
+    .settings-tab,
+    .schedule-pill,
+    .admin-action-link,
+    .admin-action-link-secondary,
+    .company-card-action,
+    .settings-assignment-employee-item,
+    .settings-auto-assign-preset
+):not([disabled]):not([aria-disabled="true"]):active :is(img, svg),
+.dashboard-sidebar-department-button.is-active :is(img, svg),
+.dashboard-sidebar-user-chip.is-active :is(img, svg),
+.dashboard-sidebar-shift-chip.is-active :is(img, svg),
+.dashboard-sidebar-control-button.is-active :is(img, svg),
+.dashboard-sidebar-control-button[aria-pressed="true"] :is(img, svg),
+.dashboard-calendar-navigator-pill.is-active :is(img, svg),
+.dashboard-calendar-navigator-pill[aria-pressed="true"] :is(img, svg),
+.dashboard-calendar-navigator-action.is-active :is(img, svg),
+.dashboard-calendar-navigator-action[aria-pressed="true"] :is(img, svg),
+.settings-tab.is-active :is(img, svg),
+.settings-tab[aria-selected="true"] :is(img, svg),
+.schedule-pill.is-active :is(img, svg),
+.schedule-pill[aria-pressed="true"] :is(img, svg),
+.company-card-action.is-active :is(img, svg),
+.settings-assignment-employee-item.is-active :is(img, svg),
+.settings-auto-assign-preset.is-active :is(img, svg),
+.settings-auto-assign-preset[aria-pressed="true"] :is(img, svg) {
+    filter: brightness(0) invert(1) !important;
+}
+
+/* Modal actions: keep the same gold + white text behavior as other buttons. */
+:where(
+    .dashboard-modal,
+    .crud-modal
+) :is(
+    .admin-action-link,
+    .admin-action-link-secondary,
+    .settings-tab,
+    .schedule-pill,
+    .dashboard-sidebar-control-button,
+    .company-card-action,
+    .settings-assignment-employee-item,
+    .settings-auto-assign-preset
+):is(:hover, :focus-visible, :active) {
+    color: #ffffff !important;
+}
+
+:where(
+    .dashboard-modal,
+    .crud-modal
+) :is(
+    .settings-tab.is-active,
+    .settings-tab[aria-selected="true"],
+    .schedule-pill.is-active,
+    .schedule-pill[aria-pressed="true"],
+    .dashboard-sidebar-control-button.is-active,
+    .dashboard-sidebar-control-button[aria-pressed="true"],
+    .company-card-action.is-active,
+    .settings-assignment-employee-item.is-active,
+    .settings-auto-assign-preset.is-active,
+    .settings-auto-assign-preset[aria-pressed="true"]
+) {
+    color: #ffffff !important;
 }

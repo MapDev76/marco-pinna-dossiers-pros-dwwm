@@ -12,7 +12,7 @@ html, body {
 }
 
 body {
-    background: #f4f5f7;
+    background: #06142b;
     font-family: var(--font-primary);
     color: var(--color-text);
 }
@@ -54,6 +54,11 @@ a {
 button {
     cursor: pointer;
     font-family: inherit;
+}
+
+/* Global: make button icons white on interactive states. */
+:where(button, [role="button"], a[class*="btn"], a[class*="button"]):not([disabled]):not([aria-disabled="true"]):is(:hover, :focus-visible, :active) :is(img, svg) {
+    filter: brightness(0) invert(1) !important;
 }
 
 /* Image styles */
