@@ -1325,6 +1325,16 @@ body.route-my-space {
     white-space: nowrap;
 }
 
+.employee-document-actions-inline {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.35rem;
+}
+
+.employee-document-actions-inline form {
+    margin: 0;
+}
+
 .employee-table-compact {
     min-width: 0;
 }
@@ -1341,30 +1351,50 @@ body.route-my-space {
     position: fixed;
     inset: 0;
     z-index: 12050;
-    display: grid;
-    justify-items: center;
-    align-items: start;
-    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.8rem;
     background: rgba(0, 0, 0, 0.52);
     backdrop-filter: blur(8px);
-    overflow-y: auto;
+    overflow: auto;
+}
+
+.employee-attendance-modal[data-employee-messages-modal],
+.employee-attendance-modal[data-employee-documents-inbox-modal] {
+    align-items: stretch;
 }
 
 .employee-attendance-dialog {
     width: min(680px, calc(100vw - 1.6rem));
-    display: grid;
-    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
     padding: 1rem;
     border-radius: 28px;
-    border: 1px solid rgba(157, 121, 16, 0.18);
-    background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
-    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+    border-top: 1px solid rgba(206, 226, 255, 0.22);
+    border-left: 1px solid rgba(206, 226, 255, 0.18);
+    border-right: 0;
+    border-bottom: 0;
+    background: linear-gradient(180deg, #122b4b 0%, #081a34 100%);
+    box-shadow:
+        0 30px 58px rgba(0, 0, 0, 0.34),
+        0 0 0 1px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(206, 226, 255, 0.18);
     overflow-x: hidden;
-    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 1.6rem);
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
+    color: #eef4ff;
 }
 
 .employee-attendance-dialog-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+    flex-wrap: wrap;
     align-items: flex-start;
 }
 
@@ -1378,12 +1408,25 @@ body.route-my-space {
 
 .employee-attendance-dialog-head p {
     margin: 0.25rem 0 0;
-    color: rgba(17, 24, 39, 0.6);
+    color: rgba(224, 235, 255, 0.82);
+}
+
+.employee-attendance-dialog-head h3,
+.employee-attendance-dialog .employee-card-head h4 {
+    color: #f3f8ff;
+}
+
+.employee-attendance-dialog .employee-stage-eyebrow {
+    color: rgba(221, 232, 251, 0.72);
+}
+
+.employee-attendance-dialog .admin-form label {
+    color: #e6efff;
 }
 
 .employee-sign-form {
     grid-template-columns: 1fr;
-    gap: 0.8rem;
+    gap: 0.72rem;
 }
 
 .employee-signature-pad-shell {
@@ -1419,6 +1462,25 @@ body.route-my-space {
     flex-wrap: wrap;
 }
 
+.employee-attendance-dialog .admin-form input,
+.employee-attendance-dialog .admin-form select,
+.employee-attendance-dialog .admin-form textarea {
+    background: rgba(247, 250, 255, 0.98);
+    border-color: rgba(139, 175, 220, 0.45);
+}
+
+.employee-attendance-dialog .admin-action-link {
+    background: #0c1730;
+    color: #f6fbff;
+    border-color: rgba(154, 184, 227, 0.52) !important;
+}
+
+.employee-attendance-dialog .admin-action-link-secondary {
+    background: rgba(233, 241, 255, 0.92);
+    color: #1f2f4d;
+    border-color: rgba(154, 184, 227, 0.52) !important;
+}
+
 .employee-documents-dialog {
     width: min(820px, calc(100vw - 1.6rem));
 }
@@ -1451,23 +1513,111 @@ body.route-my-space {
 }
 
 .employee-documents-inbox-dialog {
-    width: min(1040px, calc(100vw - 1.6rem));
-    max-height: calc(100vh - 2rem);
+    width: min(1320px, calc(100vw - 1.6rem));
+}
+
+.employee-messages-dialog {
+    width: calc(100vw - 1.6rem);
+    max-width: calc(100vw - 1.6rem);
+    min-height: calc(100dvh - 1.6rem);
+    max-height: calc(100dvh - 1.6rem);
+    border-radius: 24px;
+}
+
+.employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-dialog,
+.employee-attendance-modal[data-employee-messages-modal] .employee-messages-dialog {
+    min-height: calc(100dvh - 1.6rem);
+}
+
+.employee-modal-head-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.employee-modal-head-actions .dashboard-modal-close {
+    margin-left: 0;
+}
+
+.employee-messages-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    flex: 0 0 auto;
+    gap: 0.7rem;
+}
+
+.employee-messages-sections {
+    border-top: 1px solid rgba(157, 121, 16, 0.24);
+    padding-top: 0.6rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+}
+
+.employee-message-list-launcher {
+    padding: 0.7rem;
+    border-radius: 14px;
+    border: 1px solid rgba(166, 193, 236, 0.32);
+    background: rgba(18, 36, 63, 0.36);
+}
+
+.employee-messages-list-form {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.employee-messages-table-wrap {
+    max-height: none;
+    height: 100%;
+    min-height: 260px;
+}
+
+.employee-attendance-modal[data-employee-messages-modal].is-expanded .employee-messages-table-wrap {
+    min-height: 360px;
 }
 
 .employee-documents-inbox-sections {
     display: grid;
     gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .employee-documents-inbox-section {
     display: grid;
     gap: 0.55rem;
+    min-width: 0;
 }
 
 .employee-documents-table-wrap {
-    max-height: 240px;
-    overflow: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    min-width: 0;
+}
+
+.employee-attendance-dialog .employee-table-compact {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.employee-attendance-dialog .employee-table-compact th,
+.employee-attendance-dialog .employee-table-compact td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
+}
+
+.employee-attendance-dialog .employee-table-compact th:first-child,
+.employee-attendance-dialog .employee-table-compact td:first-child {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .employee-documents-request-form {

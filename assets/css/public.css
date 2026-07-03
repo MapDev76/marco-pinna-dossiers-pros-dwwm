@@ -1,0 +1,15 @@
+/* =============================================
+   PUBLIC.CSS - LIGHTWEIGHT BUNDLE
+   =============================================
+   Public routes (home/login/legal/contacts/creator)
+   without dashboard planner and admin-heavy styles.
+   ============================================= */
+
+@import url('variables.css');
+@import url('base.css');
+@import url('layout.css');
+@import url('navbar.css');
+@import url('components.css');
+@import url('flash.css');
+@import url('responsive.css');
+@import url('home.css');

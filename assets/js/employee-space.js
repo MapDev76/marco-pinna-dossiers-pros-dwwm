@@ -355,22 +355,123 @@
     modalControllers.push(documentModal);
   }
 
-  const employeeDocumentsModal = initSimpleModal({
-    modalSelector: '[data-employee-documents-modal]',
-    openButtonsSelector: '[data-modal-target="employee-documents-modal"], [data-employee-documents-modal-open]',
-    closeButtonsSelector: '[data-employee-documents-modal-close]',
+  const employeeMessagesModal = initSimpleModal({
+    modalSelector: '[data-employee-messages-modal]',
+    openButtonsSelector: '[data-modal-target="employee-messages-modal"], [data-employee-messages-modal-open]',
+    closeButtonsSelector: '[data-employee-messages-modal-close]',
   });
-  if (employeeDocumentsModal) {
-    modalControllers.push(employeeDocumentsModal);
+  if (employeeMessagesModal) {
+    modalControllers.push(employeeMessagesModal);
+  }
+
+  const employeeMessagesModalNode = document.querySelector('[data-employee-messages-modal]');
+  const employeeMessagesExpandButton = employeeMessagesModalNode
+    ? employeeMessagesModalNode.querySelector('[data-employee-messages-expand]')
+    : null;
+  const employeeMessagesExpandLabel = employeeMessagesExpandButton
+    ? String(employeeMessagesExpandButton.getAttribute('data-label-expand') || 'Expand').trim()
+    : 'Expand';
+  const employeeMessagesCollapseLabel = employeeMessagesExpandButton
+    ? String(employeeMessagesExpandButton.getAttribute('data-label-collapse') || 'Collapse').trim()
+    : 'Collapse';
+  const setEmployeeMessagesExpandedState = (expanded) => {
+    if (!employeeMessagesModalNode || !employeeMessagesExpandButton) {
+      return;
+    }
+
+    employeeMessagesModalNode.classList.toggle('is-expanded', expanded);
+    employeeMessagesExpandButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    employeeMessagesExpandButton.textContent = expanded ? employeeMessagesCollapseLabel : employeeMessagesExpandLabel;
+  };
+
+  if (employeeMessagesModalNode && employeeMessagesExpandButton) {
+    setEmployeeMessagesExpandedState(false);
+
+    employeeMessagesExpandButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      const isExpanded = employeeMessagesModalNode.classList.contains('is-expanded');
+      setEmployeeMessagesExpandedState(!isExpanded);
+    });
+
+    const closeMessagesButtons = Array.from(employeeMessagesModalNode.querySelectorAll('[data-employee-messages-modal-close]'));
+    closeMessagesButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setEmployeeMessagesExpandedState(false);
+      });
+    });
   }
 
   const employeeDocumentsInboxModal = initSimpleModal({
     modalSelector: '[data-employee-documents-inbox-modal]',
-    openButtonsSelector: '[data-employee-documents-inbox-open]',
+    openButtonsSelector: '[data-modal-target="employee-documents-inbox-modal"], [data-employee-documents-inbox-open]',
     closeButtonsSelector: '[data-employee-documents-inbox-close]',
   });
   if (employeeDocumentsInboxModal) {
     modalControllers.push(employeeDocumentsInboxModal);
+  }
+
+  const employeeMessagesListModal = document.querySelector('[data-employee-messages-list-modal]');
+  if (employeeMessagesListModal) {
+    const openButtons = Array.from(document.querySelectorAll('[data-employee-messages-list-open]'));
+    const closeButtons = Array.from(employeeMessagesListModal.querySelectorAll('[data-employee-messages-list-close]'));
+    const titleNode = employeeMessagesListModal.querySelector('[data-employee-messages-list-title]');
+    const sections = Array.from(employeeMessagesListModal.querySelectorAll('[data-message-list-scope]'));
+    let isOpen = !employeeMessagesListModal.hidden;
+
+    const setScope = (scope) => {
+      const normalized = String(scope || 'incoming').toLowerCase() === 'outgoing' ? 'outgoing' : 'incoming';
+      const incomingTitle = String(employeeMessagesListModal.getAttribute('data-title-incoming') || 'Received messages').trim();
+      const outgoingTitle = String(employeeMessagesListModal.getAttribute('data-title-outgoing') || 'Sent messages').trim();
+
+      sections.forEach((section) => {
+        section.hidden = section.getAttribute('data-message-list-scope') !== normalized;
+      });
+
+      if (titleNode) {
+        titleNode.textContent = normalized === 'outgoing' ? outgoingTitle : incomingTitle;
+      }
+    };
+
+    const openModal = (scope) => {
+      setScope(scope);
+      employeeMessagesListModal.hidden = false;
+      document.documentElement.classList.add('modal-open');
+      document.body.classList.add('modal-open');
+      isOpen = true;
+    };
+
+    const closeModal = () => {
+      employeeMessagesListModal.hidden = true;
+      document.documentElement.classList.remove('modal-open');
+      document.body.classList.remove('modal-open');
+      isOpen = false;
+    };
+
+    openButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        openModal(button.getAttribute('data-scope'));
+      });
+    });
+
+    closeButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        closeModal();
+      });
+    });
+
+    employeeMessagesListModal.addEventListener('click', (event) => {
+      if (event.target === employeeMessagesListModal) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && isOpen && !employeeMessagesListModal.hidden) {
+        closeModal();
+      }
+    });
   }
 
   scrollButtons.forEach((button) => {

@@ -42,7 +42,8 @@
     width: 100%;
     max-width: min(1240px, calc(100% - 20px));
     max-height: calc(100vh - 20px);
-    overflow: auto;
+    min-height: min(680px, calc(100vh - 20px));
+    overflow: hidden;
     padding: var(--spacing-md);
     border-radius: 30px;
     background: linear-gradient(180deg, #122b4b 0%, #081a34 100%);
@@ -56,6 +57,9 @@
         inset 0 1px 0 rgba(206, 226, 255, 0.18);
     box-sizing: border-box;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
 }
 
 .crud-modal-head {
@@ -70,6 +74,10 @@
 .crud-modal-body {
     display: grid;
     gap: var(--spacing-md);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    align-content: start;
 }
 
 .crud-panel {

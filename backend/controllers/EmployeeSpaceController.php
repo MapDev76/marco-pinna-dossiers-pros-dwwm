@@ -335,6 +335,102 @@ foreach ($incomingDocuments as $incomingDocument) {
     }
 }
 
+$currentRole = (string) ($currentUser['role'] ?? 'employee');
+$messageRecipients = array_values(array_filter(
+    $documentShareRecipients,
+    static function (array $recipient) use ($currentRole): bool {
+        $role = (string) ($recipient['role'] ?? 'employee');
+        if ($currentRole === 'employee') {
+            return in_array($role, ['admin', 'department_manager', 'super_admin'], true);
+        }
+        return in_array($role, ['employee', 'department_manager', 'admin', 'super_admin'], true);
+    }
+));
+
+$employeeMessageRequestTypes = $currentRole === 'employee'
+    ? ['leave', 'permission', 'document_signature']
+    : ['shift_coverage', 'leave', 'permission', 'document_signature'];
+
+$openShiftChoices = [];
+if (in_array($currentRole, ['admin', 'department_manager'], true) && $employeeCompanyId > 0) {
+    try {
+        $openShiftChoicesStatement = $pdo->prepare(
+            'SELECT s.id,
+                    s.name,
+                    s.start_time,
+                    s.end_time,
+                    s.kind,
+                    d.name AS department_name
+             FROM shifts s
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE d.company_id = :company_id
+               AND s.kind IN ("work", "overtime")
+             ORDER BY d.name ASC, s.name ASC, s.start_time ASC
+             LIMIT 200'
+        );
+        $openShiftChoicesStatement->execute(['company_id' => $employeeCompanyId]);
+        $openShiftChoices = $openShiftChoicesStatement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        $openShiftChoices = [];
+    }
+}
+$openShiftChoiceIds = array_map(static fn (array $row): int => (int) ($row['id'] ?? 0), $openShiftChoices);
+
+$incomingMessages = [];
+$outgoingMessages = [];
+try {
+    $incomingMessagesStatement = $pdo->prepare(
+        'SELECT r.id,
+                r.type,
+                r.title,
+                r.message,
+                r.status,
+                r.shift_id,
+                r.document_id,
+                r.created_at,
+                CONCAT(sender.first_name, " ", sender.last_name) AS sender_name,
+                d.file_name AS document_name,
+                s.name AS shift_name
+         FROM requests r
+         INNER JOIN users sender ON sender.id = r.user_id
+         LEFT JOIN documents d ON d.id = r.document_id
+         LEFT JOIN shifts s ON s.id = r.shift_id
+         WHERE r.recipient_id = :user_id
+                     AND r.document_id IS NULL
+         ORDER BY r.created_at DESC, r.id DESC
+         LIMIT 120'
+    );
+    $incomingMessagesStatement->execute(['user_id' => (int) $currentUser['id']]);
+    $incomingMessages = $incomingMessagesStatement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $outgoingMessagesStatement = $pdo->prepare(
+        'SELECT r.id,
+                r.type,
+                r.title,
+                r.message,
+                r.status,
+                r.shift_id,
+                r.document_id,
+                r.created_at,
+                CONCAT(recipient.first_name, " ", recipient.last_name) AS recipient_name,
+                d.file_name AS document_name,
+                s.name AS shift_name
+         FROM requests r
+         INNER JOIN users recipient ON recipient.id = r.recipient_id
+         LEFT JOIN documents d ON d.id = r.document_id
+         LEFT JOIN shifts s ON s.id = r.shift_id
+         WHERE r.user_id = :user_id
+                     AND r.document_id IS NULL
+         ORDER BY r.created_at DESC, r.id DESC
+         LIMIT 120'
+    );
+    $outgoingMessagesStatement->execute(['user_id' => (int) $currentUser['id']]);
+    $outgoingMessages = $outgoingMessagesStatement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+} catch (Throwable $e) {
+    $incomingMessages = [];
+    $outgoingMessages = [];
+}
+
 $buildShiftDateTime = static function (string $workDate, ?string $timeValue) use ($todayDate): ?DateTimeImmutable {
     $normalizedTime = trim((string) $timeValue);
     if ($workDate === '' || $normalizedTime === '') {
@@ -643,6 +739,196 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         redirectTo('my-space', ['focus' => 'employee-received-documents']);
+    }
+
+    if ($action === 'message_bulk_update') {
+        $operation = strtolower(trim((string) ($_POST['operation'] ?? '')));
+        $scope = strtolower(trim((string) ($_POST['scope'] ?? 'incoming')));
+        $requestIdsRaw = $_POST['request_ids'] ?? [];
+        $requestIds = array_values(array_unique(array_filter(array_map('intval', is_array($requestIdsRaw) ? $requestIdsRaw : [$requestIdsRaw]))));
+
+        if (empty($requestIds)) {
+            setFlash('error', t('employee.no_messages_selected', ['fallback' => 'No messages selected.']));
+            redirectTo('my-space', ['focus' => 'employee-received-documents']);
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($requestIds), '?'));
+        $affected = 0;
+
+        if ($scope === 'incoming' && $operation === 'read') {
+            $sql = 'UPDATE requests
+                    SET status = "read", updated_at = CURRENT_TIMESTAMP
+                    WHERE recipient_id = ?
+                      AND document_id IS NULL
+                      AND id IN (' . $placeholders . ')
+                      AND status IN ("pending", "unread")';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array_merge([(int) $currentUser['id']], $requestIds));
+            $affected = $stmt->rowCount();
+        } elseif ($scope === 'incoming' && $operation === 'delete') {
+            $sql = 'DELETE FROM requests
+                    WHERE recipient_id = ?
+                      AND document_id IS NULL
+                      AND id IN (' . $placeholders . ')';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array_merge([(int) $currentUser['id']], $requestIds));
+            $affected = $stmt->rowCount();
+        } elseif ($scope === 'outgoing' && $operation === 'delete') {
+            $sql = 'DELETE FROM requests
+                    WHERE user_id = ?
+                      AND document_id IS NULL
+                      AND id IN (' . $placeholders . ')';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array_merge([(int) $currentUser['id']], $requestIds));
+            $affected = $stmt->rowCount();
+        }
+
+        if ($affected > 0) {
+            setFlash('success', t('employee.messages_updated', ['fallback' => 'Messages updated successfully.']));
+        } else {
+            setFlash('error', t('employee.no_message_changes', ['fallback' => 'No changes applied to selected messages.']));
+        }
+
+        redirectTo('my-space', ['focus' => 'employee-received-documents']);
+    }
+
+    if ($action === 'send_employee_message') {
+        $title = trim((string) ($_POST['title'] ?? ''));
+        $message = trim((string) ($_POST['message'] ?? ''));
+        $messageKind = strtolower(trim((string) ($_POST['message_kind'] ?? 'request')));
+        $requestType = strtolower(trim((string) ($_POST['request_type'] ?? 'leave')));
+        $shiftId = (int) ($_POST['shift_id'] ?? 0);
+        $requireSignature = in_array((string) ($_POST['require_signature'] ?? ''), ['1', 'true', 'on'], true);
+        $recipientIdsRaw = $_POST['recipient_ids'] ?? [];
+        $recipientIds = array_values(array_filter(array_map('intval', is_array($recipientIdsRaw) ? $recipientIdsRaw : [$recipientIdsRaw])));
+
+        $allowedRecipientIds = [];
+        foreach ($messageRecipients as $recipientRow) {
+            $recipientId = (int) ($recipientRow['id'] ?? 0);
+            if ($recipientId > 0) {
+                $allowedRecipientIds[$recipientId] = true;
+            }
+        }
+        $recipientIds = array_values(array_filter($recipientIds, static fn (int $id): bool => isset($allowedRecipientIds[$id])));
+        if (empty($recipientIds)) {
+            setFlash('error', t('employee.no_recipient_available', ['fallback' => 'No recipient selected.']));
+            redirectTo('my-space');
+        }
+
+        $allowedTypes = ['leave', 'permission', 'document_signature'];
+        if (in_array($currentRole, ['admin', 'department_manager'], true)) {
+            $allowedTypes[] = 'shift_coverage';
+        }
+
+        $resolvedType = $messageKind === 'notification' ? 'notification' : $requestType;
+        if (!in_array($resolvedType, array_merge(['notification'], $allowedTypes), true)) {
+            $resolvedType = in_array('leave', $allowedTypes, true) ? 'leave' : 'notification';
+        }
+
+        $documentId = null;
+        $file = $_FILES['document_file'] ?? null;
+        $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        $hasUpload = $uploadError !== UPLOAD_ERR_NO_FILE;
+
+        if ($hasUpload && $uploadError !== UPLOAD_ERR_OK) {
+            setFlash('error', t('employee.upload_missing', ['fallback' => 'Please choose a valid document to upload.']));
+            redirectTo('my-space');
+        }
+
+        if ($requireSignature) {
+            if (!$hasUpload) {
+                setFlash('error', t('employee.upload_missing', ['fallback' => 'Attach a document before requesting a signature.']));
+                redirectTo('my-space');
+            }
+            $resolvedType = 'document_signature';
+        }
+
+        if ($message === '') {
+            setFlash('error', t('employee.enter_message', ['fallback' => 'Please enter a message.']));
+            redirectTo('my-space');
+        }
+
+        if ($title === '') {
+            $title = $messageKind === 'notification'
+                ? t('crud.message_notification', ['fallback' => 'Notification'])
+                : t('crud.message_request', ['fallback' => 'Request']);
+        }
+
+        if ($resolvedType === 'shift_coverage' && !in_array($shiftId, $openShiftChoiceIds, true)) {
+            $shiftId = 0;
+        }
+
+        if ($hasUpload) {
+            $tmpPath = trim((string) ($file['tmp_name'] ?? ''));
+            $fileName = trim((string) ($file['name'] ?? 'document'));
+            $fileSize = (int) ($file['size'] ?? 0);
+
+            if ($tmpPath === '' || !is_uploaded_file($tmpPath) || $fileSize <= 0 || $fileSize > (8 * 1024 * 1024)) {
+                setFlash('error', t('employee.upload_too_large', ['fallback' => 'Document size must be between 1 byte and 8 MB.']));
+                redirectTo('my-space');
+            }
+
+            $safeBaseName = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $fileName);
+            $safeBaseName = trim((string) $safeBaseName, '-.');
+            if ($safeBaseName === '') {
+                $safeBaseName = 'document-' . appNow()->format('Ymd-His');
+            }
+
+            $payload = @file_get_contents($tmpPath);
+            if (!is_string($payload) || $payload === '') {
+                setFlash('error', t('employee.upload_read_error', ['fallback' => 'Unable to read the uploaded document.']));
+                redirectTo('my-space');
+            }
+
+            $detectedMime = 'application/octet-stream';
+            if (function_exists('finfo_open')) {
+                $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+                if ($finfo) {
+                    $mimeProbe = @finfo_file($finfo, $tmpPath);
+                    if (is_string($mimeProbe) && trim($mimeProbe) !== '') {
+                        $detectedMime = trim($mimeProbe);
+                    }
+                    @finfo_close($finfo);
+                }
+            }
+
+            $insertDocumentStatement = $pdo->prepare(
+                'INSERT INTO documents (user_id, document_type, file_name, file_path, file_blob, file_mime_type, status)
+                 VALUES (:user_id, :document_type, :file_name, :file_path, :file_blob, :file_mime_type, :status)'
+            );
+            $insertDocumentStatement->execute([
+                'user_id' => (int) $currentUser['id'],
+                'document_type' => 'other',
+                'file_name' => $safeBaseName,
+                'file_path' => '',
+                'file_blob' => $payload,
+                'file_mime_type' => $detectedMime,
+                'status' => 'valid',
+            ]);
+            $documentId = (int) $pdo->lastInsertId();
+        }
+
+        $requestStatus = in_array($resolvedType, ['notification', 'document_signature'], true) ? 'unread' : 'pending';
+        $insertRequestStatement = $pdo->prepare(
+            'INSERT INTO requests (user_id, recipient_id, type, title, message, status, shift_id, document_id)
+             VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :shift_id, :document_id)'
+        );
+
+        foreach ($recipientIds as $recipientId) {
+            $insertRequestStatement->execute([
+                'user_id' => (int) $currentUser['id'],
+                'recipient_id' => (int) $recipientId,
+                'type' => $resolvedType,
+                'title' => $title,
+                'message' => $message,
+                'status' => $requestStatus,
+                'shift_id' => $resolvedType === 'shift_coverage' && $shiftId > 0 ? $shiftId : null,
+                'document_id' => $documentId,
+            ]);
+        }
+
+        setFlash('success', t('crud.send_message', ['fallback' => 'Message sent.']));
+        redirectTo('my-space');
     }
 
     if ($action === 'share_document_no_signature') {

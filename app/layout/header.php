@@ -127,6 +127,14 @@ if ($route === 'home') {
         ];
         $rightIcons[] = [
             'type' => 'button',
+            'title' => t('employee.messages', ['fallback' => 'Messages']),
+            'target' => 'crud-modal',
+            'entity' => 'messages',
+            'icon' => 'mail.svg',
+            'alt' => t('employee.messages', ['fallback' => 'Messages']),
+        ];
+        $rightIcons[] = [
+            'type' => 'button',
             'title' => t('common.print'),
             'target' => 'modal-print',
             'icon' => 'print-outline.svg',
@@ -138,7 +146,7 @@ if ($route === 'home') {
             $rightIcons[] = [
                 'type' => 'button',
                 'title' => t('common.documents'),
-                'target' => 'employee-documents-modal',
+                'target' => 'employee-documents-inbox-modal',
                 'icon' => 'document.svg',
                 'alt' => t('common.documents'),
             ];

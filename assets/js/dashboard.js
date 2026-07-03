@@ -996,6 +996,9 @@
     const RULES_STORAGE_KEY = 'staffease:auto-assign-rules:v1';
     const SIDEBAR_PLAN_WIDE_CLASS = 'sidebar-plan-wide';
 
+    document.body.classList.remove('sidebar-expanded');
+    document.body.classList.remove(SIDEBAR_PLAN_WIDE_CLASS);
+
     if (!sidebar && !calendarShell && !navigatorPanel) {
       return;
     }

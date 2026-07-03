@@ -441,7 +441,7 @@ if (is_array($primaryShift)) {
 
                 <div class="employee-attendance-dialog-actions">
                     <button type="button" class="admin-action-link admin-action-link-secondary" data-attendance-modal-close><?php echo e(t('employee.cancel')); ?></button>
-                    <button type="submit" <?php echo (empty($todaySignableShifts) || !$canSignNow) ? 'disabled' : ''; ?>><?php echo e(t('employee.sign_attendance')); ?></button>
+                    <button type="submit" class="admin-action-link" <?php echo (empty($todaySignableShifts) || !$canSignNow) ? 'disabled' : ''; ?>><?php echo e(t('employee.sign_attendance')); ?></button>
                 </div>
             </form>
         </div>
@@ -473,45 +473,83 @@ if (is_array($primaryShift)) {
 
                 <div class="employee-attendance-dialog-actions">
                     <button type="button" class="admin-action-link admin-action-link-secondary" data-document-sign-close><?php echo e(t('employee.cancel')); ?></button>
-                    <button type="submit"><?php echo e(t('employee.sign_document', ['fallback' => 'Sign document'])); ?></button>
+                    <button type="submit" class="admin-action-link"><?php echo e(t('employee.sign_document', ['fallback' => 'Sign document'])); ?></button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="employee-attendance-modal" data-employee-documents-modal hidden>
-        <div class="employee-attendance-dialog employee-documents-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-documents-manage-title">
+    <div class="employee-attendance-modal" data-employee-messages-modal hidden>
+        <div class="employee-attendance-dialog employee-documents-dialog employee-messages-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-messages-manage-title">
             <div class="employee-attendance-dialog-head">
                 <div>
-                    <span class="employee-stage-eyebrow"><?php echo e(t('employee.documents')); ?></span>
-                    <h3 id="employee-documents-manage-title"><?php echo e(t('common.documents')); ?></h3>
-                    <p class="crud-modal-subtitle">Partagez un document avec les responsables sans demande de signature.</p>
+                    <h3 id="employee-messages-manage-title"><?php echo e(t('employee.messages', ['fallback' => 'Messages'])); ?></h3>
+                    <p class="crud-modal-subtitle"><?php echo e(t('crud.create_message', ['fallback' => 'Create requests or notifications, optionally with a document to sign.'])); ?></p>
+                </div>
+                <div class="employee-modal-head-actions">
+                    <button type="button"
+                            class="admin-action-link admin-action-link-secondary"
+                            data-employee-messages-expand
+                            data-label-expand="<?php echo e(t('employee.expand', ['fallback' => 'Expand'])); ?>"
+                            data-label-collapse="<?php echo e(t('employee.collapse', ['fallback' => 'Collapse'])); ?>"
+                            aria-expanded="false"><?php echo e(t('employee.expand', ['fallback' => 'Expand'])); ?></button>
+                    <button type="button" class="dashboard-modal-close" data-employee-messages-modal-close aria-label="<?php echo e(t('employee.cancel')); ?>">&times;</button>
                 </div>
             </div>
 
-            <form method="post" enctype="multipart/form-data" class="admin-form employee-documents-form">
-                <input type="hidden" name="action" value="share_document_no_signature">
+            <form method="post" enctype="multipart/form-data" class="admin-form employee-documents-form employee-messages-form">
+                <input type="hidden" name="action" value="send_employee_message">
                 <label>
-                    Titre
-                    <input type="text" name="title" maxlength="255" placeholder="Partage document" required>
+                    <?php echo e(t('crud.message_kind')); ?>
+                    <select name="message_kind">
+                        <option value="request"><?php echo e(t('crud.message_request')); ?></option>
+                        <option value="notification"><?php echo e(t('crud.message_notification')); ?></option>
+                    </select>
+                </label>
+                <label>
+                    <?php echo e(t('crud.request_type')); ?>
+                    <select name="request_type">
+                        <?php foreach (($employeeMessageRequestTypes ?? []) as $requestType): ?>
+                            <option value="<?php echo e($requestType); ?>">
+                                <?php echo e(t('crud.request_' . $requestType, ['fallback' => ucfirst(str_replace('_', ' ', (string) $requestType))])); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label>
+                    <?php echo e(t('employee.title')); ?>
+                    <input type="text" name="title" maxlength="255" placeholder="<?php echo e(t('employee.document_notification')); ?>" required>
                 </label>
                 <label class="span-2">
-                    Message
-                    <textarea name="message" rows="3" placeholder="Ajoutez un court message pour les responsables."></textarea>
+                    <?php echo e(t('crud.message')); ?>
+                    <textarea name="message" rows="4" placeholder="<?php echo e(t('employee.send_message_hint', ['fallback' => 'Write your request or notification details.'])); ?>" required></textarea>
                 </label>
+                <?php if (!empty($openShiftChoices ?? [])): ?>
+                    <label>
+                        <?php echo e(t('crud.request_shift_coverage')); ?>
+                        <select name="shift_id">
+                            <option value=""><?php echo e(t('crud.none')); ?></option>
+                            <?php foreach (($openShiftChoices ?? []) as $shiftChoice): ?>
+                                <option value="<?php echo (int) ($shiftChoice['id'] ?? 0); ?>">
+                                    <?php echo e((string) ($shiftChoice['department_name'] ?? '')); ?> - <?php echo e((string) ($shiftChoice['name'] ?? 'Shift')); ?> (<?php echo e(substr((string) ($shiftChoice['start_time'] ?? '00:00'), 0, 5)); ?>-<?php echo e(substr((string) ($shiftChoice['end_time'] ?? '00:00'), 0, 5)); ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                <?php endif; ?>
                 <label class="span-2">
-                    Document
-                    <input type="file" name="document_file" required>
+                    <?php echo e(t('crud.attach_document')); ?>
+                    <input type="file" name="document_file">
                 </label>
                 <label class="span-2 employee-documents-signature-toggle">
                     <input type="checkbox" name="require_signature" value="1">
                     <span><?php echo e(t('employee.request_signature', ['fallback' => 'Request digital signature for this document'])); ?></span>
                 </label>
-                <?php if (!empty($documentShareRecipients ?? [])): ?>
+                <?php if (!empty($messageRecipients ?? [])): ?>
                     <label class="span-2">
-                        Destinataires
-                        <select name="recipient_ids[]" multiple size="6">
-                            <?php foreach (($documentShareRecipients ?? []) as $recipient): ?>
+                        <?php echo e(t('crud.recipients')); ?>
+                        <select name="recipient_ids[]" multiple size="4">
+                            <?php foreach (($messageRecipients ?? []) as $recipient): ?>
                                 <option value="<?php echo (int) ($recipient['id'] ?? 0); ?>">
                                     <?php echo e((string) ($recipient['full_name'] ?? ('User #' . (int) ($recipient['id'] ?? 0)))); ?>
                                     (<?php echo e((string) ($recipient['role'] ?? 'manager')); ?>)
@@ -521,10 +559,145 @@ if (is_array($primaryShift)) {
                     </label>
                 <?php endif; ?>
                 <div class="employee-attendance-dialog-actions span-2">
-                    <button type="button" class="admin-action-link admin-action-link-secondary" data-employee-documents-modal-close><?php echo e(t('employee.cancel')); ?></button>
-                    <button type="submit" class="admin-action-link"><?php echo e(t('employee.send_document_request', ['fallback' => 'Send request'])); ?></button>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-employee-messages-modal-close><?php echo e(t('employee.cancel')); ?></button>
+                    <button type="submit" class="admin-action-link"><?php echo e(t('crud.send_message')); ?></button>
                 </div>
             </form>
+
+            <div class="employee-documents-inbox-sections employee-messages-sections">
+                <section class="employee-documents-inbox-section employee-message-list-launcher">
+                    <div class="employee-card-head">
+                        <h4><?php echo e(t('employee.received_messages', ['fallback' => 'Received messages'])); ?></h4>
+                        <span class="employee-metric-pill"><?php echo count($incomingMessages ?? []); ?> <?php echo e(t('employee.messages_suffix', ['fallback' => 'messages'])); ?></span>
+                    </div>
+                    <p class="crud-modal-subtitle"><?php echo e(t('employee.open_received_messages', ['fallback' => 'Open received messages in a focused list modal.'])); ?></p>
+                    <div class="employee-attendance-dialog-actions">
+                        <button type="button" class="admin-action-link" data-employee-messages-list-open data-scope="incoming"><?php echo e(t('employee.open_received_messages_button', ['fallback' => 'Open received messages'])); ?></button>
+                    </div>
+                </section>
+
+                <section class="employee-documents-inbox-section employee-message-list-launcher">
+                    <div class="employee-card-head">
+                        <h4><?php echo e(t('employee.sent_messages', ['fallback' => 'Sent messages'])); ?></h4>
+                        <span class="employee-metric-pill"><?php echo count($outgoingMessages ?? []); ?> <?php echo e(t('employee.messages_suffix', ['fallback' => 'messages'])); ?></span>
+                    </div>
+                    <p class="crud-modal-subtitle"><?php echo e(t('employee.open_sent_messages', ['fallback' => 'Open sent messages in a focused list modal.'])); ?></p>
+                    <div class="employee-attendance-dialog-actions">
+                        <button type="button" class="admin-action-link" data-employee-messages-list-open data-scope="outgoing"><?php echo e(t('employee.open_sent_messages_button', ['fallback' => 'Open sent messages'])); ?></button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+        <div class="employee-attendance-modal"
+            data-employee-messages-list-modal
+            data-title-incoming="<?php echo e(t('employee.received_messages', ['fallback' => 'Received messages'])); ?>"
+            data-title-outgoing="<?php echo e(t('employee.sent_messages', ['fallback' => 'Sent messages'])); ?>"
+            hidden>
+        <div class="employee-attendance-dialog employee-documents-dialog employee-documents-inbox-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-messages-list-title">
+            <div class="employee-attendance-dialog-head">
+                <div>
+                    <span class="employee-stage-eyebrow"><?php echo e(t('employee.messages', ['fallback' => 'Messages'])); ?></span>
+                    <h3 id="employee-messages-list-title" data-employee-messages-list-title><?php echo e(t('employee.received_messages', ['fallback' => 'Received messages'])); ?></h3>
+                </div>
+                <button type="button" class="dashboard-modal-close" data-employee-messages-list-close aria-label="<?php echo e(t('employee.cancel')); ?>">&times;</button>
+            </div>
+
+            <div class="employee-documents-inbox-sections employee-messages-sections" data-employee-messages-list-body>
+                <section class="employee-documents-inbox-section" data-message-list-scope="incoming">
+                    <div class="employee-card-head">
+                        <h4><?php echo e(t('employee.received_messages', ['fallback' => 'Received messages'])); ?></h4>
+                    </div>
+                    <form method="post" class="employee-messages-list-form">
+                        <input type="hidden" name="action" value="message_bulk_update">
+                        <input type="hidden" name="scope" value="incoming">
+                        <div class="table-wrap employee-table-wrap employee-documents-table-wrap employee-messages-table-wrap">
+                            <table class="admin-table employee-table-compact">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th><?php echo e(t('employee.date')); ?></th>
+                                        <th><?php echo e(t('employee.sender')); ?></th>
+                                        <th><?php echo e(t('employee.title')); ?></th>
+                                        <th><?php echo e(t('employee.status')); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($incomingMessages ?? [])): ?>
+                                        <tr><td colspan="5"><?php echo e(t('crud.no_messages')); ?></td></tr>
+                                    <?php endif; ?>
+                                    <?php foreach (($incomingMessages ?? []) as $messageItem): ?>
+                                        <tr>
+                                            <td><input type="checkbox" name="request_ids[]" value="<?php echo (int) ($messageItem['id'] ?? 0); ?>"></td>
+                                            <td><?php echo e((string) ($messageItem['created_at'] ?? '')); ?></td>
+                                            <td><?php echo e((string) ($messageItem['sender_name'] ?? '-')); ?></td>
+                                            <td>
+                                                <strong><?php echo e((string) ($messageItem['title'] ?? t('crud.message_title_default'))); ?></strong>
+                                                <div class="employee-documents-unread-alert"><?php echo e((string) ($messageItem['message'] ?? '')); ?></div>
+                                            </td>
+                                            <td>
+                                                <span class="employee-status-chip"><?php echo e((string) ($messageItem['type'] ?? '-')); ?></span>
+                                                <span class="employee-status-chip"><?php echo e((string) ($messageItem['status'] ?? '-')); ?></span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="employee-attendance-dialog-actions">
+                            <button type="submit" name="operation" value="read" class="admin-action-link admin-action-link-secondary"><?php echo e(t('employee.mark_read_selected', ['fallback' => 'Mark selected as read'])); ?></button>
+                            <button type="submit" name="operation" value="delete" class="admin-action-link"><?php echo e(t('employee.delete_selected', ['fallback' => 'Delete selected'])); ?></button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="employee-documents-inbox-section" data-message-list-scope="outgoing" hidden>
+                    <div class="employee-card-head">
+                        <h4><?php echo e(t('employee.sent_messages', ['fallback' => 'Sent messages'])); ?></h4>
+                    </div>
+                    <form method="post" class="employee-messages-list-form">
+                        <input type="hidden" name="action" value="message_bulk_update">
+                        <input type="hidden" name="scope" value="outgoing">
+                        <div class="table-wrap employee-table-wrap employee-documents-table-wrap employee-messages-table-wrap">
+                            <table class="admin-table employee-table-compact">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th><?php echo e(t('employee.date')); ?></th>
+                                        <th><?php echo e(t('employee.recipient', ['fallback' => 'Recipient'])); ?></th>
+                                        <th><?php echo e(t('employee.title')); ?></th>
+                                        <th><?php echo e(t('employee.status')); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($outgoingMessages ?? [])): ?>
+                                        <tr><td colspan="5"><?php echo e(t('crud.no_messages')); ?></td></tr>
+                                    <?php endif; ?>
+                                    <?php foreach (($outgoingMessages ?? []) as $messageItem): ?>
+                                        <tr>
+                                            <td><input type="checkbox" name="request_ids[]" value="<?php echo (int) ($messageItem['id'] ?? 0); ?>"></td>
+                                            <td><?php echo e((string) ($messageItem['created_at'] ?? '')); ?></td>
+                                            <td><?php echo e((string) ($messageItem['recipient_name'] ?? '-')); ?></td>
+                                            <td>
+                                                <strong><?php echo e((string) ($messageItem['title'] ?? t('crud.message_title_default'))); ?></strong>
+                                                <div class="employee-documents-unread-alert"><?php echo e((string) ($messageItem['message'] ?? '')); ?></div>
+                                            </td>
+                                            <td>
+                                                <span class="employee-status-chip"><?php echo e((string) ($messageItem['type'] ?? '-')); ?></span>
+                                                <span class="employee-status-chip"><?php echo e((string) ($messageItem['status'] ?? '-')); ?></span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="employee-attendance-dialog-actions">
+                            <button type="submit" name="operation" value="delete" class="admin-action-link"><?php echo e(t('employee.delete_selected', ['fallback' => 'Delete selected'])); ?></button>
+                        </div>
+                    </form>
+                </section>
+            </div>
         </div>
     </div>
 
@@ -737,47 +910,6 @@ if (is_array($primaryShift)) {
                     </div>
                 </section>
 
-                <section class="employee-documents-inbox-section">
-                    <div class="employee-card-head">
-                        <h4><?php echo e(t('employee.send_request', ['fallback' => 'Send request'])); ?></h4>
-                    </div>
-                    <form method="post" enctype="multipart/form-data" class="admin-form employee-documents-form employee-documents-request-form">
-                        <input type="hidden" name="action" value="share_document_no_signature">
-                        <label>
-                            <?php echo e(t('employee.title')); ?>
-                            <input type="text" name="title" maxlength="255" placeholder="<?php echo e(t('employee.document_notification')); ?>" required>
-                        </label>
-                        <label>
-                            <?php echo e(t('employee.document')); ?>
-                            <input type="file" name="document_file" required>
-                        </label>
-                        <label class="span-2">
-                            Message
-                            <textarea name="message" rows="3" placeholder="Ajoutez un court message pour les responsables."></textarea>
-                        </label>
-                        <label class="span-2 employee-documents-signature-toggle">
-                            <input type="checkbox" name="require_signature" value="1">
-                            <span><?php echo e(t('employee.request_signature', ['fallback' => 'Request digital signature for this document'])); ?></span>
-                        </label>
-                        <?php if (!empty($documentShareRecipients ?? [])): ?>
-                            <label class="span-2">
-                                Destinataires
-                                <select name="recipient_ids[]" multiple size="6">
-                                    <?php foreach (($documentShareRecipients ?? []) as $recipient): ?>
-                                        <option value="<?php echo (int) ($recipient['id'] ?? 0); ?>">
-                                            <?php echo e((string) ($recipient['full_name'] ?? ('User #' . (int) ($recipient['id'] ?? 0)))); ?>
-                                            (<?php echo e((string) ($recipient['role'] ?? 'manager')); ?>)
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                        <?php endif; ?>
-                        <div class="employee-attendance-dialog-actions span-2">
-                            <button type="button" class="admin-action-link admin-action-link-secondary" data-employee-documents-inbox-close><?php echo e(t('employee.cancel')); ?></button>
-                            <button type="submit" class="admin-action-link"><?php echo e(t('employee.send_document_request', ['fallback' => 'Send request'])); ?></button>
-                        </div>
-                    </form>
-                </section>
             </div>
         </div>
     </div>

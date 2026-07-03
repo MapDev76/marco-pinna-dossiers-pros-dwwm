@@ -22,7 +22,14 @@ $isHomeRoute = $route === 'home';
 $isLoginRoute = $route === 'login';
 $isMySpaceRoute = $route === 'my-space';
 $isLegalRoute = $route === 'legal';
+$isContactsRoute = $route === 'contacts';
+$isCreatorRoute = $route === 'creator';
+$isStaticInfoRoute = $isLegalRoute || $isContactsRoute || $isCreatorRoute;
 $locale = appLocale();
+$shouldShowLoadingOverlay = $isDashboardRoute || $isMySpaceRoute;
+$requiresApiClient = ($isDashboardRoute || $isMySpaceRoute) && isLoggedIn();
+$hasFlashUi = $flashSuccess !== null || $flashError !== null || (($loginError ?? null) !== null);
+$useFullAppStyles = $isDashboardRoute || $isMySpaceRoute;
 // Compact dashboard mode: removes padding and some UI elements for admins/managers to show more content.
 $isCompactDashboard = $isDashboardRoute && isLoggedIn() && in_array((currentUser()['role'] ?? ''), ['admin', 'department_manager'], true);
 $bodyClasses = [];
@@ -38,11 +45,12 @@ if ($isLoginRoute) {
 if ($isMySpaceRoute) {
         $bodyClasses[] = 'route-my-space';
 }
-if ($isLegalRoute) {
+if ($isStaticInfoRoute) {
         $bodyClasses[] = 'route-legal';
 }
 // Precompute CSS version based on file modification time for cache busting. If the file is missing, use current time to avoid caching issues during development.
-$cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time());
+$stylesheetFile = $useFullAppStyles ? 'style.css' : 'public.css';
+$cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/' . $stylesheetFile) ?: time());
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo e($locale); ?>">
@@ -52,10 +60,13 @@ $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time())
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title><?php echo e($pageTitle); ?></title>
         <link rel="icon" href="<?php echo $basePath; ?>/assets/images/faviconStaffeasePro.jpg" type="image/jpeg">
-        <link rel="stylesheet" href="<?php echo $basePath; ?>/assets/css/style.css?v=<?php echo e($cssVersion); ?>">
-        <script defer src="<?php echo $basePath; ?>/assets/js/flash.js?v=<?php echo filemtime(__DIR__ . '/assets/js/flash.js'); ?>"></script>
+        <link rel="stylesheet" href="<?php echo $basePath; ?>/assets/css/<?php echo e($stylesheetFile); ?>?v=<?php echo e($cssVersion); ?>">
+                <?php if ($hasFlashUi): ?>
+                <script defer src="<?php echo $basePath; ?>/assets/js/flash.js?v=<?php echo filemtime(__DIR__ . '/assets/js/flash.js'); ?>"></script>
+                <?php endif; ?>
 </head>
 <body class="<?php echo e(implode(' ', $bodyClasses)); ?>">
+        <?php if ($shouldShowLoadingOverlay): ?>
     <div id="loading-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.9); display: flex; justify-content: center; align-items: center; z-index: 9999;">
         <div style="text-align: center;">
             <img src="<?php echo $basePath; ?>/assets/icons/loader-circle.svg" alt="Loading..." style="width: 50px; height: 50px; animation: spin 1s linear infinite; display: block; margin: 0 auto;">
@@ -73,6 +84,7 @@ $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/style.css') ?: time())
             document.getElementById('loading-overlay').style.display = 'none';
         });
     </script>
+        <?php endif; ?>
 
 <?php
 // Shared header used by all pages.
@@ -125,7 +137,9 @@ require $viewFile;
 <?php require __DIR__ . '/app/layout/crud-modal.php'; ?>
 <?php endif; ?>
 
-<script src="<?php echo $basePath; ?>/assets/js/api.js"></script>
+<?php if ($requiresApiClient): ?>
+<script defer src="<?php echo $basePath; ?>/assets/js/api.js"></script>
+<?php endif; ?>
 <?php if ($isDashboardRoute && isLoggedIn()): ?>
 <script>
         window.DashboardConfig = {
@@ -143,26 +157,26 @@ require $viewFile;
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
         window.DashboardPlannerData = <?php echo json_encode($dashboardPlannerData ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/sidebar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/sidebar.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/navigator.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/navigator.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/calendar-renderer.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar-renderer.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/calendar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/feedback.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/feedback.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/dnd.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/dnd.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/departments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/departments.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/companies.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/companies.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/attendances.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/attendances.js'); ?>"></script>
-<script src="<?php echo $basePath; ?>/assets/js/dashboard/print.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/print.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/sidebar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/sidebar.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/navigator.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/navigator.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/calendar-renderer.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar-renderer.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/calendar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/feedback.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/feedback.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/dnd.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/dnd.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/departments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/departments.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/shifts.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/shifts.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/companies.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/companies.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/attendances.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/attendances.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/dashboard/print.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/print.js'); ?>"></script>
 <?php endif; ?>
 
 <?php if ($isMySpaceRoute && isLoggedIn()): ?>
-<script src="<?php echo $basePath; ?>/assets/js/employee-space.js?v=<?php echo filemtime(__DIR__ . '/assets/js/employee-space.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/employee-space.js?v=<?php echo filemtime(__DIR__ . '/assets/js/employee-space.js'); ?>"></script>
 <?php endif; ?>
 
-<script src="<?php echo $basePath; ?>/assets/js/ui-hints.js?v=<?php echo filemtime(__DIR__ . '/assets/js/ui-hints.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/ui-hints.js?v=<?php echo filemtime(__DIR__ . '/assets/js/ui-hints.js'); ?>"></script>
 
 </body>
 </html>

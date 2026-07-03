@@ -981,6 +981,15 @@
         flex-direction: column;
         align-items: flex-start;
     }
+
+    .employee-messages-form {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-messages-sections,
+    .employee-documents-inbox-sections {
+        grid-template-columns: 1fr;
+    }
 }
 
  
@@ -1059,6 +1068,23 @@
         overflow-y: auto;
     }
 
+    .employee-attendance-modal[data-employee-messages-modal] .employee-messages-dialog,
+    .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-dialog {
+        min-height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+    }
+
+    .employee-attendance-modal[data-employee-messages-modal] .employee-messages-sections,
+    .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-sections {
+        overflow: visible;
+    }
+
+    .employee-attendance-modal[data-employee-messages-modal] .employee-messages-table-wrap,
+    .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-table-wrap {
+        min-height: 0;
+    }
+
     .employee-signature-pad-shell canvas {
         width: 100% !important;
         max-width: 100% !important;
@@ -1074,6 +1100,13 @@
     .employee-documents-inbox-dialog .employee-document-actions-inline .admin-action-link-secondary {
         min-height: 34px;
         padding-inline: 0.72rem;
+    }
+}
+
+@media (min-width: 901px) and (max-width: 1280px) {
+    .employee-attendance-modal[data-employee-messages-modal] .employee-messages-sections,
+    .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-sections {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -1097,5 +1130,74 @@
     
     .feature-card {
         padding: 1rem 1.1rem;
+    }
+}
+
+/* Readability boost for tablet/desktop only (mobile keeps current sizing). */
+@media (min-width: 761px) and (max-width: 1199px) {
+    body {
+        font-size: 14px;
+    }
+
+    .route-dashboard .dashboard-content,
+    .route-my-space .content,
+    .crud-modal-card,
+    .employee-attendance-dialog,
+    .dashboard-sidebar-shell,
+    .dashboard-calendar-shell,
+    .dashboard-calendar-grid,
+    .admin-table {
+        font-size: 1rem;
+        line-height: 1.35;
+    }
+
+    .admin-table th,
+    .admin-table td,
+    .dashboard-calendar-shell th,
+    .dashboard-calendar-shell td,
+    .crud-form label,
+    .admin-form label,
+    .crud-modal-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .admin-action-link,
+    .admin-action-link-secondary,
+    .site-icon-btn {
+        font-size: 0.94rem;
+    }
+}
+
+@media (min-width: 1200px) {
+    body {
+        font-size: 15px;
+    }
+
+    .route-dashboard .dashboard-content,
+    .route-my-space .content,
+    .crud-modal-card,
+    .employee-attendance-dialog,
+    .dashboard-sidebar-shell,
+    .dashboard-calendar-shell,
+    .dashboard-calendar-grid,
+    .admin-table {
+        font-size: 1.04rem;
+        line-height: 1.4;
+    }
+
+    .admin-table th,
+    .admin-table td,
+    .dashboard-calendar-shell th,
+    .dashboard-calendar-shell td,
+    .crud-form label,
+    .admin-form label,
+    .crud-modal-subtitle {
+        font-size: 0.98rem;
+    }
+
+    .admin-action-link,
+    .admin-action-link-secondary,
+    .site-icon-btn {
+        font-size: 0.98rem;
     }
 }

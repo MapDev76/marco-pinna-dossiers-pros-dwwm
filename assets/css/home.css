@@ -9,8 +9,8 @@
 .route-home .content {
     position: relative;
     top: auto;
-    left: 50%;
-    transform: translateX(-50%);
+    left: auto;
+    transform: none;
     height: auto;
     max-height: none;
     overflow: visible;
@@ -27,6 +27,13 @@
 .route-home .home-intro {
     display: grid;
     gap: 0.45rem;
+    justify-items: center;
+    width: 100%;
+}
+
+.route-home .home-intro > * {
+    width: 100%;
+    max-width: 1140px;
 }
 
 .route-home .home-page h1 {
@@ -79,7 +86,8 @@
     justify-content: center;
     align-items: stretch;
     gap: 14px;
-    margin-top: 1rem;
+    margin: 1rem auto 0;
+    width: min(1140px, 100%);
 }
 
 .simple-div {
@@ -90,7 +98,7 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     transition: transform 0.2s;
     margin: 0;
-    flex: 1 1 300px;
+    flex: 0 1 340px;
     max-width: 390px;
     min-height: 118px;
     display: flex;
@@ -125,8 +133,8 @@
 .route-legal .content {
     position: relative;
     top: auto;
-    left: 50%;
-    transform: translateX(-50%);
+    left: auto;
+    transform: none;
     height: auto;
     max-height: none;
     overflow: visible;
