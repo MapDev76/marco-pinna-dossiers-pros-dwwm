@@ -19,7 +19,7 @@
     position: relative;
     width: 100%;
     max-width: 100%;
-    height: 100px;
+    height: 124px;
     margin: 0;
     padding: 0 18px;
     display: flex;
@@ -39,8 +39,8 @@
 
 .site-navbar-left,
 .site-navbar-right {
-    width: 260px;
-    flex: 0 0 260px;
+    width: 330px;
+    flex: 0 0 330px;
     display: flex;
     align-items: center;
 }
@@ -79,8 +79,8 @@
 }
 
 .site-brand-logo {
-    width: 100px;
-    height: 100px;
+    width: 147px;
+    height: 147px;
     object-fit: contain;
     display: block;
 }
@@ -94,7 +94,7 @@
 }
 
 .site-header-title {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 800;
     color: var(--color-text);
 }
@@ -142,13 +142,13 @@
 }
 
 .site-header-subtitle {
-    font-size: 0.78rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: var(--color-text-light);
 }
 
 .site-header-subrole {
-    font-size: 0.74rem;
+    font-size: 0.86rem;
     font-weight: 700;
     color: var(--color-text-light);
 }
@@ -156,8 +156,8 @@
 .site-icon-group {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px;
+    gap: 10px;
+    padding: 5px;
     border-radius: var(--border-radius-full);
     background: var(--color-bg);
     box-shadow:
@@ -166,8 +166,8 @@
 }
 
 .site-icon-btn {
-    width: 36px;
-    height: 36px;
+    width: 53px;
+    height: 53px;
     border-radius: var(--border-radius-full);
     display: inline-flex;
     align-items: center;
@@ -194,8 +194,8 @@
 }
 
 .site-icon {
-    width: 18px;
-    height: 18px;
+    width: 26px;
+    height: 26px;
     display: block;
 }
 

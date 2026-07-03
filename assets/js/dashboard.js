@@ -2130,7 +2130,6 @@
       });
       const shouldWide = resolvedStep > 0;
       document.body.classList.toggle(SIDEBAR_PLAN_WIDE_CLASS, shouldWide);
-      document.body.classList.add('sidebar-expanded');
     };
 
     const getCalendarCounters = () => {

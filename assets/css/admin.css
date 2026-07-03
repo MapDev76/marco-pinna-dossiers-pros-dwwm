@@ -84,6 +84,16 @@
     color: var(--color-text);
 }
 
+.admin-action-link,
+.admin-action-link-secondary {
+    width: auto;
+    min-width: max-content;
+    height: auto;
+    min-height: 46px;
+    padding: 0.72rem 1.15rem;
+    white-space: nowrap;
+}
+
 button.admin-action-link,
 button.admin-action-link-secondary,
 a.admin-action-link,

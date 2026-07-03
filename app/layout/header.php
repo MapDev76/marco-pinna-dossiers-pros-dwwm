@@ -224,7 +224,7 @@ if ($route === 'home') {
                         echo appUrl('dashboard');
                     }
                 ?>" class="site-brand-link" aria-label="<?php echo e(t('common.app_name')); ?>">
-                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.jpg" alt="<?php echo e(t('common.app_name')); ?>" class="site-brand-logo">
+                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.png" alt="<?php echo e(t('common.app_name')); ?>" class="site-brand-logo">
                 </a>
             </div>
             <div class="site-navbar-right">

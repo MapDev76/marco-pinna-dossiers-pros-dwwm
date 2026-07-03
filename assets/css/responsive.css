@@ -1136,7 +1136,25 @@
 /* Readability boost for tablet/desktop only (mobile keeps current sizing). */
 @media (min-width: 761px) and (max-width: 1199px) {
     body {
-        font-size: 14px;
+        font-size: 15px;
+    }
+
+    .site-navbar-inner {
+        height: 118px;
+    }
+
+    .site-brand-logo {
+        width: 136px;
+        height: 136px;
+    }
+
+    .site-header-title {
+        font-size: 1.04rem;
+    }
+
+    .site-header-subtitle,
+    .site-header-subrole {
+        font-size: 0.86rem;
     }
 
     .route-dashboard .dashboard-content,
@@ -1147,8 +1165,8 @@
     .dashboard-calendar-shell,
     .dashboard-calendar-grid,
     .admin-table {
-        font-size: 1rem;
-        line-height: 1.35;
+        font-size: 1.08rem;
+        line-height: 1.45;
     }
 
     .admin-table th,
@@ -1158,19 +1176,77 @@
     .crud-form label,
     .admin-form label,
     .crud-modal-subtitle {
-        font-size: 0.95rem;
+        font-size: 1.04rem;
+    }
+
+    .dashboard-sidebar-group-title,
+    .dashboard-sidebar-brand h2,
+    .dashboard-sidebar-link,
+    .dashboard-calendar-headline,
+    .dashboard-calendar-navigator-pill,
+    .dashboard-calendar-navigator-action,
+    .crud-modal h2,
+    .crud-modal h3,
+    .employee-attendance-dialog-head h3,
+    .employee-card-head h4 {
+        font-size: 1.08rem;
+    }
+
+    .employee-stage-eyebrow,
+    .dashboard-sidebar-brand-kicker,
+    .crud-modal-subtitle,
+    .employee-attendance-dialog-head p {
+        font-size: 0.96rem;
+    }
+
+    .site-icon-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.08rem;
     }
 
     .admin-action-link,
-    .admin-action-link-secondary,
-    .site-icon-btn {
-        font-size: 0.94rem;
+    .admin-action-link-secondary {
+        font-size: 1.06rem;
+        min-height: 48px;
+        padding: 0.74rem 1.2rem;
+    }
+
+    .site-icon {
+        width: 25px;
+        height: 25px;
+    }
+
+    .calendar-event-time,
+    .calendar-event-title,
+    .calendar-event-meta,
+    .dashboard-calendar-title-meta,
+    .dashboard-calendar-headline .dashboard-calendar-title-meta {
+        font-size: 1.03rem;
     }
 }
 
 @media (min-width: 1200px) {
     body {
-        font-size: 15px;
+        font-size: 16px;
+    }
+
+    .site-navbar-inner {
+        height: 126px;
+    }
+
+    .site-brand-logo {
+        width: 147px;
+        height: 147px;
+    }
+
+    .site-header-title {
+        font-size: 1.1rem;
+    }
+
+    .site-header-subtitle,
+    .site-header-subrole {
+        font-size: 0.9rem;
     }
 
     .route-dashboard .dashboard-content,
@@ -1181,8 +1257,13 @@
     .dashboard-calendar-shell,
     .dashboard-calendar-grid,
     .admin-table {
-        font-size: 1.04rem;
-        line-height: 1.4;
+        font-size: 1.14rem;
+        line-height: 1.5;
+    }
+
+    .route-dashboard .dashboard-content {
+        top: 152px;
+        padding-top: 18px;
     }
 
     .admin-table th,
@@ -1192,12 +1273,52 @@
     .crud-form label,
     .admin-form label,
     .crud-modal-subtitle {
-        font-size: 0.98rem;
+        font-size: 1.1rem;
+    }
+
+    .dashboard-sidebar-group-title,
+    .dashboard-sidebar-brand h2,
+    .dashboard-sidebar-link,
+    .dashboard-calendar-headline,
+    .dashboard-calendar-navigator-pill,
+    .dashboard-calendar-navigator-action,
+    .crud-modal h2,
+    .crud-modal h3,
+    .employee-attendance-dialog-head h3,
+    .employee-card-head h4 {
+        font-size: 1.16rem;
+    }
+
+    .employee-stage-eyebrow,
+    .dashboard-sidebar-brand-kicker,
+    .crud-modal-subtitle,
+    .employee-attendance-dialog-head p {
+        font-size: 1.02rem;
+    }
+
+    .site-icon-btn {
+        width: 55px;
+        height: 55px;
+        font-size: 1.12rem;
     }
 
     .admin-action-link,
-    .admin-action-link-secondary,
-    .site-icon-btn {
-        font-size: 0.98rem;
+    .admin-action-link-secondary {
+        font-size: 1.1rem;
+        min-height: 52px;
+        padding: 0.78rem 1.24rem;
+    }
+
+    .site-icon {
+        width: 27px;
+        height: 27px;
+    }
+
+    .calendar-event-time,
+    .calendar-event-title,
+    .calendar-event-meta,
+    .dashboard-calendar-title-meta,
+    .dashboard-calendar-headline .dashboard-calendar-title-meta {
+        font-size: 1.12rem;
     }
 }
