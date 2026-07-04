@@ -130,6 +130,108 @@
     color: var(--color-text);
 }
 
+.home-commercial-link-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 0.25rem 0 0.2rem;
+}
+
+.commercial-page {
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+}
+
+.commercial-hero,
+.commercial-card,
+.commercial-videos,
+.commercial-cta {
+    width: 100%;
+}
+
+.commercial-hero {
+    display: grid;
+    gap: 0.45rem;
+    justify-items: center;
+    text-align: center;
+    padding: 0.9rem 0.8rem 0.4rem;
+    border-radius: var(--border-radius-lg);
+    background: linear-gradient(180deg, rgba(243, 225, 171, 0.7), rgba(255, 255, 255, 0.92));
+    border: 1px solid rgba(157, 121, 16, 0.16);
+}
+
+.commercial-eyebrow {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-primary);
+}
+
+.commercial-hero h1,
+.commercial-card h2,
+.commercial-cta h2 {
+    margin: 0;
+}
+
+.commercial-lead {
+    margin: 0;
+    max-width: 860px;
+    font-size: 1rem;
+    line-height: 1.35;
+}
+
+.commercial-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-top: 0.2rem;
+}
+
+.commercial-grid,
+.commercial-videos {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.commercial-card,
+.commercial-video-card,
+.commercial-cta {
+    padding: 0.9rem;
+    border-radius: var(--border-radius-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-light);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.commercial-video-card {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.commercial-video-placeholder {
+    display: grid;
+    place-items: center;
+    min-height: 160px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(17, 45, 86, 0.92), rgba(157, 121, 16, 0.82));
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.commercial-cta {
+    display: grid;
+    gap: 0.45rem;
+    justify-items: center;
+    text-align: center;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 225, 171, 0.72));
+}
+
 .route-legal .content {
     position: relative;
     top: auto;
@@ -198,9 +300,25 @@
         font-size: 0.9rem;
     }
 
+    .commercial-grid,
+    .commercial-videos {
+        grid-template-columns: 1fr;
+    }
+
+    .commercial-video-placeholder {
+        min-height: 130px;
+    }
+
     .route-home .home-intro ul li {
         flex-basis: 100%;
         max-width: 100%;
+    }
+}
+
+@media (max-width: 1024px) {
+    .commercial-grid,
+    .commercial-videos {
+        grid-template-columns: 1fr;
     }
 }
 

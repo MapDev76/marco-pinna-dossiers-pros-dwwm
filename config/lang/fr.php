@@ -29,6 +29,8 @@ return [
         'department_required' => 'department_id requis',
         'user_department_required' => 'user_id et department_id requis',
         'unauthorized_shift' => 'Poste non autorise.',
+        'commercial' => 'Page commerciale',
+        'commercial_cta' => 'Découvrir son fonctionnement',
         'users' => 'Utilisateurs',
         'companies' => 'Entreprises',
         'departments' => 'Departements',

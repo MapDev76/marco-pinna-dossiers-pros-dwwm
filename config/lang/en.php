@@ -26,6 +26,8 @@ return [
         'legal_mentions' => 'Legal mentions',
         'contacts' => 'Contacts',
         'app_creator' => 'App creator',
+        'commercial' => 'Commercial page',
+        'commercial_cta' => 'See how it works',
         'department_required' => 'department_id required',
         'user_department_required' => 'user_id and department_id required',
         'unauthorized_shift' => 'Unauthorized shift.',

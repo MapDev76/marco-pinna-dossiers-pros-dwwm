@@ -26,6 +26,8 @@ return [
         'legal_mentions' => 'Menzioni Legali',
         'contacts' => 'Contatti',
         'app_creator' => 'Ideatore app',
+        'commercial' => 'Pagina commerciale',
+        'commercial_cta' => 'Scopri come funziona',
         'department_required' => 'ID dipartimento richiesto',
         'user_department_required' => 'ID utente e ID dipartimento richiesti',
         'unauthorized_shift' => 'Turno non autorizzato.',
