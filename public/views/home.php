@@ -7,7 +7,7 @@
 		<h2><?php echo e(t('home.intro_title')); ?></h2>
 
 		<p class="home-commercial-link-wrap">
-			<a class="admin-action-link" href="<?php echo e(appUrl('commercial')); ?>"><?php echo e(t('commercial_cta', ['fallback' => 'Scopri come funziona'])); ?></a>
+			<a class="admin-action-link" href="<?php echo e(appUrl('commercial')); ?>"><?php echo e(t('common.commercial_cta')); ?></a>
 		</p>
 
 		<p>

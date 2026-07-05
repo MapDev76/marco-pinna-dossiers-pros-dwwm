@@ -8,11 +8,17 @@
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
 
-$userModel = new UserModel(getPDO());
 $pageTitle = t('auth.page_title');
 $viewFile = __DIR__ . '/../../public/views/auth/login.php';
 $loginEmail = trim($_POST['email'] ?? '');
 $loginError = null;
+$userModel = null;
+
+try {
+    $userModel = new UserModel(getPDO());
+} catch (Throwable $exception) {
+    $loginError = t('auth.db_unavailable');
+}
 
 if (($_GET['route'] ?? 'login') === 'logout') {
     $_SESSION = [];
@@ -35,7 +41,9 @@ if (isLoggedIn()) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = (string) ($_POST['password'] ?? '');
 
-    if ($loginEmail === '' || $password === '') {
+    if ($userModel === null) {
+        $loginError = t('auth.db_unavailable');
+    } elseif ($loginEmail === '' || $password === '') {
         $loginError = t('auth.empty_fields');
     } else {
         $user = $userModel->findByEmail($loginEmail);
