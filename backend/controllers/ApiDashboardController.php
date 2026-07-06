@@ -216,16 +216,20 @@ if ($action === 'upload_and_share_document') {
     $allowedRecipientsSql = 'SELECT u.id
                             FROM users u
                             LEFT JOIN departments d ON d.id = u.department_id
-                            WHERE u.status = "active"
-                              AND u.role = "employee"';
+                            WHERE u.status = "active"';
     $allowedRecipientsParams = [];
 
     if ($role === 'admin') {
+        $allowedRecipientsSql .= ' AND u.role = "employee"';
         $allowedRecipientsSql .= ' AND d.company_id = :company_id';
         $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
     } elseif ($role === 'department_manager') {
-        $allowedRecipientsSql .= ' AND u.department_id = :department_id';
+        $allowedRecipientsSql .= ' AND d.company_id = :company_id';
+        $allowedRecipientsSql .= ' AND ((u.role = "employee" AND u.department_id = :department_id) OR (u.role = "department_manager" AND u.department_id <> :department_id))';
+        $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
         $allowedRecipientsParams['department_id'] = (int) ($profile['department_id'] ?? 0);
+    } else {
+        $allowedRecipientsSql .= ' AND u.role = "employee"';
     }
 
     $allowedRecipientsStmt = $pdo->prepare($allowedRecipientsSql);

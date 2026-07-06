@@ -19,7 +19,25 @@
     padding: 1rem;
 }
 
+.route-commercial .content {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    justify-content: flex-start;
+    margin: 16px auto;
+    padding: 1rem;
+}
+
 .route-home .home-page {
+    width: 100%;
+    max-width: 1260px;
+}
+
+.route-commercial .home-page {
     width: 100%;
     max-width: 1260px;
 }
@@ -257,7 +275,7 @@
 .commercial-grid,
 .commercial-videos {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 0.8rem;
 }
 
@@ -304,7 +322,7 @@
 
 .commercial-steps {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 0.8rem;
 }
 
@@ -387,6 +405,12 @@
         padding: 0.9rem;
     }
 
+    .route-commercial .content {
+        width: calc(100% - 20px);
+        max-width: none;
+        padding: 0.9rem;
+    }
+
     .simple-div {
         flex-basis: 270px;
         max-width: 360px;
@@ -411,6 +435,11 @@
 
 @media (max-width: 760px) {
     .route-home .content {
+        margin: 12px auto;
+        padding: 0.82rem;
+    }
+
+    .route-commercial .content {
         margin: 12px auto;
         padding: 0.82rem;
     }
@@ -478,11 +507,11 @@
 @media (max-width: 1024px) {
     .commercial-grid,
     .commercial-videos {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .commercial-steps {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .commercial-split,

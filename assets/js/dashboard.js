@@ -164,8 +164,6 @@
         const uploadForm = crudBody.querySelector('#crud-document-share-form');
         const uploadFileInput = crudBody.querySelector('#crud-document-file');
         const uploadScopeInput = crudBody.querySelector('#crud-document-recipient-scope');
-        const uploadTitleInput = crudBody.querySelector('#crud-document-title');
-        const uploadMessageInput = crudBody.querySelector('#crud-document-message');
         const uploadRecipientsLabel = crudBody.querySelector('#crud-document-recipient-label');
         const uploadRecipientsInput = crudBody.querySelector('#crud-document-recipient-ids');
         const uploadRequireSignatureInput = crudBody.querySelector('#crud-document-require-signature');
@@ -233,8 +231,6 @@
                 file_content_b64: fileContentB64,
                 file_mime_type: file.type || 'application/octet-stream',
                 document_type: 'other',
-                title: uploadTitleInput ? String(uploadTitleInput.value || '').trim() : '',
-                message: uploadMessageInput ? String(uploadMessageInput.value || '').trim() : '',
                 recipient_scope: recipientScope,
                 recipient_ids: recipientIds,
                 require_signature: !!(uploadRequireSignatureInput && uploadRequireSignatureInput.checked),
@@ -253,61 +249,6 @@
             }
           });
         }
-
-        crudBody.querySelectorAll('[data-document-send-id]').forEach((button) => {
-          button.addEventListener('click', () => {
-            requestedMessageDocument = {
-              id: Number(button.getAttribute('data-document-send-id') || 0),
-              name: String(button.getAttribute('data-document-send-name') || 'Document').trim(),
-              recipientIds: [],
-            };
-
-            const messageTrigger = document.querySelector('[data-modal-entity="messages"]');
-            if (messageTrigger && typeof messageTrigger.click === 'function') {
-              messageTrigger.click();
-              return;
-            }
-
-            const template = document.getElementById('crud-template-messages');
-            if (template && crudBody) {
-              if (crudTitle) crudTitle.textContent = tr('Messages', 'Messages');
-              if (crudSubtitle) crudSubtitle.textContent = tr('Create requests or notifications and send them to selected users.', 'Creez des demandes ou notifications et envoyez-les aux utilisateurs selectionnes.');
-              crudBody.innerHTML = template.innerHTML;
-              setModalContent('messages');
-            }
-          });
-        });
-
-        crudBody.querySelectorAll('[data-document-send-all-id]').forEach((button) => {
-          button.addEventListener('click', () => {
-            const template = document.getElementById('crud-template-messages');
-            const recipientProbe = template ? template.content.querySelector('#crud-message-recipient-ids') : null;
-            const recipientIds = collectDepartmentEmployeeIds(recipientProbe);
-            if (recipientIds.length === 0) {
-              notifyError(tr('No employees found in the selected department.', 'Aucun employe trouve dans le departement selectionne.'));
-              return;
-            }
-
-            requestedMessageDocument = {
-              id: Number(button.getAttribute('data-document-send-all-id') || 0),
-              name: String(button.getAttribute('data-document-send-all-name') || 'Document').trim(),
-              recipientIds,
-            };
-
-            const messageTrigger = document.querySelector('[data-modal-entity="messages"]');
-            if (messageTrigger && typeof messageTrigger.click === 'function') {
-              messageTrigger.click();
-              return;
-            }
-
-            if (template && crudBody) {
-              if (crudTitle) crudTitle.textContent = tr('Messages', 'Messages');
-              if (crudSubtitle) crudSubtitle.textContent = tr('Create requests or notifications and send them to selected users.', 'Creez des demandes ou notifications et envoyez-les aux utilisateurs selectionnes.');
-              crudBody.innerHTML = template.innerHTML;
-              setModalContent('messages');
-            }
-          });
-        });
 
         crudBody.querySelectorAll('[data-document-delete-id]').forEach((button) => {
           button.addEventListener('click', async () => {
@@ -647,7 +588,7 @@
                   : entity === 'messages'
                     ? tr('Create requests or notifications and send them to selected users.', 'Creez des demandes ou notifications et envoyez-les aux utilisateurs selectionnes.')
                     : entity === 'documents'
-                      ? tr('Browse documents available for attachments.', 'Parcourez les documents disponibles pour les pieces jointes.')
+                        ? tr('Upload, share and manage documents from this panel.', 'Televersez, partagez et gerez les documents depuis ce panneau.')
                 : tr('Common CRUD shell', 'Conteneur CRUD commun');
           }
           if (crudBody && template) crudBody.innerHTML = template.innerHTML;

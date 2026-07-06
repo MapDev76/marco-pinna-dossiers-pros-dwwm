@@ -340,76 +340,6 @@ if (is_array($primaryShift)) {
                 </table>
             </div>
         </article>
-
-        <article class="admin-card employee-detail-card" id="employee-received-documents">
-            <div class="employee-card-head">
-                <div>
-                    <span class="employee-stage-eyebrow"><?php echo e(t('employee.documents')); ?></span>
-                    <h2><?php echo e(t('employee.received_documents')); ?></h2>
-                    <?php if ($unreadDocumentsCount > 0): ?>
-                        <p class="employee-documents-unread-alert"><?php echo e($unreadDocumentsCount . ' ' . t('employee.new_documents_notice', ['fallback' => 'new document(s) to read'])); ?></p>
-                    <?php endif; ?>
-                </div>
-                <div class="employee-card-head-actions">
-                    <span class="employee-metric-pill"><?php echo count($incomingDocuments); ?> <?php echo e(t('employee.files_suffix')); ?></span>
-                </div>
-            </div>
-            <div class="table-wrap employee-table-wrap">
-                <table class="admin-table employee-table-compact">
-                    <thead>
-                        <tr>
-                            <th><?php echo e(t('employee.date')); ?></th>
-                            <th><?php echo e(t('employee.title')); ?></th>
-                            <th><?php echo e(t('employee.sender')); ?></th>
-                            <th><?php echo e(t('employee.document')); ?></th>
-                            <th><?php echo e(t('employee.status')); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($incomingDocuments)): ?>
-                            <tr><td colspan="5"><?php echo e(t('employee.no_documents')); ?></td></tr>
-                        <?php endif; ?>
-                        <?php foreach ($incomingDocuments as $documentMessage): ?>
-                            <tr>
-                                <td><?php echo e((string) ($documentMessage['created_at'] ?? '')); ?></td>
-                                <td><?php echo e((string) ($documentMessage['title'] ?? t('employee.document_notification'))); ?></td>
-                                <td><?php echo e((string) ($documentMessage['sender_name'] ?? '-')); ?></td>
-                                <td><?php echo e((string) ($documentMessage['file_name'] ?? t('employee.document'))); ?></td>
-                                <td>
-                                    <div class="employee-document-status-list">
-                                        <?php
-                                            $docStatus = strtolower((string) ($documentMessage['status'] ?? ''));
-                                            $docType = (string) ($documentMessage['type'] ?? '');
-                                        ?>
-                                        <?php if (!empty($documentMessage['is_signed_notification'])): ?>
-                                            <span class="employee-status-chip"><?php echo e(t('employee.signed_document_received_title', ['fallback' => 'Signed document received'])); ?></span>
-                                        <?php endif; ?>
-                                        <?php if (!empty($documentMessage['is_new'])): ?>
-                                            <span class="employee-status-chip"><?php echo e(t('employee.status_new', ['fallback' => 'New'])); ?></span>
-                                        <?php else: ?>
-                                            <span class="employee-status-chip"><?php echo e(t('employee.status_old', ['fallback' => 'Old'])); ?></span>
-                                        <?php endif; ?>
-                                        <?php if ($docStatus === 'unread' || $docStatus === 'pending'): ?>
-                                            <span class="employee-status-chip"><?php echo e(t('employee.status_unread', ['fallback' => 'Unread'])); ?></span>
-                                        <?php elseif ($docStatus === 'approved' && $docType === 'document_signature'): ?>
-                                            <span class="employee-status-chip"><?php echo e(t('employee.read_and_approved', ['fallback' => 'Read and approved'])); ?></span>
-                                        <?php elseif ($docStatus === 'cancelled' || $docStatus === 'archived'): ?>
-                                            <span class="employee-status-chip"><?php echo e(t('employee.status_archived', ['fallback' => 'Archived'])); ?></span>
-                                        <?php elseif ($docStatus !== ''): ?>
-                                            <span class="employee-status-chip"><?php echo e($statusLabels[$docStatus] ?? ucfirst($docStatus)); ?></span>
-                                        <?php endif; ?>
-                                        <?php if (!empty($documentMessage['document_id']) && empty($documentMessage['is_download_available'])): ?>
-                                            <span class="employee-status-chip"><?php echo e(t('employee.file_not_available')); ?></span>
-                                        <?php endif; ?>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </article>
-
     </section>
 
     <div class="employee-attendance-modal" data-attendance-modal hidden>
@@ -461,6 +391,18 @@ if (is_array($primaryShift)) {
                 <input type="hidden" name="action" value="sign_document">
                 <input type="hidden" name="request_id" value="" data-document-request-id>
                 <input type="hidden" name="signature_data" value="" data-signature-data>
+                <input type="hidden" name="signature_pos_x" value="86" data-signature-pos-x>
+                <input type="hidden" name="signature_pos_y" value="84" data-signature-pos-y>
+
+                <div class="employee-document-sign-stage">
+                    <p class="crud-modal-subtitle employee-document-sign-stage-hint">Scegli dove firmare: clicca nel riquadro anteprima documento.</p>
+                    <div class="employee-document-sign-preview-wrap" data-document-sign-preview-wrap>
+                        <iframe src="about:blank" class="employee-document-sign-preview" data-document-sign-preview-frame title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>"></iframe>
+                        <button type="button" class="employee-document-sign-position-layer" data-document-sign-position-layer aria-label="Scegli posizione firma">
+                            <span class="employee-document-sign-position-dot" data-document-sign-position-dot aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </div>
 
                 <div class="employee-signature-pad-shell">
                     <canvas width="520" height="180" data-signature-canvas aria-label="<?php echo e(t('employee.digital_signature')); ?>"></canvas>
@@ -714,202 +656,217 @@ if (is_array($primaryShift)) {
                 <button type="button" class="dashboard-modal-close" data-employee-documents-inbox-close aria-label="<?php echo e(t('employee.cancel')); ?>">&times;</button>
             </div>
 
-            <div class="employee-documents-inbox-sections">
-                <section class="employee-documents-inbox-section">
+            <div class="employee-documents-inbox-sections crud-panel-grid crud-panel-grid-wide">
+                <section class="employee-documents-inbox-section crud-panel">
                     <div class="employee-card-head">
                         <h4><?php echo e(t('employee.received_documents')); ?></h4>
                         <span class="employee-metric-pill"><?php echo count($incomingDocuments); ?> <?php echo e(t('employee.files_suffix')); ?></span>
                     </div>
-                    <div class="table-wrap employee-table-wrap employee-documents-table-wrap">
-                        <table class="admin-table employee-table-compact">
-                            <thead>
-                                <tr>
-                                    <th><?php echo e(t('employee.date')); ?></th>
-                                    <th><?php echo e(t('employee.title')); ?></th>
-                                    <th><?php echo e(t('employee.sender')); ?></th>
-                                    <th><?php echo e(t('employee.action')); ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($incomingDocuments)): ?>
-                                    <tr><td colspan="4"><?php echo e(t('employee.no_documents')); ?></td></tr>
-                                <?php endif; ?>
-                                <?php foreach ($incomingDocuments as $documentMessage): ?>
-                                    <tr>
-                                        <td><?php echo e((string) ($documentMessage['created_at'] ?? '')); ?></td>
-                                        <td><?php echo e((string) ($documentMessage['title'] ?? t('employee.document_notification'))); ?></td>
-                                        <td><?php echo e((string) ($documentMessage['sender_name'] ?? '-')); ?></td>
-                                        <td>
-                                            <div class="employee-document-actions employee-document-actions-inline">
-                                                <?php if (!empty($documentMessage['is_new'])): ?>
-                                                    <span class="employee-status-chip"><?php echo e(t('employee.status_unread', ['fallback' => 'Unread'])); ?></span>
-                                                <?php endif; ?>
-                                                <?php if (!empty($documentMessage['is_signed_notification'])): ?>
-                                                    <span class="employee-status-chip"><?php echo e(t('employee.signed_document_received_title', ['fallback' => 'Signed document received'])); ?></span>
-                                                <?php endif; ?>
-                                                <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
-                                                    <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'preview' => '1', 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?></a>
-                                                    <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('employee.download_document', ['fallback' => 'Download'])); ?></a>
-                                                    <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'disposition' => 'inline', 'print_preview' => '1', 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?></a>
-                                                    <?php if (!empty($documentMessage['is_new'])): ?>
-                                                        <form method="post">
-                                                            <input type="hidden" name="action" value="mark_document_read">
-                                                            <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
-                                                            <button type="submit" class="admin-action-link admin-action-link-secondary"><?php echo e(t('employee.read_document', ['fallback' => 'Read'])); ?></button>
-                                                        </form>
-                                                    <?php endif; ?>
-                                                    <?php if (!empty($documentMessage['can_sign'])): ?>
-                                                        <button type="button"
-                                                                class="admin-action-link"
-                                                                data-document-sign-open
-                                                                data-document-sign-request-id="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>"
-                                                                data-document-sign-title="<?php echo e((string) ($documentMessage['file_name'] ?? t('employee.document'))); ?>">
-                                                            <?php echo e(t('employee.sign_document', ['fallback' => 'Sign'])); ?>
-                                                        </button>
-                                                    <?php endif; ?>
-                                                <?php elseif (!empty($documentMessage['document_id'])): ?>
-                                                    <span class="employee-status-chip"><?php echo e(t('employee.file_not_available')); ?></span>
-                                                <?php else: ?>
-                                                    <span class="employee-status-chip">-</span>
-                                                <?php endif; ?>
-
-                                                <?php if (!empty($documentMessage['can_archive'])): ?>
-                                                    <form method="post">
-                                                        <input type="hidden" name="action" value="archive_received_document">
-                                                        <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
-                                                        <button type="submit" class="admin-action-link admin-action-link-secondary"><?php echo e(t('employee.archive_document', ['fallback' => 'Archive'])); ?></button>
-                                                    </form>
-                                                <?php endif; ?>
-                                                <form method="post">
-                                                    <input type="hidden" name="action" value="delete_document_entry">
-                                                    <input type="hidden" name="scope" value="incoming">
-                                                    <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
-                                                    <button type="submit" class="site-icon-btn employee-document-delete-btn" aria-label="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>" title="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>">
-                                                        <img src="<?php echo e($basePath . '/assets/icons/x.svg'); ?>" alt="" aria-hidden="true">
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <div class="company-grid employee-documents-card-grid">
+                        <?php if (empty($incomingDocuments)): ?>
+                            <div class="crud-empty-state"><?php echo e(t('employee.no_documents')); ?></div>
+                        <?php endif; ?>
+                        <?php foreach ($incomingDocuments as $documentMessage): ?>
+                            <?php
+                                $incomingFileName = (string) ($documentMessage['file_name'] ?? t('employee.document'));
+                                $incomingExtension = strtoupper((string) pathinfo($incomingFileName, PATHINFO_EXTENSION));
+                                $incomingThumbnail = function_exists('documentThumbnailDataUrl')
+                                    ? documentThumbnailDataUrl($documentMessage, 220, 120)
+                                    : null;
+                                if ($incomingExtension === '') {
+                                    $incomingExtension = 'DOC';
+                                }
+                            ?>
+                            <article class="company-card company-card--stacked employee-doc-card">
+                                <div class="document-preview-vignette" aria-hidden="true">
+                                    <?php if (is_string($incomingThumbnail) && $incomingThumbnail !== ''): ?>
+                                        <img src="<?php echo e($incomingThumbnail); ?>" alt="" class="document-preview-vignette-image" loading="lazy">
+                                    <?php else: ?>
+                                        <span><?php echo e($incomingExtension); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="company-card-head">
+                                    <div class="company-card-title"><?php echo e((string) ($documentMessage['title'] ?? t('employee.document_notification'))); ?></div>
+                                    <div class="company-card-meta"><?php echo e((string) ($documentMessage['sender_name'] ?? '-')); ?> • <?php echo e((string) ($documentMessage['created_at'] ?? '')); ?></div>
+                                </div>
+                                <div class="company-card-actions company-card-actions--inline">
+                                    <?php if (!empty($documentMessage['is_new'])): ?>
+                                        <span class="company-card-chip"><?php echo e(t('employee.status_unread', ['fallback' => 'Unread'])); ?></span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($documentMessage['is_signed_notification'])): ?>
+                                        <span class="company-card-chip"><?php echo e(t('employee.signed_document_received_title', ['fallback' => 'Signed document received'])); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="company-card-actions employee-doc-actions-icons">
+                                    <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
+                                        <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'preview' => '1', 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
+                                            <img src="<?php echo e($basePath . '/assets/icons/document.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                        </a>
+                                        <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>" title="<?php echo e(t('employee.download_document', ['fallback' => 'Download'])); ?>">
+                                            <img src="<?php echo e($basePath . '/assets/icons/circle-arrow-out-up-left.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                        </a>
+                                        <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'disposition' => 'inline', 'print_preview' => '1', 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>" title="<?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?>">
+                                            <img src="<?php echo e($basePath . '/assets/icons/printer.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                        </a>
+                                        <?php if (!empty($documentMessage['is_new'])): ?>
+                                            <form method="post" class="company-card-delete-form">
+                                                <input type="hidden" name="action" value="mark_document_read">
+                                                <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
+                                                <button type="submit" class="company-card-action" title="<?php echo e(t('employee.read_document', ['fallback' => 'Read'])); ?>">
+                                                    <img src="<?php echo e($basePath . '/assets/icons/mail-open.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                        <?php if (!empty($documentMessage['can_sign'])): ?>
+                                            <button type="button"
+                                                    class="company-card-action"
+                                                    title="<?php echo e(t('employee.sign_document', ['fallback' => 'Sign'])); ?>"
+                                                    data-document-sign-open
+                                                    data-document-sign-request-id="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>"
+                                                    data-document-sign-title="<?php echo e((string) ($documentMessage['file_name'] ?? t('employee.document'))); ?>"
+                                                    data-document-sign-preview-url="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'preview' => '1', 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>">
+                                                <img src="<?php echo e($basePath . '/assets/icons/signature.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                            </button>
+                                        <?php endif; ?>
+                                    <?php elseif (!empty($documentMessage['document_id'])): ?>
+                                        <span class="company-card-chip"><?php echo e(t('employee.file_not_available')); ?></span>
+                                    <?php else: ?>
+                                        <span class="company-card-chip">-</span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($documentMessage['can_archive'])): ?>
+                                        <form method="post" class="company-card-delete-form">
+                                            <input type="hidden" name="action" value="archive_received_document">
+                                            <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
+                                            <button type="submit" class="company-card-action" title="<?php echo e(t('employee.archive_document', ['fallback' => 'Archive'])); ?>">
+                                                <img src="<?php echo e($basePath . '/assets/icons/notebook.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                    <form method="post" class="company-card-delete-form">
+                                        <input type="hidden" name="action" value="delete_document_entry">
+                                        <input type="hidden" name="scope" value="incoming">
+                                        <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
+                                        <button type="submit" class="company-card-action is-danger" aria-label="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>" title="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>">
+                                            <img src="<?php echo e($basePath . '/assets/icons/x.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                        </button>
+                                    </form>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
                     </div>
                 </section>
 
-                <section class="employee-documents-inbox-section">
+                <section class="employee-documents-inbox-section crud-panel">
                     <div class="employee-card-head">
                         <h4><?php echo e(t('employee.sent_documents', ['fallback' => 'Sent documents'])); ?></h4>
                         <span class="employee-metric-pill"><?php echo count($outgoingDocuments); ?> <?php echo e(t('employee.files_suffix')); ?></span>
                     </div>
-                    <div class="table-wrap employee-table-wrap employee-documents-table-wrap">
-                        <table class="admin-table employee-table-compact">
-                            <thead>
-                                <tr>
-                                    <th><?php echo e(t('employee.date')); ?></th>
-                                    <th><?php echo e(t('employee.title')); ?></th>
-                                    <th><?php echo e(t('employee.recipient', ['fallback' => 'Recipient'])); ?></th>
-                                    <th><?php echo e(t('employee.status', ['fallback' => 'Status'])); ?></th>
-                                    <th><?php echo e(t('employee.action')); ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($outgoingDocuments)): ?>
-                                    <tr><td colspan="5"><?php echo e(t('employee.no_sent_documents', ['fallback' => 'No sent documents yet.'])); ?></td></tr>
-                                <?php endif; ?>
-                                <?php foreach ($outgoingDocuments as $documentMessage): ?>
-                                    <tr>
-                                        <td><?php echo e((string) ($documentMessage['created_at'] ?? '')); ?></td>
-                                        <td><?php echo e((string) ($documentMessage['title'] ?? t('employee.document_notification'))); ?></td>
-                                        <td><?php echo e((string) ($documentMessage['recipient_name'] ?? '-')); ?></td>
-                                        <td>
-                                            <?php
-                                                $outgoingTitle = strtolower((string) ($documentMessage['title'] ?? ''));
-                                                $isSignedNotification = str_contains($outgoingTitle, 'signe') || str_contains($outgoingTitle, 'signed');
-                                            ?>
-                                            <span class="employee-status-chip">
-                                                <?php echo e($isSignedNotification ? t('employee.read_and_approved', ['fallback' => 'Read and approved']) : ($statusLabels[(string) ($documentMessage['status'] ?? '')] ?? ((string) ($documentMessage['status'] ?? '-')))); ?>
-                                            </span>
-                                            <?php if (!empty($documentMessage['is_signed_by_recipient']) || $isSignedNotification): ?>
-                                                <span class="employee-status-chip"><?php echo e(t('employee.signed_document_received_title', ['fallback' => 'Signed document received'])); ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <div class="employee-document-actions employee-document-actions-inline">
-                                                <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
-                                                    <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'preview' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?></a>
-                                                    <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'from' => 'my-space']); ?>"><?php echo e(t('employee.download_document', ['fallback' => 'Download'])); ?></a>
-                                                    <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'disposition' => 'inline', 'print_preview' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?></a>
-                                                <?php else: ?>
-                                                    <span class="employee-status-chip"><?php echo e(t('employee.file_not_available')); ?></span>
-                                                <?php endif; ?>
-                                                <form method="post">
-                                                    <input type="hidden" name="action" value="delete_document_entry">
-                                                    <input type="hidden" name="scope" value="outgoing">
-                                                    <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
-                                                    <button type="submit" class="site-icon-btn employee-document-delete-btn" aria-label="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>" title="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>">
-                                                        <img src="<?php echo e($basePath . '/assets/icons/x.svg'); ?>" alt="" aria-hidden="true">
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <div class="company-grid employee-documents-card-grid">
+                        <?php if (empty($outgoingDocuments)): ?>
+                            <div class="crud-empty-state"><?php echo e(t('employee.no_sent_documents', ['fallback' => 'No sent documents yet.'])); ?></div>
+                        <?php endif; ?>
+                        <?php foreach ($outgoingDocuments as $documentMessage): ?>
+                            <?php
+                                $outgoingFileName = (string) ($documentMessage['file_name'] ?? t('employee.document'));
+                                $outgoingExtension = strtoupper((string) pathinfo($outgoingFileName, PATHINFO_EXTENSION));
+                                $outgoingThumbnail = function_exists('documentThumbnailDataUrl')
+                                    ? documentThumbnailDataUrl($documentMessage, 220, 120)
+                                    : null;
+                                if ($outgoingExtension === '') {
+                                    $outgoingExtension = 'DOC';
+                                }
+                                $outgoingTitle = strtolower((string) ($documentMessage['title'] ?? ''));
+                                $isSignedNotification = str_contains($outgoingTitle, 'signe') || str_contains($outgoingTitle, 'signed');
+                            ?>
+                            <article class="company-card company-card--stacked employee-doc-card">
+                                <div class="document-preview-vignette" aria-hidden="true">
+                                    <?php if (is_string($outgoingThumbnail) && $outgoingThumbnail !== ''): ?>
+                                        <img src="<?php echo e($outgoingThumbnail); ?>" alt="" class="document-preview-vignette-image" loading="lazy">
+                                    <?php else: ?>
+                                        <span><?php echo e($outgoingExtension); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="company-card-head">
+                                    <div class="company-card-title"><?php echo e((string) ($documentMessage['title'] ?? t('employee.document_notification'))); ?></div>
+                                    <div class="company-card-meta" title="<?php echo e((string) ($documentMessage['recipient_names_label'] ?? '-')); ?>"><?php echo e((string) ($documentMessage['recipient_name'] ?? '-')); ?> • <?php echo e((string) ($documentMessage['created_at'] ?? '')); ?></div>
+                                </div>
+                                <div class="company-card-actions company-card-actions--inline">
+                                    <span class="company-card-chip">
+                                        <?php echo e($isSignedNotification ? t('employee.read_and_approved', ['fallback' => 'Read and approved']) : ($statusLabels[(string) ($documentMessage['status_display'] ?? '')] ?? ((string) ($documentMessage['status_display'] ?? '-')))); ?>
+                                    </span>
+                                    <?php if (((int) ($documentMessage['recipient_count'] ?? 0)) > 1): ?>
+                                        <span class="company-card-chip"><?php echo (int) ($documentMessage['recipient_count'] ?? 0); ?> destinatari</span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($documentMessage['is_signed_by_recipient']) || $isSignedNotification): ?>
+                                        <span class="company-card-chip"><?php echo e(t('employee.signed_document_received_title', ['fallback' => 'Signed document received'])); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="company-card-actions employee-doc-actions-icons">
+                                    <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
+                                        <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'preview' => '1', 'from' => 'my-space']); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
+                                            <img src="<?php echo e($basePath . '/assets/icons/document.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                        </a>
+                                        <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'from' => 'my-space']); ?>" title="<?php echo e(t('employee.download_document', ['fallback' => 'Download'])); ?>">
+                                            <img src="<?php echo e($basePath . '/assets/icons/circle-arrow-out-up-left.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                        </a>
+                                        <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'disposition' => 'inline', 'print_preview' => '1', 'from' => 'my-space']); ?>" title="<?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?>">
+                                            <img src="<?php echo e($basePath . '/assets/icons/printer.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="company-card-chip"><?php echo e(t('employee.file_not_available')); ?></span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($documentMessage['can_archive']) && !empty($documentMessage['document_id'])): ?>
+                                        <form method="post" class="company-card-delete-form">
+                                            <input type="hidden" name="action" value="archive_outgoing_document">
+                                            <input type="hidden" name="document_id" value="<?php echo (int) ($documentMessage['document_id'] ?? 0); ?>">
+                                            <button type="submit" class="company-card-action" title="<?php echo e(t('employee.archive_document', ['fallback' => 'Archive'])); ?>">
+                                                <img src="<?php echo e($basePath . '/assets/icons/notebook.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                    <form method="post" class="company-card-delete-form">
+                                        <input type="hidden" name="action" value="delete_outgoing_document">
+                                        <input type="hidden" name="document_id" value="<?php echo (int) ($documentMessage['document_id'] ?? 0); ?>">
+                                        <button type="submit" class="company-card-action is-danger" aria-label="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>" title="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>">
+                                            <img src="<?php echo e($basePath . '/assets/icons/x.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                        </button>
+                                    </form>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
                     </div>
                 </section>
 
-                <section class="employee-documents-inbox-section">
+                <section class="employee-documents-inbox-section employee-documents-inbox-section-full crud-panel">
                     <div class="employee-card-head">
                         <h4><?php echo e(t('employee.archived_documents', ['fallback' => 'Archived documents'])); ?></h4>
                         <span class="employee-metric-pill"><?php echo count($archivedDocuments); ?> <?php echo e(t('employee.files_suffix')); ?></span>
                     </div>
-                    <div class="table-wrap employee-table-wrap employee-documents-table-wrap">
-                        <table class="admin-table employee-table-compact">
-                            <thead>
-                                <tr>
-                                    <th><?php echo e(t('employee.date')); ?></th>
-                                    <th><?php echo e(t('employee.title')); ?></th>
-                                    <th><?php echo e(t('employee.sender')); ?></th>
-                                    <th><?php echo e(t('employee.action')); ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($archivedDocuments)): ?>
-                                    <tr><td colspan="4"><?php echo e(t('employee.no_archived_documents', ['fallback' => 'No archived documents.'])); ?></td></tr>
+                    <div class="employee-archived-list">
+                        <?php if (empty($archivedDocuments)): ?>
+                            <div class="crud-empty-state"><?php echo e(t('employee.no_archived_documents', ['fallback' => 'No archived documents.'])); ?></div>
+                        <?php endif; ?>
+                        <?php foreach ($archivedDocuments as $documentMessage): ?>
+                            <div class="employee-archived-row">
+                                <div class="employee-archived-row-main">
+                                    <div class="employee-archived-row-title"><?php echo e((string) ($documentMessage['title'] ?? t('employee.document_notification'))); ?></div>
+                                    <div class="employee-archived-row-description"><?php echo e((string) ($documentMessage['description'] ?? '-')); ?></div>
+                                </div>
+                                <?php if ((string) ($documentMessage['archive_scope'] ?? '') === 'outgoing'): ?>
+                                    <form method="post" class="employee-archived-row-action">
+                                        <input type="hidden" name="action" value="restore_archived_outgoing_document">
+                                        <input type="hidden" name="document_id" value="<?php echo (int) ($documentMessage['document_id'] ?? 0); ?>">
+                                        <button type="submit" class="admin-action-link admin-action-link-secondary"><?php echo e(t('employee.restore_document', ['fallback' => 'Restore'])); ?></button>
+                                    </form>
+                                <?php else: ?>
+                                    <form method="post" class="employee-archived-row-action">
+                                        <input type="hidden" name="action" value="restore_archived_document">
+                                        <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
+                                        <button type="submit" class="admin-action-link admin-action-link-secondary"><?php echo e(t('employee.restore_document', ['fallback' => 'Restore'])); ?></button>
+                                    </form>
                                 <?php endif; ?>
-                                <?php foreach ($archivedDocuments as $documentMessage): ?>
-                                    <tr>
-                                        <td><?php echo e((string) ($documentMessage['created_at'] ?? '')); ?></td>
-                                        <td><?php echo e((string) ($documentMessage['title'] ?? t('employee.document_notification'))); ?></td>
-                                        <td><?php echo e((string) ($documentMessage['sender_name'] ?? '-')); ?></td>
-                                        <td>
-                                            <div class="employee-document-actions employee-document-actions-inline">
-                                                <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
-                                                    <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'preview' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?></a>
-                                                    <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'from' => 'my-space']); ?>"><?php echo e(t('employee.download_document', ['fallback' => 'Download'])); ?></a>
-                                                    <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'disposition' => 'inline', 'print_preview' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?></a>
-                                                <?php endif; ?>
-                                                <form method="post">
-                                                    <input type="hidden" name="action" value="restore_archived_document">
-                                                    <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
-                                                    <button type="submit" class="admin-action-link admin-action-link-secondary"><?php echo e(t('employee.restore_document', ['fallback' => 'Restore'])); ?></button>
-                                                </form>
-                                                <form method="post">
-                                                    <input type="hidden" name="action" value="delete_document_entry">
-                                                    <input type="hidden" name="scope" value="archived">
-                                                    <input type="hidden" name="request_id" value="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>">
-                                                    <button type="submit" class="site-icon-btn employee-document-delete-btn" aria-label="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>" title="<?php echo e(t('employee.delete_document', ['fallback' => 'Delete'])); ?>">
-                                                        <img src="<?php echo e($basePath . '/assets/icons/x.svg'); ?>" alt="" aria-hidden="true">
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </section>
 

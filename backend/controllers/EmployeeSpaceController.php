@@ -106,6 +106,8 @@ if ($employeeDisplayName === '') {
 $employeeDepartmentName = trim((string) ($profileRow['department_name'] ?? ''));
 $employeeCompanyName = trim((string) ($profileRow['company_name'] ?? 'StaffEase Pro'));
 $employeeCompanyId = (int) ($profileRow['company_id'] ?? 0);
+$employeeDepartmentId = (int) ($profileRow['department_id'] ?? 0);
+$currentRole = (string) ($currentUser['role'] ?? 'employee');
 
 $documentShareRecipients = [];
 try {
@@ -119,17 +121,26 @@ try {
          WHERE u.status = "active"
            AND u.id <> :current_user_id';
 
+    $recipientParams = ['current_user_id' => (int) $currentUser['id']];
+
     if ($employeeCompanyId > 0) {
         $recipientSql .= ' AND d.company_id = :company_id';
+        $recipientParams['company_id'] = $employeeCompanyId;
+    }
+
+    if ($currentRole === 'employee') {
+        $recipientSql .= ' AND (u.role = "admin" OR (u.role = "department_manager" AND u.department_id = :employee_department_id))';
+        $recipientParams['employee_department_id'] = $employeeDepartmentId;
+    } elseif ($currentRole === 'department_manager') {
+        $recipientSql .= ' AND (u.role = "employee" OR (u.role = "department_manager" AND u.department_id <> :manager_department_id))';
+        $recipientParams['manager_department_id'] = $employeeDepartmentId;
+    } elseif ($currentRole === 'admin') {
+        $recipientSql .= ' AND u.role = "employee"';
     }
 
     $recipientSql .= ' ORDER BY FIELD(u.role, "employee", "department_manager", "admin", "super_admin"), full_name ASC';
 
     $recipientStmt = $pdo->prepare($recipientSql);
-    $recipientParams = ['current_user_id' => (int) $currentUser['id']];
-    if ($employeeCompanyId > 0) {
-        $recipientParams['company_id'] = $employeeCompanyId;
-    }
     $recipientStmt->execute($recipientParams);
     $documentShareRecipients = $recipientStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 } catch (Throwable $e) {
@@ -184,6 +195,7 @@ $incomingDocumentsStatement = $pdo->prepare(
                         d.id AS document_id,
                         d.file_name,
             d.file_path,
+        d.file_blob,
         d.file_mime_type,
             (d.file_blob IS NOT NULL) AS has_db_content,
                         d.upload_date,
@@ -200,7 +212,7 @@ $incomingDocumentsStatement = $pdo->prepare(
 $incomingDocumentsStatement->execute(['user_id' => (int) $currentUser['id']]);
 $incomingDocuments = $incomingDocumentsStatement->fetchAll(PDO::FETCH_ASSOC);
 
-$archivedDocumentsStatement = $pdo->prepare(
+$archivedIncomingDocumentsStatement = $pdo->prepare(
     'SELECT r.id AS request_id,
                         r.title,
                         r.message,
@@ -212,6 +224,7 @@ $archivedDocumentsStatement = $pdo->prepare(
                         d.id AS document_id,
                         d.file_name,
             d.file_path,
+        d.file_blob,
         d.file_mime_type,
             (d.file_blob IS NOT NULL) AS has_db_content,
                         d.upload_date,
@@ -225,8 +238,81 @@ $archivedDocumentsStatement = $pdo->prepare(
              AND COALESCE(r.status, "") IN ("cancelled", "archived")
          ORDER BY r.updated_at DESC, r.id DESC'
 );
-$archivedDocumentsStatement->execute(['user_id' => (int) $currentUser['id']]);
-$archivedDocuments = $archivedDocumentsStatement->fetchAll(PDO::FETCH_ASSOC);
+$archivedIncomingDocumentsStatement->execute(['user_id' => (int) $currentUser['id']]);
+$archivedIncomingDocuments = $archivedIncomingDocumentsStatement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+$archivedOutgoingDocumentsStatement = $pdo->prepare(
+    'SELECT r.id AS request_id,
+                    r.title,
+                    r.message,
+                    r.type,
+                    r.status,
+                    r.user_id AS sender_id,
+                    r.recipient_id,
+                    r.created_at,
+                    d.id AS document_id,
+                    d.file_name,
+                    CONCAT(recipient.first_name, " ", recipient.last_name) AS recipient_name
+     FROM requests r
+     INNER JOIN documents d ON d.id = r.document_id
+     INNER JOIN users recipient ON recipient.id = r.recipient_id
+     WHERE r.user_id = :user_id
+         AND r.document_id IS NOT NULL
+         AND r.type IN ("notification", "document_signature")
+         AND COALESCE(r.status, "") IN ("cancelled", "archived")
+     ORDER BY r.updated_at DESC, r.id DESC'
+);
+$archivedOutgoingDocumentsStatement->execute(['user_id' => (int) $currentUser['id']]);
+$archivedOutgoingRows = $archivedOutgoingDocumentsStatement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+$archivedOutgoingGroupedByDocument = [];
+foreach ($archivedOutgoingRows as $row) {
+    $documentId = (int) ($row['document_id'] ?? 0);
+    if ($documentId <= 0) {
+        continue;
+    }
+
+    if (!isset($archivedOutgoingGroupedByDocument[$documentId])) {
+        $archivedOutgoingGroupedByDocument[$documentId] = $row;
+        $archivedOutgoingGroupedByDocument[$documentId]['recipient_names'] = [];
+    }
+
+    $recipientName = trim((string) ($row['recipient_name'] ?? ''));
+    if ($recipientName !== '') {
+        $archivedOutgoingGroupedByDocument[$documentId]['recipient_names'][] = $recipientName;
+    }
+
+    $existingCreatedAt = strtotime((string) ($archivedOutgoingGroupedByDocument[$documentId]['created_at'] ?? '')) ?: 0;
+    $candidateCreatedAt = strtotime((string) ($row['created_at'] ?? '')) ?: 0;
+    if ($candidateCreatedAt > $existingCreatedAt) {
+        $archivedOutgoingGroupedByDocument[$documentId]['created_at'] = $row['created_at'] ?? $archivedOutgoingGroupedByDocument[$documentId]['created_at'];
+    }
+}
+
+$archivedOutgoingDocuments = [];
+foreach ($archivedOutgoingGroupedByDocument as $groupedDocument) {
+    $recipientNames = array_values(array_unique(array_filter(array_map(
+        static fn ($value): string => trim((string) $value),
+        $groupedDocument['recipient_names'] ?? []
+    ))));
+    $recipientCount = count($recipientNames);
+
+    $groupedDocument['recipient_count'] = $recipientCount;
+    $groupedDocument['recipient_name'] = $recipientCount > 0
+        ? ($recipientCount > 1
+            ? ($recipientNames[0] . ' +' . ($recipientCount - 1))
+            : $recipientNames[0])
+        : '-';
+    $groupedDocument['recipient_names_label'] = $recipientCount > 0 ? implode(', ', $recipientNames) : '-';
+
+    $archivedOutgoingDocuments[] = $groupedDocument;
+}
+
+usort($archivedOutgoingDocuments, static function (array $left, array $right): int {
+    $leftStamp = strtotime((string) ($left['created_at'] ?? '')) ?: 0;
+    $rightStamp = strtotime((string) ($right['created_at'] ?? '')) ?: 0;
+    return $rightStamp <=> $leftStamp;
+});
 
 // Signed-return notifications should be treated as already reviewed in sender's sent list.
 $normalizeSignedOutgoingStatement = $pdo->prepare(
@@ -255,6 +341,7 @@ $outgoingDocumentsStatement = $pdo->prepare(
                         d.id AS document_id,
                         d.file_name,
                         d.file_path,
+                        d.file_blob,
                         d.file_mime_type,
                         (d.file_blob IS NOT NULL) AS has_db_content,
                         d.upload_date,
@@ -265,10 +352,89 @@ $outgoingDocumentsStatement = $pdo->prepare(
          WHERE r.user_id = :user_id
              AND r.document_id IS NOT NULL
              AND r.type IN ("notification", "document_signature")
+             AND COALESCE(r.status, "") NOT IN ("cancelled", "archived")
          ORDER BY r.created_at DESC, r.id DESC'
 );
 $outgoingDocumentsStatement->execute(['user_id' => (int) $currentUser['id']]);
-$outgoingDocuments = $outgoingDocumentsStatement->fetchAll(PDO::FETCH_ASSOC);
+$outgoingDocumentRows = $outgoingDocumentsStatement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+$outgoingGroupedByDocument = [];
+foreach ($outgoingDocumentRows as $row) {
+    $documentId = (int) ($row['document_id'] ?? 0);
+    if ($documentId <= 0) {
+        continue;
+    }
+
+    if (!isset($outgoingGroupedByDocument[$documentId])) {
+        $outgoingGroupedByDocument[$documentId] = $row;
+        $outgoingGroupedByDocument[$documentId]['recipient_names'] = [];
+        $outgoingGroupedByDocument[$documentId]['request_ids'] = [];
+        $outgoingGroupedByDocument[$documentId]['status_list'] = [];
+    }
+
+    $recipientName = trim((string) ($row['recipient_name'] ?? ''));
+    if ($recipientName !== '') {
+        $outgoingGroupedByDocument[$documentId]['recipient_names'][] = $recipientName;
+    }
+
+    $requestId = (int) ($row['request_id'] ?? 0);
+    if ($requestId > 0) {
+        $outgoingGroupedByDocument[$documentId]['request_ids'][] = $requestId;
+    }
+
+    $statusValue = strtolower(trim((string) ($row['status'] ?? '')));
+    if ($statusValue !== '') {
+        $outgoingGroupedByDocument[$documentId]['status_list'][] = $statusValue;
+    }
+
+    $existingCreatedAt = strtotime((string) ($outgoingGroupedByDocument[$documentId]['created_at'] ?? '')) ?: 0;
+    $candidateCreatedAt = strtotime((string) ($row['created_at'] ?? '')) ?: 0;
+    if ($candidateCreatedAt > $existingCreatedAt) {
+        $outgoingGroupedByDocument[$documentId]['created_at'] = $row['created_at'] ?? $outgoingGroupedByDocument[$documentId]['created_at'];
+    }
+}
+
+$outgoingDocuments = [];
+foreach ($outgoingGroupedByDocument as $groupedDocument) {
+    $recipientNames = array_values(array_unique(array_filter(array_map(
+        static fn ($value): string => trim((string) $value),
+        $groupedDocument['recipient_names'] ?? []
+    ))));
+    $recipientCount = count($recipientNames);
+
+    $groupedDocument['recipient_count'] = $recipientCount;
+    $groupedDocument['recipient_name'] = $recipientCount > 0
+        ? ($recipientCount > 1
+            ? ($recipientNames[0] . ' +' . ($recipientCount - 1))
+            : $recipientNames[0])
+        : '-';
+    $groupedDocument['recipient_names_label'] = $recipientCount > 0 ? implode(', ', $recipientNames) : '-';
+
+    $statusList = array_values(array_unique(array_filter(array_map(
+        static fn ($value): string => strtolower(trim((string) $value)),
+        $groupedDocument['status_list'] ?? []
+    ))));
+
+    if (in_array('approved', $statusList, true)) {
+        $groupedDocument['status_display'] = 'approved';
+    } elseif (in_array('read', $statusList, true)) {
+        $groupedDocument['status_display'] = 'read';
+    } elseif (in_array('unread', $statusList, true)) {
+        $groupedDocument['status_display'] = 'unread';
+    } elseif (in_array('pending', $statusList, true)) {
+        $groupedDocument['status_display'] = 'pending';
+    } else {
+        $groupedDocument['status_display'] = strtolower(trim((string) ($groupedDocument['status'] ?? 'pending')));
+    }
+
+    $outgoingDocuments[] = $groupedDocument;
+}
+
+usort($outgoingDocuments, static function (array $left, array $right): int {
+    $leftStamp = strtotime((string) ($left['created_at'] ?? '')) ?: 0;
+    $rightStamp = strtotime((string) ($right['created_at'] ?? '')) ?: 0;
+    return $rightStamp <=> $leftStamp;
+});
 
 $resolveStoredDocumentPath = static function (array $row): ?string {
     $filePath = trim((string) ($row['file_path'] ?? ''));
@@ -306,27 +472,48 @@ foreach ($incomingDocuments as &$incomingDocument) {
 }
 unset($incomingDocument);
 
-foreach ($archivedDocuments as &$archivedDocument) {
-    $hasDbContent = !empty($archivedDocument['has_db_content']);
-    $archivedDocument['is_download_available'] = $hasDbContent || ($resolveStoredDocumentPath($archivedDocument) !== null);
-    $archivedDocument['can_sign'] = false;
-    $archivedDocument['can_archive'] = false;
-    $archivedDocument['is_new'] = false;
-}
-unset($archivedDocument);
-
 foreach ($outgoingDocuments as &$outgoingDocument) {
     $hasDbContent = !empty($outgoingDocument['has_db_content']);
     $outgoingDocument['is_download_available'] = $hasDbContent || ($resolveStoredDocumentPath($outgoingDocument) !== null);
-    $outgoingStatus = strtolower(trim((string) ($outgoingDocument['status'] ?? '')));
+    $outgoingStatus = strtolower(trim((string) ($outgoingDocument['status_display'] ?? $outgoingDocument['status'] ?? '')));
     $outgoingTitle = strtolower(trim((string) ($outgoingDocument['title'] ?? '')));
     $outgoingDocument['is_signed_notification'] = str_contains($outgoingTitle, 'signed document received')
         || str_contains($outgoingTitle, 'document signe recu');
     $outgoingDocument['is_signed_by_recipient'] = (string) ($outgoingDocument['status'] ?? '') === 'approved'
         || !empty($outgoingDocument['is_signed_notification']);
     $outgoingDocument['status_display'] = !empty($outgoingDocument['is_signed_by_recipient']) ? 'approved' : $outgoingStatus;
+    $outgoingDocument['can_archive'] = in_array($outgoingDocument['status_display'], ['pending', 'unread', 'read', 'approved'], true);
 }
 unset($outgoingDocument);
+
+$archivedDocuments = [];
+foreach ($archivedIncomingDocuments as $archivedIncomingDocument) {
+    $archivedDocuments[] = [
+        'archive_scope' => 'incoming',
+        'request_id' => (int) ($archivedIncomingDocument['request_id'] ?? 0),
+        'document_id' => (int) ($archivedIncomingDocument['document_id'] ?? 0),
+        'title' => (string) ($archivedIncomingDocument['title'] ?? $archivedIncomingDocument['file_name'] ?? t('employee.document_notification')),
+        'description' => trim((string) ($archivedIncomingDocument['sender_name'] ?? '-')) . ' • ' . (string) ($archivedIncomingDocument['created_at'] ?? ''),
+        'created_at' => (string) ($archivedIncomingDocument['created_at'] ?? ''),
+    ];
+}
+
+foreach ($archivedOutgoingDocuments as $archivedOutgoingDocument) {
+    $archivedDocuments[] = [
+        'archive_scope' => 'outgoing',
+        'request_id' => 0,
+        'document_id' => (int) ($archivedOutgoingDocument['document_id'] ?? 0),
+        'title' => (string) ($archivedOutgoingDocument['title'] ?? $archivedOutgoingDocument['file_name'] ?? t('employee.document_notification')),
+        'description' => (string) ($archivedOutgoingDocument['recipient_name'] ?? '-') . ' • ' . (string) ($archivedOutgoingDocument['created_at'] ?? ''),
+        'created_at' => (string) ($archivedOutgoingDocument['created_at'] ?? ''),
+    ];
+}
+
+usort($archivedDocuments, static function (array $left, array $right): int {
+    $leftStamp = strtotime((string) ($left['created_at'] ?? '')) ?: 0;
+    $rightStamp = strtotime((string) ($right['created_at'] ?? '')) ?: 0;
+    return $rightStamp <=> $leftStamp;
+});
 
 $unreadDocumentsCount = 0;
 foreach ($incomingDocuments as $incomingDocument) {
@@ -335,13 +522,18 @@ foreach ($incomingDocuments as $incomingDocument) {
     }
 }
 
-$currentRole = (string) ($currentUser['role'] ?? 'employee');
 $messageRecipients = array_values(array_filter(
     $documentShareRecipients,
     static function (array $recipient) use ($currentRole): bool {
         $role = (string) ($recipient['role'] ?? 'employee');
         if ($currentRole === 'employee') {
-            return in_array($role, ['admin', 'department_manager', 'super_admin'], true);
+            return in_array($role, ['admin', 'department_manager'], true);
+        }
+        if ($currentRole === 'department_manager') {
+            return in_array($role, ['employee', 'department_manager'], true);
+        }
+        if ($currentRole === 'admin') {
+            return $role === 'employee';
         }
         return in_array($role, ['employee', 'department_manager', 'admin', 'super_admin'], true);
     }
@@ -537,13 +729,20 @@ $employeeUiState = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $redirectToDocumentsModal = static function (): void {
+        redirectTo('my-space', [
+            'focus' => 'employee-received-documents',
+            'modal' => 'documents',
+        ]);
+    };
+
     $action = $_POST['action'] ?? '';
 
     if ($action === 'archive_received_document') {
         $requestId = (int) ($_POST['request_id'] ?? 0);
         if ($requestId <= 0) {
             setFlash('error', t('employee.select_valid_document', ['fallback' => 'Please select a valid document.']));
-            redirectTo('my-space', ['print' => 'documents']);
+            $redirectToDocumentsModal();
         }
 
         $archiveStatement = $pdo->prepare(
@@ -567,14 +766,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             setFlash('error', t('employee.archive_requires_read', ['fallback' => 'You can archive only after reading or signing this document.']));
         }
-        redirectTo('my-space');
+        $redirectToDocumentsModal();
     }
 
     if ($action === 'mark_document_read') {
         $requestId = (int) ($_POST['request_id'] ?? 0);
         if ($requestId <= 0) {
             setFlash('error', t('employee.select_valid_document', ['fallback' => 'Please select a valid document.']));
-            redirectTo('my-space');
+            $redirectToDocumentsModal();
         }
 
         $markReadStatement = $pdo->prepare(
@@ -633,14 +832,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setFlash('success', t('employee.document_marked_read', ['fallback' => 'Document marked as read.']));
         }
 
-        redirectTo('my-space', ['focus' => 'employee-received-documents']);
+        $redirectToDocumentsModal();
     }
 
     if ($action === 'restore_archived_document') {
         $requestId = (int) ($_POST['request_id'] ?? 0);
         if ($requestId <= 0) {
             setFlash('error', t('employee.select_valid_document', ['fallback' => 'Please select a valid document.']));
-            redirectTo('my-space');
+            $redirectToDocumentsModal();
         }
 
         $restoreStatement = $pdo->prepare(
@@ -663,14 +862,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             setFlash('error', t('common.unauthorized'));
         }
-        redirectTo('my-space');
+        $redirectToDocumentsModal();
     }
 
     if ($action === 'delete_archived_document') {
         $requestId = (int) ($_POST['request_id'] ?? 0);
         if ($requestId <= 0) {
             setFlash('error', t('employee.select_valid_document', ['fallback' => 'Please select a valid document.']));
-            redirectTo('my-space');
+            $redirectToDocumentsModal();
         }
 
         $deleteStatement = $pdo->prepare(
@@ -692,7 +891,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setFlash('error', t('common.unauthorized'));
         }
 
-        redirectTo('my-space', ['focus' => 'employee-received-documents']);
+        $redirectToDocumentsModal();
+    }
+
+    if ($action === 'archive_outgoing_document') {
+        $documentId = (int) ($_POST['document_id'] ?? 0);
+        if ($documentId <= 0) {
+            setFlash('error', t('employee.select_valid_document', ['fallback' => 'Please select a valid document.']));
+            $redirectToDocumentsModal();
+        }
+
+        $archiveOutgoingStatement = $pdo->prepare(
+            'UPDATE requests
+             SET status = :status,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE user_id = :user_id
+               AND document_id = :document_id
+               AND type IN ("notification", "document_signature")
+               AND COALESCE(status, "") NOT IN ("cancelled", "archived")'
+        );
+        $archiveOutgoingStatement->execute([
+            'status' => 'cancelled',
+            'user_id' => (int) $currentUser['id'],
+            'document_id' => $documentId,
+        ]);
+
+        if ($archiveOutgoingStatement->rowCount() > 0) {
+            setFlash('success', t('employee.document_archived', ['fallback' => 'Document archived.']));
+        } else {
+            setFlash('error', t('common.unauthorized'));
+        }
+
+        $redirectToDocumentsModal();
+    }
+
+    if ($action === 'restore_archived_outgoing_document') {
+        $documentId = (int) ($_POST['document_id'] ?? 0);
+        if ($documentId <= 0) {
+            setFlash('error', t('employee.select_valid_document', ['fallback' => 'Please select a valid document.']));
+            $redirectToDocumentsModal();
+        }
+
+        $restoreOutgoingStatement = $pdo->prepare(
+            'UPDATE requests
+             SET status = CASE
+                              WHEN type = "document_signature" THEN "pending"
+                              ELSE "unread"
+                          END,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE user_id = :user_id
+               AND document_id = :document_id
+               AND type IN ("notification", "document_signature")
+               AND COALESCE(status, "") IN ("cancelled", "archived")'
+        );
+        $restoreOutgoingStatement->execute([
+            'user_id' => (int) $currentUser['id'],
+            'document_id' => $documentId,
+        ]);
+
+        if ($restoreOutgoingStatement->rowCount() > 0) {
+            setFlash('success', t('employee.document_restored', ['fallback' => 'Document restored.']));
+        } else {
+            setFlash('error', t('common.unauthorized'));
+        }
+
+        $redirectToDocumentsModal();
+    }
+
+    if ($action === 'delete_outgoing_document') {
+        $documentId = (int) ($_POST['document_id'] ?? 0);
+        if ($documentId <= 0) {
+            setFlash('error', t('employee.select_valid_document', ['fallback' => 'Please select a valid document.']));
+            $redirectToDocumentsModal();
+        }
+
+        $deleteOutgoingStatement = $pdo->prepare(
+            'DELETE FROM requests
+             WHERE user_id = :user_id
+               AND document_id = :document_id
+               AND type IN ("notification", "document_signature")'
+        );
+        $deleteOutgoingStatement->execute([
+            'user_id' => (int) $currentUser['id'],
+            'document_id' => $documentId,
+        ]);
+
+        if ($deleteOutgoingStatement->rowCount() > 0) {
+            setFlash('success', t('employee.document_deleted', ['fallback' => 'Document deleted.']));
+        } else {
+            setFlash('error', t('common.unauthorized'));
+        }
+
+        $redirectToDocumentsModal();
     }
 
     if ($action === 'delete_document_entry') {
@@ -700,7 +990,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $scope = strtolower(trim((string) ($_POST['scope'] ?? 'incoming')));
         if ($requestId <= 0) {
             setFlash('error', t('employee.select_valid_document', ['fallback' => 'Please select a valid document.']));
-            redirectTo('my-space');
+            $redirectToDocumentsModal();
         }
 
         $deleteIncoming = $pdo->prepare(
@@ -738,7 +1028,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setFlash('error', t('common.unauthorized'));
         }
 
-        redirectTo('my-space', ['focus' => 'employee-received-documents']);
+        $redirectToDocumentsModal();
     }
 
     if ($action === 'message_bulk_update') {
@@ -1060,6 +1350,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'sign_document') {
         $requestId = (int) ($_POST['request_id'] ?? 0);
         $signatureData = trim((string) ($_POST['signature_data'] ?? ''));
+        $signaturePosX = (float) ($_POST['signature_pos_x'] ?? 86);
+        $signaturePosY = (float) ($_POST['signature_pos_y'] ?? 84);
+        $signaturePosX = max(4.0, min(96.0, $signaturePosX));
+        $signaturePosY = max(4.0, min(96.0, $signaturePosY));
 
         if ($requestId <= 0) {
             $error = t('employee.select_valid_document', ['fallback' => 'Please select a valid document to sign.']);
@@ -1119,35 +1413,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $sourceDownloadUrl = appUrl('document-download', ['id' => (int) ($signatureRequest['document_id'] ?? 0)]);
+                $sourcePreviewUrl = appUrl('document-download', [
+                    'id' => (int) ($signatureRequest['document_id'] ?? 0),
+                    'preview' => '1',
+                    'from' => 'my-space',
+                ]);
                 $safeTitle = htmlspecialchars((string) ($signatureRequest['title'] ?? 'Signed document'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $safeSenderName = htmlspecialchars($senderName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $safeEmployeeName = htmlspecialchars($employeeName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $safeSignedAt = htmlspecialchars($signedAt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $safeSourceUrl = htmlspecialchars($sourceDownloadUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $safeSourcePreviewUrl = htmlspecialchars($sourcePreviewUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $safeSignatureData = htmlspecialchars($signatureData, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $safeReadApproved = htmlspecialchars((string) t('employee.read_and_approved', ['fallback' => 'Read and approved']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $sourceMime = strtolower(trim((string) ($signatureRequest['file_mime_type'] ?? '')));
-
-                $sourcePreviewHtml = '<p><a href="' . $safeSourceUrl . '">Open original document</a></p>';
-                $sourceBlob = $signatureRequest['file_blob'] ?? null;
-                if (is_string($sourceBlob) && $sourceBlob !== '') {
-                    $isTextPreview = str_starts_with($sourceMime, 'text/')
-                        || str_contains($sourceMime, 'json')
-                        || str_contains($sourceMime, 'xml')
-                        || str_contains($sourceMime, 'csv');
-                    if ($isTextPreview) {
-                        $sourcePreviewHtml = '<pre class="signed-document-content">'
-                            . htmlspecialchars($sourceBlob, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-                            . '</pre>';
-                    }
-                }
-
                 $signedHtml = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Signed document</title>'
-                    . '<style>body{font-family:Arial,sans-serif;background:#f7f7f8;color:#111827;padding:24px;}main{max-width:980px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px 20px 90px;position:relative;}h1{font-size:1.2rem;margin:0 0 10px;}dl{display:grid;grid-template-columns:180px 1fr;gap:8px 14px;margin:12px 0 18px;}dt{font-weight:700;color:#374151;}dd{margin:0;color:#111827;}a{color:#9a7a14;}pre.signed-document-content{white-space:pre-wrap;word-break:break-word;background:#fafaf9;border:1px solid #e6e6e6;border-radius:10px;padding:12px;max-height:52vh;overflow:auto;}aside.signature-stamp{position:absolute;right:20px;bottom:16px;min-width:260px;border:1px solid rgba(209,213,219,0.85);border-radius:12px;padding:10px;background:rgba(255,255,255,0.45);backdrop-filter:blur(2px);box-shadow:0 4px 14px rgba(0,0,0,0.08);}aside.signature-stamp h2{font-size:0.9rem;margin:0 0 8px;}aside.signature-stamp img{display:block;width:180px;height:auto;border:1px solid #d1d5db;border-radius:8px;background:#fff;padding:5px;}aside.signature-stamp p{margin:6px 0 0;font-size:0.82rem;color:#374151;}aside.signature-stamp p.status-line{font-weight:700;color:#1f2937;}</style>'
+                    . '<style>body{font-family:Arial,sans-serif;background:#f7f7f8;color:#111827;padding:24px;}main{max-width:1020px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px 20px 28px;}h1{font-size:1.2rem;margin:0 0 10px;}dl{display:grid;grid-template-columns:180px 1fr;gap:8px 14px;margin:12px 0 18px;}dt{font-weight:700;color:#374151;}dd{margin:0;color:#111827;}a{color:#9a7a14;} .signed-document-stage{position:relative;border:1px solid #e6e6e6;border-radius:12px;overflow:hidden;background:#fff;min-height:72vh;} .signed-document-preview{display:block;width:100%;height:72vh;border:0;background:#fff;} .signature-stamp{position:absolute;left:' . number_format($signaturePosX, 2, '.', '') . '%;top:' . number_format($signaturePosY, 2, '.', '') . '%;transform:translate(-50%,-50%);min-width:230px;border:1px solid rgba(209,213,219,0.95);border-radius:12px;padding:10px;background:rgba(255,255,255,0.94);box-shadow:0 4px 14px rgba(0,0,0,0.12);} .signature-stamp h2{font-size:0.9rem;margin:0 0 8px;} .signature-stamp img{display:block;width:180px;height:auto;border:1px solid #d1d5db;border-radius:8px;background:#fff;padding:5px;} .signature-stamp p{margin:6px 0 0;font-size:0.82rem;color:#374151;} .signature-stamp p.status-line{font-weight:700;color:#1f2937;} @media print{body{background:#fff;padding:0;}main{max-width:none;border:0;border-radius:0;padding:0;} .signed-document-stage,.signed-document-preview{height:100vh;min-height:100vh;border:0;}}</style>'
                     . '</head><body><main><h1>' . $safeTitle . '</h1><p>Digitally signed copy generated by StaffEase Pro.</p>'
                     . '<dl><dt>Signed by</dt><dd>' . $safeEmployeeName . '</dd><dt>Requested by</dt><dd>' . $safeSenderName . '</dd><dt>Signed at</dt><dd>' . $safeSignedAt . '</dd><dt>Original document</dt><dd><a href="' . $safeSourceUrl . '">Download source file</a></dd></dl>'
-                    . $sourcePreviewHtml
-                    . '<aside class="signature-stamp"><h2>Digital signature</h2><img src="' . $safeSignatureData . '" alt="Employee signature"><p class="status-line">' . $safeReadApproved . '</p><p><strong>' . $safeEmployeeName . '</strong></p><p>' . $safeSignedAt . '</p></aside>'
+                    . '<section class="signed-document-stage"><iframe class="signed-document-preview" src="' . $safeSourcePreviewUrl . '" title="Signed source preview"></iframe><aside class="signature-stamp"><h2>Digital signature</h2><img src="' . $safeSignatureData . '" alt="Employee signature"><p class="status-line">' . $safeReadApproved . '</p><p><strong>' . $safeEmployeeName . '</strong></p><p>' . $safeSignedAt . '</p></aside></section>'
                     . '</main></body></html>';
 
                 $insertSignature = $pdo->prepare(

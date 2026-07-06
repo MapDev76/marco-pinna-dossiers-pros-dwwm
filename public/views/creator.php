@@ -4,6 +4,10 @@ $basePath = $basePath ?? (function () {
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
 })();
+$creatorName = 'Marco Antonio PINNA';
+$creatorEmail = 'pinna.marcantonio@icloud.com';
+$creatorPhoneDisplay = '+33 744907701';
+$creatorPhoneHref = '+33744907701';
 ?>
 <div class="legal-page">
     <section class="creator-hero">
@@ -12,6 +16,7 @@ $basePath = $basePath ?? (function () {
             <p class="commercial-eyebrow"><?php echo e(t('common.app_creator')); ?></p>
             <h1><?php echo e(t('creator.title', ['fallback' => 'App creator'])); ?></h1>
             <p><?php echo e(t('creator.subtitle', ['fallback' => 'This page describes the creator of StaffEase Pro.'])); ?></p>
+            <p class="creator-email-line"><strong><?php echo e($creatorName); ?></strong></p>
         </div>
     </section>
 
@@ -19,13 +24,21 @@ $basePath = $basePath ?? (function () {
     <p><?php echo e(t('creator.section_body', ['fallback' => 'StaffEase Pro was ideated and developed by the creator of this application.'])); ?></p>
 
     <section class="commercial-card creator-contact-card">
-        <h2><?php echo e(t('creator_contact_title', ['fallback' => 'Contact me for support or account creation'])); ?></h2>
-        <p><?php echo e(t('creator_contact_body', ['fallback' => 'For technical support, a demo or to create a new business account, write directly to the email address below.'])); ?></p>
+        <h2><?php echo e(t('common.creator_contact_title', ['fallback' => 'Contact me for support or account creation'])); ?></h2>
+        <p><?php echo e(t('common.creator_contact_body', ['fallback' => 'For technical support, a demo or to create a new business account, write directly to the email address below.'])); ?></p>
         <p class="creator-email-line">
-            <strong><?php echo e(t('creator_contact_email_label', ['fallback' => 'Contact email'])); ?>:</strong>
-            <a href="mailto:pinna.marcantonio@icloud.com">pinna.marcantonio@icloud.com</a>
+            <strong>Creator:</strong>
+            <span><?php echo e($creatorName); ?></span>
         </p>
-        <p class="creator-email-note"><?php echo e(t('creator_contact_email_note', ['fallback' => 'Support, demo, business account creation and commercial information.'])); ?></p>
+        <p class="creator-email-line">
+            <strong><?php echo e(t('common.creator_contact_email_label', ['fallback' => 'Contact email'])); ?>:</strong>
+            <a href="mailto:<?php echo e($creatorEmail); ?>"><?php echo e($creatorEmail); ?></a>
+        </p>
+        <p class="creator-email-line">
+            <strong>Phone:</strong>
+            <a href="tel:<?php echo e($creatorPhoneHref); ?>"><?php echo e($creatorPhoneDisplay); ?></a>
+        </p>
+        <p class="creator-email-note"><?php echo e(t('common.creator_contact_email_note', ['fallback' => 'Support, demo, business account creation and commercial information.'])); ?></p>
     </section>
 
     <p class="creator-cta-note">

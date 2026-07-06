@@ -1,8 +1,22 @@
 (() => {
   const params = new URLSearchParams(window.location.search);
   const shouldPrintDocuments = params.get('print') === 'documents';
+  const shouldOpenDocumentsModal = params.get('modal') === 'documents';
   const documentsSection = document.getElementById('employee-received-documents');
   const scrollButtons = Array.from(document.querySelectorAll('[data-scroll-target]'));
+
+  const cleanupUrlParam = (paramName) => {
+    const currentUrl = new URL(window.location.href);
+    if (!currentUrl.searchParams.has(paramName)) {
+      return;
+    }
+
+    currentUrl.searchParams.delete(paramName);
+    const nextUrl = currentUrl.pathname
+      + (currentUrl.searchParams.toString() ? `?${currentUrl.searchParams.toString()}` : '')
+      + currentUrl.hash;
+    window.history.replaceState({}, document.title, nextUrl);
+  };
 
   if (shouldPrintDocuments && documentsSection) {
     let printModeCleaned = false;
@@ -113,7 +127,7 @@
       }
     });
 
-    return { closeModal };
+    return { openModal, closeModal };
   };
 
   const initSignatureModal = ({
@@ -123,6 +137,7 @@
     closeButtonsSelector,
     isOpenAllowed,
     onBeforeOpen,
+    onAfterClose,
     emptySignatureMessage,
   }) => {
     const modal = document.querySelector(modalSelector);
@@ -139,6 +154,11 @@
     const dataInput = form.querySelector('[data-signature-data]');
     const errorNode = form.querySelector('[data-signature-error]');
     const clearBtn = form.querySelector('[data-signature-clear]');
+    const signPreviewFrame = form.querySelector('[data-document-sign-preview-frame]');
+    const signPositionLayer = form.querySelector('[data-document-sign-position-layer]');
+    const signPositionDot = form.querySelector('[data-document-sign-position-dot]');
+    const signPosXInput = form.querySelector('[data-signature-pos-x]');
+    const signPosYInput = form.querySelector('[data-signature-pos-y]');
     if (!canvas || !dataInput) return null;
 
     const ctx = canvas.getContext('2d');
@@ -231,10 +251,32 @@
       drawPadBackground();
     }
 
+    const updateSignaturePosition = (xPercent, yPercent) => {
+      const normalizedX = Math.min(96, Math.max(4, Number(xPercent) || 86));
+      const normalizedY = Math.min(96, Math.max(4, Number(yPercent) || 84));
+
+      if (signPosXInput) signPosXInput.value = String(normalizedX);
+      if (signPosYInput) signPosYInput.value = String(normalizedY);
+
+      if (signPositionDot) {
+        signPositionDot.style.left = `${normalizedX}%`;
+        signPositionDot.style.top = `${normalizedY}%`;
+      }
+    };
+
     function openModal(triggerButton) {
       if (typeof onBeforeOpen === 'function') {
         onBeforeOpen(triggerButton, form);
       }
+
+      if (signPreviewFrame && triggerButton) {
+        const previewUrl = String(triggerButton.getAttribute('data-document-sign-preview-url') || '').trim();
+        signPreviewFrame.src = previewUrl || 'about:blank';
+      }
+
+      const startX = signPosXInput ? signPosXInput.value : '86';
+      const startY = signPosYInput ? signPosYInput.value : '84';
+      updateSignaturePosition(startX, startY);
 
       modal.hidden = false;
       document.documentElement.classList.add('modal-open');
@@ -255,6 +297,12 @@
       document.body.classList.remove('modal-open');
       isModalOpen = false;
       clearSignature();
+      if (signPreviewFrame) {
+        signPreviewFrame.src = 'about:blank';
+      }
+      if (typeof onAfterClose === 'function') {
+        onAfterClose(form);
+      }
     }
 
     canvas.addEventListener('pointerdown', beginStroke, { passive: false });
@@ -267,6 +315,22 @@
       clearBtn.addEventListener('click', (event) => {
         event.preventDefault();
         clearSignature();
+      });
+    }
+
+    if (signPositionLayer) {
+      signPositionLayer.addEventListener('click', (event) => {
+        event.preventDefault();
+        const rect = signPositionLayer.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+          return;
+        }
+
+        const localX = event.clientX - rect.left;
+        const localY = event.clientY - rect.top;
+        const xPercent = (localX / rect.width) * 100;
+        const yPercent = (localY / rect.height) * 100;
+        updateSignaturePosition(xPercent, yPercent);
       });
     }
 
@@ -342,12 +406,25 @@
     openButtonsSelector: '[data-document-sign-open]',
     closeButtonsSelector: '[data-document-sign-close]',
     onBeforeOpen: (triggerButton, form) => {
+      const inboxModal = document.querySelector('[data-employee-documents-inbox-modal]');
+      if (inboxModal && !inboxModal.hasAttribute('hidden')) {
+        inboxModal.dataset.wasOpenForSign = '1';
+        inboxModal.hidden = true;
+      }
+
       const requestId = String(triggerButton?.getAttribute('data-document-sign-request-id') || '').trim();
       const documentName = String(triggerButton?.getAttribute('data-document-sign-title') || 'Document').trim();
       const requestInput = form.querySelector('[data-document-request-id]');
       const nameNode = document.querySelector('[data-document-sign-name]');
       if (requestInput) requestInput.value = requestId;
       if (nameNode) nameNode.textContent = documentName;
+    },
+    onAfterClose: () => {
+      const inboxModal = document.querySelector('[data-employee-documents-inbox-modal]');
+      if (inboxModal && inboxModal.dataset.wasOpenForSign === '1') {
+        inboxModal.hidden = false;
+        delete inboxModal.dataset.wasOpenForSign;
+      }
     },
     emptySignatureMessage: 'Please draw your signature before signing this document.',
   });
@@ -408,6 +485,10 @@
   });
   if (employeeDocumentsInboxModal) {
     modalControllers.push(employeeDocumentsInboxModal);
+    if (shouldOpenDocumentsModal) {
+      employeeDocumentsInboxModal.openModal();
+      cleanupUrlParam('modal');
+    }
   }
 
   const employeeMessagesListModal = document.querySelector('[data-employee-messages-list-modal]');

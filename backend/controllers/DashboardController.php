@@ -586,6 +586,7 @@ $modalUsers = [];
 $modalDepartments = [];
 $modalDocuments = [];
 $modalMessages = [];
+$modalDocumentRecipients = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dashboardAction = $_POST['dashboard_action'] ?? '';
@@ -635,7 +636,7 @@ if ($role === 'super_admin') {
     $modalUsers = $userModel->allWithRelations();
     $modalDepartments = $departmentModel->allWithCompany();
     $modalDocuments = $pdo->query(
-        'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.status, d.upload_date,
+        'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.file_blob, d.file_mime_type, d.status, d.upload_date,
                 u.first_name, u.last_name, dep.company_id, dep.name AS department_name
          FROM documents d
          INNER JOIN users u ON u.id = d.user_id
@@ -677,7 +678,7 @@ if ($role === 'admin' && $companyId !== null) {
     $modalUsers = $userModel->companyUsersByCompanyId($companyId);
     $modalDepartments = $departmentModel->byCompanyId($companyId);
     $modalDocuments = $pdo->prepare(
-        'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.status, d.upload_date,
+        'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.file_blob, d.file_mime_type, d.status, d.upload_date,
                 u.first_name, u.last_name, dep.company_id, dep.name AS department_name
          FROM documents d
          INNER JOIN users u ON u.id = d.user_id
@@ -719,7 +720,7 @@ if ($role === 'department_manager' && $departmentId !== null) {
         }
     }
     $modalDocuments = $pdo->prepare(
-        'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.status, d.upload_date,
+        'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.file_blob, d.file_mime_type, d.status, d.upload_date,
                 u.first_name, u.last_name, dep.company_id, dep.name AS department_name
          FROM documents d
          INNER JOIN users u ON u.id = d.user_id
@@ -751,7 +752,7 @@ if ($role === 'department_manager' && $departmentId !== null) {
 
 if ($role === 'employee') {
     $modalDocuments = $pdo->prepare(
-        'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.status, d.upload_date,
+        'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.file_blob, d.file_mime_type, d.status, d.upload_date,
                 u.first_name, u.last_name, dep.company_id, dep.name AS department_name
          FROM documents d
          INNER JOIN users u ON u.id = d.user_id
@@ -780,9 +781,62 @@ if ($role === 'employee') {
     $modalMessages = $modalMessages->fetchAll();
 }
 
+if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+    $modalDocumentRecipients = array_values(array_filter(
+        $modalUsers,
+        static fn (array $user): bool => (string) ($user['role'] ?? '') === 'employee'
+    ));
+
+    if ($role === 'department_manager' && (int) ($companyId ?? 0) > 0 && (int) ($departmentId ?? 0) > 0) {
+        try {
+            $managerRecipientsStmt = $pdo->prepare(
+                'SELECT u.id,
+                        u.first_name,
+                        u.last_name,
+                        u.email,
+                        u.role,
+                        u.status,
+                        u.department_id,
+                        d.name AS department_name,
+                        d.company_id
+                 FROM users u
+                 LEFT JOIN departments d ON d.id = u.department_id
+                 WHERE u.status = "active"
+                   AND u.role = "department_manager"
+                   AND d.company_id = :company_id
+                   AND u.department_id <> :department_id
+                 ORDER BY u.first_name ASC, u.last_name ASC'
+            );
+            $managerRecipientsStmt->execute([
+                'company_id' => (int) $companyId,
+                'department_id' => (int) $departmentId,
+            ]);
+            $otherManagers = $managerRecipientsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $recipientById = [];
+            foreach ($modalDocumentRecipients as $recipient) {
+                $rid = (int) ($recipient['id'] ?? 0);
+                if ($rid > 0) {
+                    $recipientById[$rid] = $recipient;
+                }
+            }
+            foreach ($otherManagers as $recipient) {
+                $rid = (int) ($recipient['id'] ?? 0);
+                if ($rid > 0) {
+                    $recipientById[$rid] = $recipient;
+                }
+            }
+            $modalDocumentRecipients = array_values($recipientById);
+        } catch (Throwable $e) {
+            // Keep default employee recipients if manager lookup fails.
+        }
+    }
+}
+
 $dashboardModalCompanies = $modalCompanies;
 $dashboardModalUsers = $modalUsers;
 $dashboardModalDepartments = $modalDepartments;
 $dashboardModalDocuments = $modalDocuments;
 $dashboardModalMessages = $modalMessages;
+$dashboardModalDocumentRecipients = $modalDocumentRecipients;
 $moduleRows['notifications'] = $userModel->userNotifications((int) $currentUser['id']);

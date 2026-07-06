@@ -6,10 +6,6 @@
 	<section class="home-intro">
 		<h2><?php echo e(t('home.intro_title')); ?></h2>
 
-		<p class="home-commercial-link-wrap">
-			<a class="admin-action-link" href="<?php echo e(appUrl('commercial')); ?>"><?php echo e(t('common.commercial_cta')); ?></a>
-		</p>
-
 		<p>
 			<?php echo e(t('home.lead_1')); ?>
 			<?php echo e(t('home.lead_2')); ?>
@@ -69,6 +65,9 @@
 		<div class="simple-div home-video-teaser">
 			<p class="simple-div-title"><?php echo e(t('commercial.demo_videos_title', ['fallback' => 'Video dimostrativi'])); ?></p>
 			<p class="simple-div-content"><?php echo e(t('commercial.demo_videos_body', ['fallback' => 'Guarda una presentazione rapida di dashboard, presenze, documenti e area dipendente.'])); ?></p>
+			<p class="home-commercial-link-wrap">
+				<a class="admin-action-link" href="<?php echo e(appUrl('commercial')); ?>"><?php echo e(t('common.commercial_cta')); ?></a>
+			</p>
 		</div>
 
 		<p style="margin-top: 1.5rem;">

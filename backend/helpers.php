@@ -501,3 +501,106 @@ function ensureAbsenceShiftTemplatesForDepartments(PDO $pdo, array $departmentId
         ensureDepartmentAbsenceShiftTemplates($pdo, (int) $departmentId);
     }
 }
+
+/**
+ * Build a small preview thumbnail data URL for document cards.
+ * Supports PDF (first page) and image mime types via Imagick.
+ */
+function documentThumbnailDataUrl(array $document, int $maxWidth = 220, int $maxHeight = 120): ?string
+{
+    if (!class_exists('Imagick')) {
+        return null;
+    }
+
+    $maxWidth = max(60, $maxWidth);
+    $maxHeight = max(40, $maxHeight);
+
+    $documentId = (int) ($document['id'] ?? $document['document_id'] ?? 0);
+    $fileName = (string) ($document['file_name'] ?? 'document');
+    $uploadStamp = (string) ($document['upload_date'] ?? $document['created_at'] ?? '');
+    $cacheKey = ($documentId > 0 ? (string) $documentId : ($fileName . '|' . $uploadStamp))
+        . '|' . $maxWidth . 'x' . $maxHeight;
+
+    static $cache = [];
+    if (array_key_exists($cacheKey, $cache)) {
+        return $cache[$cacheKey];
+    }
+
+    $mimeType = strtolower(trim((string) ($document['file_mime_type'] ?? '')));
+    if ($mimeType === '') {
+        $extension = strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION));
+        if ($extension === 'pdf') {
+            $mimeType = 'application/pdf';
+        }
+    }
+
+    $isPdf = str_contains($mimeType, 'pdf');
+    $isImage = str_starts_with($mimeType, 'image/');
+    if (!$isPdf && !$isImage) {
+        $cache[$cacheKey] = null;
+        return null;
+    }
+
+    $blobContent = $document['file_blob'] ?? null;
+    $filePath = trim((string) ($document['file_path'] ?? ''));
+    $resolvedPath = null;
+
+    if ($filePath !== '') {
+        $candidates = [
+            $filePath,
+            __DIR__ . '/../' . ltrim($filePath, '/'),
+            __DIR__ . '/../public/' . ltrim($filePath, '/'),
+        ];
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && $candidate !== '' && is_file($candidate)) {
+                $resolvedPath = $candidate;
+                break;
+            }
+        }
+    }
+
+    try {
+        $imagick = new Imagick();
+        if ($isPdf) {
+            $imagick->setResolution(120, 120);
+        }
+
+        if (is_string($blobContent) && $blobContent !== '') {
+            $imagick->readImageBlob($blobContent);
+            if ($isPdf && $imagick->getNumberImages() > 1) {
+                $imagick->setIteratorIndex(0);
+            }
+        } elseif ($resolvedPath !== null) {
+            if ($isPdf) {
+                $imagick->readImage($resolvedPath . '[0]');
+            } else {
+                $imagick->readImage($resolvedPath);
+            }
+        } else {
+            $cache[$cacheKey] = null;
+            return null;
+        }
+
+        $imagick->setImageBackgroundColor('white');
+        if (defined('Imagick::ALPHACHANNEL_REMOVE')) {
+            $imagick->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+        }
+
+        $imagick->thumbnailImage($maxWidth, $maxHeight, true, true);
+        $imagick->setImageFormat('jpeg');
+        $blob = (string) $imagick->getImageBlob();
+        $imagick->clear();
+        $imagick->destroy();
+
+        if ($blob === '') {
+            $cache[$cacheKey] = null;
+            return null;
+        }
+
+        $cache[$cacheKey] = 'data:image/jpeg;base64,' . base64_encode($blob);
+        return $cache[$cacheKey];
+    } catch (Throwable $e) {
+        $cache[$cacheKey] = null;
+        return null;
+    }
+}

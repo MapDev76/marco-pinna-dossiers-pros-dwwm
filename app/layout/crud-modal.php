@@ -332,27 +332,37 @@ $basePath = $basePath ?? (function () {
                 <label>
                     <?php echo e(t('crud.recipients')); ?>
                     <select id="crud-document-recipient-scope">
-                        <option value="selected">Employes selectionnes</option>
-                        <option value="all">Tous les employes disponibles</option>
+                        <option value="selected">Destinatari selezionati</option>
+                        <option value="all">Tutti i destinatari disponibili</option>
                     </select>
-                </label>
-                <label class="span-2">
-                    <?php echo e(t('crud.title')); ?>
-                    <input type="text" id="crud-document-title" maxlength="255" placeholder="<?php echo e(t('crud.message_title_default')); ?>">
-                </label>
-                <label class="span-2">
-                    <?php echo e(t('crud.message')); ?>
-                    <textarea id="crud-document-message" rows="3" placeholder="Ajoutez un court message pour les destinataires du document."></textarea>
                 </label>
                 <label class="span-2" id="crud-document-recipient-label">
                     <?php echo e(t('crud.recipients')); ?>
                     <select id="crud-document-recipient-ids" multiple size="6">
-                        <?php foreach (($dashboardModalUsers ?? []) as $user): ?>
-                            <?php if (($user['role'] ?? '') === 'employee'): ?>
+                        <?php foreach (($dashboardModalDocumentRecipients ?? $dashboardModalUsers ?? []) as $user): ?>
+                            <?php
+                                $recipientRole = (string) ($user['role'] ?? 'employee');
+                                $recipientLabel = trim((string) (($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
+                                if ($recipientLabel === '') {
+                                    $recipientLabel = 'User #' . (int) ($user['id'] ?? 0);
+                                }
+                                $recipientRoleLabel = match ($recipientRole) {
+                                    'super_admin' => 'Super Admin',
+                                    'admin' => 'Admin',
+                                    'department_manager' => 'Manager',
+                                    default => 'Employee',
+                                };
+                            ?>
+                            <?php if (
+                                ($modalCurrentRole === 'super_admin' && $recipientRole === 'employee')
+                                || ($modalCurrentRole === 'admin' && $recipientRole === 'employee')
+                                || ($modalCurrentRole === 'department_manager' && in_array($recipientRole, ['employee', 'department_manager'], true))
+                            ): ?>
                                 <option value="<?php echo (int) $user['id']; ?>"
-                                        data-role="<?php echo e($user['role'] ?? ''); ?>"
+                                        data-role="<?php echo e($recipientRole); ?>"
                                         data-department-id="<?php echo (int) ($user['department_id'] ?? 0); ?>">
-                                    <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>
+                                    <?php echo e($recipientLabel); ?>
+                                    (<?php echo e($recipientRoleLabel); ?>)
                                 </option>
                             <?php endif; ?>
                         <?php endforeach; ?>
@@ -375,7 +385,24 @@ $basePath = $basePath ?? (function () {
                     <div class="crud-empty-state"><?php echo e(t('crud.no_documents')); ?></div>
                 <?php endif; ?>
                 <?php foreach (($dashboardModalDocuments ?? []) as $document): ?>
+                    <?php
+                        $documentFileName = (string) ($document['file_name'] ?? t('crud.document'));
+                        $documentExtension = strtoupper((string) pathinfo($documentFileName, PATHINFO_EXTENSION));
+                        $documentThumbnail = function_exists('documentThumbnailDataUrl')
+                            ? documentThumbnailDataUrl($document, 220, 120)
+                            : null;
+                        if ($documentExtension === '') {
+                            $documentExtension = 'DOC';
+                        }
+                    ?>
                     <article class="company-card company-card--stacked">
+                        <div class="document-preview-vignette" aria-hidden="true">
+                            <?php if (is_string($documentThumbnail) && $documentThumbnail !== ''): ?>
+                                <img src="<?php echo e($documentThumbnail); ?>" alt="" class="document-preview-vignette-image" loading="lazy">
+                            <?php else: ?>
+                                <span><?php echo e($documentExtension); ?></span>
+                            <?php endif; ?>
+                        </div>
                         <div class="company-card-head">
                             <div class="company-card-title"><?php echo e($document['file_name'] ?? t('crud.document')); ?></div>
                             <div class="company-card-meta"><?php echo e(($document['first_name'] ?? '') . ' ' . ($document['last_name'] ?? '')); ?> • <?php echo e($document['upload_date'] ?? ''); ?></div>
@@ -383,25 +410,14 @@ $basePath = $basePath ?? (function () {
                         <div class="company-card-actions company-card-actions--inline">
                             <span class="company-card-chip"><?php echo e($document['document_type'] ?? t('crud.other')); ?></span>
                             <span class="company-card-chip"><?php echo e($document['status'] ?? t('crud.pending')); ?></span>
-                            <button type="button"
-                                    class="company-card-action"
-                                    title="<?php echo e(t('crud.attach_send_employees')); ?>"
-                                    data-document-send-id="<?php echo (int) ($document['id'] ?? 0); ?>"
-                                    data-document-send-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
-                                <img src="<?php echo $basePath; ?>/assets/icons/mail-open.svg" alt="" aria-hidden="true" class="company-card-action-icon">
-                            </button>
-                            <button type="button"
-                                    class="company-card-action"
-                                    title="<?php echo e(t('crud.attach_send_department')); ?>"
-                                    data-document-send-all-id="<?php echo (int) ($document['id'] ?? 0); ?>"
-                                    data-document-send-all-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
-                                <img src="<?php echo $basePath; ?>/assets/icons/mails.svg" alt="" aria-hidden="true" class="company-card-action-icon">
-                            </button>
                             <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $document['id'], 'preview' => '1']); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
                                 <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                             </a>
                             <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $document['id']]); ?>" title="<?php echo e(t('crud.download_document')); ?>">
                                 <img src="<?php echo $basePath; ?>/assets/icons/circle-arrow-out-up-left.svg" alt="" aria-hidden="true" class="company-card-action-icon">
+                            </a>
+                            <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $document['id'], 'disposition' => 'inline', 'print_preview' => '1']); ?>" title="<?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?>">
+                                <img src="<?php echo $basePath; ?>/assets/icons/printer.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                             </a>
                             <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
                                 <button type="button"

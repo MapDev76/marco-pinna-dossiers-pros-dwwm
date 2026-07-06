@@ -25,18 +25,6 @@ $basePath = $basePath ?? (function () {
 		</div>
 	</section>
 
-	<section class="commercial-split">
-		<article class="commercial-card commercial-sell-card">
-			<h2><?php echo e(t('commercial.how_it_works_title', ['fallback' => 'Comment ca marche'])); ?></h2>
-			<p><?php echo e(t('commercial.how_it_works_body', ['fallback' => 'Une interface unique pour gerer les shifts, les presences, les documents et les echanges internes.'])); ?></p>
-		</article>
-		<article class="commercial-card commercial-sell-card is-highlighted">
-			<h2><?php echo e(t('commercial.commercial_suite_title', ['fallback' => 'StaffEase Pro + HotelEase Pro'])); ?></h2>
-			<p><?php echo e(t('commercial.commercial_suite_body', ['fallback' => 'Two coordinated products...'])); ?></p>
-			<p class="commercial-emphasis"><?php echo e(t('commercial.cta_body', ['fallback' => 'If you want to free your company from large and expensive software, contact me and let us build the solution that fits your organization.'])); ?></p>
-		</article>
-	</section>
-
 	<section class="commercial-steps">
 		<article class="commercial-step-card">
 			<span class="commercial-step-number">1</span>
@@ -87,6 +75,13 @@ $basePath = $basePath ?? (function () {
 			<h3><?php echo e(t('commercial.video_3_title', ['fallback' => 'Documents et espace employe'])); ?></h3>
 			<p><?php echo e(t('commercial.video_3_body', ['fallback' => 'Envoi de documents, inbox, messages et consultation mobile.'])); ?></p>
 		</div>
+	</section>
+
+	<section class="commercial-grid">
+		<article class="commercial-card commercial-sell-card is-highlighted">
+			<h2><?php echo e(t('commercial.future_vision_title', ['fallback' => 'Future vision of the suite'])); ?></h2>
+			<p><?php echo e(t('commercial.future_vision_body', ['fallback' => 'StaffEase Pro and HotelEase Pro are designed to grow into a connected application suite.'])); ?></p>
+		</article>
 	</section>
 
 	<section class="commercial-cta">
