@@ -748,6 +748,7 @@ if (is_array($primaryShift)) {
                                                     <span class="employee-status-chip"><?php echo e(t('employee.signed_document_received_title', ['fallback' => 'Signed document received'])); ?></span>
                                                 <?php endif; ?>
                                                 <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
+                                                    <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'preview' => '1', 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?></a>
                                                     <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('employee.download_document', ['fallback' => 'Download'])); ?></a>
                                                     <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'disposition' => 'inline', 'print_preview' => '1', 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?></a>
                                                     <?php if (!empty($documentMessage['is_new'])): ?>
@@ -836,6 +837,7 @@ if (is_array($primaryShift)) {
                                         <td>
                                             <div class="employee-document-actions employee-document-actions-inline">
                                                 <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
+                                                    <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'preview' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?></a>
                                                     <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'from' => 'my-space']); ?>"><?php echo e(t('employee.download_document', ['fallback' => 'Download'])); ?></a>
                                                     <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'disposition' => 'inline', 'print_preview' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?></a>
                                                 <?php else: ?>
@@ -885,6 +887,7 @@ if (is_array($primaryShift)) {
                                         <td>
                                             <div class="employee-document-actions employee-document-actions-inline">
                                                 <?php if (!empty($documentMessage['document_id']) && !empty($documentMessage['is_download_available'])): ?>
+                                                    <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'preview' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?></a>
                                                     <a class="admin-action-link" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'from' => 'my-space']); ?>"><?php echo e(t('employee.download_document', ['fallback' => 'Download'])); ?></a>
                                                     <a class="admin-action-link admin-action-link-secondary" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'disposition' => 'inline', 'print_preview' => '1', 'from' => 'my-space']); ?>"><?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?></a>
                                                 <?php endif; ?>

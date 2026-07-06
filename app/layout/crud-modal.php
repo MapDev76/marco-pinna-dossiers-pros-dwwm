@@ -397,6 +397,9 @@ $basePath = $basePath ?? (function () {
                                     data-document-send-all-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
                                 <img src="<?php echo $basePath; ?>/assets/icons/mails.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                             </button>
+                            <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $document['id'], 'preview' => '1']); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
+                                <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" aria-hidden="true" class="company-card-action-icon">
+                            </a>
                             <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $document['id']]); ?>" title="<?php echo e(t('crud.download_document')); ?>">
                                 <img src="<?php echo $basePath; ?>/assets/icons/circle-arrow-out-up-left.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                             </a>
@@ -490,6 +493,14 @@ $basePath = $basePath ?? (function () {
                         <div class="company-card-actions company-card-actions--inline">
                             <span class="company-card-chip"><?php echo e($message['type'] ?? t('crud.message_request')); ?></span>
                             <span class="company-card-chip"><?php echo e($message['status'] ?? t('crud.pending')); ?></span>
+                            <?php if (!empty($message['document_id'])): ?>
+                                <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $message['document_id'], 'preview' => '1']); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
+                                    <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" aria-hidden="true" class="company-card-action-icon">
+                                </a>
+                                <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $message['document_id']]); ?>" title="<?php echo e(t('crud.download_document')); ?>">
+                                    <img src="<?php echo $basePath; ?>/assets/icons/circle-arrow-out-up-left.svg" alt="" aria-hidden="true" class="company-card-action-icon">
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </article>
                 <?php endforeach; ?>

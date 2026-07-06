@@ -20,6 +20,7 @@ $role = $currentUser['role'] ?? 'employee';
 $documentId = (int) ($_GET['id'] ?? 0);
 $contentDisposition = strtolower(trim((string) ($_GET['disposition'] ?? '')));
 $serveInline = $contentDisposition === 'inline';
+$previewMode = in_array(strtolower(trim((string) ($_GET['preview'] ?? ''))), ['1', 'true', 'yes', 'on'], true);
 $printPreview = in_array(strtolower(trim((string) ($_GET['print_preview'] ?? ''))), ['1', 'true', 'yes', 'on'], true);
 $sourceRoute = trim((string) ($_GET['from'] ?? ''));
 $referer = trim((string) ($_SERVER['HTTP_REFERER'] ?? ''));
@@ -159,13 +160,18 @@ foreach ($candidatePaths as $candidatePath) {
 }
 
 $downloadName = basename((string) ($document['file_name'] ?? ($resolvedPath !== null ? basename($resolvedPath) : 'document.bin')));
+$downloadUrl = appUrl('document-download', [
+    'id' => $documentId,
+    'from' => $redirectRoute,
+]);
 
-$renderPrintPreview = static function (string $content, string $mimeType, string $documentName): never {
+$renderDocumentPreview = static function (string $content, string $mimeType, string $documentName, bool $autoPrint, string $downloadHref): never {
     $safeName = htmlspecialchars($documentName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $normalizedMime = strtolower(trim($mimeType));
+    $safeDownloadHref = htmlspecialchars($downloadHref, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $bodyHtml = '';
 
-    if (str_contains($normalizedMime, 'html')) {
+    if (str_contains($normalizedMime, 'html') && $autoPrint) {
         $htmlContent = $content;
         if (!str_contains(strtolower($htmlContent), 'window.print(')) {
             $printScript = '<script>window.addEventListener("load", function(){ setTimeout(function(){ try { window.print(); } catch(e) {} }, 160); });</script>';
@@ -181,29 +187,47 @@ $renderPrintPreview = static function (string $content, string $mimeType, string
         exit;
     }
 
-    if (str_starts_with($normalizedMime, 'image/')) {
+    if (str_contains($normalizedMime, 'html')) {
+        $bodyHtml = '<iframe class="print-preview-frame" srcdoc="' . htmlspecialchars($content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"></iframe>';
+    } elseif (str_starts_with($normalizedMime, 'image/')) {
         $bodyHtml = '<img src="data:' . htmlspecialchars($mimeType, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ';base64,' . base64_encode($content) . '" alt="' . $safeName . '" class="print-preview-image">';
     } elseif (str_contains($normalizedMime, 'pdf')) {
         $bodyHtml = '<iframe class="print-preview-frame" src="data:application/pdf;base64,' . base64_encode($content) . '"></iframe>';
+    } elseif (str_starts_with($normalizedMime, 'video/')) {
+        $bodyHtml = '<video class="print-preview-media" controls><source src="data:' . htmlspecialchars($mimeType, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ';base64,' . base64_encode($content) . '"></video>';
+    } elseif (str_starts_with($normalizedMime, 'audio/')) {
+        $bodyHtml = '<audio class="print-preview-audio" controls><source src="data:' . htmlspecialchars($mimeType, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ';base64,' . base64_encode($content) . '"></audio>';
     } elseif (str_starts_with($normalizedMime, 'text/') || str_contains($normalizedMime, 'json') || str_contains($normalizedMime, 'xml') || str_contains($normalizedMime, 'csv')) {
         $bodyHtml = '<pre class="print-preview-text">' . htmlspecialchars($content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>';
     } else {
-        $bodyHtml = '<p>Print preview is not available for this file type.</p>';
+        $bodyHtml = '<p>Preview is not available for this file type.</p>';
+    }
+
+    $actionsHtml = '<div class="print-preview-actions">'
+        . '<a class="print-preview-link" href="' . $safeDownloadHref . '">Download file</a>';
+    if ($autoPrint) {
+        $actionsHtml .= '<button type="button" class="print-preview-link" onclick="window.print()">Print now</button>';
+    }
+    $actionsHtml .= '</div>';
+
+    $scriptHtml = '';
+    if ($autoPrint) {
+        $scriptHtml = '<script>window.addEventListener("load", function(){ setTimeout(function(){ try { window.print(); } catch(e) {} }, 160); });</script>';
     }
 
     header('Content-Type: text/html; charset=utf-8');
-    echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Print preview - ' . $safeName . '</title>'
-        . '<style>body{margin:0;font-family:Arial,sans-serif;background:#f7f7f7;color:#111;}main{max-width:1100px;margin:0 auto;padding:16px;}h1{margin:0 0 12px;font-size:20px;} .print-preview-frame{width:100%;height:80vh;border:1px solid #d5d5d5;border-radius:8px;background:#fff;} .print-preview-image{max-width:100%;height:auto;border:1px solid #d5d5d5;border-radius:8px;background:#fff;} .print-preview-text{white-space:pre-wrap;word-break:break-word;background:#fff;border:1px solid #d5d5d5;border-radius:8px;padding:12px;min-height:60vh;} @media print{body{background:#fff;}main{max-width:none;padding:0;}h1{display:none;} .print-preview-frame{height:100vh;border:0;} .print-preview-text,.print-preview-image{border:0;}}</style>'
-        . '</head><body><main><h1>' . $safeName . '</h1>' . $bodyHtml . '</main><script>window.addEventListener("load", function(){ setTimeout(function(){ try { window.print(); } catch(e) {} }, 160); });</script></body></html>';
+    echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>' . ($autoPrint ? 'Print preview' : 'Document preview') . ' - ' . $safeName . '</title>'
+        . '<style>body{margin:0;font-family:Arial,sans-serif;background:#f7f7f7;color:#111;}main{max-width:1100px;margin:0 auto;padding:16px;}h1{margin:0 0 12px;font-size:20px;} .print-preview-actions{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px;} .print-preview-link{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #c5c5c5;border-radius:8px;background:#fff;color:#111;text-decoration:none;cursor:pointer;font-size:14px;} .print-preview-link:hover{background:#f4f4f4;} .print-preview-frame{width:100%;height:80vh;border:1px solid #d5d5d5;border-radius:8px;background:#fff;} .print-preview-image{max-width:100%;height:auto;border:1px solid #d5d5d5;border-radius:8px;background:#fff;} .print-preview-media{width:100%;max-height:75vh;border:1px solid #d5d5d5;border-radius:8px;background:#111;} .print-preview-audio{width:100%;} .print-preview-text{white-space:pre-wrap;word-break:break-word;background:#fff;border:1px solid #d5d5d5;border-radius:8px;padding:12px;min-height:60vh;} @media print{body{background:#fff;}main{max-width:none;padding:0;}h1,.print-preview-actions{display:none;} .print-preview-frame{height:100vh;border:0;} .print-preview-text,.print-preview-image,.print-preview-media{border:0;}}</style>'
+        . '</head><body><main><h1>' . $safeName . '</h1>' . $actionsHtml . $bodyHtml . '</main>' . $scriptHtml . '</body></html>';
     exit;
 };
 
 if ($resolvedPath !== null) {
     $mimeType = mime_content_type($resolvedPath) ?: 'application/octet-stream';
-    if ($printPreview) {
+    if ($previewMode || $printPreview) {
         $previewContent = @file_get_contents($resolvedPath);
         if (is_string($previewContent)) {
-            $renderPrintPreview($previewContent, $mimeType, $downloadName);
+            $renderDocumentPreview($previewContent, $mimeType, $downloadName, $printPreview, $downloadUrl);
         }
     }
     header('Content-Type: ' . $mimeType);
@@ -216,8 +240,8 @@ if ($resolvedPath !== null) {
 $blobContent = $document['file_blob'] ?? null;
 if (is_string($blobContent) && $blobContent !== '') {
     $mimeType = trim((string) ($document['file_mime_type'] ?? '')) ?: 'application/octet-stream';
-    if ($printPreview) {
-        $renderPrintPreview($blobContent, $mimeType, $downloadName);
+    if ($previewMode || $printPreview) {
+        $renderDocumentPreview($blobContent, $mimeType, $downloadName, $printPreview, $downloadUrl);
     }
     header('Content-Type: ' . $mimeType);
     header('Content-Length: ' . (string) strlen($blobContent));
