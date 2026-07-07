@@ -32,6 +32,169 @@ $user = currentUser();
 $role = $user['role'] ?? 'employee';
 $profile = $userModel->profileWithRelations((int) $user['id']) ?? [];
 
+$imagickClass = 'Imagick';
+$imagickDrawClass = 'ImagickDraw';
+$imagickPixelClass = 'ImagickPixel';
+$imagickFilterLanczos = defined('\\Imagick::FILTER_LANCZOS') ? (int) constant('\\Imagick::FILTER_LANCZOS') : 1;
+$imagickCompositeOver = defined('\\Imagick::COMPOSITE_OVER') ? (int) constant('\\Imagick::COMPOSITE_OVER') : 40;
+
+$writePdfWithGhostscript = static function ($pdfDoc): string {
+    $gsBinary = trim((string) @shell_exec('command -v gs 2>/dev/null'));
+    if ($gsBinary === '') {
+        throw new RuntimeException('Ghostscript binary not available');
+    }
+
+    $tempDir = sys_get_temp_dir() . '/staffease-sign-' . bin2hex(random_bytes(6));
+    if (!@mkdir($tempDir, 0777, true) && !is_dir($tempDir)) {
+        throw new RuntimeException('Unable to create temporary directory for PDF signing');
+    }
+
+    $imagePaths = [];
+    $outputPdf = $tempDir . '/signed-output.pdf';
+
+    try {
+        $pdfForExport = clone $pdfDoc;
+        $pdfForExport->setFirstIterator();
+
+        $pageIndex = 0;
+        foreach ($pdfForExport as $pageImage) {
+            $pagePath = $tempDir . '/page-' . str_pad((string) $pageIndex, 3, '0', STR_PAD_LEFT) . '.png';
+            $pageClone = clone $pageImage;
+            $pageClone->setImageFormat('png');
+            $pageClone->writeImage($pagePath);
+            $pageClone->clear();
+            $pageClone->destroy();
+            $imagePaths[] = $pagePath;
+            $pageIndex++;
+        }
+
+        $pdfForExport->clear();
+        $pdfForExport->destroy();
+
+        if (empty($imagePaths)) {
+            throw new RuntimeException('No PDF pages rendered for Ghostscript output');
+        }
+
+        $escapedImages = implode(' ', array_map('escapeshellarg', $imagePaths));
+        $command = escapeshellcmd($gsBinary)
+            . ' -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -dAutoRotatePages=/None'
+            . ' -sOutputFile=' . escapeshellarg($outputPdf)
+            . ' ' . $escapedImages . ' 2>&1';
+        @shell_exec($command);
+
+        if (!is_file($outputPdf)) {
+            throw new RuntimeException('Ghostscript did not generate a PDF output file');
+        }
+
+        $signedPdf = @file_get_contents($outputPdf);
+        if (!is_string($signedPdf) || $signedPdf === '') {
+            throw new RuntimeException('Unable to read Ghostscript PDF output');
+        }
+
+        return $signedPdf;
+    } finally {
+        foreach ($imagePaths as $imagePath) {
+            if (is_string($imagePath) && $imagePath !== '' && file_exists($imagePath)) {
+                @unlink($imagePath);
+            }
+        }
+        if (file_exists($outputPdf)) {
+            @unlink($outputPdf);
+        }
+        if (is_dir($tempDir)) {
+            @rmdir($tempDir);
+        }
+    }
+};
+
+$buildSignatureStamp = static function ($signatureStamp, int $targetMaxWidth) use ($imagickFilterLanczos) {
+    $stamp = clone $signatureStamp;
+    $targetMaxWidth = max(80, $targetMaxWidth);
+    $currentWidth = max(1, (int) $stamp->getImageWidth());
+
+    if ($currentWidth > $targetMaxWidth) {
+        try {
+            $stamp->resizeImage($targetMaxWidth, 0, $imagickFilterLanczos, 1, true);
+        } catch (Throwable $resizeError) {
+            // Keep original signature size if resize is not supported for this raster payload.
+        }
+    }
+
+    return $stamp;
+};
+
+$resolveAllowedRecipients = static function () use ($pdo, $role, $profile): array {
+    $allowedRecipientsSql = 'SELECT u.id
+                            FROM users u
+                            LEFT JOIN departments d ON d.id = u.department_id
+                            WHERE u.status = "active"';
+    $allowedRecipientsParams = [];
+
+    if ($role === 'admin') {
+        $allowedRecipientsSql .= ' AND u.role = "employee"';
+        $allowedRecipientsSql .= ' AND d.company_id = :company_id';
+        $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
+    } elseif ($role === 'department_manager') {
+        $allowedRecipientsSql .= ' AND d.company_id = :company_id';
+        $allowedRecipientsSql .= ' AND ((u.role = "employee" AND u.department_id = :department_id) OR (u.role = "department_manager" AND u.department_id <> :department_id))';
+        $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
+        $allowedRecipientsParams['department_id'] = (int) ($profile['department_id'] ?? 0);
+    } else {
+        $allowedRecipientsSql .= ' AND u.role = "employee"';
+    }
+
+    $allowedRecipientsStmt = $pdo->prepare($allowedRecipientsSql);
+    $allowedRecipientsStmt->execute($allowedRecipientsParams);
+    $allowedRecipientIds = array_map('intval', $allowedRecipientsStmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
+
+    return [$allowedRecipientIds, array_fill_keys($allowedRecipientIds, true)];
+};
+
+$enforceDocumentScope = static function (array $documentRow) use ($role, $profile): void {
+    if ($role === 'admin' && (int) ($profile['company_id'] ?? 0) !== (int) ($documentRow['company_id'] ?? 0)) {
+        jsonResponse(['success' => false, 'error' => 'Document out of scope'], 403);
+    }
+    if ($role === 'department_manager' && (int) ($profile['department_id'] ?? 0) !== (int) ($documentRow['department_id'] ?? 0)) {
+        jsonResponse(['success' => false, 'error' => 'Document out of scope'], 403);
+    }
+};
+
+$enforceMessageScope = static function (array $messageRow) use ($role, $profile, $user): void {
+    $senderUserId = (int) ($messageRow['sender_user_id'] ?? 0);
+    $recipientUserId = (int) ($messageRow['recipient_user_id'] ?? 0);
+    $senderCompanyId = (int) ($messageRow['sender_company_id'] ?? 0);
+    $recipientCompanyId = (int) ($messageRow['recipient_company_id'] ?? 0);
+    $senderDepartmentId = (int) ($messageRow['sender_department_id'] ?? 0);
+    $recipientDepartmentId = (int) ($messageRow['recipient_department_id'] ?? 0);
+
+    if ($role === 'super_admin') {
+        return;
+    }
+
+    if ($role === 'admin') {
+        $profileCompanyId = (int) ($profile['company_id'] ?? 0);
+        if ($profileCompanyId > 0 && ($profileCompanyId === $senderCompanyId || $profileCompanyId === $recipientCompanyId)) {
+            return;
+        }
+        jsonResponse(['success' => false, 'error' => 'Message out of scope'], 403);
+    }
+
+    if ($role === 'department_manager') {
+        $profileDepartmentId = (int) ($profile['department_id'] ?? 0);
+        if ($profileDepartmentId > 0 && ($profileDepartmentId === $senderDepartmentId || $profileDepartmentId === $recipientDepartmentId)) {
+            return;
+        }
+        jsonResponse(['success' => false, 'error' => 'Message out of scope'], 403);
+    }
+
+    $currentUserId = (int) ($user['id'] ?? 0);
+    if ($currentUserId > 0 && ($currentUserId === $senderUserId || $currentUserId === $recipientUserId)) {
+        return;
+    }
+
+    jsonResponse(['success' => false, 'error' => 'Message out of scope'], 403);
+};
+
 if ($action === 'save_planning_document' || $action === 'save_dashboard_document') {
     if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
         jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
@@ -177,6 +340,116 @@ if ($action === 'delete_document') {
     ]);
 }
 
+if ($action === 'archive_document' || $action === 'restore_document') {
+    if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $documentId = (int) ($input['document_id'] ?? 0);
+    if ($documentId <= 0) {
+        jsonResponse(['success' => false, 'error' => 'document_id is required'], 400);
+    }
+
+    $lookup = $pdo->prepare(
+        'SELECT d.id, u.department_id, dep.company_id
+         FROM documents d
+         INNER JOIN users u ON u.id = d.user_id
+         LEFT JOIN departments dep ON dep.id = u.department_id
+         WHERE d.id = :id
+         LIMIT 1'
+    );
+    $lookup->execute(['id' => $documentId]);
+    $documentRow = $lookup->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$documentRow) {
+        jsonResponse(['success' => false, 'error' => 'Document not found'], 404);
+    }
+
+    $enforceDocumentScope($documentRow);
+
+    $nextStatus = $action === 'archive_document' ? 'archived' : 'valid';
+    try {
+        $updateStatus = $pdo->prepare('UPDATE documents SET status = :status WHERE id = :id LIMIT 1');
+        $updateStatus->execute([
+            'status' => $nextStatus,
+            'id' => $documentId,
+        ]);
+    } catch (Throwable $e) {
+        jsonResponse([
+            'success' => false,
+            'error' => 'Unable to update document status. Please verify documents.status schema supports archived state.',
+        ], 500);
+    }
+
+    jsonResponse([
+        'success' => true,
+        'ok' => true,
+        'document_id' => $documentId,
+        'status' => $nextStatus,
+    ]);
+}
+
+if ($action === 'archive_message' || $action === 'delete_message') {
+    $messageId = (int) ($input['message_id'] ?? 0);
+    if ($messageId <= 0) {
+        jsonResponse(['success' => false, 'error' => 'message_id is required'], 400);
+    }
+
+    $messageLookup = $pdo->prepare(
+        'SELECT r.id,
+                r.user_id AS sender_user_id,
+                r.recipient_id AS recipient_user_id,
+                su.department_id AS sender_department_id,
+                ru.department_id AS recipient_department_id,
+                sd.company_id AS sender_company_id,
+                rd.company_id AS recipient_company_id
+         FROM requests r
+         LEFT JOIN users su ON su.id = r.user_id
+         LEFT JOIN users ru ON ru.id = r.recipient_id
+         LEFT JOIN departments sd ON sd.id = su.department_id
+         LEFT JOIN departments rd ON rd.id = ru.department_id
+         WHERE r.id = :id
+         LIMIT 1'
+    );
+    $messageLookup->execute(['id' => $messageId]);
+    $messageRow = $messageLookup->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$messageRow) {
+        jsonResponse(['success' => false, 'error' => 'Message not found'], 404);
+    }
+
+    $enforceMessageScope($messageRow);
+
+    if ($action === 'archive_message') {
+        try {
+            $archiveMessage = $pdo->prepare('UPDATE requests SET status = :status WHERE id = :id LIMIT 1');
+            $archiveMessage->execute([
+                'status' => 'archived',
+                'id' => $messageId,
+            ]);
+        } catch (Throwable $e) {
+            jsonResponse([
+                'success' => false,
+                'error' => 'Unable to archive message. Please verify requests.status schema supports archived state.',
+            ], 500);
+        }
+
+        jsonResponse([
+            'success' => true,
+            'ok' => true,
+            'message_id' => $messageId,
+            'status' => 'archived',
+        ]);
+    }
+
+    $deleteMessage = $pdo->prepare('DELETE FROM requests WHERE id = :id LIMIT 1');
+    $deleteMessage->execute(['id' => $messageId]);
+
+    jsonResponse([
+        'success' => true,
+        'ok' => true,
+        'message_id' => $messageId,
+    ]);
+}
+
 if ($action === 'upload_and_share_document') {
     if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
         jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
@@ -191,6 +464,7 @@ if ($action === 'upload_and_share_document') {
     $recipientScope = trim((string) ($input['recipient_scope'] ?? 'selected'));
     $recipientIdsRaw = $input['recipient_ids'] ?? [];
     $requireSignature = !empty($input['require_signature']);
+    $shareNow = !array_key_exists('share_now', $input) || !empty($input['share_now']);
 
     if ($fileName === '' || $fileContentB64 === '') {
         jsonResponse(['success' => false, 'error' => 'file_name and file_content_b64 are required'], 400);
@@ -213,29 +487,7 @@ if ($action === 'upload_and_share_document') {
         $safeBaseName = mb_substr($safeBaseName, 0, 180);
     }
 
-    $allowedRecipientsSql = 'SELECT u.id
-                            FROM users u
-                            LEFT JOIN departments d ON d.id = u.department_id
-                            WHERE u.status = "active"';
-    $allowedRecipientsParams = [];
-
-    if ($role === 'admin') {
-        $allowedRecipientsSql .= ' AND u.role = "employee"';
-        $allowedRecipientsSql .= ' AND d.company_id = :company_id';
-        $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
-    } elseif ($role === 'department_manager') {
-        $allowedRecipientsSql .= ' AND d.company_id = :company_id';
-        $allowedRecipientsSql .= ' AND ((u.role = "employee" AND u.department_id = :department_id) OR (u.role = "department_manager" AND u.department_id <> :department_id))';
-        $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
-        $allowedRecipientsParams['department_id'] = (int) ($profile['department_id'] ?? 0);
-    } else {
-        $allowedRecipientsSql .= ' AND u.role = "employee"';
-    }
-
-    $allowedRecipientsStmt = $pdo->prepare($allowedRecipientsSql);
-    $allowedRecipientsStmt->execute($allowedRecipientsParams);
-    $allowedRecipientIds = array_map('intval', $allowedRecipientsStmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
-    $allowedRecipientSet = array_fill_keys($allowedRecipientIds, true);
+    [$allowedRecipientIds, $allowedRecipientSet] = $resolveAllowedRecipients();
 
     $recipientIds = [];
     if ($recipientScope === 'all') {
@@ -245,7 +497,7 @@ if ($action === 'upload_and_share_document') {
         $recipientIds = array_values(array_filter($recipientIds, static fn (int $id): bool => isset($allowedRecipientSet[$id])));
     }
 
-    if (empty($recipientIds)) {
+    if ($shareNow && empty($recipientIds)) {
         jsonResponse(['success' => false, 'error' => 'At least one valid recipient is required'], 400);
     }
 
@@ -295,8 +547,101 @@ if ($action === 'upload_and_share_document') {
         ]);
 
         $documentId = (int) $pdo->lastInsertId();
-        $requestType = $requireSignature ? 'document_signature' : 'notification';
-        $requestStatus = $requireSignature ? 'pending' : 'unread';
+        if ($shareNow) {
+            $requestType = $requireSignature ? 'document_signature' : 'notification';
+            $requestStatus = $requireSignature ? 'pending' : 'unread';
+            foreach ($recipientIds as $recipientId) {
+                $insertRequest->execute([
+                    'user_id' => (int) ($user['id'] ?? 0),
+                    'recipient_id' => $recipientId,
+                    'type' => $requestType,
+                    'title' => $requestTitle,
+                    'message' => $requestMessage,
+                    'status' => $requestStatus,
+                    'document_id' => $documentId,
+                ]);
+            }
+        }
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        jsonResponse(['success' => false, 'error' => 'Unable to upload document'], 500);
+    }
+
+    jsonResponse([
+        'success' => true,
+        'ok' => true,
+        'document_id' => $documentId,
+        'file_name' => $safeBaseName,
+        'recipient_count' => $shareNow ? count($recipientIds) : 0,
+        'shared' => $shareNow,
+        'requires_signature' => $requireSignature,
+        'download_url' => appUrl('document-download', ['id' => $documentId]),
+    ]);
+}
+
+if ($action === 'share_existing_document') {
+    if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $documentId = (int) ($input['document_id'] ?? 0);
+    $recipientScope = trim((string) ($input['recipient_scope'] ?? 'selected'));
+    $recipientIdsRaw = $input['recipient_ids'] ?? [];
+    $requireSignature = !empty($input['require_signature']);
+
+    if ($documentId <= 0) {
+        jsonResponse(['success' => false, 'error' => 'document_id is required'], 400);
+    }
+
+    $lookup = $pdo->prepare(
+        'SELECT d.id, d.file_name, d.status, u.department_id, dep.company_id
+         FROM documents d
+         INNER JOIN users u ON u.id = d.user_id
+         LEFT JOIN departments dep ON dep.id = u.department_id
+         WHERE d.id = :id
+         LIMIT 1'
+    );
+    $lookup->execute(['id' => $documentId]);
+    $documentRow = $lookup->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$documentRow) {
+        jsonResponse(['success' => false, 'error' => 'Document not found'], 404);
+    }
+
+    $enforceDocumentScope($documentRow);
+
+    if ((string) ($documentRow['status'] ?? '') === 'archived') {
+        jsonResponse(['success' => false, 'error' => 'Restore document before sharing'], 400);
+    }
+
+    [$allowedRecipientIds, $allowedRecipientSet] = $resolveAllowedRecipients();
+    if ($recipientScope === 'all') {
+        $recipientIds = $allowedRecipientIds;
+    } else {
+        $recipientIds = array_values(array_filter(array_map('intval', is_array($recipientIdsRaw) ? $recipientIdsRaw : [$recipientIdsRaw])));
+        $recipientIds = array_values(array_filter($recipientIds, static fn (int $id): bool => isset($allowedRecipientSet[$id])));
+    }
+
+    if (empty($recipientIds)) {
+        jsonResponse(['success' => false, 'error' => 'At least one valid recipient is required'], 400);
+    }
+
+    $requestType = $requireSignature ? 'document_signature' : 'notification';
+    $requestStatus = $requireSignature ? 'pending' : 'unread';
+    $requestTitle = $requireSignature ? 'Document to sign' : 'Shared document';
+    $requestMessage = $requireSignature
+        ? 'Please review and sign the attached document.'
+        : 'Please review the attached document.';
+
+    $insertRequest = $pdo->prepare(
+        'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
+         VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
+    );
+
+    try {
         foreach ($recipientIds as $recipientId) {
             $insertRequest->execute([
                 'user_id' => (int) ($user['id'] ?? 0),
@@ -308,22 +653,288 @@ if ($action === 'upload_and_share_document') {
                 'document_id' => $documentId,
             ]);
         }
-
-        $pdo->commit();
     } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        jsonResponse(['success' => false, 'error' => 'Unable to upload and share document'], 500);
+        jsonResponse(['success' => false, 'error' => 'Unable to share document'], 500);
     }
 
     jsonResponse([
         'success' => true,
         'ok' => true,
         'document_id' => $documentId,
-        'file_name' => $safeBaseName,
         'recipient_count' => count($recipientIds),
-        'requires_signature' => $requireSignature,
+    ]);
+}
+
+if ($action === 'sign_dashboard_document') {
+    if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $documentId = (int) ($input['document_id'] ?? 0);
+    $signatureData = trim((string) ($input['signature_data'] ?? ''));
+    $signaturePosX = (float) ($input['signature_pos_x'] ?? 86);
+    $signaturePosY = (float) ($input['signature_pos_y'] ?? 84);
+    $signaturePage = max(1, (int) ($input['signature_page'] ?? 1));
+    $signaturePosX = max(4.0, min(96.0, $signaturePosX));
+    $signaturePosY = max(4.0, min(96.0, $signaturePosY));
+
+    if ($documentId <= 0 || $signatureData === '') {
+        jsonResponse(['success' => false, 'error' => 'document_id and signature_data are required'], 400);
+    }
+
+    $documentLookup = $pdo->prepare(
+        'SELECT d.id,
+                d.user_id,
+                d.document_type,
+                d.file_name,
+                d.file_path,
+                d.file_blob,
+                d.file_mime_type,
+                u.department_id,
+                dep.company_id
+         FROM documents d
+         INNER JOIN users u ON u.id = d.user_id
+         LEFT JOIN departments dep ON dep.id = u.department_id
+         WHERE d.id = :id
+         LIMIT 1'
+    );
+    $documentLookup->execute(['id' => $documentId]);
+    $document = $documentLookup->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$document) {
+        jsonResponse(['success' => false, 'error' => 'Document not found'], 404);
+    }
+
+    if ($role === 'admin' && (int) ($profile['company_id'] ?? 0) !== (int) ($document['company_id'] ?? 0)) {
+        jsonResponse(['success' => false, 'error' => 'Document out of scope'], 403);
+    }
+    if ($role === 'department_manager' && (int) ($profile['department_id'] ?? 0) !== (int) ($document['department_id'] ?? 0)) {
+        jsonResponse(['success' => false, 'error' => 'Document out of scope'], 403);
+    }
+
+    $signerName = trim((string) (($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
+    if ($signerName === '') {
+        $signerName = (string) ($user['email'] ?? 'User');
+    }
+    $signedAt = appNow()->format('Y-m-d H:i:s');
+
+    $sourceMimeType = strtolower(trim((string) ($document['file_mime_type'] ?? '')));
+    if ($sourceMimeType === '') {
+        $extension = strtolower((string) pathinfo((string) ($document['file_name'] ?? ''), PATHINFO_EXTENSION));
+        $sourceMimeType = match ($extension) {
+            'pdf' => 'application/pdf',
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            default => 'application/octet-stream',
+        };
+    }
+
+    $sourceBlob = is_string($document['file_blob'] ?? null) ? (string) $document['file_blob'] : '';
+    if ($sourceBlob === '') {
+        $storedPath = trim((string) ($document['file_path'] ?? ''));
+        if ($storedPath !== '') {
+            $candidatePaths = [
+                $storedPath,
+                __DIR__ . '/../../' . ltrim($storedPath, '/'),
+                __DIR__ . '/../../public/' . ltrim($storedPath, '/'),
+            ];
+            foreach ($candidatePaths as $candidate) {
+                if (is_string($candidate) && $candidate !== '' && is_file($candidate)) {
+                    $content = @file_get_contents($candidate);
+                    if (is_string($content) && $content !== '') {
+                        $sourceBlob = $content;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if ($sourceBlob === '') {
+        jsonResponse(['success' => false, 'error' => 'Source document content not found'], 404);
+    }
+
+    $signaturePayload = preg_replace('/^data:image\/[a-zA-Z0-9.+-]+;base64,/', '', $signatureData);
+    $signaturePayload = str_replace(' ', '+', (string) $signaturePayload);
+    $signatureBinary = base64_decode($signaturePayload, true);
+    if (!is_string($signatureBinary) || $signatureBinary === '') {
+        jsonResponse(['success' => false, 'error' => 'Invalid signature payload'], 400);
+    }
+
+    if (!class_exists('Imagick')) {
+        jsonResponse(['success' => false, 'error' => 'Imagick extension is required for in-place document signing'], 500);
+    }
+
+    $signedBlob = '';
+    $signedMimeType = $sourceMimeType;
+    $appliedSignaturePage = max(1, $signaturePage);
+
+    try {
+        $signatureStamp = new $imagickClass();
+        $signatureStamp->readImageBlob($signatureBinary);
+        $signatureStamp->setImageFormat('png');
+
+        $stampDraw = new $imagickDrawClass();
+        $stampDraw->setFillColor(new $imagickPixelClass('rgba(31,41,55,0.92)'));
+        $stampDraw->setFontSize(16);
+
+        if (str_contains($sourceMimeType, 'pdf')) {
+            $pdfDoc = new $imagickClass();
+            $pdfDoc->setResolution(150, 150);
+            $pdfDoc->readImageBlob($sourceBlob);
+
+            $pagesCount = max(1, (int) $pdfDoc->getNumberImages());
+            $pageIndex = min($pagesCount - 1, max(0, $signaturePage - 1));
+            $appliedSignaturePage = $pageIndex + 1;
+            $pdfDoc->setIteratorIndex($pageIndex);
+
+            $pageWidth = max(1, (int) $pdfDoc->getImageWidth());
+            $pageHeight = max(1, (int) $pdfDoc->getImageHeight());
+
+            $targetStampWidth = max(140, (int) round($pageWidth * 0.22));
+            $pageStamp = $buildSignatureStamp($signatureStamp, $targetStampWidth);
+
+            $stampWidth = max(1, (int) $pageStamp->getImageWidth());
+            $stampHeight = max(1, (int) $pageStamp->getImageHeight());
+            $stampX = max(4, min($pageWidth - $stampWidth - 4, (int) round(($signaturePosX / 100) * $pageWidth - ($stampWidth / 2))));
+            $stampY = max(4, min($pageHeight - $stampHeight - 56, (int) round(($signaturePosY / 100) * $pageHeight - ($stampHeight / 2))));
+
+            $pdfDoc->compositeImage($pageStamp, $imagickCompositeOver, $stampX, $stampY);
+            try {
+                $pdfDoc->annotateImage($stampDraw, $stampX, min($pageHeight - 10, $stampY + $stampHeight + 22), 0, 'Firma digitale: ' . $signerName);
+                $pdfDoc->annotateImage($stampDraw, $stampX, min($pageHeight - 10, $stampY + $stampHeight + 42), 0, 'Data/Ora: ' . $signedAt . ' - Pagina ' . $appliedSignaturePage);
+            } catch (Throwable $annotationError) {
+                // Some runtimes do not have a default font configured for Imagick.
+                // Keep the visual signature and persist metadata on the document row.
+            }
+
+            try {
+                $pdfDoc->setFirstIterator();
+                $pdfDoc->setImageFormat('pdf');
+                $signedBlob = (string) $pdfDoc->writeImagesBlob();
+            } catch (Throwable $writeError) {
+                $pdfDoc->setFirstIterator();
+                $signedBlob = $writePdfWithGhostscript($pdfDoc);
+            }
+            $signedMimeType = 'application/pdf';
+
+            $pageStamp->clear();
+            $pageStamp->destroy();
+            $pdfDoc->clear();
+            $pdfDoc->destroy();
+        } elseif (str_starts_with($sourceMimeType, 'image/')) {
+            $imageDoc = new $imagickClass();
+            $imageDoc->readImageBlob($sourceBlob);
+            if ($imageDoc->getNumberImages() > 1) {
+                $imageDoc->setIteratorIndex(0);
+            }
+
+            $imgWidth = max(1, (int) $imageDoc->getImageWidth());
+            $imgHeight = max(1, (int) $imageDoc->getImageHeight());
+            $targetStampWidth = max(100, (int) round($imgWidth * 0.22));
+
+            $imageStamp = $buildSignatureStamp($signatureStamp, $targetStampWidth);
+            $stampWidth = max(1, (int) $imageStamp->getImageWidth());
+            $stampHeight = max(1, (int) $imageStamp->getImageHeight());
+            $stampX = max(4, min($imgWidth - $stampWidth - 4, (int) round(($signaturePosX / 100) * $imgWidth - ($stampWidth / 2))));
+            $stampY = max(4, min($imgHeight - $stampHeight - 56, (int) round(($signaturePosY / 100) * $imgHeight - ($stampHeight / 2))));
+
+            $imageDoc->compositeImage($imageStamp, $imagickCompositeOver, $stampX, $stampY);
+            try {
+                $imageDoc->annotateImage($stampDraw, $stampX, min($imgHeight - 10, $stampY + $stampHeight + 20), 0, 'Firma digitale: ' . $signerName . ' - ' . $signedAt);
+            } catch (Throwable $annotationError) {
+                // Best-effort only.
+            }
+
+            if (str_contains($sourceMimeType, 'png')) {
+                $imageDoc->setImageFormat('png');
+                $signedMimeType = 'image/png';
+            } elseif (str_contains($sourceMimeType, 'webp')) {
+                $imageDoc->setImageFormat('webp');
+                $signedMimeType = 'image/webp';
+            } else {
+                $imageDoc->setImageFormat('jpeg');
+                $signedMimeType = 'image/jpeg';
+            }
+
+            $signedBlob = (string) $imageDoc->getImageBlob();
+
+            $imageStamp->clear();
+            $imageStamp->destroy();
+            $imageDoc->clear();
+            $imageDoc->destroy();
+        } else {
+            jsonResponse([
+                'success' => false,
+                'error' => 'Unsupported document format for in-place signing. Use PDF or image documents.',
+            ], 400);
+        }
+
+        $signatureStamp->clear();
+        $signatureStamp->destroy();
+    } catch (Throwable $e) {
+        jsonResponse([
+            'success' => false,
+            'error' => 'Unable to apply signature on the original document: ' . $e->getMessage(),
+        ], 500);
+    }
+
+    if ($signedBlob === '') {
+        jsonResponse(['success' => false, 'error' => 'Unable to generate signed document content'], 500);
+    }
+
+    $insertSignature = $pdo->prepare(
+        'INSERT INTO digital_signatures (user_id, signature_type, signature_data)
+         VALUES (:user_id, :signature_type, :signature_data)'
+    );
+    $updateDocument = $pdo->prepare(
+        'UPDATE documents
+         SET file_blob = :file_blob,
+             file_path = :file_path,
+             file_mime_type = :file_mime_type,
+             status = :status,
+             signed_at = :signed_at,
+             signed_by_user_id = :signed_by_user_id,
+             signed_page = :signed_page
+         WHERE id = :id
+         LIMIT 1'
+    );
+
+    $pdo->beginTransaction();
+    try {
+        $insertSignature->execute([
+            'user_id' => (int) ($user['id'] ?? 0),
+            'signature_type' => 'touchscreen',
+            'signature_data' => $signatureData,
+        ]);
+
+        $updateDocument->execute([
+            'id' => $documentId,
+            'file_path' => '',
+            'file_blob' => $signedBlob,
+            'file_mime_type' => $signedMimeType,
+            'status' => 'valid',
+            'signed_at' => $signedAt,
+            'signed_by_user_id' => (int) ($user['id'] ?? 0),
+            'signed_page' => $appliedSignaturePage,
+        ]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        jsonResponse(['success' => false, 'error' => 'Unable to sign document'], 500);
+    }
+
+    jsonResponse([
+        'success' => true,
+        'ok' => true,
+        'signed_document_id' => $documentId,
+        'signed_file_name' => (string) ($document['file_name'] ?? 'document'),
+        'signed_file_mime_type' => $signedMimeType,
+        'signature_page' => $appliedSignaturePage,
+        'signed_at' => $signedAt,
         'download_url' => appUrl('document-download', ['id' => $documentId]),
     ]);
 }

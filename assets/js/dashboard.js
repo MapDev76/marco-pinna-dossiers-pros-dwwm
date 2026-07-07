@@ -22,6 +22,12 @@
   const apiUsers = config.apiUsers;
   const apiDashboard = config.apiDashboard;
   const iconsBase = String(config.iconsBase || '/assets/icons/');
+  const pdfjsWorkerSrc = String(config.pdfjsWorkerSrc || '/assets/js/vendor/pdfjs/pdf.worker.min.js');
+  const pdfjsLibGlobal = window.pdfjsLib || null;
+
+  if (pdfjsLibGlobal && pdfjsLibGlobal.GlobalWorkerOptions) {
+    pdfjsLibGlobal.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
+  }
 
   const escapeHtml = (value) => String(value || '')
     .replace(/&/g, '&amp;')
@@ -167,18 +173,453 @@
         const uploadRecipientsLabel = crudBody.querySelector('#crud-document-recipient-label');
         const uploadRecipientsInput = crudBody.querySelector('#crud-document-recipient-ids');
         const uploadRequireSignatureInput = crudBody.querySelector('#crud-document-require-signature');
+        const uploadShareNowInput = crudBody.querySelector('#crud-document-share-now');
         const uploadSubmitButton = crudBody.querySelector('#crud-document-share-submit');
+        const uploadShareExistingButton = crudBody.querySelector('#crud-document-share-existing-submit');
+
+        const closeDashboardSignModal = () => {
+          const signModal = document.querySelector('[data-dashboard-document-sign-modal]');
+          if (signModal) {
+            signModal.remove();
+          }
+        };
+
+        const openDashboardSignModal = (button) => {
+          const documentId = Number(button.getAttribute('data-dashboard-document-sign-id') || 0);
+          if (!documentId) {
+            notifyError(tr('Invalid document id.', 'ID document invalide.'));
+            return;
+          }
+
+          closeDashboardSignModal();
+
+          const documentName = String(button.getAttribute('data-dashboard-document-sign-name') || 'Document').trim();
+          const documentMimeType = String(button.getAttribute('data-dashboard-document-sign-mime-type') || '').trim().toLowerCase();
+          const previewUrl = String(button.getAttribute('data-dashboard-document-sign-preview-url') || '').trim();
+          const isPdfDocument = /pdf/.test(documentMimeType) || /\.pdf$/i.test(documentName);
+          const fallbackPreviewUrl = previewUrl ? previewUrl.split('#')[0] : '';
+          const pdfStreamUrl = previewUrl
+            ? `${previewUrl}${previewUrl.includes('?') ? '&' : '?'}pdf_stream=1`
+            : '';
+
+          const signModal = document.createElement('div');
+          signModal.className = 'employee-attendance-modal';
+          signModal.setAttribute('data-dashboard-document-sign-modal', '1');
+
+          signModal.innerHTML = `
+            <div class="employee-attendance-dialog" role="dialog" aria-modal="true" aria-labelledby="dashboard-document-sign-title">
+              <div class="employee-attendance-dialog-head">
+                <div>
+                  <span class="employee-stage-eyebrow">Documenti</span>
+                  <h3 id="dashboard-document-sign-title">Firma documento</h3>
+                  <p class="crud-modal-subtitle">${documentName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                </div>
+                <button type="button" class="dashboard-modal-close" data-dashboard-document-sign-close aria-label="Close">×</button>
+              </div>
+
+              <div class="admin-form employee-sign-form" data-dashboard-document-sign-form>
+                <div class="employee-document-sign-stage">
+                  <p class="crud-modal-subtitle employee-document-sign-stage-hint">Scegli dove firmare: clicca o trascina il marker nel riquadro anteprima documento.</p>
+                  <div class="employee-signature-pad-actions" data-dashboard-document-sign-page-controls>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-prev>Pagina precedente</button>
+                    <label style="display:flex;align-items:center;gap:.35rem;">
+                      <span>Pagina</span>
+                      <input type="number" min="1" step="1" value="1" data-dashboard-document-sign-page-input style="max-width:88px;">
+                    </label>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-next>Pagina successiva</button>
+                  </div>
+                  <div class="employee-document-sign-preview-wrap">
+                    <iframe src="${previewUrl}" class="employee-document-sign-preview" data-dashboard-document-sign-preview-frame title="Preview"></iframe>
+                    <canvas class="employee-document-sign-pdf-canvas" data-dashboard-document-sign-pdf-canvas hidden aria-label="PDF page preview"></canvas>
+                    <button type="button" class="employee-document-sign-position-layer" data-dashboard-document-sign-position-layer aria-label="Scegli posizione firma">
+                      <span class="employee-document-sign-position-dot" data-dashboard-document-sign-position-dot aria-hidden="true"></span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="employee-signature-pad-shell">
+                  <canvas width="520" height="180" data-dashboard-document-sign-canvas aria-label="Firma digitale"></canvas>
+                  <small class="employee-signature-error" data-dashboard-document-sign-error></small>
+                  <div class="employee-signature-pad-actions">
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-clear>Cancella firma</button>
+                    <small>Firma con il dito su mobile o con il mouse/pennino su desktop.</small>
+                  </div>
+                </div>
+
+                <div class="employee-attendance-dialog-actions">
+                  <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-close>Annulla</button>
+                  <button type="button" class="admin-action-link" data-dashboard-document-sign-submit>Firma documento</button>
+                </div>
+              </div>
+            </div>
+          `;
+
+          document.body.appendChild(signModal);
+          document.documentElement.classList.add('modal-open');
+          document.body.classList.add('modal-open');
+
+          const closeModal = () => {
+            closeDashboardSignModal();
+            document.documentElement.classList.remove('modal-open');
+            document.body.classList.remove('modal-open');
+          };
+
+          signModal.querySelectorAll('[data-dashboard-document-sign-close]').forEach((closeBtn) => {
+            closeBtn.addEventListener('click', (event) => {
+              event.preventDefault();
+              closeModal();
+            });
+          });
+
+          signModal.addEventListener('click', (event) => {
+            if (event.target === signModal) {
+              closeModal();
+            }
+          });
+
+          const canvas = signModal.querySelector('[data-dashboard-document-sign-canvas]');
+          const errorNode = signModal.querySelector('[data-dashboard-document-sign-error]');
+          const clearButton = signModal.querySelector('[data-dashboard-document-sign-clear]');
+          const submitButton = signModal.querySelector('[data-dashboard-document-sign-submit]');
+          const positionLayer = signModal.querySelector('[data-dashboard-document-sign-position-layer]');
+          const positionDot = signModal.querySelector('[data-dashboard-document-sign-position-dot]');
+          const previewWrap = signModal.querySelector('.employee-document-sign-preview-wrap');
+          const previewFrame = signModal.querySelector('[data-dashboard-document-sign-preview-frame]');
+          const pdfCanvas = signModal.querySelector('[data-dashboard-document-sign-pdf-canvas]');
+          const pageControls = signModal.querySelector('[data-dashboard-document-sign-page-controls]');
+          const pagePrevButton = signModal.querySelector('[data-dashboard-document-sign-page-prev]');
+          const pageNextButton = signModal.querySelector('[data-dashboard-document-sign-page-next]');
+          const pageInput = signModal.querySelector('[data-dashboard-document-sign-page-input]');
+
+          const ctx = canvas && typeof canvas.getContext === 'function' ? canvas.getContext('2d') : null;
+          if (!canvas || !ctx || !positionLayer || !positionDot || !submitButton || !previewFrame) {
+            notifyError(tr('Unable to open signature editor.', 'Impossible d\'ouvrir l\'editeur de signature.'));
+            closeModal();
+            return;
+          }
+
+          let drawing = false;
+          let activePointerId = null;
+          let hasStroke = false;
+          let markerX = 86;
+          let markerY = 84;
+          let selectedPage = 1;
+          let pdfDocument = null;
+          let pdfRenderToken = 0;
+
+          const normalizePage = (rawValue) => {
+            const parsed = Number(rawValue || 1);
+            if (!Number.isFinite(parsed)) return 1;
+            return Math.max(1, Math.floor(parsed));
+          };
+
+          const previewBaseUrl = (isPdfDocument && pdfStreamUrl ? pdfStreamUrl : previewUrl).split('#')[0];
+
+          const renderPdfPage = async (targetPage) => {
+            if (!pdfDocument || !pdfCanvas || !previewWrap) return false;
+            const pageNumber = Math.max(1, Math.min(pdfDocument.numPages || 1, normalizePage(targetPage)));
+            selectedPage = pageNumber;
+            if (pageInput) {
+              pageInput.value = String(selectedPage);
+            }
+
+            const token = ++pdfRenderToken;
+            const page = await pdfDocument.getPage(pageNumber);
+            const fitRect = previewWrap.getBoundingClientRect();
+            const viewportRaw = page.getViewport({ scale: 1 });
+            const safeWidth = Math.max(320, Math.floor((fitRect.width || 920) - 12));
+            const scale = Math.max(0.2, safeWidth / viewportRaw.width);
+            const viewport = page.getViewport({ scale });
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+
+            if (token !== pdfRenderToken) return false;
+
+            const ctxPdf = pdfCanvas.getContext('2d');
+            if (!ctxPdf) return false;
+            pdfCanvas.width = Math.floor(viewport.width * ratio);
+            pdfCanvas.height = Math.floor(viewport.height * ratio);
+            pdfCanvas.style.width = `${Math.floor(viewport.width)}px`;
+            pdfCanvas.style.height = `${Math.floor(viewport.height)}px`;
+            ctxPdf.setTransform(ratio, 0, 0, ratio, 0, 0);
+            ctxPdf.fillStyle = '#ffffff';
+            ctxPdf.fillRect(0, 0, viewport.width, viewport.height);
+
+            await page.render({ canvasContext: ctxPdf, viewport }).promise;
+
+            if (token !== pdfRenderToken) return false;
+
+            previewFrame.hidden = true;
+            pdfCanvas.hidden = false;
+            previewWrap.classList.add('is-pdf-rendered');
+            return true;
+          };
+
+          const initPdfRenderer = async () => {
+            if (!isPdfDocument || !pdfjsLibGlobal || typeof pdfjsLibGlobal.getDocument !== 'function' || !pdfStreamUrl) {
+              return;
+            }
+
+            try {
+              const loadingTask = pdfjsLibGlobal.getDocument({ url: pdfStreamUrl, withCredentials: true });
+              pdfDocument = await loadingTask.promise;
+              if (pageInput && pdfDocument && Number.isFinite(pdfDocument.numPages)) {
+                pageInput.max = String(Math.max(1, Math.floor(pdfDocument.numPages)));
+              }
+              await renderPdfPage(selectedPage);
+            } catch (error) {
+              pdfDocument = null;
+              if (errorNode) {
+                errorNode.textContent = tr('PDF advanced preview unavailable, using browser preview fallback.', 'Apercu PDF avance indisponible, utilisation du mode de secours navigateur.');
+              }
+              previewFrame.hidden = false;
+              previewFrame.src = fallbackPreviewUrl;
+              if (pdfCanvas) pdfCanvas.hidden = true;
+              if (previewWrap) previewWrap.classList.remove('is-pdf-rendered');
+            }
+          };
+
+          const applyPreviewPage = (targetPage) => {
+            selectedPage = normalizePage(targetPage);
+            if (pdfDocument) {
+              renderPdfPage(selectedPage).catch(() => {
+                previewFrame.src = fallbackPreviewUrl;
+              });
+              return;
+            }
+            if (pageInput) {
+              pageInput.value = String(selectedPage);
+            }
+            if (isPdfDocument) {
+              previewFrame.src = fallbackPreviewUrl;
+              return;
+            }
+            previewFrame.src = previewBaseUrl;
+          };
+
+          if (!isPdfDocument && pageControls) {
+            pageControls.style.display = 'none';
+          }
+
+          if (pagePrevButton) {
+            pagePrevButton.addEventListener('click', (event) => {
+              event.preventDefault();
+              applyPreviewPage(selectedPage - 1);
+            });
+          }
+          if (pageNextButton) {
+            pageNextButton.addEventListener('click', (event) => {
+              event.preventDefault();
+              applyPreviewPage(selectedPage + 1);
+            });
+          }
+          if (pageInput) {
+            pageInput.addEventListener('change', (event) => {
+              event.preventDefault();
+              applyPreviewPage(pageInput.value);
+            });
+          }
+
+          const drawPadBackground = () => {
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
+            ctx.beginPath();
+            ctx.moveTo(10, height - 30);
+            ctx.lineTo(width - 10, height - 30);
+            ctx.stroke();
+            ctx.strokeStyle = '#111827';
+            ctx.lineWidth = 2.2;
+          };
+
+          const resizeCanvas = () => {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            const cssWidth = canvas.clientWidth || canvas.width;
+            const cssHeight = canvas.clientHeight || canvas.height;
+            canvas.width = Math.floor(cssWidth * ratio);
+            canvas.height = Math.floor(cssHeight * ratio);
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 2.2;
+            ctx.strokeStyle = '#111827';
+            drawPadBackground();
+          };
+
+          const pointFromEvent = (event) => {
+            const rect = canvas.getBoundingClientRect();
+            return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+          };
+
+          const beginStroke = (event) => {
+            if (activePointerId !== null) return;
+            activePointerId = event.pointerId;
+            drawing = true;
+            const p = pointFromEvent(event);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            hasStroke = true;
+            event.preventDefault();
+          };
+
+          const drawStroke = (event) => {
+            if (!drawing || event.pointerId !== activePointerId) return;
+            const p = pointFromEvent(event);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+            event.preventDefault();
+          };
+
+          const endStroke = (event) => {
+            if (event.pointerId !== activePointerId) return;
+            drawing = false;
+            activePointerId = null;
+            ctx.closePath();
+          };
+
+          const clearSignature = () => {
+            hasStroke = false;
+            if (errorNode) errorNode.textContent = '';
+            drawPadBackground();
+          };
+
+          const updateMarker = (xPercent, yPercent) => {
+            markerX = Math.min(96, Math.max(4, Number(xPercent) || 86));
+            markerY = Math.min(96, Math.max(4, Number(yPercent) || 84));
+            positionDot.style.left = `${markerX}%`;
+            positionDot.style.top = `${markerY}%`;
+          };
+
+          const setMarkerFromPointer = (event) => {
+            const rect = positionLayer.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            updateMarker((localX / rect.width) * 100, (localY / rect.height) * 100);
+          };
+
+          canvas.addEventListener('pointerdown', beginStroke, { passive: false });
+          canvas.addEventListener('pointermove', drawStroke, { passive: false });
+          canvas.addEventListener('pointerup', endStroke);
+          canvas.addEventListener('pointercancel', endStroke);
+          canvas.addEventListener('pointerleave', endStroke);
+
+          let markerDrag = false;
+          positionLayer.addEventListener('pointerdown', (event) => {
+            markerDrag = true;
+            if (typeof positionLayer.setPointerCapture === 'function') {
+              try { positionLayer.setPointerCapture(event.pointerId); } catch (e) { /* noop */ }
+            }
+            setMarkerFromPointer(event);
+          });
+          positionLayer.addEventListener('pointermove', (event) => {
+            if (!markerDrag) return;
+            setMarkerFromPointer(event);
+          });
+          const stopMarkerDrag = (event) => {
+            markerDrag = false;
+            if (typeof positionLayer.releasePointerCapture === 'function') {
+              try { positionLayer.releasePointerCapture(event.pointerId); } catch (e) { /* noop */ }
+            }
+          };
+          positionLayer.addEventListener('pointerup', stopMarkerDrag);
+          positionLayer.addEventListener('pointercancel', stopMarkerDrag);
+          positionLayer.addEventListener('click', (event) => {
+            event.preventDefault();
+            setMarkerFromPointer(event);
+          });
+
+          if (clearButton) {
+            clearButton.addEventListener('click', (event) => {
+              event.preventDefault();
+              clearSignature();
+            });
+          }
+
+          submitButton.addEventListener('click', async (event) => {
+            event.preventDefault();
+            if (!hasStroke) {
+              if (errorNode) {
+                errorNode.textContent = tr('Please draw your signature before signing this document.', 'Veuillez dessiner votre signature avant de signer ce document.');
+              }
+              return;
+            }
+
+            if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+              return;
+            }
+
+            submitButton.disabled = true;
+            if (errorNode) errorNode.textContent = '';
+            try {
+              const signatureData = canvas.toDataURL('image/png');
+              const response = await window.AppAPI.postJSON(apiDashboard, {
+                action: 'sign_dashboard_document',
+                document_id: documentId,
+                signature_data: signatureData,
+                signature_pos_x: markerX,
+                signature_pos_y: markerY,
+                signature_page: selectedPage,
+              });
+
+              if (!response || response.ok === false || response.success === false) {
+                throw new Error((response && (response.error || response.message)) || tr('Unable to sign document.', 'Impossible de signer le document.'));
+              }
+
+              notifySuccess(tr('Document signed successfully.', 'Document signe avec succes.'));
+              closeModal();
+              window.location.reload();
+            } catch (err) {
+              if (errorNode) {
+                errorNode.textContent = (err && err.message) || tr('Unable to sign document.', 'Impossible de signer le document.');
+              }
+            } finally {
+              submitButton.disabled = false;
+            }
+          });
+
+          updateMarker(markerX, markerY);
+          applyPreviewPage(1);
+          initPdfRenderer();
+          resizeCanvas();
+          window.addEventListener('resize', resizeCanvas, { once: true });
+        };
 
         const syncUploadRecipientMode = () => {
           if (!uploadScopeInput || !uploadRecipientsInput || !uploadRecipientsLabel) return;
+          const shareNow = !uploadShareNowInput || !!uploadShareNowInput.checked;
           const isAll = uploadScopeInput.value === 'all';
-          uploadRecipientsInput.disabled = isAll;
-          uploadRecipientsLabel.classList.toggle('is-hidden', isAll);
-          if (isAll) {
+          const disableRecipients = !shareNow || isAll;
+          uploadScopeInput.disabled = !shareNow;
+          uploadRecipientsInput.disabled = disableRecipients;
+          uploadRecipientsLabel.classList.toggle('is-hidden', disableRecipients);
+          if (disableRecipients) {
             Array.from(uploadRecipientsInput.options || []).forEach((option) => {
               option.selected = false;
             });
           }
+          if (uploadRequireSignatureInput) {
+            uploadRequireSignatureInput.disabled = !shareNow;
+            if (!shareNow) uploadRequireSignatureInput.checked = false;
+          }
+          if (uploadSubmitButton) {
+            uploadSubmitButton.textContent = shareNow
+              ? tr('Upload and share document', 'Televerser et partager le document')
+              : tr('Save document draft', 'Enregistrer le brouillon du document');
+          }
+        };
+
+        const getRecipientsPayload = () => {
+          const recipientScope = uploadScopeInput ? String(uploadScopeInput.value || 'selected') : 'selected';
+          const recipientIds = uploadRecipientsInput
+            ? Array.from(uploadRecipientsInput.selectedOptions || []).map((option) => Number(option.value || 0)).filter((id) => Number.isInteger(id) && id > 0)
+            : [];
+          return { recipientScope, recipientIds };
         };
 
         const toBase64 = (file) => new Promise((resolve, reject) => {
@@ -194,6 +635,10 @@
 
         if (uploadScopeInput) {
           uploadScopeInput.addEventListener('change', syncUploadRecipientMode);
+          syncUploadRecipientMode();
+        }
+        if (uploadShareNowInput) {
+          uploadShareNowInput.addEventListener('change', syncUploadRecipientMode);
           syncUploadRecipientMode();
         }
 
@@ -212,12 +657,10 @@
               return;
             }
 
-            const recipientScope = uploadScopeInput ? String(uploadScopeInput.value || 'selected') : 'selected';
-            const recipientIds = uploadRecipientsInput
-              ? Array.from(uploadRecipientsInput.selectedOptions || []).map((option) => Number(option.value || 0)).filter((id) => Number.isInteger(id) && id > 0)
-              : [];
+            const shareNow = !uploadShareNowInput || !!uploadShareNowInput.checked;
+            const { recipientScope, recipientIds } = getRecipientsPayload();
 
-            if (recipientScope !== 'all' && recipientIds.length === 0) {
+            if (shareNow && recipientScope !== 'all' && recipientIds.length === 0) {
               notifyError(tr('Select at least one recipient.', 'Selectionnez au moins un destinataire.'));
               return;
             }
@@ -233,6 +676,7 @@
                 document_type: 'other',
                 recipient_scope: recipientScope,
                 recipient_ids: recipientIds,
+                share_now: shareNow,
                 require_signature: !!(uploadRequireSignatureInput && uploadRequireSignatureInput.checked),
               });
 
@@ -240,15 +684,136 @@
                 throw new Error((response && (response.error || response.message)) || tr('Unable to share document.', 'Impossible de partager le document.'));
               }
 
-              notifySuccess(tr('Document uploaded and shared successfully.', 'Document televerse et partage avec succes.'));
+              notifySuccess(shareNow
+                ? tr('Document uploaded and shared successfully.', 'Document televerse et partage avec succes.')
+                : tr('Document draft uploaded successfully. Sign or archive it before sharing.', 'Brouillon televerse avec succes. Signez-le ou archivez-le avant partage.'));
               window.location.reload();
             } catch (error) {
-              notifyError((error && error.message) || tr('Unable to share document.', 'Impossible de partager le document.'));
+              notifyError((error && error.message) || tr('Unable to upload document.', 'Impossible de televerser le document.'));
             } finally {
               uploadSubmitButton && (uploadSubmitButton.disabled = false);
             }
           });
         }
+
+        if (uploadShareExistingButton) {
+          uploadShareExistingButton.addEventListener('click', async (event) => {
+            event.preventDefault();
+            if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+              return;
+            }
+
+            const selectedButton = crudBody.querySelector('[data-document-share-existing-id].is-active');
+            const documentId = Number(selectedButton ? (selectedButton.getAttribute('data-document-share-existing-id') || 0) : 0);
+            if (!documentId) {
+              notifyError(tr('Select a document card to share first.', 'Selectionnez d abord une carte document a partager.'));
+              return;
+            }
+
+            const { recipientScope, recipientIds } = getRecipientsPayload();
+            if (recipientScope !== 'all' && recipientIds.length === 0) {
+              notifyError(tr('Select at least one recipient.', 'Selectionnez au moins un destinataire.'));
+              return;
+            }
+
+            uploadShareExistingButton.disabled = true;
+            try {
+              const response = await window.AppAPI.postJSON(apiDashboard, {
+                action: 'share_existing_document',
+                document_id: documentId,
+                recipient_scope: recipientScope,
+                recipient_ids: recipientIds,
+                require_signature: !!(uploadRequireSignatureInput && uploadRequireSignatureInput.checked),
+              });
+
+              if (!response || response.ok === false || response.success === false) {
+                throw new Error((response && (response.error || response.message)) || tr('Unable to share selected document.', 'Impossible de partager le document selectionne.'));
+              }
+
+              notifySuccess(tr('Selected document shared successfully.', 'Document selectionne partage avec succes.'));
+              window.location.reload();
+            } catch (error) {
+              notifyError((error && error.message) || tr('Unable to share selected document.', 'Impossible de partager le document selectionne.'));
+            } finally {
+              uploadShareExistingButton.disabled = false;
+            }
+          });
+        }
+
+        crudBody.querySelectorAll('[data-document-share-existing-id]').forEach((button) => {
+          button.addEventListener('click', (event) => {
+            event.preventDefault();
+            const isAlreadyActive = button.classList.contains('is-active');
+            crudBody.querySelectorAll('[data-document-share-existing-id]').forEach((item) => item.classList.remove('is-active'));
+            if (!isAlreadyActive) {
+              button.classList.add('is-active');
+              const documentName = String(button.getAttribute('data-document-share-existing-name') || 'document');
+              notifySuccess(tr(`Selected for sharing: ${documentName}`, `Selectionne pour partage : ${documentName}`));
+            }
+          });
+        });
+
+        const updateDocumentCardStatus = (button, nextStatus) => {
+          const card = button.closest('.company-card');
+          if (!card) return;
+
+          const statusChip = card.querySelector('[data-document-status-chip]');
+          if (statusChip) {
+            statusChip.textContent = String(nextStatus || 'valid');
+          }
+
+          const archiveButton = card.querySelector('[data-document-archive-id]');
+          const restoreButton = card.querySelector('[data-document-restore-id]');
+          const signButton = card.querySelector('[data-dashboard-document-sign-open]');
+          const isArchived = String(nextStatus || '') === 'archived';
+
+          if (archiveButton) archiveButton.hidden = isArchived;
+          if (restoreButton) restoreButton.hidden = !isArchived;
+          if (signButton) signButton.hidden = isArchived;
+        };
+
+        const handleDocumentStatusAction = async (button, actionName, successMessage) => {
+          if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
+            notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+            return;
+          }
+
+          const documentId = Number(button.getAttribute('data-document-archive-id') || button.getAttribute('data-document-restore-id') || 0);
+          if (!documentId) {
+            notifyError(tr('Invalid document id.', 'ID document invalide.'));
+            return;
+          }
+
+          button.disabled = true;
+          try {
+            const response = await window.AppAPI.postJSON(apiDashboard, {
+              action: actionName,
+              document_id: documentId,
+            });
+            if (!response || response.ok === false || response.success === false) {
+              throw new Error((response && (response.error || response.message)) || tr('Unable to update document status.', 'Impossible de mettre a jour le statut du document.'));
+            }
+            updateDocumentCardStatus(button, response.status || (actionName === 'archive_document' ? 'archived' : 'valid'));
+            notifySuccess(successMessage);
+          } catch (error) {
+            notifyError((error && error.message) || tr('Unable to update document status.', 'Impossible de mettre a jour le statut du document.'));
+          } finally {
+            button.disabled = false;
+          }
+        };
+
+        crudBody.querySelectorAll('[data-document-archive-id]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            await handleDocumentStatusAction(button, 'archive_document', tr('Document archived successfully.', 'Document archive avec succes.'));
+          });
+        });
+
+        crudBody.querySelectorAll('[data-document-restore-id]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            await handleDocumentStatusAction(button, 'restore_document', tr('Document restored successfully.', 'Document restaure avec succes.'));
+          });
+        });
 
         crudBody.querySelectorAll('[data-document-delete-id]').forEach((button) => {
           button.addEventListener('click', async () => {
@@ -286,6 +851,13 @@
             }
           });
         });
+
+        crudBody.querySelectorAll('[data-dashboard-document-sign-open]').forEach((button) => {
+          button.addEventListener('click', (event) => {
+            event.preventDefault();
+            openDashboardSignModal(button);
+          });
+        });
         return;
       }
 
@@ -299,6 +871,28 @@
         const recipients = crudBody.querySelector('#crud-message-recipient-ids');
         const messageSubmit = crudBody.querySelector('#crud-message-submit');
         const resetMessage = crudBody.querySelector('[data-crud-reset-message]');
+
+        const removeMessageCard = (card) => {
+          if (!card || !card.parentElement) return;
+          card.remove();
+          const remaining = crudBody.querySelectorAll('[data-message-card-id]').length;
+          if (remaining === 0) {
+            const grid = crudBody.querySelector('.company-grid');
+            if (grid) {
+              grid.innerHTML = '<div class="crud-empty-state">No messages available.</div>';
+            }
+          }
+        };
+
+        const archiveMessageCard = (button) => {
+          const card = button.closest('.company-card');
+          if (!card) return;
+          const statusChip = card.querySelector('[data-message-status-chip]');
+          if (statusChip) {
+            statusChip.textContent = 'archived';
+          }
+          button.hidden = true;
+        };
 
         const syncKind = () => {
           const isNotification = messageKind && messageKind.value === 'notification';
@@ -351,6 +945,106 @@
         if (messageKind) {
           messageKind.addEventListener('change', syncKind);
         }
+
+        crudBody.querySelectorAll('[data-message-archive-id]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+              return;
+            }
+
+            const messageId = Number(button.getAttribute('data-message-archive-id') || 0);
+            if (!messageId) {
+              notifyError(tr('Invalid message id.', 'ID message invalide.'));
+              return;
+            }
+
+            button.disabled = true;
+            try {
+              const response = await window.AppAPI.postJSON(apiDashboard, {
+                action: 'archive_message',
+                message_id: messageId,
+              });
+              if (!response || response.ok === false || response.success === false) {
+                throw new Error((response && (response.error || response.message)) || tr('Unable to archive message.', 'Impossible d archiver le message.'));
+              }
+
+              archiveMessageCard(button);
+              notifySuccess(tr('Message archived successfully.', 'Message archive avec succes.'));
+            } catch (error) {
+              notifyError((error && error.message) || tr('Unable to archive message.', 'Impossible d archiver le message.'));
+            } finally {
+              button.disabled = false;
+            }
+          });
+        });
+
+        crudBody.querySelectorAll('[data-message-delete-id]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
+              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
+              return;
+            }
+
+            const messageId = Number(button.getAttribute('data-message-delete-id') || 0);
+            const messageName = String(button.getAttribute('data-message-delete-name') || 'message');
+            if (!messageId) {
+              notifyError(tr('Invalid message id.', 'ID message invalide.'));
+              return;
+            }
+
+            if (!window.confirm(tr('Delete message "' + messageName + '"? This action cannot be undone.', 'Supprimer le message "' + messageName + '" ? Cette action est irreversible.'))) {
+              return;
+            }
+
+            button.disabled = true;
+            try {
+              const response = await window.AppAPI.postJSON(apiDashboard, {
+                action: 'delete_message',
+                message_id: messageId,
+              });
+              if (!response || response.ok === false || response.success === false) {
+                throw new Error((response && (response.error || response.message)) || tr('Unable to delete message.', 'Impossible de supprimer le message.'));
+              }
+
+              removeMessageCard(button.closest('.company-card'));
+              notifySuccess(tr('Message deleted successfully.', 'Message supprime avec succes.'));
+            } catch (error) {
+              notifyError((error && error.message) || tr('Unable to delete message.', 'Impossible de supprimer le message.'));
+            } finally {
+              button.disabled = false;
+            }
+          });
+        });
+
+        crudBody.querySelectorAll('[data-message-print-id]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const printDocumentUrl = String(button.getAttribute('data-message-document-print-url') || '').trim();
+            if (printDocumentUrl) {
+              window.open(printDocumentUrl, '_blank', 'noopener');
+              return;
+            }
+
+            const title = String(button.getAttribute('data-message-print-title') || 'Message');
+            const body = String(button.getAttribute('data-message-print-body') || '');
+            const sender = String(button.getAttribute('data-message-print-sender') || '');
+            const recipient = String(button.getAttribute('data-message-print-recipient') || '');
+            const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
+            if (!printWindow) {
+              notifyError(tr('Unable to open print window.', 'Impossible d ouvrir la fenetre d impression.'));
+              return;
+            }
+
+            const escapedTitle = escapeHtml(title);
+            const escapedBody = escapeHtml(body).replace(/\n/g, '<br>');
+            const escapedSender = escapeHtml(sender);
+            const escapedRecipient = escapeHtml(recipient);
+            printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapedTitle}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h1{margin:0 0 16px 0;font-size:26px}.meta{margin-bottom:16px;color:#555}.box{border:1px solid #ddd;border-radius:10px;padding:14px}</style></head><body><h1>${escapedTitle}</h1><div class="meta">${escapedSender}${escapedRecipient ? ' -> ' + escapedRecipient : ''}</div><div class="box">${escapedBody}</div></body></html>`);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+          });
+        });
 
         if (resetMessage) resetMessage.addEventListener('click', resetMessageForm);
         syncKind();

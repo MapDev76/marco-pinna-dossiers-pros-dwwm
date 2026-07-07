@@ -319,8 +319,9 @@
     }
 
     if (signPositionLayer) {
-      signPositionLayer.addEventListener('click', (event) => {
-        event.preventDefault();
+      let markerDragActive = false;
+
+      const placeMarkerFromPointer = (event) => {
         const rect = signPositionLayer.getBoundingClientRect();
         if (!rect.width || !rect.height) {
           return;
@@ -331,6 +332,49 @@
         const xPercent = (localX / rect.width) * 100;
         const yPercent = (localY / rect.height) * 100;
         updateSignaturePosition(xPercent, yPercent);
+      };
+
+      signPositionLayer.addEventListener('pointerdown', (event) => {
+        markerDragActive = true;
+        if (typeof signPositionLayer.setPointerCapture === 'function') {
+          try {
+            signPositionLayer.setPointerCapture(event.pointerId);
+          } catch (e) {
+            // Ignore capture failures on unsupported browsers.
+          }
+        }
+        placeMarkerFromPointer(event);
+      });
+
+      signPositionLayer.addEventListener('pointermove', (event) => {
+        if (!markerDragActive) {
+          return;
+        }
+        placeMarkerFromPointer(event);
+      });
+
+      const endMarkerDrag = (event) => {
+        markerDragActive = false;
+        if (typeof signPositionLayer.releasePointerCapture === 'function') {
+          try {
+            signPositionLayer.releasePointerCapture(event.pointerId);
+          } catch (e) {
+            // Ignore capture failures on unsupported browsers.
+          }
+        }
+      };
+
+      signPositionLayer.addEventListener('pointerup', endMarkerDrag);
+      signPositionLayer.addEventListener('pointercancel', endMarkerDrag);
+      signPositionLayer.addEventListener('pointerleave', (event) => {
+        if (markerDragActive) {
+          endMarkerDrag(event);
+        }
+      });
+
+      signPositionLayer.addEventListener('click', (event) => {
+        event.preventDefault();
+        placeMarkerFromPointer(event);
       });
     }
 

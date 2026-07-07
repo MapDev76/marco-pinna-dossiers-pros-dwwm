@@ -637,6 +637,7 @@ if ($role === 'super_admin') {
     $modalDepartments = $departmentModel->allWithCompany();
     $modalDocuments = $pdo->query(
         'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.file_blob, d.file_mime_type, d.status, d.upload_date,
+            d.signed_at, d.signed_by_user_id, d.signed_page,
                 u.first_name, u.last_name, dep.company_id, dep.name AS department_name
          FROM documents d
          INNER JOIN users u ON u.id = d.user_id
@@ -679,6 +680,7 @@ if ($role === 'admin' && $companyId !== null) {
     $modalDepartments = $departmentModel->byCompanyId($companyId);
     $modalDocuments = $pdo->prepare(
         'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.file_blob, d.file_mime_type, d.status, d.upload_date,
+            d.signed_at, d.signed_by_user_id, d.signed_page,
                 u.first_name, u.last_name, dep.company_id, dep.name AS department_name
          FROM documents d
          INNER JOIN users u ON u.id = d.user_id
@@ -721,6 +723,7 @@ if ($role === 'department_manager' && $departmentId !== null) {
     }
     $modalDocuments = $pdo->prepare(
         'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.file_blob, d.file_mime_type, d.status, d.upload_date,
+            d.signed_at, d.signed_by_user_id, d.signed_page,
                 u.first_name, u.last_name, dep.company_id, dep.name AS department_name
          FROM documents d
          INNER JOIN users u ON u.id = d.user_id
@@ -753,6 +756,7 @@ if ($role === 'department_manager' && $departmentId !== null) {
 if ($role === 'employee') {
     $modalDocuments = $pdo->prepare(
         'SELECT d.id, d.user_id, d.document_type, d.file_name, d.file_path, d.file_blob, d.file_mime_type, d.status, d.upload_date,
+            d.signed_at, d.signed_by_user_id, d.signed_page,
                 u.first_name, u.last_name, dep.company_id, dep.name AS department_name
          FROM documents d
          INNER JOIN users u ON u.id = d.user_id

@@ -205,8 +205,8 @@
 }
 
 .company-card-action {
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
     border-radius: 999px;
     border: 1px solid rgba(0, 0, 0, 0.06);
     background: #fff;
@@ -215,7 +215,13 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.company-card-action > span[aria-hidden="true"] {
+    font-size: 1.2rem;
+    font-weight: 700;
     line-height: 1;
 }
 

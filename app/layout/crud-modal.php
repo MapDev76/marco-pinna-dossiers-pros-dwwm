@@ -329,6 +329,10 @@ $basePath = $basePath ?? (function () {
                     <?php echo e(t('crud.document')); ?>
                     <input type="file" id="crud-document-file" required>
                 </label>
+                <label class="span-2 crud-inline-choice" for="crud-document-share-now">
+                    <input type="checkbox" id="crud-document-share-now" value="1" checked>
+                    <span class="company-card-chip">Invia subito ai destinatari selezionati</span>
+                </label>
                 <label>
                     <?php echo e(t('crud.recipients')); ?>
                     <select id="crud-document-recipient-scope">
@@ -374,6 +378,7 @@ $basePath = $basePath ?? (function () {
                 </label>
                 <div class="form-actions span-2">
                     <button type="submit" id="crud-document-share-submit" class="admin-action-link">Partager le document</button>
+                    <button type="button" id="crud-document-share-existing-submit" class="admin-action-link admin-action-link-secondary">Invia documento selezionato</button>
                 </div>
             </form>
         </section>
@@ -388,6 +393,13 @@ $basePath = $basePath ?? (function () {
                     <?php
                         $documentFileName = (string) ($document['file_name'] ?? t('crud.document'));
                         $documentExtension = strtoupper((string) pathinfo($documentFileName, PATHINFO_EXTENSION));
+                        $documentSignedPage = (int) ($document['signed_page'] ?? 0);
+                        $documentMimeType = strtolower((string) ($document['file_mime_type'] ?? ''));
+                        $documentIsPdf = str_contains($documentMimeType, 'pdf') || strtolower((string) pathinfo($documentFileName, PATHINFO_EXTENSION)) === 'pdf';
+                        $documentPreviewHref = appUrl('document-download', ['id' => (int) $document['id'], 'preview' => '1']);
+                        if ($documentSignedPage > 0 && $documentIsPdf) {
+                            $documentPreviewHref .= '#page=' . $documentSignedPage;
+                        }
                         $documentThumbnail = function_exists('documentThumbnailDataUrl')
                             ? documentThumbnailDataUrl($document, 220, 120)
                             : null;
@@ -409,8 +421,11 @@ $basePath = $basePath ?? (function () {
                         </div>
                         <div class="company-card-actions company-card-actions--inline">
                             <span class="company-card-chip"><?php echo e($document['document_type'] ?? t('crud.other')); ?></span>
-                            <span class="company-card-chip"><?php echo e($document['status'] ?? t('crud.pending')); ?></span>
-                            <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $document['id'], 'preview' => '1']); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
+                            <span class="company-card-chip" data-document-status-chip><?php echo e($document['status'] ?? t('crud.pending')); ?></span>
+                            <?php if (!empty($document['signed_at'])): ?>
+                                <span class="company-card-chip"><?php echo e('Firmato'); ?><?php if (!empty($document['signed_page'])): ?> <?php echo e('P.' . (int) $document['signed_page']); ?><?php endif; ?></span>
+                            <?php endif; ?>
+                            <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo e($documentPreviewHref); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
                                 <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                             </a>
                             <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $document['id']]); ?>" title="<?php echo e(t('crud.download_document')); ?>">
@@ -419,6 +434,46 @@ $basePath = $basePath ?? (function () {
                             <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $document['id'], 'disposition' => 'inline', 'print_preview' => '1']); ?>" title="<?php echo e(t('employee.print_document', ['fallback' => 'Print'])); ?>">
                                 <img src="<?php echo $basePath; ?>/assets/icons/printer.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                             </a>
+                            <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
+                                <button type="button"
+                                        class="company-card-action"
+                                        title="Invia documento"
+                                        data-document-share-existing-id="<?php echo (int) ($document['id'] ?? 0); ?>"
+                                        data-document-share-existing-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
+                                    <span aria-hidden="true">↗</span>
+                                </button>
+                            <?php endif; ?>
+                            <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
+                                <button type="button"
+                                        class="company-card-action"
+                                        title="Archivia documento"
+                                        data-document-archive-id="<?php echo (int) ($document['id'] ?? 0); ?>"
+                                        data-document-archive-name="<?php echo e($document['file_name'] ?? 'Document'); ?>"
+                                        <?php if ((string) ($document['status'] ?? 'valid') === 'archived'): ?>hidden<?php endif; ?>>
+                                    <span aria-hidden="true">🗄</span>
+                                </button>
+                                <button type="button"
+                                        class="company-card-action"
+                                        title="Ripristina documento"
+                                        data-document-restore-id="<?php echo (int) ($document['id'] ?? 0); ?>"
+                                        data-document-restore-name="<?php echo e($document['file_name'] ?? 'Document'); ?>"
+                                        <?php if ((string) ($document['status'] ?? '') !== 'archived'): ?>hidden<?php endif; ?>>
+                                    <span aria-hidden="true">↺</span>
+                                </button>
+                            <?php endif; ?>
+                            <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
+                                <button type="button"
+                                        class="company-card-action"
+                                        title="<?php echo e(t('employee.sign_document', ['fallback' => 'Sign document'])); ?>"
+                                        data-dashboard-document-sign-open
+                                        data-dashboard-document-sign-id="<?php echo (int) ($document['id'] ?? 0); ?>"
+                                        data-dashboard-document-sign-name="<?php echo e((string) ($document['file_name'] ?? t('crud.document'))); ?>"
+                                        data-dashboard-document-sign-mime-type="<?php echo e((string) ($document['file_mime_type'] ?? '')); ?>"
+                                        data-dashboard-document-sign-preview-url="<?php echo appUrl('document-download', ['id' => (int) ($document['id'] ?? 0), 'preview' => '1', 'embed' => '1']); ?>"
+                                        <?php if ((string) ($document['status'] ?? 'valid') === 'archived'): ?>hidden<?php endif; ?>>
+                                    <img src="<?php echo $basePath; ?>/assets/icons/signature.svg" alt="" aria-hidden="true" class="company-card-action-icon">
+                                </button>
+                            <?php endif; ?>
                             <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
                                 <button type="button"
                                         class="company-card-action is-danger"
@@ -501,14 +556,14 @@ $basePath = $basePath ?? (function () {
                     <div class="crud-empty-state"><?php echo e(t('crud.no_messages')); ?></div>
                 <?php endif; ?>
                 <?php foreach (($dashboardModalMessages ?? []) as $message): ?>
-                    <article class="company-card company-card--stacked">
+                    <article class="company-card company-card--stacked" data-message-card-id="<?php echo (int) ($message['id'] ?? 0); ?>">
                         <div class="company-card-head">
                             <div class="company-card-title"><?php echo e($message['title'] ?? t('crud.message_title_default')); ?></div>
                             <div class="company-card-meta"><?php echo e($message['sender_name'] ?? ''); ?> <?php echo !empty($message['recipient_name']) ? '→ ' . e($message['recipient_name']) : ''; ?></div>
                         </div>
                         <div class="company-card-actions company-card-actions--inline">
                             <span class="company-card-chip"><?php echo e($message['type'] ?? t('crud.message_request')); ?></span>
-                            <span class="company-card-chip"><?php echo e($message['status'] ?? t('crud.pending')); ?></span>
+                            <span class="company-card-chip" data-message-status-chip><?php echo e($message['status'] ?? t('crud.pending')); ?></span>
                             <?php if (!empty($message['document_id'])): ?>
                                 <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $message['document_id'], 'preview' => '1']); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
                                     <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" aria-hidden="true" class="company-card-action-icon">
@@ -517,6 +572,32 @@ $basePath = $basePath ?? (function () {
                                     <img src="<?php echo $basePath; ?>/assets/icons/circle-arrow-out-up-left.svg" alt="" aria-hidden="true" class="company-card-action-icon">
                                 </a>
                             <?php endif; ?>
+                            <button type="button"
+                                    class="company-card-action"
+                                    title="Stampa messaggio"
+                                    data-message-print-id="<?php echo (int) ($message['id'] ?? 0); ?>"
+                                    data-message-print-title="<?php echo e($message['title'] ?? t('crud.message_title_default')); ?>"
+                                    data-message-print-body="<?php echo e($message['message'] ?? ''); ?>"
+                                    data-message-print-sender="<?php echo e($message['sender_name'] ?? ''); ?>"
+                                    data-message-print-recipient="<?php echo e($message['recipient_name'] ?? ''); ?>"
+                                    data-message-document-print-url="<?php echo !empty($message['document_id']) ? e(appUrl('document-download', ['id' => (int) $message['document_id'], 'disposition' => 'inline', 'print_preview' => '1'])) : ''; ?>">
+                                <img src="<?php echo $basePath; ?>/assets/icons/printer.svg" alt="" aria-hidden="true" class="company-card-action-icon">
+                            </button>
+                            <button type="button"
+                                    class="company-card-action"
+                                    title="Archivia messaggio"
+                                    data-message-archive-id="<?php echo (int) ($message['id'] ?? 0); ?>"
+                                    data-message-archive-name="<?php echo e($message['title'] ?? t('crud.message_title_default')); ?>"
+                                    <?php if ((string) ($message['status'] ?? '') === 'archived'): ?>hidden<?php endif; ?>>
+                                <span aria-hidden="true">🗄</span>
+                            </button>
+                            <button type="button"
+                                    class="company-card-action is-danger"
+                                    title="Cancella messaggio"
+                                    data-message-delete-id="<?php echo (int) ($message['id'] ?? 0); ?>"
+                                    data-message-delete-name="<?php echo e($message['title'] ?? t('crud.message_title_default')); ?>">
+                                <span aria-hidden="true">×</span>
+                            </button>
                         </div>
                     </article>
                 <?php endforeach; ?>

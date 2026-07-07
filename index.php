@@ -148,7 +148,8 @@ require $viewFile;
                 apiUsers: '<?php echo appUrl('api-users'); ?>',
                 apiDashboard: '<?php echo appUrl('api-dashboard'); ?>',
                 apiShifts: '<?php echo appUrl('api-shifts'); ?>',
-                iconsBase: '<?php echo $basePath; ?>/assets/icons/'
+                iconsBase: '<?php echo $basePath; ?>/assets/icons/',
+                pdfjsWorkerSrc: '<?php echo $basePath; ?>/assets/js/vendor/pdfjs/pdf.worker.min.js'
         };
         window.DashboardCurrentUser = <?php echo json_encode([
                 'id' => (int) (currentUser()['id'] ?? 0),
@@ -163,6 +164,7 @@ require $viewFile;
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/calendar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/feedback.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/feedback.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/dnd.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/dnd.js'); ?>"></script>
+<script defer src="<?php echo $basePath; ?>/assets/js/vendor/pdfjs/pdf.min.js?v=<?php echo filemtime(__DIR__ . '/assets/js/vendor/pdfjs/pdf.min.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/departments.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/departments.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/users.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/users.js'); ?>"></script>

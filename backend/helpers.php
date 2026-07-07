@@ -391,6 +391,48 @@ function ensureDocumentStorageSchema(PDO $pdo): void
         // Column already exists.
     }
 
+    try {
+        $pdo->exec('ALTER TABLE documents ADD COLUMN signed_at TIMESTAMP NULL DEFAULT NULL AFTER upload_date');
+    } catch (Throwable $e) {
+        // Column already exists.
+    }
+
+    try {
+        $pdo->exec('ALTER TABLE documents ADD COLUMN signed_by_user_id INT NULL AFTER signed_at');
+    } catch (Throwable $e) {
+        // Column already exists.
+    }
+
+    try {
+        $pdo->exec('ALTER TABLE documents ADD COLUMN signed_page INT NULL AFTER signed_by_user_id');
+    } catch (Throwable $e) {
+        // Column already exists.
+    }
+
+    // Keep legacy installations compatible with document archive/restore flow.
+    try {
+        $statusInfoStmt = $pdo->query("SHOW COLUMNS FROM documents LIKE 'status'");
+        $statusInfo = $statusInfoStmt ? $statusInfoStmt->fetch(PDO::FETCH_ASSOC) : null;
+        $statusType = strtolower((string) ($statusInfo['Type'] ?? ''));
+        if ($statusType !== '' && str_contains($statusType, 'enum(') && !str_contains($statusType, "'archived'")) {
+            $pdo->exec("ALTER TABLE documents MODIFY COLUMN status ENUM('valid','expired','pending','archived') NOT NULL DEFAULT 'pending'");
+        }
+    } catch (Throwable $e) {
+        // Ignore to keep bootstrap resilient on restricted SQL privileges.
+    }
+
+    // Keep legacy installations compatible with message archive flow.
+    try {
+        $requestStatusInfoStmt = $pdo->query("SHOW COLUMNS FROM requests LIKE 'status'");
+        $requestStatusInfo = $requestStatusInfoStmt ? $requestStatusInfoStmt->fetch(PDO::FETCH_ASSOC) : null;
+        $requestStatusType = strtolower((string) ($requestStatusInfo['Type'] ?? ''));
+        if ($requestStatusType !== '' && str_contains($requestStatusType, 'enum(') && !str_contains($requestStatusType, "'archived'")) {
+            $pdo->exec("ALTER TABLE requests MODIFY COLUMN status ENUM('pending','approved','rejected','cancelled','read','unread','archived') NOT NULL DEFAULT 'pending'");
+        }
+    } catch (Throwable $e) {
+        // Ignore to keep bootstrap resilient on restricted SQL privileges.
+    }
+
     $initialized = true;
 }
 
