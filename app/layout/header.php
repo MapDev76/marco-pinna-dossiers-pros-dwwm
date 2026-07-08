@@ -108,7 +108,7 @@ if ($route === 'home') {
     ];
 } elseif ($currentUser !== null) {
     $role = $currentUser['role'] ?? 'employee';
-    if ($route === 'dashboard') {
+    if (in_array($route, ['dashboard', 'calendar'], true)) {
         $rightIcons[] = [
             'type' => 'button',
             'title' => t('common.settings'),
