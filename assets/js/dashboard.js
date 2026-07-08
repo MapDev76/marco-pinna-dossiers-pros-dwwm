@@ -434,8 +434,6 @@
             const result = origUpdatePos(xPercent, yPercent);
             markerX = result ? result.x : Math.min(96, Math.max(4, Number(xPercent) || 86));
             markerY = result ? result.y : Math.min(96, Math.max(4, Number(yPercent) || 84));
-            positionDot.style.left = `${markerX}%`;
-            positionDot.style.top = `${markerY}%`;
           };
 
           submitButton.addEventListener('click', async (event) => {

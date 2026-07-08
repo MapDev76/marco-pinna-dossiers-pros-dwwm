@@ -1362,14 +1362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Resolve source document content.
                 $sourceMimeType = strtolower(trim((string) ($signatureRequest['file_mime_type'] ?? '')));
                 if ($sourceMimeType === '') {
-                    $extension = strtolower((string) pathinfo((string) ($signatureRequest['file_name'] ?? ''), PATHINFO_EXTENSION));
-                    $sourceMimeType = match ($extension) {
-                        'pdf' => 'application/pdf',
-                        'png' => 'image/png',
-                        'jpg', 'jpeg' => 'image/jpeg',
-                        'webp' => 'image/webp',
-                        default => 'application/octet-stream',
-                    };
+                    $sourceMimeType = mimeTypeFromFileExtension((string) ($signatureRequest['file_name'] ?? ''));
                 }
 
                 $sourceBlob = is_string($signatureRequest['file_blob'] ?? null) ? (string) $signatureRequest['file_blob'] : '';

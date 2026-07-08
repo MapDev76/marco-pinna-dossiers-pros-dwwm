@@ -631,14 +631,7 @@ if ($action === 'sign_dashboard_document') {
 
     $sourceMimeType = strtolower(trim((string) ($document['file_mime_type'] ?? '')));
     if ($sourceMimeType === '') {
-        $extension = strtolower((string) pathinfo((string) ($document['file_name'] ?? ''), PATHINFO_EXTENSION));
-        $sourceMimeType = match ($extension) {
-            'pdf' => 'application/pdf',
-            'png' => 'image/png',
-            'jpg', 'jpeg' => 'image/jpeg',
-            'webp' => 'image/webp',
-            default => 'application/octet-stream',
-        };
+        $sourceMimeType = mimeTypeFromFileExtension((string) ($document['file_name'] ?? ''));
     }
 
     $sourceBlob = is_string($document['file_blob'] ?? null) ? (string) $document['file_blob'] : '';

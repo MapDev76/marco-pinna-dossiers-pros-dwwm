@@ -545,6 +545,21 @@ function ensureAbsenceShiftTemplatesForDepartments(PDO $pdo, array $departmentId
 }
 
 /**
+ * Resolve a best-guess MIME type from a file extension.
+ * Returns 'application/octet-stream' when the extension is unknown.
+ */
+function mimeTypeFromFileExtension(string $fileName): string
+{
+    return match (strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION))) {
+        'pdf' => 'application/pdf',
+        'png' => 'image/png',
+        'jpg', 'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp',
+        default => 'application/octet-stream',
+    };
+}
+
+/**
  * Mark a document request as read and send a "document viewed" notification to the original sender.
  *
  * Used by both DocumentDownloadController (triggered via URL parameter) and

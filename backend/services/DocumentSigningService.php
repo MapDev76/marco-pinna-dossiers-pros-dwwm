@@ -59,7 +59,7 @@ function documentSigningWritePdfViaGhostscript(mixed $pdfDoc): string
         throw new RuntimeException('Ghostscript binary not available');
     }
 
-    $tempDir = sys_get_temp_dir() . '/staffease-sign-' . bin2hex(random_bytes(6));
+    $tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'staffease-sign-' . bin2hex(random_bytes(6));
     if (!@mkdir($tempDir, 0777, true) && !is_dir($tempDir)) {
         throw new RuntimeException('Unable to create temporary directory for PDF signing');
     }
