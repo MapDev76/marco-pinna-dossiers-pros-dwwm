@@ -7,6 +7,7 @@
  * restricted by company Wi-Fi IP when configured by admin/super admin.
  */
 require_once __DIR__ . '/../bootstrap.php';
+require_once __DIR__ . '/../services/DocumentSigningService.php';
 
 if (!isLoggedIn()) {
     setFlash('error', t('common.login_required'));
@@ -776,59 +777,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $redirectToDocumentsModal();
         }
 
-        $markReadStatement = $pdo->prepare(
-            'UPDATE requests
-             SET status = "read",
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = :id
-               AND recipient_id = :recipient_id
-               AND type IN ("notification", "document_signature")
-               AND status IN ("pending", "unread")
-             LIMIT 1'
-        );
-        $markReadStatement->execute([
-            'id' => $requestId,
-            'recipient_id' => (int) $currentUser['id'],
-        ]);
-
-        if ($markReadStatement->rowCount() > 0) {
-            $senderLookup = $pdo->prepare(
-                'SELECT user_id, title, document_id
-                 FROM requests
-                 WHERE id = :id
-                   AND recipient_id = :recipient_id
-                 LIMIT 1'
-            );
-            $senderLookup->execute([
-                'id' => $requestId,
-                'recipient_id' => (int) $currentUser['id'],
-            ]);
-            $readRow = $senderLookup->fetch(PDO::FETCH_ASSOC) ?: null;
-
-            if ($readRow) {
-                $recipientId = (int) ($readRow['user_id'] ?? 0);
-                if ($recipientId > 0) {
-                    $employeeName = trim((string) (($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')));
-                    if ($employeeName === '') {
-                        $employeeName = (string) ($currentUser['email'] ?? 'Employee');
-                    }
-
-                    $insertNotification = $pdo->prepare(
-                        'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
-                         VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
-                    );
-                    $insertNotification->execute([
-                        'user_id' => (int) $currentUser['id'],
-                        'recipient_id' => $recipientId,
-                        'type' => 'notification',
-                        'title' => 'Document viewed',
-                        'message' => $employeeName . ' viewed document "' . ((string) ($readRow['title'] ?? 'Document')) . '" successfully.',
-                        'status' => 'unread',
-                        'document_id' => (int) ($readRow['document_id'] ?? 0),
-                    ]);
-                }
-            }
-
+        $wasUpdated = markRequestReadAndNotifySender($pdo, $requestId, (int) $currentUser['id'], $currentUser);
+        if ($wasUpdated) {
             setFlash('success', t('employee.document_marked_read', ['fallback' => 'Document marked as read.']));
         }
 
@@ -1403,120 +1353,151 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $senderName = 'Manager';
                 }
 
-                $signedFileBase = pathinfo((string) ($signatureRequest['file_name'] ?? 'document'), PATHINFO_FILENAME);
-                $signedFileBase = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $signedFileBase ?: 'document') ?: 'document';
-                $signedFileName = 'signed-' . $signedFileBase . '-' . appNow()->format('Ymd-His') . '.html';
                 $signedAt = appNow()->format('Y-m-d H:i:s');
                 $employeeName = trim((string) (($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')));
                 if ($employeeName === '') {
                     $employeeName = (string) ($currentUser['email'] ?? 'Employee');
                 }
 
-                $sourceDownloadUrl = appUrl('document-download', ['id' => (int) ($signatureRequest['document_id'] ?? 0)]);
-                $sourcePreviewUrl = appUrl('document-download', [
-                    'id' => (int) ($signatureRequest['document_id'] ?? 0),
-                    'preview' => '1',
-                    'from' => 'my-space',
-                ]);
-                $safeTitle = htmlspecialchars((string) ($signatureRequest['title'] ?? 'Signed document'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $safeSenderName = htmlspecialchars($senderName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $safeEmployeeName = htmlspecialchars($employeeName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $safeSignedAt = htmlspecialchars($signedAt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $safeSourceUrl = htmlspecialchars($sourceDownloadUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $safeSourcePreviewUrl = htmlspecialchars($sourcePreviewUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $safeSignatureData = htmlspecialchars($signatureData, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $safeReadApproved = htmlspecialchars((string) t('employee.read_and_approved', ['fallback' => 'Read and approved']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $signedHtml = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Signed document</title>'
-                    . '<style>body{font-family:Arial,sans-serif;background:#f7f7f8;color:#111827;padding:24px;}main{max-width:1020px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px 20px 28px;}h1{font-size:1.2rem;margin:0 0 10px;}dl{display:grid;grid-template-columns:180px 1fr;gap:8px 14px;margin:12px 0 18px;}dt{font-weight:700;color:#374151;}dd{margin:0;color:#111827;}a{color:#9a7a14;} .signed-document-stage{position:relative;border:1px solid #e6e6e6;border-radius:12px;overflow:hidden;background:#fff;min-height:72vh;} .signed-document-preview{display:block;width:100%;height:72vh;border:0;background:#fff;} .signature-stamp{position:absolute;left:' . number_format($signaturePosX, 2, '.', '') . '%;top:' . number_format($signaturePosY, 2, '.', '') . '%;transform:translate(-50%,-50%);min-width:230px;border:1px solid rgba(209,213,219,0.95);border-radius:12px;padding:10px;background:rgba(255,255,255,0.94);box-shadow:0 4px 14px rgba(0,0,0,0.12);} .signature-stamp h2{font-size:0.9rem;margin:0 0 8px;} .signature-stamp img{display:block;width:180px;height:auto;border:1px solid #d1d5db;border-radius:8px;background:#fff;padding:5px;} .signature-stamp p{margin:6px 0 0;font-size:0.82rem;color:#374151;} .signature-stamp p.status-line{font-weight:700;color:#1f2937;} @media print{body{background:#fff;padding:0;}main{max-width:none;border:0;border-radius:0;padding:0;} .signed-document-stage,.signed-document-preview{height:100vh;min-height:100vh;border:0;}}</style>'
-                    . '</head><body><main><h1>' . $safeTitle . '</h1><p>Digitally signed copy generated by StaffEase Pro.</p>'
-                    . '<dl><dt>Signed by</dt><dd>' . $safeEmployeeName . '</dd><dt>Requested by</dt><dd>' . $safeSenderName . '</dd><dt>Signed at</dt><dd>' . $safeSignedAt . '</dd><dt>Original document</dt><dd><a href="' . $safeSourceUrl . '">Download source file</a></dd></dl>'
-                    . '<section class="signed-document-stage"><iframe class="signed-document-preview" src="' . $safeSourcePreviewUrl . '" title="Signed source preview"></iframe><aside class="signature-stamp"><h2>Digital signature</h2><img src="' . $safeSignatureData . '" alt="Employee signature"><p class="status-line">' . $safeReadApproved . '</p><p><strong>' . $safeEmployeeName . '</strong></p><p>' . $safeSignedAt . '</p></aside></section>'
-                    . '</main></body></html>';
+                // Resolve source document content.
+                $sourceMimeType = strtolower(trim((string) ($signatureRequest['file_mime_type'] ?? '')));
+                if ($sourceMimeType === '') {
+                    $extension = strtolower((string) pathinfo((string) ($signatureRequest['file_name'] ?? ''), PATHINFO_EXTENSION));
+                    $sourceMimeType = match ($extension) {
+                        'pdf' => 'application/pdf',
+                        'png' => 'image/png',
+                        'jpg', 'jpeg' => 'image/jpeg',
+                        'webp' => 'image/webp',
+                        default => 'application/octet-stream',
+                    };
+                }
 
-                $insertSignature = $pdo->prepare(
-                    'INSERT INTO digital_signatures (user_id, signature_type, signature_data)
-                     VALUES (:user_id, :signature_type, :signature_data)'
-                );
-                $insertSignedDocument = $pdo->prepare(
-                    'INSERT INTO documents (user_id, document_type, file_name, file_path, file_blob, file_mime_type, status)
-                     VALUES (:user_id, :document_type, :file_name, :file_path, :file_blob, :file_mime_type, :status)'
-                );
-                $updateRequest = $pdo->prepare(
-                    'UPDATE requests
-                     SET status = :status,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = :id
-                       AND recipient_id = :recipient_id
-                     LIMIT 1'
-                );
-                $insertNotification = $pdo->prepare(
-                    'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
-                     VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
-                );
+                $sourceBlob = is_string($signatureRequest['file_blob'] ?? null) ? (string) $signatureRequest['file_blob'] : '';
+                if ($sourceBlob === '') {
+                    $resolvedPath = $resolveStoredDocumentPath($signatureRequest);
+                    if ($resolvedPath !== null) {
+                        $fileContent = @file_get_contents($resolvedPath);
+                        if (is_string($fileContent) && $fileContent !== '') {
+                            $sourceBlob = $fileContent;
+                        }
+                    }
+                }
 
-                $pdo->beginTransaction();
-                try {
-                    $insertSignature->execute([
-                        'user_id' => (int) $currentUser['id'],
-                        'signature_type' => 'touchscreen',
-                        'signature_data' => $signatureData,
-                    ]);
-
-                    $insertSignedDocument->execute([
-                        'user_id' => (int) $currentUser['id'],
-                        'document_type' => 'other',
-                        'file_name' => $signedFileName,
-                        'file_path' => '',
-                        'file_blob' => $signedHtml,
-                        'file_mime_type' => 'text/html; charset=utf-8',
-                        'status' => 'valid',
-                    ]);
-                    $signedDocumentId = (int) $pdo->lastInsertId();
-
-                    $updateRequest->execute([
-                        'status' => 'approved',
-                        'id' => $requestId,
-                        'recipient_id' => (int) $currentUser['id'],
-                    ]);
-
-                    $recipientIds = [(int) ($signatureRequest['sender_id'] ?? 0)];
-                    $senderCompanyId = (int) ($signatureRequest['sender_company_id'] ?? 0);
-                    $adminRecipientsSql = 'SELECT u.id
-                                           FROM users u
-                                           LEFT JOIN departments d ON d.id = u.department_id
-                                           WHERE u.status = "active"
-                                             AND (
-                                               u.role = "super_admin"
-                                               OR (u.role = "admin" AND d.company_id = :company_id)
-                                             )';
-                    $adminRecipients = $pdo->prepare($adminRecipientsSql);
-                    $adminRecipients->execute(['company_id' => $senderCompanyId]);
-                    $recipientIds = array_merge($recipientIds, array_map('intval', $adminRecipients->fetchAll(PDO::FETCH_COLUMN) ?: []));
-
-                    $recipientIds = array_values(array_unique(array_filter($recipientIds, static fn (int $id): bool => $id > 0)));
-                    $signedNotificationTitle = t('employee.signed_document_received_title', ['fallback' => 'Signed document received']);
-                    $signedNotificationMessage = t('employee.signed_document_received_message', ['fallback' => '{employee} signed "{document}" on {time}.', 'employee' => $employeeName, 'document' => (string) ($signatureRequest['file_name'] ?? 'document'), 'time' => $signedAt]);
-
-                    foreach ($recipientIds as $recipientId) {
-                        $insertNotification->execute([
-                            'user_id' => (int) $currentUser['id'],
-                            'recipient_id' => $recipientId,
-                            'type' => 'notification',
-                            'title' => $signedNotificationTitle,
-                            'message' => $signedNotificationMessage,
-                            'status' => 'unread',
-                            'document_id' => $signedDocumentId,
-                        ]);
+                if ($sourceBlob === '') {
+                    $error = t('common.file_not_available');
+                } else {
+                    try {
+                        $signResult = documentSigningApply(
+                            $sourceBlob,
+                            $sourceMimeType,
+                            $signatureData,
+                            $signaturePosX,
+                            $signaturePosY,
+                            1,
+                            $employeeName,
+                            $signedAt
+                        );
+                    } catch (Throwable $signingException) {
+                        $signResult = null;
+                        $error = t('employee.document_sign_failed', ['fallback' => 'Unable to sign this document right now.']) . ' (' . $signingException->getMessage() . ')';
                     }
 
-                    $pdo->commit();
-                    setFlash('success', t('flash.document_signed_success', ['fallback' => 'Document signed and shared successfully.']));
-                    redirectTo('my-space');
-                } catch (Throwable $e) {
-                    if ($pdo->inTransaction()) {
-                        $pdo->rollBack();
+                    if ($signResult !== null) {
+                        $insertSignature = $pdo->prepare(
+                            'INSERT INTO digital_signatures (user_id, signature_type, signature_data)
+                             VALUES (:user_id, :signature_type, :signature_data)'
+                        );
+                        $updateSignedDocument = $pdo->prepare(
+                            'UPDATE documents
+                             SET file_blob = :file_blob,
+                                 file_path = :file_path,
+                                 file_mime_type = :file_mime_type,
+                                 status = :status,
+                                 signed_at = :signed_at,
+                                 signed_by_user_id = :signed_by_user_id,
+                                 signed_page = :signed_page
+                             WHERE id = :id
+                             LIMIT 1'
+                        );
+                        $updateRequest = $pdo->prepare(
+                            'UPDATE requests
+                             SET status = :status,
+                                 updated_at = CURRENT_TIMESTAMP
+                             WHERE id = :id
+                               AND recipient_id = :recipient_id
+                             LIMIT 1'
+                        );
+                        $insertNotification = $pdo->prepare(
+                            'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
+                             VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
+                        );
+
+                        $pdo->beginTransaction();
+                        try {
+                            $insertSignature->execute([
+                                'user_id' => (int) $currentUser['id'],
+                                'signature_type' => 'touchscreen',
+                                'signature_data' => $signatureData,
+                            ]);
+
+                            $signedDocumentId = (int) ($signatureRequest['document_id'] ?? 0);
+                            $updateSignedDocument->execute([
+                                'id' => $signedDocumentId,
+                                'file_path' => '',
+                                'file_blob' => $signResult['blob'],
+                                'file_mime_type' => $signResult['mime_type'],
+                                'status' => 'valid',
+                                'signed_at' => $signedAt,
+                                'signed_by_user_id' => (int) $currentUser['id'],
+                                'signed_page' => $signResult['page'],
+                            ]);
+
+                            $updateRequest->execute([
+                                'status' => 'approved',
+                                'id' => $requestId,
+                                'recipient_id' => (int) $currentUser['id'],
+                            ]);
+
+                            $recipientIds = [(int) ($signatureRequest['sender_id'] ?? 0)];
+                            $senderCompanyId = (int) ($signatureRequest['sender_company_id'] ?? 0);
+                            $adminRecipientsSql = 'SELECT u.id
+                                                   FROM users u
+                                                   LEFT JOIN departments d ON d.id = u.department_id
+                                                   WHERE u.status = "active"
+                                                     AND (
+                                                       u.role = "super_admin"
+                                                       OR (u.role = "admin" AND d.company_id = :company_id)
+                                                     )';
+                            $adminRecipients = $pdo->prepare($adminRecipientsSql);
+                            $adminRecipients->execute(['company_id' => $senderCompanyId]);
+                            $recipientIds = array_merge($recipientIds, array_map('intval', $adminRecipients->fetchAll(PDO::FETCH_COLUMN) ?: []));
+
+                            $recipientIds = array_values(array_unique(array_filter($recipientIds, static fn (int $id): bool => $id > 0)));
+                            $signedNotificationTitle = t('employee.signed_document_received_title', ['fallback' => 'Signed document received']);
+                            $signedNotificationMessage = t('employee.signed_document_received_message', ['fallback' => '{employee} signed "{document}" on {time}.', 'employee' => $employeeName, 'document' => (string) ($signatureRequest['file_name'] ?? 'document'), 'time' => $signedAt]);
+
+                            foreach ($recipientIds as $recipientId) {
+                                $insertNotification->execute([
+                                    'user_id' => (int) $currentUser['id'],
+                                    'recipient_id' => $recipientId,
+                                    'type' => 'notification',
+                                    'title' => $signedNotificationTitle,
+                                    'message' => $signedNotificationMessage,
+                                    'status' => 'unread',
+                                    'document_id' => $signedDocumentId,
+                                ]);
+                            }
+
+                            $pdo->commit();
+                            setFlash('success', t('flash.document_signed_success', ['fallback' => 'Document signed and shared successfully.']));
+                            redirectTo('my-space');
+                        } catch (Throwable $e) {
+                            if ($pdo->inTransaction()) {
+                                $pdo->rollBack();
+                            }
+                            $error = t('employee.document_sign_failed', ['fallback' => 'Unable to sign this document right now.']);
+                        }
                     }
-                    $error = t('employee.document_sign_failed', ['fallback' => 'Unable to sign this document right now.']);
                 }
             }
         }

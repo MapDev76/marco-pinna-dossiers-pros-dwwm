@@ -4,6 +4,7 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/CompanyModel.php';
 require_once __DIR__ . '/../models/DepartmentModel.php';
+require_once __DIR__ . '/../services/DocumentSigningService.php';
 
 /**
  * API dashboard endpoint returning JSON useful for AJAX/REST clients.
@@ -32,96 +33,7 @@ $user = currentUser();
 $role = $user['role'] ?? 'employee';
 $profile = $userModel->profileWithRelations((int) $user['id']) ?? [];
 
-$imagickClass = 'Imagick';
-$imagickDrawClass = 'ImagickDraw';
-$imagickPixelClass = 'ImagickPixel';
-$imagickFilterLanczos = defined('\\Imagick::FILTER_LANCZOS') ? (int) constant('\\Imagick::FILTER_LANCZOS') : 1;
-$imagickCompositeOver = defined('\\Imagick::COMPOSITE_OVER') ? (int) constant('\\Imagick::COMPOSITE_OVER') : 40;
-
-$writePdfWithGhostscript = static function ($pdfDoc): string {
-    $gsBinary = trim((string) @shell_exec('command -v gs 2>/dev/null'));
-    if ($gsBinary === '') {
-        throw new RuntimeException('Ghostscript binary not available');
-    }
-
-    $tempDir = sys_get_temp_dir() . '/staffease-sign-' . bin2hex(random_bytes(6));
-    if (!@mkdir($tempDir, 0777, true) && !is_dir($tempDir)) {
-        throw new RuntimeException('Unable to create temporary directory for PDF signing');
-    }
-
-    $imagePaths = [];
-    $outputPdf = $tempDir . '/signed-output.pdf';
-
-    try {
-        $pdfForExport = clone $pdfDoc;
-        $pdfForExport->setFirstIterator();
-
-        $pageIndex = 0;
-        foreach ($pdfForExport as $pageImage) {
-            $pagePath = $tempDir . '/page-' . str_pad((string) $pageIndex, 3, '0', STR_PAD_LEFT) . '.png';
-            $pageClone = clone $pageImage;
-            $pageClone->setImageFormat('png');
-            $pageClone->writeImage($pagePath);
-            $pageClone->clear();
-            $pageClone->destroy();
-            $imagePaths[] = $pagePath;
-            $pageIndex++;
-        }
-
-        $pdfForExport->clear();
-        $pdfForExport->destroy();
-
-        if (empty($imagePaths)) {
-            throw new RuntimeException('No PDF pages rendered for Ghostscript output');
-        }
-
-        $escapedImages = implode(' ', array_map('escapeshellarg', $imagePaths));
-        $command = escapeshellcmd($gsBinary)
-            . ' -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -dAutoRotatePages=/None'
-            . ' -sOutputFile=' . escapeshellarg($outputPdf)
-            . ' ' . $escapedImages . ' 2>&1';
-        @shell_exec($command);
-
-        if (!is_file($outputPdf)) {
-            throw new RuntimeException('Ghostscript did not generate a PDF output file');
-        }
-
-        $signedPdf = @file_get_contents($outputPdf);
-        if (!is_string($signedPdf) || $signedPdf === '') {
-            throw new RuntimeException('Unable to read Ghostscript PDF output');
-        }
-
-        return $signedPdf;
-    } finally {
-        foreach ($imagePaths as $imagePath) {
-            if (is_string($imagePath) && $imagePath !== '' && file_exists($imagePath)) {
-                @unlink($imagePath);
-            }
-        }
-        if (file_exists($outputPdf)) {
-            @unlink($outputPdf);
-        }
-        if (is_dir($tempDir)) {
-            @rmdir($tempDir);
-        }
-    }
-};
-
-$buildSignatureStamp = static function ($signatureStamp, int $targetMaxWidth) use ($imagickFilterLanczos) {
-    $stamp = clone $signatureStamp;
-    $targetMaxWidth = max(80, $targetMaxWidth);
-    $currentWidth = max(1, (int) $stamp->getImageWidth());
-
-    if ($currentWidth > $targetMaxWidth) {
-        try {
-            $stamp->resizeImage($targetMaxWidth, 0, $imagickFilterLanczos, 1, true);
-        } catch (Throwable $resizeError) {
-            // Keep original signature size if resize is not supported for this raster payload.
-        }
-    }
-
-    return $stamp;
-};
+// Signing helpers are now provided by DocumentSigningService.php (required above).
 
 $resolveAllowedRecipients = static function () use ($pdo, $role, $profile): array {
     $allowedRecipientsSql = 'SELECT u.id
@@ -754,124 +666,17 @@ if ($action === 'sign_dashboard_document') {
         jsonResponse(['success' => false, 'error' => 'Source document content not found'], 404);
     }
 
-    $signaturePayload = preg_replace('/^data:image\/[a-zA-Z0-9.+-]+;base64,/', '', $signatureData);
-    $signaturePayload = str_replace(' ', '+', (string) $signaturePayload);
-    $signatureBinary = base64_decode($signaturePayload, true);
-    if (!is_string($signatureBinary) || $signatureBinary === '') {
-        jsonResponse(['success' => false, 'error' => 'Invalid signature payload'], 400);
-    }
-
-    if (!class_exists('Imagick')) {
-        jsonResponse(['success' => false, 'error' => 'Imagick extension is required for in-place document signing'], 500);
-    }
-
-    $signedBlob = '';
-    $signedMimeType = $sourceMimeType;
-    $appliedSignaturePage = max(1, $signaturePage);
-
     try {
-        $signatureStamp = new $imagickClass();
-        $signatureStamp->readImageBlob($signatureBinary);
-        $signatureStamp->setImageFormat('png');
-
-        $stampDraw = new $imagickDrawClass();
-        $stampDraw->setFillColor(new $imagickPixelClass('rgba(31,41,55,0.92)'));
-        $stampDraw->setFontSize(16);
-
-        if (str_contains($sourceMimeType, 'pdf')) {
-            $pdfDoc = new $imagickClass();
-            $pdfDoc->setResolution(150, 150);
-            $pdfDoc->readImageBlob($sourceBlob);
-
-            $pagesCount = max(1, (int) $pdfDoc->getNumberImages());
-            $pageIndex = min($pagesCount - 1, max(0, $signaturePage - 1));
-            $appliedSignaturePage = $pageIndex + 1;
-            $pdfDoc->setIteratorIndex($pageIndex);
-
-            $pageWidth = max(1, (int) $pdfDoc->getImageWidth());
-            $pageHeight = max(1, (int) $pdfDoc->getImageHeight());
-
-            $targetStampWidth = max(140, (int) round($pageWidth * 0.22));
-            $pageStamp = $buildSignatureStamp($signatureStamp, $targetStampWidth);
-
-            $stampWidth = max(1, (int) $pageStamp->getImageWidth());
-            $stampHeight = max(1, (int) $pageStamp->getImageHeight());
-            $stampX = max(4, min($pageWidth - $stampWidth - 4, (int) round(($signaturePosX / 100) * $pageWidth - ($stampWidth / 2))));
-            $stampY = max(4, min($pageHeight - $stampHeight - 56, (int) round(($signaturePosY / 100) * $pageHeight - ($stampHeight / 2))));
-
-            $pdfDoc->compositeImage($pageStamp, $imagickCompositeOver, $stampX, $stampY);
-            try {
-                $pdfDoc->annotateImage($stampDraw, $stampX, min($pageHeight - 10, $stampY + $stampHeight + 22), 0, 'Firma digitale: ' . $signerName);
-                $pdfDoc->annotateImage($stampDraw, $stampX, min($pageHeight - 10, $stampY + $stampHeight + 42), 0, 'Data/Ora: ' . $signedAt . ' - Pagina ' . $appliedSignaturePage);
-            } catch (Throwable $annotationError) {
-                // Some runtimes do not have a default font configured for Imagick.
-                // Keep the visual signature and persist metadata on the document row.
-            }
-
-            try {
-                $pdfDoc->setFirstIterator();
-                $pdfDoc->setImageFormat('pdf');
-                $signedBlob = (string) $pdfDoc->writeImagesBlob();
-            } catch (Throwable $writeError) {
-                $pdfDoc->setFirstIterator();
-                $signedBlob = $writePdfWithGhostscript($pdfDoc);
-            }
-            $signedMimeType = 'application/pdf';
-
-            $pageStamp->clear();
-            $pageStamp->destroy();
-            $pdfDoc->clear();
-            $pdfDoc->destroy();
-        } elseif (str_starts_with($sourceMimeType, 'image/')) {
-            $imageDoc = new $imagickClass();
-            $imageDoc->readImageBlob($sourceBlob);
-            if ($imageDoc->getNumberImages() > 1) {
-                $imageDoc->setIteratorIndex(0);
-            }
-
-            $imgWidth = max(1, (int) $imageDoc->getImageWidth());
-            $imgHeight = max(1, (int) $imageDoc->getImageHeight());
-            $targetStampWidth = max(100, (int) round($imgWidth * 0.22));
-
-            $imageStamp = $buildSignatureStamp($signatureStamp, $targetStampWidth);
-            $stampWidth = max(1, (int) $imageStamp->getImageWidth());
-            $stampHeight = max(1, (int) $imageStamp->getImageHeight());
-            $stampX = max(4, min($imgWidth - $stampWidth - 4, (int) round(($signaturePosX / 100) * $imgWidth - ($stampWidth / 2))));
-            $stampY = max(4, min($imgHeight - $stampHeight - 56, (int) round(($signaturePosY / 100) * $imgHeight - ($stampHeight / 2))));
-
-            $imageDoc->compositeImage($imageStamp, $imagickCompositeOver, $stampX, $stampY);
-            try {
-                $imageDoc->annotateImage($stampDraw, $stampX, min($imgHeight - 10, $stampY + $stampHeight + 20), 0, 'Firma digitale: ' . $signerName . ' - ' . $signedAt);
-            } catch (Throwable $annotationError) {
-                // Best-effort only.
-            }
-
-            if (str_contains($sourceMimeType, 'png')) {
-                $imageDoc->setImageFormat('png');
-                $signedMimeType = 'image/png';
-            } elseif (str_contains($sourceMimeType, 'webp')) {
-                $imageDoc->setImageFormat('webp');
-                $signedMimeType = 'image/webp';
-            } else {
-                $imageDoc->setImageFormat('jpeg');
-                $signedMimeType = 'image/jpeg';
-            }
-
-            $signedBlob = (string) $imageDoc->getImageBlob();
-
-            $imageStamp->clear();
-            $imageStamp->destroy();
-            $imageDoc->clear();
-            $imageDoc->destroy();
-        } else {
-            jsonResponse([
-                'success' => false,
-                'error' => 'Unsupported document format for in-place signing. Use PDF or image documents.',
-            ], 400);
-        }
-
-        $signatureStamp->clear();
-        $signatureStamp->destroy();
+        $signResult = documentSigningApply(
+            $sourceBlob,
+            $sourceMimeType,
+            $signatureData,
+            $signaturePosX,
+            $signaturePosY,
+            $signaturePage,
+            $signerName,
+            $signedAt
+        );
     } catch (Throwable $e) {
         jsonResponse([
             'success' => false,
@@ -879,9 +684,9 @@ if ($action === 'sign_dashboard_document') {
         ], 500);
     }
 
-    if ($signedBlob === '') {
-        jsonResponse(['success' => false, 'error' => 'Unable to generate signed document content'], 500);
-    }
+    $signedBlob = $signResult['blob'];
+    $signedMimeType = $signResult['mime_type'];
+    $appliedSignaturePage = $signResult['page'];
 
     $insertSignature = $pdo->prepare(
         'INSERT INTO digital_signatures (user_id, signature_type, signature_data)

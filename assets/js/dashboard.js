@@ -291,16 +291,25 @@
           const pageNextButton = signModal.querySelector('[data-dashboard-document-sign-page-next]');
           const pageInput = signModal.querySelector('[data-dashboard-document-sign-page-input]');
 
-          const ctx = canvas && typeof canvas.getContext === 'function' ? canvas.getContext('2d') : null;
-          if (!canvas || !ctx || !positionLayer || !positionDot || !submitButton || !previewFrame) {
+          if (!canvas || !positionLayer || !positionDot || !submitButton || !previewFrame) {
             notifyError(tr('Unable to open signature editor.', 'Impossible d\'ouvrir l\'editeur de signature.'));
             closeModal();
             return;
           }
 
-          let drawing = false;
-          let activePointerId = null;
-          let hasStroke = false;
+          const pad = window.AppSignaturePad && window.AppSignaturePad.init(canvas, {
+            errorNode,
+            clearBtn: clearButton,
+            positionLayer,
+            positionDot,
+          });
+
+          if (!pad) {
+            notifyError(tr('Unable to open signature editor.', 'Impossible d\'ouvrir l\'editeur de signature.'));
+            closeModal();
+            return;
+          }
+
           let markerX = 86;
           let markerY = 84;
           let selectedPage = 1;
@@ -419,130 +428,19 @@
             });
           }
 
-          const drawPadBackground = () => {
-            const width = canvas.clientWidth;
-            const height = canvas.clientHeight;
-            ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, width, height);
-            ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
-            ctx.beginPath();
-            ctx.moveTo(10, height - 30);
-            ctx.lineTo(width - 10, height - 30);
-            ctx.stroke();
-            ctx.strokeStyle = '#111827';
-            ctx.lineWidth = 2.2;
-          };
-
-          const resizeCanvas = () => {
-            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            const cssWidth = canvas.clientWidth || canvas.width;
-            const cssHeight = canvas.clientHeight || canvas.height;
-            canvas.width = Math.floor(cssWidth * ratio);
-            canvas.height = Math.floor(cssHeight * ratio);
-            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.lineWidth = 2.2;
-            ctx.strokeStyle = '#111827';
-            drawPadBackground();
-          };
-
-          const pointFromEvent = (event) => {
-            const rect = canvas.getBoundingClientRect();
-            return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-          };
-
-          const beginStroke = (event) => {
-            if (activePointerId !== null) return;
-            activePointerId = event.pointerId;
-            drawing = true;
-            const p = pointFromEvent(event);
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            hasStroke = true;
-            event.preventDefault();
-          };
-
-          const drawStroke = (event) => {
-            if (!drawing || event.pointerId !== activePointerId) return;
-            const p = pointFromEvent(event);
-            ctx.lineTo(p.x, p.y);
-            ctx.stroke();
-            event.preventDefault();
-          };
-
-          const endStroke = (event) => {
-            if (event.pointerId !== activePointerId) return;
-            drawing = false;
-            activePointerId = null;
-            ctx.closePath();
-          };
-
-          const clearSignature = () => {
-            hasStroke = false;
-            if (errorNode) errorNode.textContent = '';
-            drawPadBackground();
-          };
-
-          const updateMarker = (xPercent, yPercent) => {
-            markerX = Math.min(96, Math.max(4, Number(xPercent) || 86));
-            markerY = Math.min(96, Math.max(4, Number(yPercent) || 84));
+          // Keep markerX / markerY in sync when the position layer updates via AppSignaturePad.
+          const origUpdatePos = pad.updatePosition;
+          pad.updatePosition = (xPercent, yPercent) => {
+            const result = origUpdatePos(xPercent, yPercent);
+            markerX = result ? result.x : Math.min(96, Math.max(4, Number(xPercent) || 86));
+            markerY = result ? result.y : Math.min(96, Math.max(4, Number(yPercent) || 84));
             positionDot.style.left = `${markerX}%`;
             positionDot.style.top = `${markerY}%`;
           };
 
-          const setMarkerFromPointer = (event) => {
-            const rect = positionLayer.getBoundingClientRect();
-            if (!rect.width || !rect.height) return;
-            const localX = event.clientX - rect.left;
-            const localY = event.clientY - rect.top;
-            updateMarker((localX / rect.width) * 100, (localY / rect.height) * 100);
-          };
-
-          canvas.addEventListener('pointerdown', beginStroke, { passive: false });
-          canvas.addEventListener('pointermove', drawStroke, { passive: false });
-          canvas.addEventListener('pointerup', endStroke);
-          canvas.addEventListener('pointercancel', endStroke);
-          canvas.addEventListener('pointerleave', endStroke);
-
-          let markerDrag = false;
-          positionLayer.addEventListener('pointerdown', (event) => {
-            markerDrag = true;
-            if (typeof positionLayer.setPointerCapture === 'function') {
-              try { positionLayer.setPointerCapture(event.pointerId); } catch (e) { /* noop */ }
-            }
-            setMarkerFromPointer(event);
-          });
-          positionLayer.addEventListener('pointermove', (event) => {
-            if (!markerDrag) return;
-            setMarkerFromPointer(event);
-          });
-          const stopMarkerDrag = (event) => {
-            markerDrag = false;
-            if (typeof positionLayer.releasePointerCapture === 'function') {
-              try { positionLayer.releasePointerCapture(event.pointerId); } catch (e) { /* noop */ }
-            }
-          };
-          positionLayer.addEventListener('pointerup', stopMarkerDrag);
-          positionLayer.addEventListener('pointercancel', stopMarkerDrag);
-          positionLayer.addEventListener('click', (event) => {
-            event.preventDefault();
-            setMarkerFromPointer(event);
-          });
-
-          if (clearButton) {
-            clearButton.addEventListener('click', (event) => {
-              event.preventDefault();
-              clearSignature();
-            });
-          }
-
           submitButton.addEventListener('click', async (event) => {
             event.preventDefault();
-            if (!hasStroke) {
+            if (!pad.hasStroke()) {
               if (errorNode) {
                 errorNode.textContent = tr('Please draw your signature before signing this document.', 'Veuillez dessiner votre signature avant de signer ce document.');
               }
@@ -557,11 +455,10 @@
             submitButton.disabled = true;
             if (errorNode) errorNode.textContent = '';
             try {
-              const signatureData = canvas.toDataURL('image/png');
               const response = await window.AppAPI.postJSON(apiDashboard, {
                 action: 'sign_dashboard_document',
                 document_id: documentId,
-                signature_data: signatureData,
+                signature_data: pad.getDataUrl(),
                 signature_pos_x: markerX,
                 signature_pos_y: markerY,
                 signature_page: selectedPage,
@@ -583,11 +480,11 @@
             }
           });
 
-          updateMarker(markerX, markerY);
+          pad.updatePosition(markerX, markerY);
           applyPreviewPage(1);
           initPdfRenderer();
-          resizeCanvas();
-          window.addEventListener('resize', resizeCanvas, { once: true });
+          pad.resize();
+          window.addEventListener('resize', () => pad.resize(), { once: true });
         };
 
         const syncUploadRecipientMode = () => {

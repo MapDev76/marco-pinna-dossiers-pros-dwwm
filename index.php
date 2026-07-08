@@ -140,6 +140,9 @@ require $viewFile;
 <?php if ($requiresApiClient): ?>
 <script defer src="<?php echo $basePath; ?>/assets/js/api.js"></script>
 <?php endif; ?>
+<?php if ($isDashboardRoute || $isMySpaceRoute): ?>
+<script defer src="<?php echo $basePath; ?>/assets/js/signature-pad.js?v=<?php echo filemtime(__DIR__ . '/assets/js/signature-pad.js'); ?>"></script>
+<?php endif; ?>
 <?php if ($isDashboardRoute && isLoggedIn()): ?>
 <script>
         window.DashboardConfig = {
