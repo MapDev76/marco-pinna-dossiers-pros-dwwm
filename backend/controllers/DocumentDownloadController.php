@@ -87,7 +87,7 @@ if (!$allowed) {
 $markRead = in_array(strtolower(trim((string) ($_GET['mark_read'] ?? ''))), ['1', 'true', 'yes', 'on'], true);
 $requestId = (int) ($_GET['request_id'] ?? 0);
 if ($markRead && $requestId > 0) {
-    markRequestReadAndNotifySender($pdo, $requestId, $currentUserId, $documentId, $currentUser);
+    markRequestReadAndNotifySender($pdo, $requestId, $currentUserId, $currentUser, $documentId);
 }
 
 $filePath = trim((string) ($document['file_path'] ?? ''));
