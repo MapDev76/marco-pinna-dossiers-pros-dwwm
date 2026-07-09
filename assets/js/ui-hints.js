@@ -40,7 +40,6 @@
     '[data-assignment-employee-open]',
     '[data-auto-assign-open]',
     '[data-auto-assign-clear]',
-    '[data-document-sign-open]',
     '[data-attendance-modal-open]',
   ].join(',');
 

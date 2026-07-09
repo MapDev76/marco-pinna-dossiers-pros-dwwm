@@ -10,7 +10,7 @@
         position: fixed;
         top: 100px;
         left: 8px;
-        width: 236px;
+        width: 284px;
         margin: 0;
         transform: translateX(calc(-100% + 6px));
     }
@@ -29,6 +29,8 @@
         max-width: none;
         transform: none;
         overflow: auto;
+        contain: layout paint style;
+        -webkit-overflow-scrolling: touch;
     }
 
     body.sidebar-expanded .route-dashboard .dashboard-content {
@@ -256,6 +258,7 @@
     .dashboard-calendar-shell {
         height: auto;
         min-height: 0;
+        contain: layout paint;
     }
 
     .dashboard-calendar-frame {
@@ -276,6 +279,22 @@
 
     .dashboard-sidebar-scroll {
         padding: 0.7rem 0.5rem;
+    }
+
+    .route-dashboard .site-icon-btn,
+    .route-dashboard .admin-card,
+    .route-dashboard .dashboard-calendar-shell,
+    .route-dashboard .dashboard-calendar-grid,
+    .route-dashboard .calendar-day-card,
+    .route-dashboard .calendar-year-card,
+    .route-dashboard .dashboard-sidebar-shell,
+    .route-dashboard .dashboard-sidebar-user-chip,
+    .route-dashboard .dashboard-sidebar-shift-chip,
+    .route-dashboard .dashboard-calendar-navigator-action,
+    .route-dashboard .dashboard-calendar-navigator-pill {
+        box-shadow: none !important;
+        filter: none !important;
+        transition: none !important;
     }
 }
 
@@ -361,7 +380,7 @@
     .app-sidebar {
         top: 68px;
         left: 6px;
-        width: 218px;
+        width: min(332px, calc(100vw - 14px));
         margin: 0;
         transform: translateX(calc(-100% + 6px));
     }
@@ -982,14 +1001,10 @@
         align-items: flex-start;
     }
 
-    .employee-messages-form {
-        grid-template-columns: 1fr;
-    }
-
-    .employee-messages-sections,
     .employee-documents-inbox-sections {
         grid-template-columns: 1fr;
     }
+
 }
 
  
@@ -1068,45 +1083,21 @@
         overflow-y: auto;
     }
 
-    .employee-attendance-modal[data-employee-messages-modal] .employee-messages-dialog,
     .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-dialog {
         min-height: 100dvh !important;
         max-height: 100dvh !important;
         border-radius: 0 !important;
     }
 
-    .employee-attendance-modal[data-employee-messages-modal] .employee-messages-sections,
     .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-sections {
+        grid-template-columns: 1fr;
         overflow: visible;
-    }
-
-    .employee-attendance-modal[data-employee-messages-modal] .employee-messages-table-wrap,
-    .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-table-wrap {
-        min-height: 0;
     }
 
     .employee-signature-pad-shell canvas {
         width: 100% !important;
         max-width: 100% !important;
         height: clamp(190px, 36vh, 300px);
-    }
-
-    .employee-documents-inbox-dialog .employee-document-actions-inline {
-        flex-wrap: wrap;
-        overflow: visible;
-    }
-
-    .employee-documents-inbox-dialog .employee-document-actions-inline .admin-action-link,
-    .employee-documents-inbox-dialog .employee-document-actions-inline .admin-action-link-secondary {
-        min-height: 34px;
-        padding-inline: 0.72rem;
-    }
-}
-
-@media (min-width: 901px) and (max-width: 1280px) {
-    .employee-attendance-modal[data-employee-messages-modal] .employee-messages-sections,
-    .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-sections {
-        grid-template-columns: 1fr;
     }
 }
 

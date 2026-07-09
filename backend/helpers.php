@@ -26,6 +26,38 @@ function appBasePath(): string
     return rtrim($scriptDir, '/');
 }
 
+function appUsesPrettyUrls(): bool
+{
+    $serverSoftware = strtolower((string) ($_SERVER['SERVER_SOFTWARE'] ?? ''));
+    return str_contains($serverSoftware, 'apache');
+}
+
+function appRouteFromRequest(): string
+{
+    $route = strtolower(trim((string) ($_GET['route'] ?? '')));
+    if ($route !== '') {
+        return $route;
+    }
+
+    $requestPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+    $basePath = appBasePath();
+    $normalizedPath = $requestPath;
+
+    if ($basePath !== '' && str_starts_with($normalizedPath, $basePath)) {
+        $normalizedPath = (string) substr($normalizedPath, strlen($basePath));
+    }
+
+    $normalizedPath = trim($normalizedPath, '/');
+    if ($normalizedPath === '' || $normalizedPath === 'index.php') {
+        return 'home';
+    }
+
+    $segments = explode('/', $normalizedPath);
+    $firstSegment = strtolower(trim((string) ($segments[0] ?? '')));
+
+    return $firstSegment !== '' ? $firstSegment : 'home';
+}
+
 function appSupportedLocales(): array
 {
     return ['fr', 'en', 'it'];
@@ -65,21 +97,36 @@ function appLocale(): string
 
 function appCurrentUrl(array $overrides = []): string
 {
-    $query = $_GET;
-    if (!isset($query['route'])) {
-        $query['route'] = $_GET['route'] ?? 'home';
+    $requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+    $parsedUri = $requestUri !== '' ? parse_url($requestUri) : [];
+    $query = [];
+    if (!empty($parsedUri['query'])) {
+        parse_str((string) $parsedUri['query'], $query);
+    } else {
+        $query = $_GET;
     }
+
+    $route = appRouteFromRequest();
+    unset($query['route']);
 
     foreach ($overrides as $key => $value) {
         if ($value === null) {
             unset($query[$key]);
             continue;
         }
+        if ($key === 'route') {
+            $route = strtolower(trim((string) $value));
+            continue;
+        }
         $query[$key] = $value;
     }
 
-    $basePath = appBasePath();
-    return ($basePath === '' ? '' : $basePath) . '/?' . http_build_query($query);
+    if (!appUsesPrettyUrls()) {
+        $query['route'] = $route !== '' ? $route : 'home';
+        return (appBasePath() === '' ? '' : appBasePath()) . '/?' . http_build_query($query);
+    }
+
+    return appUrl($route !== '' ? $route : 'home', $query);
 }
 
 function appTranslations(string $locale): array
@@ -141,10 +188,29 @@ function t(string $key, array $replace = [], ?string $locale = null): string
 
 function appUrl(string $route, array $params = []): string
 {
-    $query = array_merge(['route' => $route], $params);
+    $route = strtolower(trim($route));
+    if ($route === '') {
+        $route = 'home';
+    }
+
+    $query = $params;
+    unset($query['route']);
+
     $basePath = appBasePath();
 
-    return ($basePath === '' ? '' : $basePath) . '/?' . http_build_query($query);
+    if (!appUsesPrettyUrls()) {
+        $query = array_merge(['route' => $route], $query);
+        return ($basePath === '' ? '' : $basePath) . '/?' . http_build_query($query);
+    }
+
+    $path = $route === 'home' ? '/' : '/' . rawurlencode($route);
+    $url = ($basePath === '' ? '' : $basePath) . $path;
+
+    if (!empty($query)) {
+        $url .= '?' . http_build_query($query);
+    }
+
+    return $url;
 }
 
 function redirectTo(string $route, array $params = []): never

@@ -11,6 +11,10 @@ html, body {
     overflow: hidden;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body.route-public {
     min-height: 100%;
     overflow-x: hidden;
@@ -62,6 +66,30 @@ a {
 button {
     cursor: pointer;
     font-family: inherit;
+}
+
+.skip-link {
+    position: absolute;
+    top: -44px;
+    left: 12px;
+    z-index: 9999;
+    background: #111827;
+    color: #ffffff;
+    padding: 0.45rem 0.7rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.skip-link:focus-visible {
+    top: 10px;
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid #f59e0b;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.35);
 }
 
 /* Global: make button icons white on interactive states. */

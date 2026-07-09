@@ -65,6 +65,24 @@
   const globalAutoAssignForecastTips = document.querySelector('[data-auto-assign-forecast-tips]');
   const globalAutoAssignPreviewModal = document.querySelector('[data-auto-assign-preview-modal]');
   const globalAutoAssignPreviewGrid = document.querySelector('[data-auto-assign-preview-grid]');
+  const assignmentPlannerPanel = document.querySelector('[data-assignment-planner-panel]');
+  const assignmentPlannerScope = document.querySelector('[data-assignment-planner-scope]');
+  const assignmentPlannerDepartment = document.querySelector('[data-assignment-planner-department]');
+  const assignmentPlannerUser = document.querySelector('[data-assignment-planner-user]');
+  const assignmentPlannerDepartmentWrap = document.querySelector('[data-assignment-planner-department-wrap]');
+  const assignmentPlannerUserWrap = document.querySelector('[data-assignment-planner-user-wrap]');
+  const assignmentPlannerRangeStart = document.querySelector('[data-assignment-planner-range-start]');
+  const assignmentPlannerRangeEnd = document.querySelector('[data-assignment-planner-range-end]');
+  const assignmentPlannerMinEmployees = document.querySelector('[data-assignment-planner-min-employees]');
+  const assignmentPlannerMaxEmployees = document.querySelector('[data-assignment-planner-max-employees]');
+  const assignmentPlannerMinRestDays = document.querySelector('[data-assignment-planner-min-rest-days]');
+  const assignmentPlannerMaxRestDays = document.querySelector('[data-assignment-planner-max-rest-days]');
+  const assignmentPlannerMinWorkDays = document.querySelector('[data-assignment-planner-min-work-days]');
+  const assignmentPlannerMaxWorkDays = document.querySelector('[data-assignment-planner-max-work-days]');
+  const assignmentPlannerRestMode = document.querySelector('[data-assignment-planner-rest-mode]');
+  const assignmentPlannerShiftList = document.querySelector('[data-assignment-planner-shift-list]');
+  const assignmentPlannerForecastSummary = document.querySelector('[data-assignment-planner-forecast-summary]');
+  const assignmentPlannerForecastImpact = document.querySelector('[data-assignment-planner-forecast-impact]');
   const shiftCatalogNode = document.querySelector('[data-assignment-shift-catalog]');
   const shiftCatalog = (() => {
     if (!shiftCatalogNode) return [];
@@ -156,6 +174,154 @@
   function isAssignmentsPanelActive() {
     const panel = document.querySelector('.settings-panel[data-settings-panel="assignments"]');
     return !!panel && !panel.hidden;
+  }
+
+  function isAssignmentPlannerPanelActive() {
+    const panel = document.querySelector('.settings-panel[data-settings-panel="assignment-planner"]');
+    return !!panel && !panel.hidden;
+  }
+
+  function syncAssignmentPlannerScopeUi() {
+    if (!assignmentPlannerScope) return;
+    const scope = String(assignmentPlannerScope.value || 'department').toLowerCase();
+    if (assignmentPlannerDepartmentWrap) {
+      assignmentPlannerDepartmentWrap.hidden = scope === 'employee';
+    }
+    if (assignmentPlannerUserWrap) {
+      assignmentPlannerUserWrap.hidden = scope !== 'employee';
+    }
+  }
+
+  function getAssignmentPlannerSelectedShiftIds() {
+    return Array.from(assignmentPlannerShiftList?.querySelectorAll('[data-assignment-planner-shift-id]:checked') || [])
+      .map((input) => parseInt(String(input.getAttribute('data-assignment-planner-shift-id') || '0'), 10) || 0)
+      .filter((value) => value > 0);
+  }
+
+  function buildAssignmentPlannerPayload(actionName) {
+    const scope = String(assignmentPlannerScope?.value || 'department').toLowerCase();
+    const range = normalizeCurrentMonthRange(
+      assignmentPlannerRangeStart?.value || '',
+      assignmentPlannerRangeEnd?.value || ''
+    );
+    const selectedShiftIds = getAssignmentPlannerSelectedShiftIds();
+
+    const minEmployees = parseInt(String(assignmentPlannerMinEmployees?.value || '1'), 10) || 1;
+    const maxEmployees = parseInt(String(assignmentPlannerMaxEmployees?.value || '3'), 10) || 3;
+    const minRestDays = parseInt(String(assignmentPlannerMinRestDays?.value || '1'), 10) || 1;
+    const maxRestDays = parseInt(String(assignmentPlannerMaxRestDays?.value || '2'), 10) || 2;
+    const minWorkDays = parseInt(String(assignmentPlannerMinWorkDays?.value || '4'), 10) || 4;
+    const maxWorkDays = parseInt(String(assignmentPlannerMaxWorkDays?.value || '6'), 10) || 6;
+    const boundedMinEmployees = Math.max(0, Math.min(minEmployees, maxEmployees));
+    const boundedMaxEmployees = Math.max(1, Math.max(minEmployees, maxEmployees));
+    const boundedMinRestDays = Math.min(6, Math.max(0, Math.min(minRestDays, maxRestDays)));
+    const boundedMaxRestDays = Math.min(6, Math.max(0, Math.max(minRestDays, maxRestDays)));
+    const boundedMinWorkDays = Math.min(7, Math.max(1, Math.min(minWorkDays, maxWorkDays)));
+    const boundedMaxWorkDays = Math.min(7, Math.max(1, Math.max(minWorkDays, maxWorkDays)));
+    const restDistributionModeRaw = String(assignmentPlannerRestMode?.value || 'fixed').toLowerCase();
+    const restDistributionMode = ['fixed', 'staggered', 'random'].includes(restDistributionModeRaw)
+      ? restDistributionModeRaw
+      : 'fixed';
+
+    const payload = {
+      action: actionName,
+      range_mode: 'custom',
+      range_start: range.start,
+      range_end: range.end,
+      allowed_shift_ids: selectedShiftIds,
+      min_employees_per_shift_day: boundedMinEmployees,
+      max_employees_per_shift_day: boundedMaxEmployees,
+      min_rest_days_per_week: boundedMinRestDays,
+      max_rest_days_per_week: boundedMaxRestDays,
+      min_work_days_per_week: boundedMinWorkDays,
+      max_work_days_per_week: boundedMaxWorkDays,
+      rest_distribution_mode: restDistributionMode,
+      allow_reassign_conflicts: true,
+      priority_department_strict_internal: scope === 'department',
+    };
+
+    if (!selectedShiftIds.length) {
+      throw new Error(tr('Select at least one shift template.', 'Selectionnez au moins un modele de poste.'));
+    }
+
+    if (scope === 'employee') {
+      const targetUserId = parseInt(String(assignmentPlannerUser?.value || '0'), 10) || 0;
+      if (targetUserId <= 0) {
+        throw new Error(tr('Select one employee.', 'Selectionnez un employe.'));
+      }
+      payload.target_user_id = targetUserId;
+    } else if (scope === 'department') {
+      const departmentId = parseInt(String(assignmentPlannerDepartment?.value || '0'), 10) || 0;
+      if (departmentId > 0) {
+        payload.priority_department_id = departmentId;
+      }
+    }
+
+    return { scope, payload };
+  }
+
+  function renderAssignmentPlannerForecast(response) {
+    if (!assignmentPlannerForecastSummary || !assignmentPlannerForecastImpact) {
+      return;
+    }
+
+    const isOk = !!(response && (response.success || response.ok));
+    const forecast = response && typeof response.forecast === 'object' ? response.forecast : null;
+    if (!isOk || !forecast) {
+      assignmentPlannerForecastSummary.textContent = tr('Forecast unavailable.', 'Prevision indisponible.');
+      assignmentPlannerForecastImpact.innerHTML = '';
+      return;
+    }
+
+    const slotsOpen = Number(forecast.slots_open || 0);
+    const predictedRemainingAtMin = Number(forecast.predicted_remaining_at_min || 0);
+    const uncoveredDays = Number(forecast.uncovered_days_open || 0);
+    const coveredAtMin = Number(forecast.covered_at_min_groups || 0);
+
+    assignmentPlannerForecastSummary.textContent = String(response.summary || tr('Coverage forecast ready.', 'Prevision de couverture prete.'));
+    assignmentPlannerForecastImpact.innerHTML = [
+      `<span class="settings-auto-assign-impact-chip ${slotsOpen > 0 ? 'is-warning' : 'is-positive'}">${escapeHtml(tr('Open slots now', 'Postes ouverts'))}: ${slotsOpen}</span>`,
+      `<span class="settings-auto-assign-impact-chip ${predictedRemainingAtMin > 0 ? 'is-warning' : 'is-positive'}">${escapeHtml(tr('Projected open after run', 'Ouverts projetes apres execution'))}: ${predictedRemainingAtMin}</span>`,
+      `<span class="settings-auto-assign-impact-chip ${uncoveredDays > 0 ? 'is-warning' : 'is-positive'}">${escapeHtml(tr('Uncovered days', 'Jours non couverts'))}: ${uncoveredDays}</span>`,
+      `<span class="settings-auto-assign-impact-chip is-positive">${escapeHtml(tr('Shift-days already covered', 'Jours-poste deja couverts'))}: ${coveredAtMin}</span>`
+    ].join('');
+  }
+
+  async function runAssignmentPlannerForecast() {
+    if (!apiUrl || !window.AppAPI) return;
+    const { payload } = buildAssignmentPlannerPayload('auto_assign_forecast');
+    if (assignmentPlannerForecastSummary) {
+      assignmentPlannerForecastSummary.textContent = tr('Calculating forecast...', 'Calcul de la prevision...');
+    }
+    const response = await AppAPI.postJSON(apiUrl, payload);
+    if (!(response && (response.success || response.ok))) {
+      throw new Error(response?.error || tr('Forecast failed.', 'La prevision a echoue.'));
+    }
+    renderAssignmentPlannerForecast(response);
+    return response;
+  }
+
+  async function runAssignmentPlannerAutoAssign() {
+    if (!apiUrl || !window.AppAPI) return;
+    const { payload } = buildAssignmentPlannerPayload('auto_assign_open');
+    const response = await AppAPI.postJSON(apiUrl, payload);
+    if (!(response && (response.success || response.ok))) {
+      throw new Error(response?.error || tr('Auto-assignment failed.', 'L\'affectation automatique a echoue.'));
+    }
+
+    const assignedCount = Number(response.assigned_count || 0);
+    const note = response?.note ? ` ${String(response.note)}` : '';
+    notifySuccess(`${tr('Automatic assignment completed.', 'Affectation automatique terminee.')} ${assignedCount} ${tr('slots assigned.', 'affectations creees.')}${note}`);
+
+    if (feedback && typeof feedback.reloadSettingsTabWithSuccess === 'function') {
+      feedback.reloadSettingsTabWithSuccess(
+        'assignment-planner',
+        tr('Done', 'Termine'),
+        tr('Automatic assignment completed.', 'Affectation automatique terminee.')
+      );
+      return;
+    }
+    location.reload();
   }
 
   function getPlannerRuntimeSnapshot() {
@@ -2534,6 +2700,28 @@
   // ─────────────────────────────────────────────────────────────────────────
 
   document.addEventListener('click', (ev) => {
+    const plannerForecastBtn = ev.target.closest && ev.target.closest('[data-assignment-planner-forecast]');
+    if (plannerForecastBtn) {
+      ev.preventDefault();
+      if (!isAssignmentPlannerPanelActive()) return;
+      runAssignmentPlannerForecast().catch((error) => {
+        notifyError((error && error.message) || tr('Forecast failed.', 'La prevision a echoue.'));
+      });
+      return;
+    }
+
+    const plannerRunBtn = ev.target.closest && ev.target.closest('[data-assignment-planner-run]');
+    if (plannerRunBtn) {
+      ev.preventDefault();
+      if (!isAssignmentPlannerPanelActive()) return;
+      const confirmed = window.confirm(tr('Run automatic assignment with current planner parameters?', 'Lancer l\'affectation automatique avec les parametres actuels ?'));
+      if (!confirmed) return;
+      runAssignmentPlannerAutoAssign().catch((error) => {
+        notifyError((error && error.message) || tr('Auto-assignment failed.', 'L\'affectation automatique a echoue.'));
+      });
+      return;
+    }
+
     if (!isAssignmentsPanelActive()) return;
 
     const addRuleDateBtn = ev.target.closest && ev.target.closest('[data-auto-rule-add-special]');
@@ -2931,6 +3119,23 @@
   });
 
   document.addEventListener('change', (ev) => {
+    const plannerTarget = ev.target;
+    if (plannerTarget.matches('[data-assignment-planner-scope]')) {
+      syncAssignmentPlannerScopeUi();
+      return;
+    }
+
+    if (plannerTarget.matches('[data-assignment-planner-range-start], [data-assignment-planner-range-end]')) {
+      const start = normalizeDateKey(assignmentPlannerRangeStart?.value || '');
+      const end = normalizeDateKey(assignmentPlannerRangeEnd?.value || '');
+      if (start && end && start > end) {
+        if (assignmentPlannerRangeEnd) {
+          assignmentPlannerRangeEnd.value = start;
+        }
+      }
+      return;
+    }
+
     if (!isAssignmentsPanelActive()) return;
     const target = ev.target;
     if (target.matches('[data-assignment-modal-shift-select]')) {
@@ -3061,5 +3266,6 @@
   updatePolicyPresetUi(resolveMatchingPolicyPreset());
   refreshAssignmentEmployeeIndexStats();
   refreshGlobalForecast();
+  syncAssignmentPlannerScopeUi();
   applyRulesToRows(loadRules());
 })();

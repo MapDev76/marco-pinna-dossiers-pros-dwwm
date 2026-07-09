@@ -1,6 +1,6 @@
 <?php
 // Simple router: maps a route value to a controller or view.
-$route = $_GET['route'] ?? 'home';
+$route = function_exists('appRouteFromRequest') ? appRouteFromRequest() : ($_GET['route'] ?? 'home');
 
 $routes = [
     'home' => realpath(__DIR__ . '/../public/views/home.php'),

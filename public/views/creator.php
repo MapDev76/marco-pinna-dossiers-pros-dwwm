@@ -9,12 +9,12 @@ $creatorEmail = 'pinna.marcantonio@icloud.com';
 $creatorPhoneDisplay = '+33 744907701';
 $creatorPhoneHref = '+33744907701';
 ?>
-<div class="legal-page">
+<article class="legal-page" aria-labelledby="creator-title">
     <section class="creator-hero">
-        <img src="<?php echo e($basePath); ?>/assets/images/MapDev76.jpg" alt="<?php echo e(t('creator.title', ['fallback' => 'App creator'])); ?>" class="creator-photo">
+        <img src="<?php echo e($basePath); ?>/assets/images/MapDev76.jpg" alt="<?php echo e(t('creator.title', ['fallback' => 'App creator'])); ?>" class="creator-photo" loading="lazy" decoding="async">
         <div>
             <p class="commercial-eyebrow"><?php echo e(t('common.app_creator')); ?></p>
-            <h1><?php echo e(t('creator.title', ['fallback' => 'App creator'])); ?></h1>
+            <h1 id="creator-title"><?php echo e(t('creator.title', ['fallback' => 'App creator'])); ?></h1>
             <p><?php echo e(t('creator.subtitle', ['fallback' => 'This page describes the creator of StaffEase Pro.'])); ?></p>
             <p class="creator-email-line"><strong><?php echo e($creatorName); ?></strong></p>
         </div>
@@ -51,17 +51,11 @@ $creatorPhoneHref = '+33744907701';
         <?php echo e(t('commercial.cta_body', ['fallback' => 'If you want to free your company from large and expensive software, contact me and let us build the solution that fits your organization.'])); ?>
     </p>
 
-    <section class="commercial-media-placeholder">
-        <h2><?php echo e(t('creator.media_title', ['fallback' => 'Spazio immagini, press kit e video'])); ?></h2>
-        <p><?php echo e(t('creator.media_body', ['fallback' => 'Area disponibile per inserire in seguito video YouTube, screenshot roadmap e materiali commerciali.'])); ?></p>
-        <div class="commercial-image-slot">Media Slot</div>
-    </section>
-
-    <p style="margin-top: 2rem;">
+    <nav aria-label="Footer links" style="margin-top: 2rem;">
         <a href="<?php echo e(appUrl('home')); ?>">&larr; <?php echo e(t('legal.back_home')); ?></a>
         &nbsp;|&nbsp;
         <a href="<?php echo e(appUrl('legal')); ?>"><?php echo e(t('common.legal_mentions')); ?></a>
         &nbsp;|&nbsp;
         <a href="<?php echo e(appUrl('contacts')); ?>"><?php echo e(t('common.contacts', ['fallback' => 'Contacts'])); ?></a>
-    </p>
-</div>
+    </nav>
+</article>

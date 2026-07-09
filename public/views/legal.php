@@ -1,6 +1,6 @@
 <?php $currentUser = currentUser(); ?>
-<div class="legal-page">
-    <h1><?php echo e(t('legal.title')); ?></h1>
+<article class="legal-page" aria-labelledby="legal-title">
+    <h1 id="legal-title"><?php echo e(t('legal.title')); ?></h1>
     <p><strong><?php echo e(t('common.app_name')); ?></strong> © <?php echo date('Y'); ?> - <?php echo e(t('legal.rights_reserved')); ?></p>
 
     <h2><?php echo e(t('legal.publisher_title', ['fallback' => 'Editore e responsabile servizio'])); ?></h2>
@@ -21,17 +21,11 @@
     <h2><?php echo e(t('legal.liability_title')); ?></h2>
     <p><?php echo e(t('legal.liability_body')); ?></p>
 
-    <section class="commercial-media-placeholder">
-        <h2><?php echo e(t('legal.media_title', ['fallback' => 'Spazio per policy e allegati'])); ?></h2>
-        <p><?php echo e(t('legal.media_body', ['fallback' => 'Questa area puo ospitare PDF di policy aziendali, informative privacy multilingua e documentazione compliance.'])); ?></p>
-        <div class="commercial-image-slot">Policy / PDF Slot</div>
-    </section>
-
-    <p style="margin-top: 2rem;">
+    <nav aria-label="Footer links" style="margin-top: 2rem;">
         <a href="<?php echo e(appUrl('home')); ?>">&larr; <?php echo e(t('legal.back_home')); ?></a>
         &nbsp;|&nbsp;
         <a href="<?php echo e(appUrl('contacts')); ?>"><?php echo e(t('common.contacts', ['fallback' => 'Contacts'])); ?></a>
         &nbsp;|&nbsp;
         <a href="<?php echo e(appUrl('creator')); ?>"><?php echo e(t('common.app_creator', ['fallback' => 'App creator'])); ?></a>
-    </p>
-</div>
+    </nav>
+</article>

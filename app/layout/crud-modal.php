@@ -19,6 +19,35 @@ if (!isLoggedIn()) {
 }
 
 $modalCurrentRole = currentUser()['role'] ?? 'employee';
+$modalLocale = strtolower((string) appLocale());
+$modalIsFr = str_starts_with($modalLocale, 'fr');
+$modalIsIt = str_starts_with($modalLocale, 'it');
+
+$modalRecipientsSelectedLabel = $modalIsFr
+    ? 'Destinataires selectionnes'
+    : ($modalIsIt ? 'Destinatari selezionati' : 'Selected recipients');
+
+$modalRecipientsAllLabel = match ($modalCurrentRole) {
+    'super_admin' => ($modalIsFr ? 'Tous les utilisateurs actifs' : ($modalIsIt ? 'Tutti gli utenti attivi' : 'All active users')),
+    'admin' => ($modalIsFr ? 'Tous les collegues de votre entreprise' : ($modalIsIt ? 'Tutti i colleghi della tua azienda' : 'All colleagues in your company')),
+    'department_manager' => ($modalIsFr ? 'Tous les managers de votre entreprise' : ($modalIsIt ? 'Tutti i manager della tua azienda' : 'All managers in your company')),
+    default => ($modalIsFr ? 'Tous les destinataires disponibles' : ($modalIsIt ? 'Tutti i destinatari disponibili' : 'All available recipients')),
+};
+
+$modalDocumentScopeHint = match ($modalCurrentRole) {
+    'super_admin' => ($modalIsFr ? 'Portee super admin: vous pouvez partager avec tout utilisateur actif.' : ($modalIsIt ? 'Ambito super admin: puoi condividere con qualsiasi utente attivo.' : 'Super admin scope: you can share with any active user.')),
+    'admin' => ($modalIsFr ? 'Portee admin: partage limite a votre entreprise.' : ($modalIsIt ? 'Ambito admin: condivisione limitata alla tua azienda.' : 'Admin scope: sharing is limited to your company.')),
+    'department_manager' => ($modalIsFr ? 'Portee manager: partage limite aux managers de votre entreprise.' : ($modalIsIt ? 'Ambito manager: condivisione limitata ai manager della tua azienda.' : 'Manager scope: sharing is limited to managers in your company.')),
+    default => ($modalIsFr ? 'Selectionnez les destinataires autorises.' : ($modalIsIt ? 'Seleziona i destinatari consentiti.' : 'Select the allowed recipients.')),
+};
+
+$modalMessageScopeHint = match ($modalCurrentRole) {
+    'super_admin' => ($modalIsFr ? 'Portee super admin: messages vers tous les utilisateurs actifs.' : ($modalIsIt ? 'Ambito super admin: messaggi verso tutti gli utenti attivi.' : 'Super admin scope: messages can be sent to all active users.')),
+    'admin' => ($modalIsFr ? 'Portee admin: messages limites a votre entreprise.' : ($modalIsIt ? 'Ambito admin: messaggi limitati alla tua azienda.' : 'Admin scope: messages are limited to your company.')),
+    'department_manager' => ($modalIsFr ? 'Portee manager: messages vers tous les collegues de votre entreprise.' : ($modalIsIt ? 'Ambito manager: messaggi a tutti i colleghi della tua azienda.' : 'Manager scope: messages can be sent to all colleagues in your company.')),
+    default => ($modalIsFr ? 'Selectionnez les destinataires autorises.' : ($modalIsIt ? 'Seleziona i destinatari consentiti.' : 'Select the allowed recipients.')),
+};
+
 $basePath = $basePath ?? (function () {
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
@@ -336,10 +365,11 @@ $basePath = $basePath ?? (function () {
                 <label>
                     <?php echo e(t('crud.recipients')); ?>
                     <select id="crud-document-recipient-scope">
-                        <option value="selected">Destinatari selezionati</option>
-                        <option value="all">Tutti i destinatari disponibili</option>
+                        <option value="selected"><?php echo e($modalRecipientsSelectedLabel); ?></option>
+                        <option value="all"><?php echo e($modalRecipientsAllLabel); ?></option>
                     </select>
                 </label>
+                <p class="crud-modal-subtitle span-2"><?php echo e($modalDocumentScopeHint); ?></p>
                 <label class="span-2" id="crud-document-recipient-label">
                     <?php echo e(t('crud.recipients')); ?>
                     <select id="crud-document-recipient-ids" multiple size="6">
@@ -357,18 +387,12 @@ $basePath = $basePath ?? (function () {
                                     default => 'Employee',
                                 };
                             ?>
-                            <?php if (
-                                ($modalCurrentRole === 'super_admin' && $recipientRole === 'employee')
-                                || ($modalCurrentRole === 'admin' && $recipientRole === 'employee')
-                                || ($modalCurrentRole === 'department_manager' && in_array($recipientRole, ['employee', 'department_manager'], true))
-                            ): ?>
-                                <option value="<?php echo (int) $user['id']; ?>"
-                                        data-role="<?php echo e($recipientRole); ?>"
-                                        data-department-id="<?php echo (int) ($user['department_id'] ?? 0); ?>">
-                                    <?php echo e($recipientLabel); ?>
-                                    (<?php echo e($recipientRoleLabel); ?>)
-                                </option>
-                            <?php endif; ?>
+                            <option value="<?php echo (int) $user['id']; ?>"
+                                    data-role="<?php echo e($recipientRole); ?>"
+                                    data-department-id="<?php echo (int) ($user['department_id'] ?? 0); ?>">
+                                <?php echo e($recipientLabel); ?>
+                                (<?php echo e($recipientRoleLabel); ?>)
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </label>
@@ -542,6 +566,7 @@ $basePath = $basePath ?? (function () {
                         <?php endforeach; ?>
                     </select>
                 </label>
+                <p class="crud-modal-subtitle span-2"><?php echo e($modalMessageScopeHint); ?></p>
                 <div class="form-actions span-2">
                     <button type="submit" id="crud-message-submit"><?php echo e(t('crud.send_message')); ?></button>
                     <button type="button" class="admin-action-link admin-action-link-secondary" data-crud-reset-message><?php echo e(t('crud.reset')); ?></button>

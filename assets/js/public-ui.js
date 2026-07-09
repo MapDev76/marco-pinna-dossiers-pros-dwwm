@@ -3,13 +3,66 @@
   var openButtons = Array.prototype.slice.call(document.querySelectorAll('[data-site-menu-open]'));
   var closeTriggers = Array.prototype.slice.call(document.querySelectorAll('[data-site-menu-close]'));
   var body = document.body;
+  var lastFocusedElement = null;
+  var focusableSelector = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  function setOpenButtonState(isExpanded) {
+    openButtons.forEach(function (button) {
+      button.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    });
+  }
+
+  function focusFirstInDrawer() {
+    if (!drawer) {
+      return;
+    }
+    var panel = drawer.querySelector('.site-mobile-drawer-panel');
+    if (!panel) {
+      return;
+    }
+    var focusables = panel.querySelectorAll(focusableSelector);
+    var firstFocusable = focusables[0] || panel;
+    if (typeof firstFocusable.focus === 'function') {
+      firstFocusable.focus();
+    }
+  }
+
+  function trapDrawerFocus(event) {
+    if (!drawer || drawer.hidden || event.key !== 'Tab') {
+      return;
+    }
+    var panel = drawer.querySelector('.site-mobile-drawer-panel');
+    if (!panel) {
+      return;
+    }
+    var focusables = Array.prototype.slice.call(panel.querySelectorAll(focusableSelector));
+    if (!focusables.length) {
+      return;
+    }
+    var first = focusables[0];
+    var last = focusables[focusables.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   function openDrawer() {
     if (!drawer) {
       return;
     }
+    lastFocusedElement = document.activeElement;
     drawer.hidden = false;
     body.classList.add('site-menu-open');
+    setOpenButtonState(true);
+    focusFirstInDrawer();
   }
 
   function closeDrawer() {
@@ -18,6 +71,11 @@
     }
     drawer.hidden = true;
     body.classList.remove('site-menu-open');
+    setOpenButtonState(false);
+    if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+      lastFocusedElement.focus();
+      lastFocusedElement = null;
+    }
   }
 
   openButtons.forEach(function (button) {
@@ -29,6 +87,7 @@
   });
 
   document.addEventListener('keydown', function (event) {
+    trapDrawerFocus(event);
     if (event.key === 'Escape') {
       closeDrawer();
     }

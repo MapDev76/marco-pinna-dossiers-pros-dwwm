@@ -5,17 +5,13 @@ $basePath = $basePath ?? (function () {
 	return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
 })();
 ?>
-<div class="home-page commercial-page">
+<article class="home-page commercial-page" aria-labelledby="commercial-title">
 	<section class="commercial-hero">
 		<p class="commercial-eyebrow"><?php echo e(t('common.app_name')); ?></p>
-		<h1><?php echo e(t('commercial.title', ['fallback' => 'StaffEase Pro en action'])); ?></h1>
+		<h1 id="commercial-title"><?php echo e(t('commercial.title', ['fallback' => 'StaffEase Pro en action'])); ?></h1>
 		<p class="commercial-lead">
 			<?php echo e(t('commercial.lead', ['fallback' => 'Scopri una piattaforma progettata per semplificare pianificazione turni, presenze e gestione operativa.'])); ?>
 		</p>
-		<div class="commercial-actions">
-			<a class="admin-action-link" href="<?php echo e(appUrl('login')); ?>"><?php echo e(t('common.login')); ?></a>
-			<a class="admin-action-link-secondary" href="<?php echo e(appUrl('contacts')); ?>"><?php echo e(t('common.contacts')); ?></a>
-		</div>
 	</section>
 
 	<section class="commercial-project-note">
@@ -83,33 +79,18 @@ $basePath = $basePath ?? (function () {
 		</article>
 	</section>
 
-	<section class="commercial-videos">
+	<section class="commercial-videos" aria-label="<?php echo e(t('commercial.demo_videos_title', ['fallback' => 'Demo videos'])); ?>">
 		<div class="commercial-video-card">
 			<div class="commercial-video-placeholder" aria-label="<?php echo e(t('commercial.video_slot_1', ['fallback' => 'Spazio video 1'])); ?>">1</div>
-			<h3><?php echo e(t('commercial.video_1_title', ['fallback' => 'Vue d ensemble du dashboard'])); ?></h3>
-			<p><?php echo e(t('commercial.video_1_body', ['fallback' => 'Spazio riservato al primo video YouTube. Il link verra inserito successivamente.'])); ?></p>
+			<h3><?php echo e(t('commercial.feature_1_title', ['fallback' => 'Automatizzazione dei turni di lavoro'])); ?></h3>
 		</div>
 		<div class="commercial-video-card">
 			<div class="commercial-video-placeholder" aria-label="<?php echo e(t('commercial.video_slot_2', ['fallback' => 'Spazio video 2'])); ?>">2</div>
-			<h3><?php echo e(t('commercial.video_2_title', ['fallback' => 'Presences et signatures'])); ?></h3>
-			<p><?php echo e(t('commercial.video_2_body', ['fallback' => 'Spazio riservato al secondo video YouTube. Il link verra inserito successivamente.'])); ?></p>
+			<h3><?php echo e(t('commercial.feature_2_title', ['fallback' => 'Sicurezza delle firme digitali (Wi-Fi/IP aziendale)'])); ?></h3>
 		</div>
 		<div class="commercial-video-card">
 			<div class="commercial-video-placeholder" aria-label="<?php echo e(t('commercial.video_slot_3', ['fallback' => 'Spazio video 3'])); ?>">3</div>
-			<h3><?php echo e(t('commercial.video_3_title', ['fallback' => 'Documents et espace employe'])); ?></h3>
-			<p><?php echo e(t('commercial.video_3_body', ['fallback' => 'Spazio riservato al terzo video YouTube. Il link verra inserito successivamente.'])); ?></p>
+			<h3><?php echo e(t('commercial.feature_3_title', ['fallback' => 'Centralizzazione della gestione dei dipendenti'])); ?></h3>
 		</div>
 	</section>
-
-	<section class="commercial-media-placeholder">
-		<h2><?php echo e(t('commercial.media_title', ['fallback' => 'Spazio immagini e demo future'])); ?></h2>
-		<p><?php echo e(t('commercial.media_body', ['fallback' => 'Questa sezione resta disponibile per aggiungere nuove immagini, mockup o video di prodotto.'])); ?></p>
-		<div class="commercial-image-slot">Image / Video Slot</div>
-	</section>
-
-	<section class="commercial-cta">
-		<h2><?php echo e(t('commercial.cta_title', ['fallback' => 'Vous voulez voir une demo complete ?'])); ?></h2>
-		<p><?php echo e(t('commercial.cta_body', ['fallback' => 'Demandez une presentation et obtenez un accompagnement pour l installation.'])); ?></p>
-		<a class="admin-action-link" href="<?php echo e(appUrl('contacts')); ?>"><?php echo e(t('commercial.cta_button', ['fallback' => 'Demander une demonstration'])); ?></a>
-	</section>
-</div>
+</article>

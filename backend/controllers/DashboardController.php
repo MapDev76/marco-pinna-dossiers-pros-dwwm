@@ -588,6 +588,43 @@ $modalDocuments = [];
 $modalMessages = [];
 $modalDocumentRecipients = [];
 
+$resolveDashboardAllowedMessageRecipients = static function () use ($pdo, $role, $companyId, $currentUser): array {
+    $sql = 'SELECT u.id
+            FROM users u
+            LEFT JOIN departments d ON d.id = u.department_id
+            WHERE u.status = "active"
+              AND u.id <> :current_user_id';
+    $params = [
+        'current_user_id' => (int) ($currentUser['id'] ?? 0),
+    ];
+
+    if ($role === 'super_admin') {
+        // Super admin can message everyone.
+    } elseif ($role === 'admin') {
+        $companyScopeId = (int) ($companyId ?? 0);
+        if ($companyScopeId <= 0) {
+            return [];
+        }
+        $sql .= ' AND d.company_id = :company_id AND u.role <> "super_admin"';
+        $params['company_id'] = $companyScopeId;
+    } elseif ($role === 'department_manager') {
+        $companyScopeId = (int) ($companyId ?? 0);
+        if ($companyScopeId <= 0) {
+            return [];
+        }
+        $sql .= ' AND d.company_id = :company_id';
+        $params['company_id'] = $companyScopeId;
+    } else {
+        return [];
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
+
+    return array_fill_keys($ids, true);
+};
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dashboardAction = $_POST['dashboard_action'] ?? '';
 
@@ -599,6 +636,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $documentId = ($_POST['document_id'] ?? '') !== '' ? (int) $_POST['document_id'] : null;
         $recipientIds = $_POST['recipient_ids'] ?? [];
         $recipientIds = array_values(array_filter(array_map('intval', is_array($recipientIds) ? $recipientIds : [$recipientIds])));
+
+        $allowedRecipientSet = $resolveDashboardAllowedMessageRecipients();
+        $recipientIds = array_values(array_filter(
+            $recipientIds,
+            static fn (int $recipientId): bool => isset($allowedRecipientSet[$recipientId])
+        ));
 
         if ($messageTitle === '' || $messageBody === '' || empty($recipientIds)) {
             setFlash('error', t('flash.message_required_fields'));
@@ -712,7 +755,9 @@ if ($role === 'admin' && $companyId !== null) {
 }
 
 if ($role === 'department_manager' && $departmentId !== null) {
-    $modalUsers = $userModel->teamByDepartmentId($departmentId);
+    $modalUsers = $companyId !== null
+        ? $userModel->companyUsersByCompanyId((int) $companyId)
+        : $userModel->teamByDepartmentId($departmentId);
     $modalDepartments = [];
     $companyDepartmentRows = $departmentModel->byCompanyId($companyId ?? 0);
     foreach ($companyDepartmentRows as $departmentRow) {
@@ -742,13 +787,15 @@ if ($role === 'department_manager' && $departmentId !== null) {
          INNER JOIN users u ON u.id = r.user_id
          LEFT JOIN users ru ON ru.id = r.recipient_id
          LEFT JOIN documents doc ON doc.id = r.document_id
-         WHERE u.department_id = :department_id_sender
-            OR EXISTS (SELECT 1 FROM users rx WHERE rx.id = r.recipient_id AND rx.department_id = :department_id_recipient)
+         LEFT JOIN departments dep_sender ON dep_sender.id = u.department_id
+         LEFT JOIN departments dep_recipient ON dep_recipient.id = ru.department_id
+         WHERE dep_sender.company_id = :company_id_sender
+            OR dep_recipient.company_id = :company_id_recipient
          ORDER BY r.created_at DESC, r.id DESC'
     );
     $modalMessages->execute([
-        'department_id_sender' => $departmentId,
-        'department_id_recipient' => $departmentId,
+        'company_id_sender' => (int) ($companyId ?? 0),
+        'company_id_recipient' => (int) ($companyId ?? 0),
     ]);
     $modalMessages = $modalMessages->fetchAll();
 }
@@ -786,54 +833,40 @@ if ($role === 'employee') {
 }
 
 if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
-    $modalDocumentRecipients = array_values(array_filter(
-        $modalUsers,
-        static fn (array $user): bool => (string) ($user['role'] ?? '') === 'employee'
-    ));
+    $recipientSql =
+        'SELECT u.id,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.role,
+                u.status,
+                u.department_id,
+                d.name AS department_name,
+                d.company_id
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         WHERE u.status = "active"
+           AND u.id <> :current_user_id';
+    $recipientParams = [
+        'current_user_id' => (int) ($currentUser['id'] ?? 0),
+    ];
 
-    if ($role === 'department_manager' && (int) ($companyId ?? 0) > 0 && (int) ($departmentId ?? 0) > 0) {
-        try {
-            $managerRecipientsStmt = $pdo->prepare(
-                'SELECT u.id,
-                        u.first_name,
-                        u.last_name,
-                        u.email,
-                        u.role,
-                        u.status,
-                        u.department_id,
-                        d.name AS department_name,
-                        d.company_id
-                 FROM users u
-                 LEFT JOIN departments d ON d.id = u.department_id
-                 WHERE u.status = "active"
-                   AND u.role = "department_manager"
-                   AND d.company_id = :company_id
-                   AND u.department_id <> :department_id
-                 ORDER BY u.first_name ASC, u.last_name ASC'
-            );
-            $managerRecipientsStmt->execute([
-                'company_id' => (int) $companyId,
-                'department_id' => (int) $departmentId,
-            ]);
-            $otherManagers = $managerRecipientsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    if ($role === 'admin') {
+        $recipientSql .= ' AND d.company_id = :company_id AND u.role <> "super_admin"';
+        $recipientParams['company_id'] = (int) ($companyId ?? 0);
+    } elseif ($role === 'department_manager') {
+        $recipientSql .= ' AND d.company_id = :company_id AND u.role = "department_manager"';
+        $recipientParams['company_id'] = (int) ($companyId ?? 0);
+    }
 
-            $recipientById = [];
-            foreach ($modalDocumentRecipients as $recipient) {
-                $rid = (int) ($recipient['id'] ?? 0);
-                if ($rid > 0) {
-                    $recipientById[$rid] = $recipient;
-                }
-            }
-            foreach ($otherManagers as $recipient) {
-                $rid = (int) ($recipient['id'] ?? 0);
-                if ($rid > 0) {
-                    $recipientById[$rid] = $recipient;
-                }
-            }
-            $modalDocumentRecipients = array_values($recipientById);
-        } catch (Throwable $e) {
-            // Keep default employee recipients if manager lookup fails.
-        }
+    $recipientSql .= ' ORDER BY u.first_name ASC, u.last_name ASC';
+
+    try {
+        $recipientStmt = $pdo->prepare($recipientSql);
+        $recipientStmt->execute($recipientParams);
+        $modalDocumentRecipients = $recipientStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        $modalDocumentRecipients = [];
     }
 }
 

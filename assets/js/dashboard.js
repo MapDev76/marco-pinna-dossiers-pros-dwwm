@@ -22,12 +22,62 @@
   const apiUsers = config.apiUsers;
   const apiDashboard = config.apiDashboard;
   const iconsBase = String(config.iconsBase || '/assets/icons/');
+  const pdfjsLibSrc = String(config.pdfjsLibSrc || '/assets/js/vendor/pdfjs/pdf.min.js');
   const pdfjsWorkerSrc = String(config.pdfjsWorkerSrc || '/assets/js/vendor/pdfjs/pdf.worker.min.js');
-  const pdfjsLibGlobal = window.pdfjsLib || null;
+  let pdfjsLibGlobal = window.pdfjsLib || null;
+  let pdfjsLoadPromise = null;
 
-  if (pdfjsLibGlobal && pdfjsLibGlobal.GlobalWorkerOptions) {
-    pdfjsLibGlobal.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
-  }
+  const configurePdfWorker = () => {
+    if (pdfjsLibGlobal && pdfjsLibGlobal.GlobalWorkerOptions) {
+      pdfjsLibGlobal.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
+    }
+  };
+
+  const ensurePdfJsLoaded = async () => {
+    if (pdfjsLibGlobal && typeof pdfjsLibGlobal.getDocument === 'function') {
+      configurePdfWorker();
+      return pdfjsLibGlobal;
+    }
+
+    if (window.pdfjsLib && typeof window.pdfjsLib.getDocument === 'function') {
+      pdfjsLibGlobal = window.pdfjsLib;
+      configurePdfWorker();
+      return pdfjsLibGlobal;
+    }
+
+    if (pdfjsLoadPromise) {
+      return pdfjsLoadPromise;
+    }
+
+    pdfjsLoadPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-pdfjs-runtime="1"]');
+      if (existing) {
+        existing.addEventListener('load', () => {
+          pdfjsLibGlobal = window.pdfjsLib || null;
+          configurePdfWorker();
+          resolve(pdfjsLibGlobal);
+        }, { once: true });
+        existing.addEventListener('error', () => reject(new Error(tr('Unable to load PDF engine.', 'Impossible de charger le moteur PDF.'))), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = pdfjsLibSrc;
+      script.defer = true;
+      script.setAttribute('data-pdfjs-runtime', '1');
+      script.onload = () => {
+        pdfjsLibGlobal = window.pdfjsLib || null;
+        configurePdfWorker();
+        resolve(pdfjsLibGlobal);
+      };
+      script.onerror = () => reject(new Error(tr('Unable to load PDF engine.', 'Impossible de charger le moteur PDF.')));
+      document.head.appendChild(script);
+    });
+
+    return pdfjsLoadPromise;
+  };
+
+  configurePdfWorker();
 
   const escapeHtml = (value) => String(value || '')
     .replace(/&/g, '&amp;')
@@ -210,45 +260,45 @@
             <div class="employee-attendance-dialog" role="dialog" aria-modal="true" aria-labelledby="dashboard-document-sign-title">
               <div class="employee-attendance-dialog-head">
                 <div>
-                  <span class="employee-stage-eyebrow">Documenti</span>
-                  <h3 id="dashboard-document-sign-title">Firma documento</h3>
+                  <span class="employee-stage-eyebrow">${tr('Documents', 'Documents')}</span>
+                  <h3 id="dashboard-document-sign-title">${tr('Sign document', 'Signer le document')}</h3>
                   <p class="crud-modal-subtitle">${documentName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
                 </div>
-                <button type="button" class="dashboard-modal-close" data-dashboard-document-sign-close aria-label="Close">×</button>
+                <button type="button" class="dashboard-modal-close" data-dashboard-document-sign-close aria-label="${tr('Close', 'Fermer')}">×</button>
               </div>
 
               <div class="admin-form employee-sign-form" data-dashboard-document-sign-form>
                 <div class="employee-document-sign-stage">
-                  <p class="crud-modal-subtitle employee-document-sign-stage-hint">Scegli dove firmare: clicca o trascina il marker nel riquadro anteprima documento.</p>
+                  <p class="crud-modal-subtitle employee-document-sign-stage-hint">${tr('Choose where to sign: click or drag the marker inside the document preview.', 'Choisissez où signer : cliquez ou faites glisser le marqueur dans l apercu du document.')}</p>
                   <div class="employee-signature-pad-actions" data-dashboard-document-sign-page-controls>
-                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-prev>Pagina precedente</button>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-prev>${tr('Previous page', 'Page precedente')}</button>
                     <label style="display:flex;align-items:center;gap:.35rem;">
-                      <span>Pagina</span>
+                      <span>${tr('Page', 'Page')}</span>
                       <input type="number" min="1" step="1" value="1" data-dashboard-document-sign-page-input style="max-width:88px;">
                     </label>
-                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-next>Pagina successiva</button>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-page-next>${tr('Next page', 'Page suivante')}</button>
                   </div>
                   <div class="employee-document-sign-preview-wrap">
                     <iframe src="${previewUrl}" class="employee-document-sign-preview" data-dashboard-document-sign-preview-frame title="Preview"></iframe>
-                    <canvas class="employee-document-sign-pdf-canvas" data-dashboard-document-sign-pdf-canvas hidden aria-label="PDF page preview"></canvas>
-                    <button type="button" class="employee-document-sign-position-layer" data-dashboard-document-sign-position-layer aria-label="Scegli posizione firma">
+                    <canvas class="employee-document-sign-pdf-canvas" data-dashboard-document-sign-pdf-canvas hidden aria-label="${tr('PDF page preview', 'Apercu de la page PDF')}"></canvas>
+                    <button type="button" class="employee-document-sign-position-layer" data-dashboard-document-sign-position-layer aria-label="${tr('Choose signature position', 'Choisissez la position de la signature')}">
                       <span class="employee-document-sign-position-dot" data-dashboard-document-sign-position-dot aria-hidden="true"></span>
                     </button>
                   </div>
                 </div>
 
                 <div class="employee-signature-pad-shell">
-                  <canvas width="520" height="180" data-dashboard-document-sign-canvas aria-label="Firma digitale"></canvas>
+                  <canvas width="520" height="180" data-dashboard-document-sign-canvas aria-label="${tr('Digital signature', 'Signature numerique')}"></canvas>
                   <small class="employee-signature-error" data-dashboard-document-sign-error></small>
                   <div class="employee-signature-pad-actions">
-                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-clear>Cancella firma</button>
-                    <small>Firma con il dito su mobile o con il mouse/pennino su desktop.</small>
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-clear>${tr('Clear signature', 'Effacer la signature')}</button>
+                    <small>${tr('Sign with your finger on mobile or with mouse/stylus on desktop.', 'Signez avec le doigt sur mobile ou avec la souris/le stylet sur desktop.')}</small>
                   </div>
                 </div>
 
                 <div class="employee-attendance-dialog-actions">
-                  <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-close>Annulla</button>
-                  <button type="button" class="admin-action-link" data-dashboard-document-sign-submit>Firma documento</button>
+                  <button type="button" class="admin-action-link admin-action-link-secondary" data-dashboard-document-sign-close>${tr('Cancel', 'Annuler')}</button>
+                  <button type="button" class="admin-action-link" data-dashboard-document-sign-submit>${tr('Sign document', 'Signer le document')}</button>
                 </div>
               </div>
             </div>
@@ -355,12 +405,16 @@
           };
 
           const initPdfRenderer = async () => {
-            if (!isPdfDocument || !pdfjsLibGlobal || typeof pdfjsLibGlobal.getDocument !== 'function' || !pdfStreamUrl) {
+            if (!isPdfDocument || !pdfStreamUrl) {
               return;
             }
 
             try {
-              const loadingTask = pdfjsLibGlobal.getDocument({ url: pdfStreamUrl, withCredentials: true });
+              const pdfLib = await ensurePdfJsLoaded();
+              if (!pdfLib || typeof pdfLib.getDocument !== 'function') {
+                return;
+              }
+              const loadingTask = pdfLib.getDocument({ url: pdfStreamUrl, withCredentials: true });
               pdfDocument = await loadingTask.promise;
               if (pageInput && pdfDocument && Number.isFinite(pdfDocument.numPages)) {
                 pageInput.max = String(Math.max(1, Math.floor(pdfDocument.numPages)));
@@ -2763,8 +2817,7 @@
           titleButton.tabIndex = isLocked ? -1 : 0;
         }
       });
-      const shouldWide = resolvedStep > 0;
-      document.body.classList.toggle(SIDEBAR_PLAN_WIDE_CLASS, shouldWide);
+      document.body.classList.remove(SIDEBAR_PLAN_WIDE_CLASS);
     };
 
     const getCalendarCounters = () => {

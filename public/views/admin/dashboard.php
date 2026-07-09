@@ -25,15 +25,15 @@ $requestTypeLabels = [
 
 ?>
 
-<div class="admin-shell dashboard-shell">
-    <div class="admin-hero">
+<section class="admin-shell dashboard-shell" aria-label="<?php echo e(t('common.dashboard')); ?>">
+    <header class="admin-hero">
             <?php if (($currentUser['role'] ?? '') === 'super_admin'): ?>
             <h1><?php echo e($pageTitle ?? t('common.dashboard')); ?></h1>
         <?php endif; ?>
         <!-- No welcome message or titles for non-super users per design -->
-    </div>
+    </header>
 
-        <div class="dashboard-main">
+        <section class="dashboard-main" aria-label="<?php echo e(t('common.quick_actions')); ?>">
             <?php if ($role === 'super_admin'): ?>
                 <div class="admin-grid">
                     <section class="admin-card admin-stat">
@@ -65,7 +65,7 @@ $requestTypeLabels = [
                                         <p><?php echo e($company['city'] ?? '-'); ?></p>
                                     </div>
                                     <?php if (!empty($company['logo_path'])): ?>
-                                        <img src="<?php echo e($company['logo_path']); ?>" alt="<?php echo e($company['name']); ?>" class="dashboard-company-logo">
+                                        <img src="<?php echo e($company['logo_path']); ?>" alt="<?php echo e($company['name']); ?> logo" class="dashboard-company-logo" loading="lazy" decoding="async">
                                     <?php endif; ?>
                                 </div>
 
@@ -149,6 +149,6 @@ $requestTypeLabels = [
                     </div>
                 </section>
             <?php endif; ?>
-    </div>
-</div>
+    </section>
+</section>
 

@@ -1087,8 +1087,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = trim((string) ($_POST['message'] ?? ''));
         $messageKind = strtolower(trim((string) ($_POST['message_kind'] ?? 'request')));
         $requestType = strtolower(trim((string) ($_POST['request_type'] ?? 'leave')));
+        $recipientScope = strtolower(trim((string) ($_POST['recipient_scope'] ?? 'selected')));
         $shiftId = (int) ($_POST['shift_id'] ?? 0);
         $requireSignature = in_array((string) ($_POST['require_signature'] ?? ''), ['1', 'true', 'on'], true);
+        $selectedDocumentId = (int) ($_POST['document_id'] ?? 0);
         $recipientIdsRaw = $_POST['recipient_ids'] ?? [];
         $recipientIds = array_values(array_filter(array_map('intval', is_array($recipientIdsRaw) ? $recipientIdsRaw : [$recipientIdsRaw])));
 
@@ -1099,7 +1101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $allowedRecipientIds[$recipientId] = true;
             }
         }
-        $recipientIds = array_values(array_filter($recipientIds, static fn (int $id): bool => isset($allowedRecipientIds[$id])));
+        if ($recipientScope === 'all') {
+            $recipientIds = array_map('intval', array_keys($allowedRecipientIds));
+        } else {
+            $recipientIds = array_values(array_filter($recipientIds, static fn (int $id): bool => isset($allowedRecipientIds[$id])));
+        }
         if (empty($recipientIds)) {
             setFlash('error', t('employee.no_recipient_available', ['fallback' => 'No recipient selected.']));
             redirectTo('my-space');
@@ -1115,21 +1121,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $resolvedType = in_array('leave', $allowedTypes, true) ? 'leave' : 'notification';
         }
 
-        $documentId = null;
         $file = $_FILES['document_file'] ?? null;
         $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
         $hasUpload = $uploadError !== UPLOAD_ERR_NO_FILE;
+
+        if ($selectedDocumentId > 0 && $hasUpload) {
+            setFlash('error', t('employee.upload_choose_existing_or_new', ['fallback' => 'Choose either an existing document or a new upload.']));
+            redirectTo('my-space');
+        }
 
         if ($hasUpload && $uploadError !== UPLOAD_ERR_OK) {
             setFlash('error', t('employee.upload_missing', ['fallback' => 'Please choose a valid document to upload.']));
             redirectTo('my-space');
         }
 
+        if ($requireSignature && !$hasUpload && $selectedDocumentId <= 0) {
+            setFlash('error', t('employee.upload_missing', ['fallback' => 'Attach or select a document before requesting a signature.']));
+            redirectTo('my-space');
+        }
+
         if ($requireSignature) {
-            if (!$hasUpload) {
-                setFlash('error', t('employee.upload_missing', ['fallback' => 'Attach a document before requesting a signature.']));
-                redirectTo('my-space');
-            }
             $resolvedType = 'document_signature';
         }
 
@@ -1195,7 +1206,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'file_mime_type' => $detectedMime,
                 'status' => 'valid',
             ]);
-            $documentId = (int) $pdo->lastInsertId();
+            $selectedDocumentId = (int) $pdo->lastInsertId();
+        }
+
+        if ($selectedDocumentId <= 0) {
+            setFlash('error', t('employee.upload_missing', ['fallback' => 'Please upload or select a document.']));
+            redirectTo('my-space');
         }
 
         $requestStatus = in_array($resolvedType, ['notification', 'document_signature'], true) ? 'unread' : 'pending';
@@ -1213,7 +1229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'message' => $message,
                 'status' => $requestStatus,
                 'shift_id' => $resolvedType === 'shift_coverage' && $shiftId > 0 ? $shiftId : null,
-                'document_id' => $documentId,
+                'document_id' => $selectedDocumentId,
             ]);
         }
 
@@ -1225,6 +1241,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title = trim((string) ($_POST['title'] ?? ''));
         $message = trim((string) ($_POST['message'] ?? ''));
         $requireSignature = in_array((string) ($_POST['require_signature'] ?? ''), ['1', 'true', 'on'], true);
+        $shareNow = !array_key_exists('share_now', $_POST) || in_array((string) ($_POST['share_now'] ?? ''), ['1', 'true', 'on'], true);
+        $recipientScope = strtolower(trim((string) ($_POST['recipient_scope'] ?? 'selected')));
+        $selectedDocumentId = (int) ($_POST['document_id'] ?? 0);
         $recipientIdsRaw = $_POST['recipient_ids'] ?? [];
         $recipientIds = array_values(array_filter(array_map('intval', is_array($recipientIdsRaw) ? $recipientIdsRaw : [$recipientIdsRaw])));
 
@@ -1234,39 +1253,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $uploadError = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
         $fileSize = (int) ($file['size'] ?? 0);
 
-        if ($uploadError !== UPLOAD_ERR_OK || $tmpPath === '' || !is_uploaded_file($tmpPath)) {
-            setFlash('error', t('employee.upload_missing', ['fallback' => 'Please choose a valid document to upload.']));
-            redirectTo('my-space');
-        }
-        if ($fileSize <= 0 || $fileSize > (8 * 1024 * 1024)) {
-            setFlash('error', t('employee.upload_too_large', ['fallback' => 'Document size must be between 1 byte and 8 MB.']));
+        $hasUpload = $uploadError !== UPLOAD_ERR_NO_FILE;
+        if ($selectedDocumentId > 0 && $hasUpload) {
+            setFlash('error', t('employee.upload_choose_existing_or_new', ['fallback' => 'Choose either an existing document or a new upload.']));
             redirectTo('my-space');
         }
 
-        $safeBaseName = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $fileName ?: 'document');
-        $safeBaseName = trim((string) $safeBaseName, '-.');
-        if ($safeBaseName === '') {
-            $safeBaseName = 'document-' . appNow()->format('Ymd-His');
-        }
-        if (strlen($safeBaseName) > 180) {
-            $safeBaseName = substr($safeBaseName, 0, 180);
-        }
-
-        $payload = @file_get_contents($tmpPath);
-        if (!is_string($payload) || $payload === '') {
-            setFlash('error', t('employee.upload_read_error', ['fallback' => 'Unable to read the uploaded document.']));
+        if (!$shareNow && $selectedDocumentId > 0) {
+            setFlash('error', t('employee.upload_choose_existing_or_new', ['fallback' => 'Draft mode supports new uploads only.']));
             redirectTo('my-space');
         }
 
+        if ($selectedDocumentId <= 0) {
+            if ($uploadError !== UPLOAD_ERR_OK || $tmpPath === '' || !is_uploaded_file($tmpPath)) {
+                setFlash('error', t('employee.upload_missing', ['fallback' => 'Please choose a valid document to upload.']));
+                redirectTo('my-space');
+            }
+            if ($fileSize <= 0 || $fileSize > (8 * 1024 * 1024)) {
+                setFlash('error', t('employee.upload_too_large', ['fallback' => 'Document size must be between 1 byte and 8 MB.']));
+                redirectTo('my-space');
+            }
+        }
+
+        $safeBaseName = '';
+        $payload = null;
         $detectedMime = 'application/octet-stream';
-        if (function_exists('finfo_open')) {
-            $finfo = @finfo_open(FILEINFO_MIME_TYPE);
-            if ($finfo) {
-                $mimeProbe = @finfo_file($finfo, $tmpPath);
-                if (is_string($mimeProbe) && trim($mimeProbe) !== '') {
-                    $detectedMime = trim($mimeProbe);
+        if ($selectedDocumentId <= 0) {
+            $safeBaseName = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $fileName ?: 'document');
+            $safeBaseName = trim((string) $safeBaseName, '-.');
+            if ($safeBaseName === '') {
+                $safeBaseName = 'document-' . appNow()->format('Ymd-His');
+            }
+            if (strlen($safeBaseName) > 180) {
+                $safeBaseName = substr($safeBaseName, 0, 180);
+            }
+
+            $payload = @file_get_contents($tmpPath);
+            if (!is_string($payload) || $payload === '') {
+                setFlash('error', t('employee.upload_read_error', ['fallback' => 'Unable to read the uploaded document.']));
+                redirectTo('my-space');
+            }
+
+            if (function_exists('finfo_open')) {
+                $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+                if ($finfo) {
+                    $mimeProbe = @finfo_file($finfo, $tmpPath);
+                    if (is_string($mimeProbe) && trim($mimeProbe) !== '') {
+                        $detectedMime = trim($mimeProbe);
+                    }
+                    @finfo_close($finfo);
                 }
-                @finfo_close($finfo);
             }
         }
 
@@ -1278,14 +1314,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if (!empty($recipientIds)) {
-            $recipientIds = array_values(array_filter($recipientIds, static fn (int $id): bool => isset($allowedRecipientSet[$id])));
-        }
-        if (empty($recipientIds)) {
+        if ($recipientScope === 'all') {
             $recipientIds = array_map('intval', array_keys($allowedRecipientSet));
+        } else {
+            if (!empty($recipientIds)) {
+                $recipientIds = array_values(array_filter($recipientIds, static fn (int $id): bool => isset($allowedRecipientSet[$id])));
+            }
+            if (empty($recipientIds)) {
+                $recipientIds = array_map('intval', array_keys($allowedRecipientSet));
+            }
         }
 
-        if (empty($recipientIds)) {
+        if ($shareNow && empty($recipientIds)) {
             setFlash('error', t('employee.no_recipient_available', ['fallback' => 'No recipient is available for document sharing.']));
             redirectTo('my-space');
         }
@@ -1297,42 +1337,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Please review the attached document.';
         }
 
-        $insertDocument = $pdo->prepare(
-            'INSERT INTO documents (user_id, document_type, file_name, file_path, file_blob, file_mime_type, status)
-             VALUES (:user_id, :document_type, :file_name, :file_path, :file_blob, :file_mime_type, :status)'
-        );
         $insertRequest = $pdo->prepare(
             'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
              VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
         );
 
+        $insertDocument = $pdo->prepare(
+            'INSERT INTO documents (user_id, document_type, file_name, file_path, file_blob, file_mime_type, status)
+             VALUES (:user_id, :document_type, :file_name, :file_path, :file_blob, :file_mime_type, :status)'
+        );
+
+        $lookupOwnedDocument = $pdo->prepare(
+            'SELECT id, status
+             FROM documents
+             WHERE id = :document_id
+               AND user_id = :user_id
+             LIMIT 1'
+        );
+
         $pdo->beginTransaction();
         try {
-            $insertDocument->execute([
-                'user_id' => (int) $currentUser['id'],
-                'document_type' => 'other',
-                'file_name' => $safeBaseName,
-                'file_path' => '',
-                'file_blob' => $payload,
-                'file_mime_type' => $detectedMime,
-                'status' => 'valid',
-            ]);
-            $documentId = (int) $pdo->lastInsertId();
-
-            foreach ($recipientIds as $recipientId) {
-                $insertRequest->execute([
-                    'user_id' => (int) $currentUser['id'],
-                    'recipient_id' => (int) $recipientId,
-                    'type' => $requireSignature ? 'document_signature' : 'notification',
-                    'title' => $title,
-                    'message' => $message,
-                    'status' => 'unread',
+            $documentId = $selectedDocumentId;
+            if ($documentId > 0) {
+                $lookupOwnedDocument->execute([
                     'document_id' => $documentId,
+                    'user_id' => (int) $currentUser['id'],
                 ]);
+                $ownedDocument = $lookupOwnedDocument->fetch(PDO::FETCH_ASSOC) ?: null;
+                if (!$ownedDocument) {
+                    throw new RuntimeException((string) t('common.document_not_found'));
+                }
+                if (strtolower((string) ($ownedDocument['status'] ?? 'valid')) === 'archived') {
+                    throw new RuntimeException((string) t('employee.file_not_available', ['fallback' => 'File not available.']));
+                }
+            } else {
+                $insertDocument->execute([
+                    'user_id' => (int) $currentUser['id'],
+                    'document_type' => 'other',
+                    'file_name' => $safeBaseName,
+                    'file_path' => '',
+                    'file_blob' => $payload,
+                    'file_mime_type' => $detectedMime,
+                    'status' => 'valid',
+                ]);
+                $documentId = (int) $pdo->lastInsertId();
+            }
+
+            if ($shareNow) {
+                foreach ($recipientIds as $recipientId) {
+                    $insertRequest->execute([
+                        'user_id' => (int) $currentUser['id'],
+                        'recipient_id' => (int) $recipientId,
+                        'type' => $requireSignature ? 'document_signature' : 'notification',
+                        'title' => $title,
+                        'message' => $message,
+                        'status' => 'unread',
+                        'document_id' => $documentId,
+                    ]);
+                }
             }
 
             $pdo->commit();
-            if ($requireSignature) {
+            if (!$shareNow) {
+                setFlash('success', t('employee.document_saved_draft', ['fallback' => 'Document saved as draft. You can share it later.']));
+            } elseif ($requireSignature) {
                 setFlash('success', t('employee.signature_request_sent', ['fallback' => 'Signature request sent successfully.']));
             } else {
                 setFlash('success', t('employee.document_shared_success', ['fallback' => 'Document uploaded and sent successfully.']));

@@ -156,6 +156,15 @@
     margin: 1rem 0 0.5rem;
 }
 
+.home-video-teaser {
+    min-height: 0;
+    padding: 0.9rem;
+}
+
+.home-video-teaser .home-commercial-link-wrap {
+    margin: 0;
+}
+
 .commercial-page {
     display: grid;
     gap: 1rem;

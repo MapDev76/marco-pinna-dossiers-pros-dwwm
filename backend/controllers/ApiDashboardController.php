@@ -123,22 +123,24 @@ $buildSignatureStamp = static function ($signatureStamp, int $targetMaxWidth) us
     return $stamp;
 };
 
-$resolveAllowedRecipients = static function () use ($pdo, $role, $profile): array {
+$resolveAllowedRecipients = static function () use ($pdo, $role, $profile, $user): array {
     $allowedRecipientsSql = 'SELECT u.id
                             FROM users u
                             LEFT JOIN departments d ON d.id = u.department_id
-                            WHERE u.status = "active"';
-    $allowedRecipientsParams = [];
+                            WHERE u.status = "active"
+                              AND u.id <> :current_user_id';
+    $allowedRecipientsParams = [
+        'current_user_id' => (int) ($user['id'] ?? 0),
+    ];
 
-    if ($role === 'admin') {
-        $allowedRecipientsSql .= ' AND u.role = "employee"';
-        $allowedRecipientsSql .= ' AND d.company_id = :company_id';
+    if ($role === 'super_admin') {
+        // Super admin can share with any active user.
+    } elseif ($role === 'admin') {
+        $allowedRecipientsSql .= ' AND d.company_id = :company_id AND u.role <> "super_admin"';
         $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
     } elseif ($role === 'department_manager') {
-        $allowedRecipientsSql .= ' AND d.company_id = :company_id';
-        $allowedRecipientsSql .= ' AND ((u.role = "employee" AND u.department_id = :department_id) OR (u.role = "department_manager" AND u.department_id <> :department_id))';
+        $allowedRecipientsSql .= ' AND d.company_id = :company_id AND u.role = "department_manager"';
         $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
-        $allowedRecipientsParams['department_id'] = (int) ($profile['department_id'] ?? 0);
     } else {
         $allowedRecipientsSql .= ' AND u.role = "employee"';
     }
@@ -180,8 +182,8 @@ $enforceMessageScope = static function (array $messageRow) use ($role, $profile,
     }
 
     if ($role === 'department_manager') {
-        $profileDepartmentId = (int) ($profile['department_id'] ?? 0);
-        if ($profileDepartmentId > 0 && ($profileDepartmentId === $senderDepartmentId || $profileDepartmentId === $recipientDepartmentId)) {
+        $profileCompanyId = (int) ($profile['company_id'] ?? 0);
+        if ($profileCompanyId > 0 && ($profileCompanyId === $senderCompanyId || $profileCompanyId === $recipientCompanyId)) {
             return;
         }
         jsonResponse(['success' => false, 'error' => 'Message out of scope'], 403);

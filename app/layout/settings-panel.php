@@ -562,6 +562,47 @@ $attendanceAssignableShifts = array_values(array_filter(
         && !in_array((string) ($assignment['status'] ?? ''), ['cancelled', 'open'], true)
 ));
 
+$employeeAssignmentStats = [];
+foreach ($visibleUsers as $userStat) {
+    $statUserId = (int) ($userStat['id'] ?? 0);
+    if ($statUserId <= 0) {
+        continue;
+    }
+    $employeeAssignmentStats[$statUserId] = [
+        'assigned' => 0,
+        'sick' => 0,
+        'vacation' => 0,
+        'rest' => 0,
+    ];
+}
+
+foreach ($assignmentsCurrentMonth as $assignmentStat) {
+    $statUserId = (int) ($assignmentStat['user_id'] ?? 0);
+    if ($statUserId <= 0 || !isset($employeeAssignmentStats[$statUserId])) {
+        continue;
+    }
+
+    $statusValue = (string) ($assignmentStat['status'] ?? 'assigned');
+    if (in_array($statusValue, ['cancelled', 'open'], true)) {
+        continue;
+    }
+
+    $employeeAssignmentStats[$statUserId]['assigned']++;
+    $kindValue = strtolower((string) ($assignmentStat['shift_kind'] ?? 'work'));
+    if ($kindValue === 'sick') {
+        $employeeAssignmentStats[$statUserId]['sick']++;
+    } elseif ($kindValue === 'vacation') {
+        $employeeAssignmentStats[$statUserId]['vacation']++;
+    } elseif ($kindValue === 'rest') {
+        $employeeAssignmentStats[$statUserId]['rest']++;
+    }
+}
+
+$totalUncoveredByDepartment = 0;
+foreach ($departmentCoverageRows as $coverageRow) {
+    $totalUncoveredByDepartment += (int) ($coverageRow['uncovered_days'] ?? 0);
+}
+
 $departmentCreateHeadUsers = array_values(array_filter(
     $visibleUsers,
     static fn(array $u): bool => ((int) ($u['company_id'] ?? 0) === $scopeCompanyId) && ((int) ($u['department_id'] ?? 0) === 0)
@@ -626,6 +667,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
             <?php if (!$settingsSimpleMode): ?>
                 <button type="button" class="settings-tab" data-settings-tab="assignments"><?php echo e(t('settings.assignments')); ?></button>
             <?php endif; ?>
+            <button type="button" class="settings-tab" data-settings-tab="assignment-planner"><?php echo e(t('settings.assignment_planner', ['fallback' => 'Shift Planner'])); ?></button>
             <button type="button" class="settings-tab" data-settings-tab="attendances"><?php echo e(t('settings.attendances')); ?></button>
         </div>
 
@@ -729,44 +771,200 @@ $departmentCreateHeadUsers = array_values(array_filter(
             </section>
             <?php endif; ?>
 
+            <section class="crud-panel settings-panel" data-settings-panel="assignment-planner" hidden>
+                <?php
+                    $plannerAutoAssignableShiftOptions = [];
+                    foreach ($shifts as $shift) {
+                        $shiftOptionKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
+                        $shiftOptionNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
+                        $isWorkAssignable = $shiftOptionKindRaw === 'work'
+                            && !in_array($shiftOptionNameRaw, ['rest day', 'vacation', 'sick leave'], true);
+                        if (!$isWorkAssignable) {
+                            continue;
+                        }
+                        $plannerAutoAssignableShiftOptions[] = $shift;
+                    }
+
+                    $userWorkloadById = [];
+                    foreach ($userWorkloadRows as $workloadRow) {
+                        $userWorkloadById[(int) ($workloadRow['user_id'] ?? 0)] = $workloadRow;
+                    }
+                ?>
+                <div class="settings-panel-head">
+                    <div>
+                        <h3><?php echo e(t('settings.assignment_planner_title', ['fallback' => 'Advanced shift assignment planner'])); ?></h3>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.assignment_planner_subtitle', ['fallback' => 'Set scope, rest policies, and shift mix, then run automatic assignment with one action.'])); ?></p>
+                    </div>
+                    <div class="settings-pill-row">
+                        <span class="settings-pill"><?php echo e(t('settings.open_slot')); ?>: <?php echo (int) $openAssignmentsCount; ?></span>
+                        <span class="settings-pill"><?php echo e(t('settings.uncovered_days')); ?>: <?php echo (int) $totalUncoveredByDepartment; ?></span>
+                        <span class="settings-pill"><?php echo e(t('settings.assignments_metric')); ?>: <?php echo (int) ($assignmentTotals['active'] ?? 0); ?></span>
+                    </div>
+                </div>
+
+                <div class="settings-create-row settings-auto-assign-row settings-assignment-planner-row" data-assignment-planner-panel>
+                    <div class="settings-list-cols settings-list-cols-shift-create">
+                        <div class="settings-field settings-field-span-all">
+                            <label class="settings-field">
+                                <?php echo e(t('settings.assignment_scope', ['fallback' => 'Assignment scope'])); ?>
+                                <select data-assignment-planner-scope>
+                                    <option value="department"><?php echo e(t('settings.assignment_scope_department', ['fallback' => 'Whole department'])); ?></option>
+                                    <option value="employee"><?php echo e(t('settings.assignment_scope_employee', ['fallback' => 'Single employee'])); ?></option>
+                                    <option value="company"><?php echo e(t('settings.assignment_scope_company', ['fallback' => 'All accessible departments'])); ?></option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <label class="settings-field" data-assignment-planner-department-wrap>
+                            <?php echo e(t('common.department')); ?>
+                            <select data-assignment-planner-department>
+                                <?php foreach ($visibleDepartments as $department): ?>
+                                    <option value="<?php echo (int) ($department['id'] ?? 0); ?>"><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+
+                        <label class="settings-field" data-assignment-planner-user-wrap hidden>
+                            <?php echo e(t('settings.employee_label', ['fallback' => 'Employee'])); ?>
+                            <select data-assignment-planner-user>
+                                <option value=""><?php echo e(t('settings.select_employee_hint', ['fallback' => 'Select employee'])); ?></option>
+                                <?php foreach ($visibleUsers as $userOption): ?>
+                                    <?php
+                                        $plannerUserId = (int) ($userOption['id'] ?? 0);
+                                        $plannerUserName = trim((string) (($userOption['first_name'] ?? '') . ' ' . ($userOption['last_name'] ?? '')));
+                                        if ($plannerUserName === '') {
+                                            $plannerUserName = (string) ($userOption['email'] ?? ('User #' . $plannerUserId));
+                                        }
+                                    ?>
+                                    <option value="<?php echo $plannerUserId; ?>" data-department-id="<?php echo (int) ($userOption['department_id'] ?? 0); ?>"><?php echo e($plannerUserName); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+
+                        <label class="settings-field">
+                            <?php echo e(t('settings.from_date')); ?>
+                            <input data-assignment-planner-range-start type="date" value="<?php echo e($currentMonthStart); ?>" min="<?php echo e($currentMonthStart); ?>">
+                        </label>
+                        <label class="settings-field">
+                            <?php echo e(t('settings.to_date')); ?>
+                            <input data-assignment-planner-range-end type="date" value="<?php echo e($currentMonthEnd); ?>" min="<?php echo e($currentMonthStart); ?>">
+                        </label>
+                        <label class="settings-field">
+                            <?php echo e(t('settings.minimum_employees')); ?>
+                            <input data-assignment-planner-min-employees type="number" min="0" step="1" value="1">
+                        </label>
+                        <label class="settings-field">
+                            <?php echo e(t('settings.maximum_employees')); ?>
+                            <input data-assignment-planner-max-employees type="number" min="1" step="1" value="3">
+                        </label>
+
+                        <label class="settings-field">
+                            <?php echo e(t('settings.rest_distribution_mode', ['fallback' => 'Rest distribution'])); ?>
+                            <select data-assignment-planner-rest-mode>
+                                <option value="fixed"><?php echo e(t('settings.fixed_rest_days', ['fallback' => 'Fixed weekly rest'])); ?></option>
+                                <option value="staggered"><?php echo e(t('settings.staggered_rest_days', ['fallback' => 'Staggered rest'])); ?></option>
+                                <option value="random"><?php echo e(t('settings.mixed_rest_days', ['fallback' => 'Mixed/random rest'])); ?></option>
+                            </select>
+                        </label>
+                        <label class="settings-field">Min rest days / week<input data-assignment-planner-min-rest-days type="number" min="0" max="6" step="1" value="1"></label>
+                        <label class="settings-field">Max rest days / week<input data-assignment-planner-max-rest-days type="number" min="0" max="6" step="1" value="2"></label>
+                        <label class="settings-field">Min work days / week<input data-assignment-planner-min-work-days type="number" min="1" max="7" step="1" value="4"></label>
+                        <label class="settings-field">Max work days / week<input data-assignment-planner-max-work-days type="number" min="1" max="7" step="1" value="6"></label>
+
+                        <div class="settings-field settings-field-span-all">
+                            <span class="settings-summary-label"><?php echo e(t('settings.select_shift_templates', ['fallback' => 'Shift templates to include'])); ?></span>
+                            <div class="settings-assignment-open-shift-list settings-assignment-planner-shift-list" data-assignment-planner-shift-list>
+                                <?php if (empty($plannerAutoAssignableShiftOptions)): ?>
+                                    <div class="crud-empty-state"><?php echo e(t('settings.no_shifts_available')); ?></div>
+                                <?php else: ?>
+                                    <?php foreach ($plannerAutoAssignableShiftOptions as $shiftOption): ?>
+                                        <label class="settings-assignment-open-shift-chip">
+                                            <input type="checkbox" data-assignment-planner-shift-id="<?php echo (int) ($shiftOption['id'] ?? 0); ?>" checked>
+                                            <span>
+                                                <?php echo e((string) ($shiftOption['name'] ?? t('settings.shift_default'))); ?>
+                                                <small><?php echo e((string) ($shiftOption['department_name'] ?? t('settings.department_default'))); ?></small>
+                                            </span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <div class="settings-inline-actions settings-field-span-all">
+                            <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-planner-forecast><?php echo e(t('settings.auto_assign_forecast_title', ['fallback' => 'Preview coverage impact'])); ?></button>
+                            <button type="button" class="admin-action-link" data-assignment-planner-run><?php echo e(t('settings.run_auto_assign', ['fallback' => 'Run auto-assignment'])); ?></button>
+                        </div>
+
+                        <div class="settings-auto-assign-forecast settings-field-span-all" data-assignment-planner-forecast-box>
+                            <strong><?php echo e(t('settings.coverage_overview', ['fallback' => 'Coverage overview'])); ?></strong>
+                            <p class="crud-modal-subtitle" data-assignment-planner-forecast-summary><?php echo e(t('settings.auto_assign_forecast_loading', ['fallback' => 'Set parameters and preview the impact.'])); ?></p>
+                            <div class="settings-auto-assign-impact" data-assignment-planner-forecast-impact></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-analytics-grid">
+                    <section class="settings-analytics-card">
+                        <h4><?php echo e(t('settings.coverage_by_department')); ?></h4>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.current_month_range', ['month' => $currentMonthLabel, 'start' => $assignmentRangeStart, 'end' => $assignmentRangeEnd])); ?></p>
+                        <?php if (empty($departmentCoverageRows)): ?>
+                            <div class="crud-empty-state"><?php echo e(t('settings.no_department_data')); ?></div>
+                        <?php else: ?>
+                            <div class="settings-analytics-list">
+                                <?php foreach (array_slice($departmentCoverageRows, 0, 10) as $deptMetric): ?>
+                                    <article class="settings-analytics-item">
+                                        <div class="settings-analytics-item-head">
+                                            <strong><?php echo e((string) ($deptMetric['department_name'] ?? t('settings.department_default'))); ?></strong>
+                                        </div>
+                                        <div class="settings-analytics-metrics">
+                                            <span><?php echo e(t('settings.assignments_metric')); ?>: <?php echo (int) ($deptMetric['active_assignments'] ?? 0); ?></span>
+                                            <span><?php echo e(t('settings.uncovered_days')); ?>: <?php echo (int) ($deptMetric['uncovered_days'] ?? 0); ?></span>
+                                            <span><?php echo e(t('settings.hours_label')); ?>: <?php echo e(number_format((float) ($deptMetric['hours'] ?? 0), 1)); ?>h</span>
+                                        </div>
+                                    </article>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </section>
+
+                    <section class="settings-analytics-card">
+                        <h4><?php echo e(t('settings.workload_by_user')); ?></h4>
+                        <p class="crud-modal-subtitle"><?php echo e(t('settings.workload_month_hint', ['month' => $currentMonthLabel])); ?></p>
+                        <?php if (empty($visibleUsers)): ?>
+                            <div class="crud-empty-state"><?php echo e(t('settings.no_user_workload_data')); ?></div>
+                        <?php else: ?>
+                            <div class="settings-analytics-list">
+                                <?php foreach (array_slice($visibleUsers, 0, 12) as $userItem): ?>
+                                    <?php
+                                        $plannerUserId = (int) ($userItem['id'] ?? 0);
+                                        $plannerUserName = trim((string) (($userItem['first_name'] ?? '') . ' ' . ($userItem['last_name'] ?? '')));
+                                        if ($plannerUserName === '') {
+                                            $plannerUserName = (string) ($userItem['email'] ?? ('User #' . $plannerUserId));
+                                        }
+                                        $plannerStats = $employeeAssignmentStats[$plannerUserId] ?? ['assigned' => 0, 'sick' => 0, 'vacation' => 0, 'rest' => 0];
+                                        $plannerWorkload = $userWorkloadById[$plannerUserId] ?? ['days_count' => 0, 'hours' => 0.0];
+                                    ?>
+                                    <article class="settings-analytics-item">
+                                        <div class="settings-analytics-item-head">
+                                            <strong><?php echo e($plannerUserName); ?></strong>
+                                        </div>
+                                        <div class="settings-analytics-metrics">
+                                            <span><?php echo e(t('settings.days_label')); ?>: <?php echo (int) ($plannerWorkload['days_count'] ?? 0); ?></span>
+                                            <span><?php echo e(t('settings.hours_label')); ?>: <?php echo e(number_format((float) ($plannerWorkload['hours'] ?? 0), 1)); ?>h</span>
+                                            <span><?php echo e(t('settings.rest')); ?>: <?php echo (int) ($plannerStats['rest'] ?? 0); ?></span>
+                                        </div>
+                                    </article>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </section>
+                </div>
+            </section>
+
             <?php if (!$settingsSimpleMode): ?>
             <section class="crud-panel settings-panel" data-settings-panel="assignments" hidden>
                 <?php
-                    $employeeAssignmentStats = [];
-                    foreach ($visibleUsers as $userStat) {
-                        $statUserId = (int) ($userStat['id'] ?? 0);
-                        if ($statUserId <= 0) {
-                            continue;
-                        }
-                        $employeeAssignmentStats[$statUserId] = [
-                            'assigned' => 0,
-                            'sick' => 0,
-                            'vacation' => 0,
-                            'rest' => 0,
-                        ];
-                    }
-
-                    foreach ($assignmentsCurrentMonth as $assignmentStat) {
-                        $statUserId = (int) ($assignmentStat['user_id'] ?? 0);
-                        if ($statUserId <= 0 || !isset($employeeAssignmentStats[$statUserId])) {
-                            continue;
-                        }
-
-                        $statusValue = (string) ($assignmentStat['status'] ?? 'assigned');
-                        if (in_array($statusValue, ['cancelled', 'open'], true)) {
-                            continue;
-                        }
-
-                        $employeeAssignmentStats[$statUserId]['assigned']++;
-                        $kindValue = strtolower((string) ($assignmentStat['shift_kind'] ?? 'work'));
-                        if ($kindValue === 'sick') {
-                            $employeeAssignmentStats[$statUserId]['sick']++;
-                        } elseif ($kindValue === 'vacation') {
-                            $employeeAssignmentStats[$statUserId]['vacation']++;
-                        } elseif ($kindValue === 'rest') {
-                            $employeeAssignmentStats[$statUserId]['rest']++;
-                        }
-                    }
+                    // Shared stats are prepared earlier to be reused by assignment planner and advanced assignment panel.
                 ?>
                 <div class="settings-panel-head">
                     <div>
@@ -1089,7 +1287,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 <h5><?php echo e(t('settings.assigned_shifts')); ?></h5>
                                 <p class="crud-modal-subtitle"><?php echo e(t('settings.assigned_shifts_hint')); ?></p>
                                 <div class="settings-inline-actions">
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-shifts>Open assigned shifts</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-open-shifts><?php echo e(t('settings.open_assigned_shifts', ['fallback' => 'Open assigned shifts'])); ?></button>
                                 </div>
                                 <p class="crud-modal-subtitle settings-assignment-shifts-summary" data-assignment-modal-shifts-summary></p>
                             </section>
@@ -1143,10 +1341,10 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <button type="button" class="dashboard-modal-close" data-assignment-modal-shifts-close aria-label="<?php echo e(t('settings.close')); ?>">&times;</button>
                                 </header>
                                 <div class="settings-inline-actions settings-assignment-shifts-toolbar">
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-shifts-select-all>Select all</button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-shifts-clear-selection>Deselect all</button>
-                                    <button type="button" class="admin-action-link" data-assignment-modal-shifts-unassign-selected>Unassign selected</button>
-                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-shifts-unassign-all>Unassign all</button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-shifts-select-all><?php echo e(t('settings.select_all', ['fallback' => 'Select all'])); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-shifts-clear-selection><?php echo e(t('settings.deselect_all', ['fallback' => 'Deselect all'])); ?></button>
+                                    <button type="button" class="admin-action-link" data-assignment-modal-shifts-unassign-selected><?php echo e(t('settings.unassign_selected', ['fallback' => 'Unassign selected'])); ?></button>
+                                    <button type="button" class="admin-action-link admin-action-link-secondary" data-assignment-modal-shifts-unassign-all><?php echo e(t('settings.unassign_all', ['fallback' => 'Unassign all'])); ?></button>
                                 </div>
                                 <div class="settings-assignment-modal-shift-list" data-assignment-modal-shifts></div>
                             </div>

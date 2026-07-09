@@ -144,20 +144,15 @@ if ($route === 'home') {
 
     } else {
         if ($route === 'my-space') {
-            $rightIcons[] = [
-                'type' => 'button',
-                'title' => t('common.documents'),
-                'target' => 'employee-documents-inbox-modal',
-                'icon' => 'document.svg',
-                'alt' => t('common.documents'),
-            ];
-            $rightIcons[] = [
-                'type' => 'button',
-                'title' => t('employee.messages', ['fallback' => 'Messages']),
-                'target' => 'employee-messages-modal',
-                'icon' => 'mail.svg',
-                'alt' => t('employee.messages', ['fallback' => 'Messages']),
-            ];
+            if ($role === 'employee') {
+                $rightIcons[] = [
+                    'type' => 'button',
+                    'title' => t('common.documents'),
+                    'target' => 'employee-documents-inbox-modal',
+                    'icon' => 'document.svg',
+                    'alt' => t('common.documents'),
+                ];
+            }
         }
 
         if ($role === 'employee') {
@@ -226,7 +221,7 @@ if (is_array($logoutIcon)) {
             <div class="site-navbar-left">
                 <?php if (is_array($leftMySpaceIcon)): ?>
                     <a href="<?php echo e($leftMySpaceIcon['href']); ?>" class="site-icon-btn site-left-myspace-btn" title="
-                    <?php echo e($leftMySpaceIcon['title']); ?>">
+                    <?php echo e($leftMySpaceIcon['title']); ?>" aria-label="<?php echo e($leftMySpaceIcon['title']); ?>">
             <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($leftMySpaceIcon['icon']); ?>" alt="<?php echo e($leftMySpaceIcon['alt']); ?>" class="site-icon">
                     </a>
                 <?php endif; ?>
@@ -259,7 +254,7 @@ if (is_array($logoutIcon)) {
                         echo appUrl('dashboard');
                     }
                 ?>" class="site-brand-link" aria-label="<?php echo e(t('common.app_name')); ?>">
-                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.png" alt="<?php echo e(t('common.app_name')); ?>" class="site-brand-logo">
+                    <img src="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.png" alt="<?php echo e(t('common.app_name')); ?>" class="site-brand-logo" width="147" height="147" loading="eager" decoding="async" fetchpriority="high">
                 </a>
             </div>
             <div class="site-navbar-right">
@@ -268,6 +263,8 @@ if (is_array($logoutIcon)) {
                     class="site-icon-btn site-burger-btn"
                     title="<?php echo e(t('common.quick_actions')); ?>"
                     aria-label="<?php echo e(t('common.quick_actions')); ?>"
+                    aria-controls="site-mobile-drawer"
+                    aria-expanded="false"
                     data-site-menu-open
                 >
                     <img src="<?php echo $basePath; ?>/assets/icons/menu.svg" alt="" class="site-icon" aria-hidden="true">
@@ -279,6 +276,7 @@ if (is_array($logoutIcon)) {
                                 type="button"
                                 class="site-icon-btn"
                                 title="<?php echo e($iconItem['title']); ?>"
+                                aria-label="<?php echo e($iconItem['title']); ?>"
                                 <?php if (($iconItem['toggle'] ?? '') === 'calendar-navigator'): ?>
                                     data-calendar-navigator-toggle="true"
                                     aria-controls="dashboard-calendar-navigator"
@@ -295,7 +293,7 @@ if (is_array($logoutIcon)) {
                                 <?php endif; ?>
                             </button>
                         <?php else: ?>
-                            <a href="<?php echo e($iconItem['href']); ?>" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>">
+                            <a href="<?php echo e($iconItem['href']); ?>" class="site-icon-btn" title="<?php echo e($iconItem['title']); ?>" aria-label="<?php echo e($iconItem['title']); ?>">
                                 <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($iconItem['icon']); ?>" alt="<?php echo e($iconItem['alt']); ?>" class="site-icon">
                             </a>
                         <?php endif; ?>
@@ -313,7 +311,7 @@ if (is_array($logoutIcon)) {
                         </details>
                     </div>
                     <?php if (is_array($logoutIcon)): ?>
-                        <a href="<?php echo e($logoutIcon['href']); ?>" class="site-icon-btn" title="<?php echo e($logoutIcon['title']); ?>">
+                        <a href="<?php echo e($logoutIcon['href']); ?>" class="site-icon-btn" title="<?php echo e($logoutIcon['title']); ?>" aria-label="<?php echo e($logoutIcon['title']); ?>">
                             <img src="<?php echo $basePath; ?>/assets/icons/<?php echo e($logoutIcon['icon']); ?>" alt="<?php echo e($logoutIcon['alt']); ?>" class="site-icon">
                         </a>
                     <?php endif; ?>
@@ -322,9 +320,9 @@ if (is_array($logoutIcon)) {
         </div>
     </nav>
 
-    <div class="site-mobile-drawer" data-site-mobile-drawer hidden>
+    <div id="site-mobile-drawer" class="site-mobile-drawer" data-site-mobile-drawer hidden>
         <div class="site-mobile-drawer-backdrop" data-site-menu-close></div>
-        <aside class="site-mobile-drawer-panel" aria-label="<?php echo e(t('common.quick_actions')); ?>">
+        <aside class="site-mobile-drawer-panel" role="dialog" aria-modal="true" tabindex="-1" aria-label="<?php echo e(t('common.quick_actions')); ?>">
             <div class="site-mobile-drawer-head">
                 <strong><?php echo e(t('common.quick_actions')); ?></strong>
                 <button type="button" class="site-mobile-drawer-close" data-site-menu-close aria-label="<?php echo e(t('common.close')); ?>">x</button>

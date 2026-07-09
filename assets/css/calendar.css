@@ -27,13 +27,13 @@ body.sidebar-expanded .route-dashboard .dashboard-content {
     top: 118px;
     left: 10px;
     z-index: 950;
-    width: 252px;
+    width: 312px;
     transform: translateX(calc(-100% + 6px));
     transition: transform 180ms ease;
 }
 
 body.sidebar-plan-wide .app-sidebar {
-    width: min(560px, calc(100vw - 18px));
+    width: min(640px, calc(100vw - 18px));
 }
 
 body.sidebar-expanded .app-sidebar {
@@ -45,7 +45,7 @@ body.sidebar-expanded .app-sidebar {
    ============================================= */
 .dashboard-sidebar-shell {
     position: relative;
-    width: 252px;
+    width: 312px;
     overflow: visible;
     margin: 0 auto;
     padding: 0;
@@ -54,7 +54,7 @@ body.sidebar-expanded .app-sidebar {
 }
 
 body.sidebar-plan-wide .dashboard-sidebar-shell {
-    width: min(560px, calc(100vw - 18px));
+    width: min(640px, calc(100vw - 18px));
 }
 
 .dashboard-sidebar-scroll {
@@ -67,6 +67,21 @@ body.sidebar-plan-wide .dashboard-sidebar-shell {
     border: 1px solid rgba(157, 121, 16, 0.24);
     box-shadow: 0 18px 30px rgba(0, 0, 0, 0.12);
     box-sizing: border-box;
+}
+
+.dashboard-sidebar-shell,
+.dashboard-sidebar-shell * {
+    box-sizing: border-box;
+}
+
+.dashboard-sidebar-shell :is(input, select, textarea, button, a) {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.dashboard-sidebar-shell input[type="date"] {
+    width: 100%;
+    min-width: 0;
 }
 
 body.sidebar-plan-wide .dashboard-sidebar-scroll {
@@ -627,6 +642,10 @@ body.sidebar-plan-wide .dashboard-sidebar-scroll {
     padding: 0.3rem 0.36rem;
 }
 
+.dashboard-sidebar-plan-row > * {
+    min-width: 0;
+}
+
 body.sidebar-plan-wide .dashboard-sidebar-plan-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
     gap: 0.45rem;
@@ -682,7 +701,8 @@ body.sidebar-plan-wide .dashboard-sidebar-plan-row small {
     border: 1px solid rgba(157, 121, 16, 0.3);
     background: #f8efd3;
     color: #6b4f0b;
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
 }
 
 .dashboard-sidebar-plan-tag.is-available {
@@ -1333,9 +1353,11 @@ body.sidebar-plan-wide .dashboard-sidebar-plan-preview {
 .calendar-event-slot-card {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    gap: 0.35rem;
     min-width: 2.5rem;
     min-height: 2rem;
+    max-width: 100%;
     padding: 0.18rem 0.45rem;
     border: 1px solid rgba(157, 121, 16, 0.24);
     border-radius: var(--border-radius-md);
@@ -1351,6 +1373,17 @@ body.sidebar-plan-wide .dashboard-sidebar-plan-preview {
 }
 
 .calendar-event-user-fullname {
+    display: inline-block;
+    max-width: 8.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+}
+
+.calendar-event-user-initials {
     display: none;
 }
 
@@ -1358,7 +1391,7 @@ body.sidebar-plan-wide .dashboard-sidebar-plan-preview {
     .calendar-event-slot-card {
         display: inline-flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         gap: 0.35rem;
         min-width: 0;
         max-width: 100%;
