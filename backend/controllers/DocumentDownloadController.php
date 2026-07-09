@@ -87,61 +87,7 @@ if (!$allowed) {
 $markRead = in_array(strtolower(trim((string) ($_GET['mark_read'] ?? ''))), ['1', 'true', 'yes', 'on'], true);
 $requestId = (int) ($_GET['request_id'] ?? 0);
 if ($markRead && $requestId > 0) {
-    $markReadStatement = $pdo->prepare(
-        'UPDATE requests
-         SET status = "read",
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = :id
-           AND recipient_id = :recipient_id
-           AND document_id = :document_id
-           AND type IN ("notification", "document_signature")
-           AND status IN ("pending", "unread")
-         LIMIT 1'
-    );
-    $markReadStatement->execute([
-        'id' => $requestId,
-        'recipient_id' => $currentUserId,
-        'document_id' => $documentId,
-    ]);
-
-    if ($markReadStatement->rowCount() > 0) {
-        $requestInfoLookup = $pdo->prepare(
-            'SELECT user_id, title, document_id
-             FROM requests
-             WHERE id = :id
-               AND recipient_id = :recipient_id
-             LIMIT 1'
-        );
-        $requestInfoLookup->execute([
-            'id' => $requestId,
-            'recipient_id' => $currentUserId,
-        ]);
-        $requestInfo = $requestInfoLookup->fetch(PDO::FETCH_ASSOC) ?: null;
-
-        if ($requestInfo) {
-            $senderId = (int) ($requestInfo['user_id'] ?? 0);
-            if ($senderId > 0) {
-                $viewerName = trim((string) (($currentUser['first_name'] ?? '') . ' ' . ($currentUser['last_name'] ?? '')));
-                if ($viewerName === '') {
-                    $viewerName = (string) ($currentUser['email'] ?? 'Employee');
-                }
-
-                $insertNotification = $pdo->prepare(
-                    'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
-                     VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
-                );
-                $insertNotification->execute([
-                    'user_id' => $currentUserId,
-                    'recipient_id' => $senderId,
-                    'type' => 'notification',
-                    'title' => 'Document viewed',
-                    'message' => $viewerName . ' viewed document "' . ((string) ($requestInfo['title'] ?? 'Document')) . '" successfully.',
-                    'status' => 'unread',
-                    'document_id' => (int) ($requestInfo['document_id'] ?? 0),
-                ]);
-            }
-        }
-    }
+    markRequestReadAndNotifySender($pdo, $requestId, $currentUserId, $currentUser, $documentId);
 }
 
 $filePath = trim((string) ($document['file_path'] ?? ''));

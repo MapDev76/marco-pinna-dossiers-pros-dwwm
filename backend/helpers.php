@@ -611,6 +611,103 @@ function ensureAbsenceShiftTemplatesForDepartments(PDO $pdo, array $departmentId
 }
 
 /**
+ * Resolve a best-guess MIME type from a file extension.
+ * Returns 'application/octet-stream' when the extension is unknown.
+ */
+function mimeTypeFromFileExtension(string $fileName): string
+{
+    return match (strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION))) {
+        'pdf' => 'application/pdf',
+        'png' => 'image/png',
+        'jpg', 'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp',
+        default => 'application/octet-stream',
+    };
+}
+
+/**
+ * Mark a document request as read and send a "document viewed" notification to the original sender.
+ *
+ * Used by both DocumentDownloadController (triggered via URL parameter) and
+ * EmployeeSpaceController (triggered via POST action).
+ *
+ * Returns true when the request row was updated (i.e. it was previously unread/pending),
+ * false when nothing changed (already read, wrong owner, etc.).
+ *
+ * @param PDO   $pdo          Active PDO connection.
+ * @param int   $requestId    ID of the requests row to mark as read.
+ * @param int   $recipientId  ID of the current user (must match requests.recipient_id).
+ * @param array $viewer       Current user array (keys: id, first_name, last_name, email).
+ * @param int   $documentId   Optional document ID for an additional WHERE filter (0 = skip).
+ */
+function markRequestReadAndNotifySender(PDO $pdo, int $requestId, int $recipientId, array $viewer, int $documentId = 0): bool
+{
+    $documentFilter = $documentId > 0 ? ' AND document_id = :document_id' : '';
+    $markReadStatement = $pdo->prepare(
+        'UPDATE requests
+         SET status = "read",
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = :id
+           AND recipient_id = :recipient_id'
+        . $documentFilter . '
+           AND type IN ("notification", "document_signature")
+           AND status IN ("pending", "unread")
+         LIMIT 1'
+    );
+    $params = [
+        'id' => $requestId,
+        'recipient_id' => $recipientId,
+    ];
+    if ($documentId > 0) {
+        $params['document_id'] = $documentId;
+    }
+    $markReadStatement->execute($params);
+
+    if ($markReadStatement->rowCount() === 0) {
+        return false;
+    }
+
+    $requestInfoLookup = $pdo->prepare(
+        'SELECT user_id, title, document_id
+         FROM requests
+         WHERE id = :id
+           AND recipient_id = :recipient_id
+         LIMIT 1'
+    );
+    $requestInfoLookup->execute([
+        'id' => $requestId,
+        'recipient_id' => $recipientId,
+    ]);
+    $requestInfo = $requestInfoLookup->fetch(PDO::FETCH_ASSOC) ?: null;
+
+    if ($requestInfo) {
+        $senderId = (int) ($requestInfo['user_id'] ?? 0);
+        if ($senderId > 0) {
+            $viewerName = trim((string) (($viewer['first_name'] ?? '') . ' ' . ($viewer['last_name'] ?? '')));
+            if ($viewerName === '') {
+                $viewerName = (string) ($viewer['email'] ?? 'Employee');
+            }
+
+            $insertNotification = $pdo->prepare(
+                'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
+                 VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
+            );
+            $insertNotification->execute([
+                'user_id' => (int) ($viewer['id'] ?? 0),
+                'recipient_id' => $senderId,
+                'type' => 'notification',
+                'title' => 'Document viewed',
+                'message' => $viewerName . ' viewed document "' . ((string) ($requestInfo['title'] ?? 'Document')) . '" successfully.',
+                'status' => 'unread',
+                'document_id' => (int) ($requestInfo['document_id'] ?? 0),
+            ]);
+        }
+    }
+
+    return true;
+}
+
+/**
  * Build a small preview thumbnail data URL for document cards.
  * Supports PDF (first page) and image mime types via Imagick.
  */
