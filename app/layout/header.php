@@ -90,6 +90,7 @@ if (!$isPublicPage && $currentUser !== null) {
 
 $rightIcons = [];
 $logoutIcon = null;
+$isPublicInfoRoute = in_array($route, ['home', 'commercial', 'legal', 'contacts', 'creator', 'login'], true);
 if ($route === 'home') {
     $rightIcons[] = [
         'type' => 'link',
@@ -184,6 +185,40 @@ if ($route === 'home') {
         'alt' => t('common.logout'),
     ];
 }
+
+$mobileMenuItems = [];
+if ($isPublicInfoRoute) {
+    $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('home'), 'label' => t('common.home')];
+    $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('commercial'), 'label' => t('common.commercial')];
+    $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('contacts'), 'label' => t('common.contacts')];
+    $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('legal'), 'label' => t('common.legal_mentions')];
+    $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('creator'), 'label' => t('common.app_creator')];
+}
+
+foreach ($rightIcons as $iconItem) {
+    if (($iconItem['type'] ?? 'link') === 'button') {
+        $mobileMenuItems[] = [
+            'type' => 'button',
+            'label' => (string) ($iconItem['title'] ?? t('common.action')),
+            'target' => (string) ($iconItem['target'] ?? ''),
+            'entity' => (string) ($iconItem['entity'] ?? ''),
+        ];
+        continue;
+    }
+    $mobileMenuItems[] = [
+        'type' => 'link',
+        'href' => (string) ($iconItem['href'] ?? appUrl('home')),
+        'label' => (string) ($iconItem['title'] ?? t('common.action')),
+    ];
+}
+
+if (is_array($logoutIcon)) {
+    $mobileMenuItems[] = [
+        'type' => 'link',
+        'href' => (string) ($logoutIcon['href'] ?? appUrl('logout')),
+        'label' => (string) ($logoutIcon['title'] ?? t('common.logout')),
+    ];
+}
 ?>
 <header class="site-header">
     <nav class="site-navbar" aria-label="Primary navigation">
@@ -228,6 +263,15 @@ if ($route === 'home') {
                 </a>
             </div>
             <div class="site-navbar-right">
+                <button
+                    type="button"
+                    class="site-icon-btn site-burger-btn"
+                    title="<?php echo e(t('common.quick_actions')); ?>"
+                    aria-label="<?php echo e(t('common.quick_actions')); ?>"
+                    data-site-menu-open
+                >
+                    <img src="<?php echo $basePath; ?>/assets/icons/menu.svg" alt="" class="site-icon" aria-hidden="true">
+                </button>
                 <div class="site-icon-group" role="toolbar" aria-label="<?php echo e(t('common.quick_actions')); ?>">
                     <?php foreach ($rightIcons as $iconItem): ?>
                         <?php if (($iconItem['type'] ?? 'link') === 'button'): ?>
@@ -277,4 +321,34 @@ if ($route === 'home') {
             </div>
         </div>
     </nav>
+
+    <div class="site-mobile-drawer" data-site-mobile-drawer hidden>
+        <div class="site-mobile-drawer-backdrop" data-site-menu-close></div>
+        <aside class="site-mobile-drawer-panel" aria-label="<?php echo e(t('common.quick_actions')); ?>">
+            <div class="site-mobile-drawer-head">
+                <strong><?php echo e(t('common.quick_actions')); ?></strong>
+                <button type="button" class="site-mobile-drawer-close" data-site-menu-close aria-label="<?php echo e(t('common.close')); ?>">x</button>
+            </div>
+            <div class="site-mobile-drawer-links">
+                <?php foreach ($mobileMenuItems as $item): ?>
+                    <?php if (($item['type'] ?? 'link') === 'button' && !empty($item['target'])): ?>
+                        <button
+                            type="button"
+                            class="site-mobile-drawer-link"
+                            data-modal-target="<?php echo e($item['target']); ?>"
+                            <?php if (!empty($item['entity'])): ?>data-modal-entity="<?php echo e($item['entity']); ?>"<?php endif; ?>
+                            data-site-menu-close
+                        >
+                            <?php echo e($item['label']); ?>
+                        </button>
+                    <?php elseif (!empty($item['href'])): ?>
+                        <a class="site-mobile-drawer-link" href="<?php echo e($item['href']); ?>" data-site-menu-close><?php echo e($item['label']); ?></a>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+                <a class="site-mobile-drawer-link" href="<?php echo e(appCurrentUrl(['lang' => 'it'])); ?>" data-site-menu-close>Italiano</a>
+                <a class="site-mobile-drawer-link" href="<?php echo e(appCurrentUrl(['lang' => 'en'])); ?>" data-site-menu-close>English</a>
+                <a class="site-mobile-drawer-link" href="<?php echo e(appCurrentUrl(['lang' => 'fr'])); ?>" data-site-menu-close>Francais</a>
+            </div>
+        </aside>
+    </div>
 </header>

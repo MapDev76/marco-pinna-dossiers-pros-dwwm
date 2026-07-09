@@ -385,6 +385,66 @@
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 225, 171, 0.72));
 }
 
+.commercial-project-note,
+.commercial-media-placeholder {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: var(--border-radius-lg);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 225, 171, 0.64));
+    border: 1px solid rgba(157, 121, 16, 0.2);
+    display: grid;
+    gap: 0.45rem;
+}
+
+.commercial-feature-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+    align-items: start;
+}
+
+.commercial-feature-card {
+    display: grid;
+    gap: 0.45rem;
+    align-content: start;
+}
+
+.commercial-feature-card h2,
+.commercial-feature-card h3,
+.commercial-feature-card p {
+    text-align: left;
+}
+
+.commercial-feature-card ul {
+    display: block;
+    margin: 0;
+    padding-left: 1.05rem;
+}
+
+.commercial-feature-card ul li {
+    margin-bottom: 0.34rem;
+    list-style: disc;
+    text-align: left;
+}
+
+.commercial-video-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+}
+
+.commercial-image-slot {
+    min-height: 160px;
+    border: 2px dashed rgba(157, 121, 16, 0.35);
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.86);
+    color: #6b7280;
+    font-weight: 700;
+}
+
 .route-legal .content {
     position: relative;
     top: auto;
@@ -396,6 +456,19 @@
     justify-content: flex-start;
     margin: 16px auto;
     max-width: 980px;
+}
+
+.route-commercial .content,
+.route-home .content,
+.route-legal .content {
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+}
+
+.route-commercial .home-page,
+.route-legal .legal-page {
+    width: 100%;
 }
 
 @media (max-width: 1024px) {
@@ -469,6 +542,10 @@
         grid-template-columns: 1fr;
     }
 
+    .commercial-feature-grid {
+        grid-template-columns: 1fr;
+    }
+
     .commercial-steps {
         grid-template-columns: 1fr;
     }
@@ -518,14 +595,8 @@
     .creator-hero {
         grid-template-columns: 1fr;
     }
-}
 
-/* Short desktop/laptop screens: scale the whole Home panel to keep all sections visible without scrolling. */
-@media (min-width: 980px) and (max-height: 900px) {
-    .route-home .content {
-        margin: 8px auto 0;
-        transform: translateX(-50%) scale(0.87);
-        transform-origin: top center;
-        width: min(1280px, calc((100vw - 18px) / 0.87));
+    .commercial-feature-grid {
+        grid-template-columns: 1fr;
     }
 }

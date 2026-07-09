@@ -23,6 +23,12 @@ $creatorPhoneHref = '+33744907701';
     <h2><?php echo e(t('creator.section_title', ['fallback' => 'About the creator'])); ?></h2>
     <p><?php echo e(t('creator.section_body', ['fallback' => 'StaffEase Pro was ideated and developed by the creator of this application.'])); ?></p>
 
+    <h2><?php echo e(t('creator.vision_title', ['fallback' => 'Visione prodotto'])); ?></h2>
+    <p><?php echo e(t('creator.vision_body', ['fallback' => 'L obiettivo e costruire una suite moderna e leggera che unisca gestione del personale, operations e comunicazione in un flusso semplice e scalabile per aziende piccole e grandi.'])); ?></p>
+
+    <h2><?php echo e(t('creator.projects_title', ['fallback' => 'Prossimi progetti in corso'])); ?></h2>
+    <p><?php echo e(t('creator.projects_body', ['fallback' => 'HotelEase Pro e GuestEase Pro estenderanno la suite con moduli dedicati alla gestione reception, servizi ospiti, coordinamento inter-reparto e controllo operativo delle strutture ricettive.'])); ?></p>
+
     <section class="commercial-card creator-contact-card">
         <h2><?php echo e(t('common.creator_contact_title', ['fallback' => 'Contact me for support or account creation'])); ?></h2>
         <p><?php echo e(t('common.creator_contact_body', ['fallback' => 'For technical support, a demo or to create a new business account, write directly to the email address below.'])); ?></p>
@@ -44,6 +50,12 @@ $creatorPhoneHref = '+33744907701';
     <p class="creator-cta-note">
         <?php echo e(t('commercial.cta_body', ['fallback' => 'If you want to free your company from large and expensive software, contact me and let us build the solution that fits your organization.'])); ?>
     </p>
+
+    <section class="commercial-media-placeholder">
+        <h2><?php echo e(t('creator.media_title', ['fallback' => 'Spazio immagini, press kit e video'])); ?></h2>
+        <p><?php echo e(t('creator.media_body', ['fallback' => 'Area disponibile per inserire in seguito video YouTube, screenshot roadmap e materiali commerciali.'])); ?></p>
+        <div class="commercial-image-slot">Media Slot</div>
+    </section>
 
     <p style="margin-top: 2rem;">
         <a href="<?php echo e(appUrl('home')); ?>">&larr; <?php echo e(t('legal.back_home')); ?></a>

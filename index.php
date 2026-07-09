@@ -19,12 +19,14 @@ $flashSuccess = getFlash('success');
 $flashError = getFlash('error');
 $isDashboardRoute = $route === 'dashboard';
 $isHomeRoute = $route === 'home';
+$isCommercialRoute = $route === 'commercial';
 $isLoginRoute = $route === 'login';
 $isMySpaceRoute = $route === 'my-space';
 $isLegalRoute = $route === 'legal';
 $isContactsRoute = $route === 'contacts';
 $isCreatorRoute = $route === 'creator';
 $isStaticInfoRoute = $isLegalRoute || $isContactsRoute || $isCreatorRoute;
+$isPublicRoute = $isHomeRoute || $isCommercialRoute || $isLoginRoute || $isStaticInfoRoute;
 $locale = appLocale();
 $shouldShowLoadingOverlay = $isDashboardRoute || $isMySpaceRoute;
 $requiresApiClient = ($isDashboardRoute || $isMySpaceRoute) && isLoggedIn();
@@ -39,6 +41,9 @@ if ($isDashboardRoute) {
 if ($isHomeRoute) {
         $bodyClasses[] = 'route-home';
 }
+if ($isCommercialRoute) {
+        $bodyClasses[] = 'route-commercial';
+}
 if ($isLoginRoute) {
         $bodyClasses[] = 'route-login';
 }
@@ -47,6 +52,9 @@ if ($isMySpaceRoute) {
 }
 if ($isStaticInfoRoute) {
         $bodyClasses[] = 'route-legal';
+}
+if ($isPublicRoute) {
+        $bodyClasses[] = 'route-public';
 }
 // Precompute CSS version based on file modification time for cache busting. If the file is missing, use current time to avoid caching issues during development.
 $stylesheetFile = $useFullAppStyles ? 'style.css' : 'public.css';
@@ -133,6 +141,21 @@ require $viewFile;
 ?>
 </main>
 
+<?php if ($isPublicRoute): ?>
+<footer class="site-reveal-footer" data-reveal-footer aria-label="<?php echo e(t('common.quick_actions')); ?>">
+        <div class="site-reveal-footer-inner">
+                <a class="site-reveal-footer-link" href="<?php echo e(appUrl('home')); ?>"><?php echo e(t('common.home')); ?></a>
+                <a class="site-reveal-footer-link" href="<?php echo e(appUrl('commercial')); ?>"><?php echo e(t('common.commercial')); ?></a>
+                <a class="site-reveal-footer-link" href="<?php echo e(appUrl('contacts')); ?>"><?php echo e(t('common.contacts')); ?></a>
+                <a class="site-reveal-footer-link" href="<?php echo e(appUrl('legal')); ?>"><?php echo e(t('common.legal_mentions')); ?></a>
+                <a class="site-reveal-footer-link" href="<?php echo e(appUrl('creator')); ?>"><?php echo e(t('common.app_creator')); ?></a>
+                <?php if (!isLoggedIn()): ?>
+                        <a class="site-reveal-footer-link is-strong" href="<?php echo e(appUrl('login')); ?>"><?php echo e(t('common.login')); ?></a>
+                <?php endif; ?>
+        </div>
+</footer>
+<?php endif; ?>
+
 <?php if ($isDashboardRoute && isLoggedIn()): ?>
 <?php require __DIR__ . '/app/layout/crud-modal.php'; ?>
 <?php endif; ?>
@@ -177,6 +200,8 @@ require $viewFile;
 <?php if ($isMySpaceRoute && isLoggedIn()): ?>
 <script defer src="<?php echo $basePath; ?>/assets/js/employee-space.js?v=<?php echo filemtime(__DIR__ . '/assets/js/employee-space.js'); ?>"></script>
 <?php endif; ?>
+
+<script defer src="<?php echo $basePath; ?>/assets/js/public-ui.js?v=<?php echo filemtime(__DIR__ . '/assets/js/public-ui.js'); ?>"></script>
 
 <script defer src="<?php echo $basePath; ?>/assets/js/ui-hints.js?v=<?php echo filemtime(__DIR__ . '/assets/js/ui-hints.js'); ?>"></script>
 

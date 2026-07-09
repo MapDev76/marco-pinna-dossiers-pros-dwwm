@@ -3678,6 +3678,57 @@ body.route-my-space {
         color 0.2s ease;
 }
 
+/* Keep text-based controls fluid; only icon controls should stay square. */
+.dashboard-modal .settings-tab,
+.crud-modal .settings-tab,
+.dashboard-modal .schedule-pill,
+.crud-modal .schedule-pill,
+.dashboard-modal .admin-action-link,
+.crud-modal .admin-action-link,
+.dashboard-modal .admin-action-link-secondary,
+.crud-modal .admin-action-link-secondary {
+    width: auto;
+    height: auto;
+    min-width: max-content;
+    min-height: 38px;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+}
+
+/* Assignment list items contain names/emails, so they must not stay square. */
+.dashboard-modal .settings-assignment-employee-item,
+.crud-modal .settings-assignment-employee-item {
+    width: 100%;
+    height: auto;
+    min-width: 0;
+    min-height: 38px;
+    padding: 0.58rem 0.64rem;
+    font-size: 1rem;
+    border-radius: 12px;
+}
+
+/* Shared modal controls: keep text buttons/selects content-sized across roles. */
+.dashboard-modal .dashboard-sidebar-control-button:not(.settings-action-icon),
+.crud-modal .dashboard-sidebar-control-button:not(.settings-action-icon) {
+    width: auto;
+    height: auto;
+    min-width: max-content;
+    min-height: 38px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.92rem;
+}
+
+/* Print modal controls are text-based; keep them fluid and readable. */
+.dashboard-modal .dashboard-print-actions .dashboard-sidebar-control-button,
+.crud-modal .dashboard-print-actions .dashboard-sidebar-control-button {
+    width: auto;
+    height: auto;
+    min-width: max-content;
+    min-height: 38px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.92rem;
+}
+
 .dashboard-modal .company-card-action > span[aria-hidden="true"],
 .crud-modal .company-card-action > span[aria-hidden="true"] {
     font-size: 1.2rem;

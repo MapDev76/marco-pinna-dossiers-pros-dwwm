@@ -5,14 +5,14 @@
    for better organization and maintenance.
    ============================================= */
 
-@import url('variables.css');
-@import url('base.css');
-@import url('layout.css');
-@import url('navbar.css');
-@import url('components.css');
-@import url('calendar.css');
-@import url('modal.css');
-@import url('flash.css');
-@import url('admin.css');
-@import url('responsive.css');
-@import url('home.css');   
+@import url('variables.css?v=20260709');
+@import url('base.css?v=20260709');
+@import url('layout.css?v=20260709');
+@import url('navbar.css?v=20260709');
+@import url('components.css?v=20260709');
+@import url('calendar.css?v=20260709');
+@import url('modal.css?v=20260709');
+@import url('flash.css?v=20260709');
+@import url('admin.css?v=20260709');
+@import url('responsive.css?v=20260709');
+@import url('home.css?v=20260709');

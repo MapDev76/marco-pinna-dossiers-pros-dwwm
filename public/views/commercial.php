@@ -10,78 +10,101 @@ $basePath = $basePath ?? (function () {
 		<p class="commercial-eyebrow"><?php echo e(t('common.app_name')); ?></p>
 		<h1><?php echo e(t('commercial.title', ['fallback' => 'StaffEase Pro en action'])); ?></h1>
 		<p class="commercial-lead">
-			<?php echo e(t('commercial.lead', ['fallback' => 'Decouvrez comment l application simplifie les plannings, les presences, les documents et les messages.'])); ?>
+			<?php echo e(t('commercial.lead', ['fallback' => 'Scopri una piattaforma progettata per semplificare pianificazione turni, presenze e gestione operativa.'])); ?>
 		</p>
-		<div class="commercial-suite-logo" aria-label="HotelEase Pro">
-			<img src="<?php echo e($basePath); ?>/assets/images/LogoHotelEasePro.jpg" alt="HotelEase Pro" class="commercial-suite-logo-image">
-			<div class="commercial-suite-logo-text">
-				<span>HotelEase</span>
-				<strong>Pro</strong>
-			</div>
-		</div>
 		<div class="commercial-actions">
 			<a class="admin-action-link" href="<?php echo e(appUrl('login')); ?>"><?php echo e(t('common.login')); ?></a>
 			<a class="admin-action-link-secondary" href="<?php echo e(appUrl('contacts')); ?>"><?php echo e(t('common.contacts')); ?></a>
 		</div>
 	</section>
 
-	<section class="commercial-steps">
-		<article class="commercial-step-card">
-			<span class="commercial-step-number">1</span>
-			<h3><?php echo e(t('commercial.step_1_title', ['fallback' => 'Discover the platform'])); ?></h3>
-			<p><?php echo e(t('commercial.step_1_body', ['fallback' => 'Watch the first demo and see the main workflow in action.'])); ?></p>
-		</article>
-		<article class="commercial-step-card is-highlighted">
-			<span class="commercial-step-number">2</span>
-			<h3><?php echo e(t('commercial.step_2_title', ['fallback' => 'Choose HotelEase Pro'])); ?></h3>
-			<p><?php echo e(t('commercial.step_2_body', ['fallback' => 'Aggiungi la suite hospitality quando gestisci hotel, residence o strutture multi-servizio.'])); ?></p>
-		</article>
-		<article class="commercial-step-card is-highlighted">
-			<span class="commercial-step-number">3</span>
-			<h3><?php echo e(t('commercial.step_3_title', ['fallback' => 'Request activation'])); ?></h3>
-			<p><?php echo e(t('commercial.step_3_body', ['fallback' => 'Scrivi per ricevere assistenza, attivazione account e una proposta commerciale su misura.'])); ?></p>
-		</article>
+	<section class="commercial-project-note">
+		<h2><?php echo e(t('commercial.projects_title', ['fallback' => 'Progetti in corso'])); ?></h2>
+		<p><?php echo e(t('commercial.projects_body', ['fallback' => 'HotelEase Pro e GuestEase Pro estenderanno la base StaffEase Pro con strumenti verticali per strutture ricettive e team operativi.'])); ?></p>
+		<p class="commercial-emphasis"><?php echo e(t('commercial.projects_sell', ['fallback' => 'Una suite semplice, connessa e scalabile per qualsiasi azienda del turismo e dell ospitalita.'])); ?></p>
 	</section>
 
-	<section class="commercial-grid">
-		<article class="commercial-card">
-			<h2><?php echo e(t('commercial.how_to_get_it_title', ['fallback' => 'Comment l obtenir'])); ?></h2>
-			<p><?php echo e(t('commercial.how_to_get_it_body', ['fallback' => 'Contactez-nous pour une demonstration, un devis et une configuration adaptee a votre organisation.'])); ?></p>
-			<p class="commercial-email-callout"><a href="mailto:pinna.marcantonio@icloud.com">pinna.marcantonio@icloud.com</a></p>
+	<section class="commercial-feature-grid">
+		<article class="commercial-card commercial-feature-card">
+			<span class="commercial-step-number">1</span>
+			<h2><?php echo e(t('commercial.feature_1_title', ['fallback' => 'Automatizzazione dei turni di lavoro'])); ?></h2>
+			<p class="commercial-video-title"><?php echo e(t('commercial.feature_1_video_title', ['fallback' => 'StaffEase Pro: Come automatizzare i turni di lavoro in 3 passaggi'])); ?></p>
+			<p><?php echo e(t('commercial.feature_1_intro')); ?></p>
+			<h3><?php echo e(t('commercial.how_it_works_title', ['fallback' => 'Come funziona'])); ?></h3>
+			<ul>
+				<li><?php echo e(t('commercial.feature_1_step_1')); ?></li>
+				<li><?php echo e(t('commercial.feature_1_step_2')); ?></li>
+				<li><?php echo e(t('commercial.feature_1_step_3')); ?></li>
+				<li><?php echo e(t('commercial.feature_1_step_4')); ?></li>
+			</ul>
+			<h3><?php echo e(t('commercial.benefits_title', ['fallback' => 'Vantaggi'])); ?></h3>
+			<ul>
+				<li><?php echo e(t('commercial.feature_1_benefit_1')); ?></li>
+				<li><?php echo e(t('commercial.feature_1_benefit_2')); ?></li>
+				<li><?php echo e(t('commercial.feature_1_benefit_3')); ?></li>
+			</ul>
 		</article>
-		<article class="commercial-card">
-			<h2><?php echo e(t('commercial.commercial_suite_title', ['fallback' => 'StaffEase Pro + HotelEase Pro'])); ?></h2>
-			<p><?php echo e(t('commercial.commercial_suite_body', ['fallback' => 'Two coordinated products: one to manage staff, the other designed to simplify processes for hospitality properties and multi-department organizations.'])); ?></p>
+		<article class="commercial-card commercial-feature-card">
+			<span class="commercial-step-number">2</span>
+			<h2><?php echo e(t('commercial.feature_2_title', ['fallback' => 'Sicurezza delle firme digitali (Wi-Fi/IP aziendale)'])); ?></h2>
+			<p class="commercial-video-title"><?php echo e(t('commercial.feature_2_video_title', ['fallback' => 'Firme digitali sicure con StaffEase Pro: Autenticazione e tracciabilita'])); ?></p>
+			<p><?php echo e(t('commercial.feature_2_intro')); ?></p>
+			<h3><?php echo e(t('commercial.how_it_works_title', ['fallback' => 'Come funziona'])); ?></h3>
+			<ul>
+				<li><?php echo e(t('commercial.feature_2_step_1')); ?></li>
+				<li><?php echo e(t('commercial.feature_2_step_2')); ?></li>
+				<li><?php echo e(t('commercial.feature_2_step_3')); ?></li>
+			</ul>
+			<h3><?php echo e(t('commercial.benefits_title', ['fallback' => 'Vantaggi'])); ?></h3>
+			<ul>
+				<li><?php echo e(t('commercial.feature_2_benefit_1')); ?></li>
+				<li><?php echo e(t('commercial.feature_2_benefit_2')); ?></li>
+				<li><?php echo e(t('commercial.feature_2_benefit_3')); ?></li>
+			</ul>
 		</article>
-		<article class="commercial-card">
-			<h2><?php echo e(t('commercial.demo_videos_title', ['fallback' => 'Videos demonstratives'])); ?></h2>
-			<p><?php echo e(t('commercial.demo_videos_body', ['fallback' => 'Des videos courtes pour voir le planning, les presences, les documents et l espace employe.'])); ?></p>
+		<article class="commercial-card commercial-feature-card">
+			<span class="commercial-step-number">3</span>
+			<h2><?php echo e(t('commercial.feature_3_title', ['fallback' => 'Centralizzazione della gestione dei dipendenti'])); ?></h2>
+			<p class="commercial-video-title"><?php echo e(t('commercial.feature_3_video_title', ['fallback' => 'StaffEase Pro: Tutto il team in un unica piattaforma'])); ?></p>
+			<p><?php echo e(t('commercial.feature_3_intro')); ?></p>
+			<h3><?php echo e(t('commercial.how_it_works_title', ['fallback' => 'Come funziona'])); ?></h3>
+			<ul>
+				<li><?php echo e(t('commercial.feature_3_step_1')); ?></li>
+				<li><?php echo e(t('commercial.feature_3_step_2')); ?></li>
+				<li><?php echo e(t('commercial.feature_3_step_3')); ?></li>
+				<li><?php echo e(t('commercial.feature_3_step_4')); ?></li>
+			</ul>
+			<h3><?php echo e(t('commercial.benefits_title', ['fallback' => 'Vantaggi'])); ?></h3>
+			<ul>
+				<li><?php echo e(t('commercial.feature_3_benefit_1')); ?></li>
+				<li><?php echo e(t('commercial.feature_3_benefit_2')); ?></li>
+				<li><?php echo e(t('commercial.feature_3_benefit_3')); ?></li>
+			</ul>
 		</article>
 	</section>
 
 	<section class="commercial-videos">
 		<div class="commercial-video-card">
-			<a class="commercial-video-placeholder" href="https://www.youtube.com/watch?v=VIDEO_DEMO_1" target="_blank" rel="noopener noreferrer">1</a>
+			<div class="commercial-video-placeholder" aria-label="<?php echo e(t('commercial.video_slot_1', ['fallback' => 'Spazio video 1'])); ?>">1</div>
 			<h3><?php echo e(t('commercial.video_1_title', ['fallback' => 'Vue d ensemble du dashboard'])); ?></h3>
-			<p><?php echo e(t('commercial.video_1_body', ['fallback' => 'Navigation, calendrier, actions rapides et logique de gestion.'])); ?></p>
+			<p><?php echo e(t('commercial.video_1_body', ['fallback' => 'Spazio riservato al primo video YouTube. Il link verra inserito successivamente.'])); ?></p>
 		</div>
 		<div class="commercial-video-card">
-			<a class="commercial-video-placeholder" href="https://www.youtube.com/watch?v=VIDEO_DEMO_2" target="_blank" rel="noopener noreferrer">2</a>
+			<div class="commercial-video-placeholder" aria-label="<?php echo e(t('commercial.video_slot_2', ['fallback' => 'Spazio video 2'])); ?>">2</div>
 			<h3><?php echo e(t('commercial.video_2_title', ['fallback' => 'Presences et signatures'])); ?></h3>
-			<p><?php echo e(t('commercial.video_2_body', ['fallback' => 'Signature tactile, horodatage et validation des presences.'])); ?></p>
+			<p><?php echo e(t('commercial.video_2_body', ['fallback' => 'Spazio riservato al secondo video YouTube. Il link verra inserito successivamente.'])); ?></p>
 		</div>
 		<div class="commercial-video-card">
-			<a class="commercial-video-placeholder" href="https://www.youtube.com/watch?v=VIDEO_DEMO_3" target="_blank" rel="noopener noreferrer">3</a>
+			<div class="commercial-video-placeholder" aria-label="<?php echo e(t('commercial.video_slot_3', ['fallback' => 'Spazio video 3'])); ?>">3</div>
 			<h3><?php echo e(t('commercial.video_3_title', ['fallback' => 'Documents et espace employe'])); ?></h3>
-			<p><?php echo e(t('commercial.video_3_body', ['fallback' => 'Envoi de documents, inbox, messages et consultation mobile.'])); ?></p>
+			<p><?php echo e(t('commercial.video_3_body', ['fallback' => 'Spazio riservato al terzo video YouTube. Il link verra inserito successivamente.'])); ?></p>
 		</div>
 	</section>
 
-	<section class="commercial-grid">
-		<article class="commercial-card commercial-sell-card is-highlighted">
-			<h2><?php echo e(t('commercial.future_vision_title', ['fallback' => 'Future vision of the suite'])); ?></h2>
-			<p><?php echo e(t('commercial.future_vision_body', ['fallback' => 'StaffEase Pro and HotelEase Pro are designed to grow into a connected application suite.'])); ?></p>
-		</article>
+	<section class="commercial-media-placeholder">
+		<h2><?php echo e(t('commercial.media_title', ['fallback' => 'Spazio immagini e demo future'])); ?></h2>
+		<p><?php echo e(t('commercial.media_body', ['fallback' => 'Questa sezione resta disponibile per aggiungere nuove immagini, mockup o video di prodotto.'])); ?></p>
+		<div class="commercial-image-slot">Image / Video Slot</div>
 	</section>
 
 	<section class="commercial-cta">

@@ -11,6 +11,14 @@ html, body {
     overflow: hidden;
 }
 
+body.route-public {
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-bottom: 62px;
+    box-sizing: border-box;
+}
+
 body {
     background: #06142b;
     font-family: var(--font-primary);
