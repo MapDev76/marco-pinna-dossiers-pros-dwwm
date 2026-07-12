@@ -109,6 +109,17 @@ function appCurrentUrl(array $overrides = []): string
     $route = appRouteFromRequest();
     unset($query['route']);
 
+    // Ignore tracking and provider-specific params in canonical URLs.
+    $ignoredParams = ['i', 'fbclid', 'gclid', 'dclid', 'msclkid'];
+    foreach ($ignoredParams as $param) {
+        unset($query[$param]);
+    }
+    foreach (array_keys($query) as $key) {
+        if (str_starts_with((string) $key, 'utm_')) {
+            unset($query[$key]);
+        }
+    }
+
     foreach ($overrides as $key => $value) {
         if ($value === null) {
             unset($query[$key]);

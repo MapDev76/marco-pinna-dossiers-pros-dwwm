@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://staffeasepro.epizy.com/sitemap.xml
+Sitemap: https://staffeasepro.page.gd/sitemap.xml
