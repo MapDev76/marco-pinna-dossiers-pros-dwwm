@@ -16,11 +16,4 @@
         <p><?php echo e(t('contacts.sales_body', ['fallback' => 'Per aziende ricettive, gruppi hospitality e attivazioni multi-sede, e disponibile una presentazione dedicata con roadmap StaffEase Pro, HotelEase Pro e GuestEase Pro.'])); ?></p>
     </section>
 
-    <nav aria-label="Footer links" style="margin-top: 2rem;">
-        <a href="<?php echo e(appUrl('home')); ?>">&larr; <?php echo e(t('legal.back_home')); ?></a>
-        &nbsp;|&nbsp;
-        <a href="<?php echo e(appUrl('legal')); ?>"><?php echo e(t('common.legal_mentions')); ?></a>
-        &nbsp;|&nbsp;
-        <a href="<?php echo e(appUrl('creator')); ?>"><?php echo e(t('common.app_creator', ['fallback' => 'App creator'])); ?></a>
-    </nav>
 </article>

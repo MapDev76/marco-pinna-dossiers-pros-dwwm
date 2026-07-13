@@ -74,12 +74,5 @@ $basePath = $basePath ?? (function () {
 			</p>
 		</aside>
 
-		<nav aria-label="Footer links" style="margin-top: 1.5rem;">
-			<a href="<?php echo e(appUrl('legal')); ?>" style="color: var(--color-accent); text-decoration: underline;"><?php echo e(t('common.legal_mentions')); ?></a>
-			&nbsp;|&nbsp;
-			<a href="<?php echo e(appUrl('contacts')); ?>" style="color: var(--color-accent); text-decoration: underline;"><?php echo e(t('common.contacts', ['fallback' => 'Contacts'])); ?></a>
-			&nbsp;|&nbsp;
-			<a href="<?php echo e(appUrl('creator')); ?>" style="color: var(--color-accent); text-decoration: underline;"><?php echo e(t('common.app_creator', ['fallback' => 'App creator'])); ?></a>
-		</nav>
 	</section>
 </section>
