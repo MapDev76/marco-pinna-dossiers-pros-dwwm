@@ -305,6 +305,21 @@ a.admin-action-link-secondary {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
+.settings-company-identity {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.settings-company-logo-inline {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: #fff;
+}
+
 .settings-summary-label {
     display: block;
     margin-bottom: var(--spacing-xs);
@@ -1552,6 +1567,13 @@ body.route-my-space {
 .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-card-head,
 .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-metric-pill,
 .employee-attendance-modal[data-employee-documents-inbox-modal] .crud-modal-subtitle {
+    color: #1f2937;
+}
+
+.employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .admin-form,
+.employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .crud-form,
+.employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .admin-form label,
+.employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .crud-form label {
     color: #1f2937;
 }
 
@@ -3246,6 +3268,19 @@ body.route-my-space {
     background: linear-gradient(180deg, #ffffff 0%, #faf7ef 100%);
     border: 1px solid rgba(157, 121, 16, 0.16);
     box-shadow: var(--box-shadow-sm);
+}
+
+.dashboard-company-card-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.dashboard-company-card-link:hover .dashboard-company-card,
+.dashboard-company-card-link:focus-visible .dashboard-company-card {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 22px rgba(0, 0, 0, 0.12);
+    border-color: rgba(157, 121, 16, 0.34);
 }
 
 .dashboard-company-card h3 {

@@ -378,6 +378,19 @@ if (is_array($primaryShift)) {
     </div>
 
     <?php if (($currentRole ?? 'employee') === 'employee'): ?>
+    <style>
+        .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section,
+        .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .admin-form,
+        .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .crud-form,
+        .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .admin-form label,
+        .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .crud-form label,
+        .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section h4,
+        .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .employee-card-head,
+        .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .employee-metric-pill,
+        .employee-attendance-modal[data-employee-documents-inbox-modal] .employee-documents-inbox-section .crud-modal-subtitle {
+            color: #1f2937;
+        }
+    </style>
     <div class="employee-attendance-modal" data-employee-documents-inbox-modal hidden>
         <div class="employee-attendance-dialog employee-documents-dialog employee-documents-inbox-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-documents-inbox-title">
             <div class="employee-attendance-dialog-head">
@@ -393,7 +406,6 @@ if (is_array($primaryShift)) {
                 <section class="employee-documents-inbox-section crud-panel">
                     <div class="employee-card-head">
                         <h4><?php echo e(t('crud.documents_overview')); ?></h4>
-                        <span class="employee-metric-pill"><?php echo e(t('crud.attach_send_employees', ['fallback' => 'Share with recipients'])); ?></span>
                     </div>
                     <form method="post" enctype="multipart/form-data" class="admin-form crud-form" id="employee-document-share-form">
                         <input type="hidden" name="action" value="share_document_no_signature">
@@ -421,9 +433,19 @@ if (is_array($primaryShift)) {
                             <?php echo e(t('crud.recipients')); ?>
                             <select name="recipient_ids[]" multiple size="5" data-employee-document-recipient-ids>
                                 <?php foreach (($documentShareRecipients ?? []) as $recipient): ?>
+                                    <?php
+                                        $recipientRole = (string) ($recipient['role'] ?? 'employee');
+                                        $recipientDepartment = trim((string) ($recipient['department_name'] ?? ''));
+                                        $recipientRoleLabel = $recipientRole;
+                                        if ($recipientRole === 'department_manager') {
+                                            $recipientRoleLabel = $recipientDepartment !== ''
+                                                ? ('Manager - ' . $recipientDepartment)
+                                                : 'Manager';
+                                        }
+                                    ?>
                                     <option value="<?php echo (int) ($recipient['id'] ?? 0); ?>">
                                         <?php echo e((string) ($recipient['full_name'] ?? ('User #' . (int) ($recipient['id'] ?? 0)))); ?>
-                                        (<?php echo e((string) ($recipient['role'] ?? 'employee')); ?>)
+                                        (<?php echo e($recipientRoleLabel); ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>

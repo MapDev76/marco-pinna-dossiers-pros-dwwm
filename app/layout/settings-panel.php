@@ -16,6 +16,7 @@ $users = is_array($planner['users'] ?? null) ? $planner['users'] : [];
 $plannerCompany = is_array($planner['company'] ?? null) ? $planner['company'] : [];
 $scopeCompanyId = (int) ($plannerCompany['id'] ?? ($departments[0]['company_id'] ?? ($currentUser['company_id'] ?? 0)));
 $scopeCompanyName = (string) ($plannerCompany['name'] ?? ($currentUser['company_name'] ?? 'StaffEase Pro'));
+$scopeCompanyLogoPath = (string) ($plannerCompany['logo_path'] ?? '');
 $scopeCompanySignatureIp = trim((string) ($plannerCompany['signature_ip'] ?? ''));
 $scopeCompanies = is_array($planner['companies'] ?? null) ? $planner['companies'] : [];
 $visibleUsers = $users;
@@ -139,6 +140,18 @@ if (empty($iconCatalog)) {
 
 $iconUrl = static function (string $icon) use ($basePath): string {
     return $basePath . '/assets/icons/' . rawurlencode($icon);
+};
+
+$resolveCompanyLogoUrl = static function (?string $rawPath) use ($basePath): string {
+    $path = trim((string) $rawPath);
+    if ($path === '') {
+        return '';
+    }
+    if (preg_match('/^(https?:)?\/\//i', $path) || str_starts_with($path, 'data:')) {
+        return $path;
+    }
+
+    return rtrim($basePath, '/') . '/' . ltrim($path, '/');
 };
 
 $isIconAsset = static function (string $icon): bool {
@@ -617,10 +630,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
                 <h2 id="settings-modal-title"><?php echo e(t('settings.title')); ?></h2>
                 <p id="settings-modal-subtitle" class="crud-modal-subtitle"><?php echo e(t('settings.subtitle')); ?></p>
             </div>
+            <?php $scopeCompanyLogoUrl = $resolveCompanyLogoUrl($scopeCompanyLogoPath); ?>
             <div class="settings-summary settings-summary--compact">
                 <div class="settings-summary-card">
                     <span class="settings-summary-label"><?php echo e(t('settings.company')); ?></span>
-                    <strong><?php echo e($scopeCompanyName); ?></strong>
+                    <strong class="settings-company-identity">
+                        <?php if ($scopeCompanyLogoUrl !== ''): ?>
+                            <img src="<?php echo e($scopeCompanyLogoUrl); ?>" alt="" class="settings-company-logo-inline" loading="lazy" decoding="async">
+                        <?php endif; ?>
+                        <span><?php echo e($scopeCompanyName); ?></span>
+                    </strong>
                 </div>
                 <div class="settings-summary-card">
                     <span class="settings-summary-label"><?php echo e(t('settings.departments')); ?></span>
@@ -656,7 +675,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
         </div>
 
         <div class="settings-tabs" role="tablist" aria-label="<?php echo e(t('settings.management_rubrics')); ?>">
-            <?php if ($currentRole === 'super_admin'): ?>
+            <?php if (in_array($currentRole, ['super_admin', 'admin'], true)): ?>
                 <button type="button" class="settings-tab" data-settings-tab="companies"><?php echo e(t('common.companies')); ?></button>
             <?php endif; ?>
             <button type="button" class="settings-tab" data-settings-tab="users"><?php echo e(t('settings.users')); ?></button>
@@ -672,7 +691,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
         </div>
 
         <div class="crud-modal-body settings-modal-body">
-            <?php if ($currentRole === 'super_admin'): ?>
+            <?php if (in_array($currentRole, ['super_admin', 'admin'], true)): ?>
             <section class="crud-panel settings-panel" data-settings-panel="companies" hidden>
                 <div class="settings-panel-head">
                     <div>
@@ -702,7 +721,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <label class="settings-field"><?php echo e(t('crud.zip_code')); ?><input data-field="zip_code" type="text" value=""></label>
                         <label class="settings-field"><?php echo e(t('crud.phone')); ?><input data-field="phone" type="text" value=""></label>
                         <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value=""></label>
-                        <label class="settings-field">Logo path<input data-field="logo_path" type="text" value=""></label>
+                        <label class="settings-field">Logo file<input data-field="logo_file" type="file" accept="image/*"></label>
+                        <label class="settings-field">Logo path (optional)<input data-field="logo_path" type="text" value=""></label>
                         <label class="settings-field">Authorized Wi-Fi IP<input data-field="signature_ip" type="text" value=""></label>
                         <div class="settings-inline-actions">
                             <button type="button" class="admin-action-link settings-company-create"><?php echo e(t('crud.create')); ?></button>
@@ -725,9 +745,15 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <div class="crud-empty-state">No companies available.</div>
                     <?php else: ?>
                         <?php foreach ($scopeCompanies as $company): ?>
+                            <?php $companyLogoUrl = $resolveCompanyLogoUrl((string) ($company['logo_path'] ?? '')); ?>
                             <article class="settings-list-item-wrap" data-company-id="<?php echo (int) ($company['id'] ?? 0); ?>">
                                 <div class="settings-list-row settings-list-cols settings-list-cols-company">
-                                    <strong><?php echo e($company['name'] ?? 'Company'); ?></strong>
+                                    <strong class="settings-company-identity">
+                                        <?php if ($companyLogoUrl !== ''): ?>
+                                            <img src="<?php echo e($companyLogoUrl); ?>" alt="" class="settings-company-logo-inline" loading="lazy" decoding="async">
+                                        <?php endif; ?>
+                                        <span><?php echo e($company['name'] ?? 'Company'); ?></span>
+                                    </strong>
                                     <span><?php echo e($company['type'] ?? 'other'); ?></span>
                                     <span><?php echo e($company['city'] ?? '--'); ?></span>
                                     <span><?php echo e($company['email'] ?? '--'); ?></span>
@@ -756,7 +782,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <label class="settings-field"><?php echo e(t('crud.zip_code')); ?><input data-field="zip_code" type="text" value="<?php echo e($company['zip_code'] ?? ''); ?>"></label>
                                         <label class="settings-field"><?php echo e(t('crud.phone')); ?><input data-field="phone" type="text" value="<?php echo e($company['phone'] ?? ''); ?>"></label>
                                         <label class="settings-field"><?php echo e(t('crud.email')); ?><input data-field="email" type="email" value="<?php echo e($company['email'] ?? ''); ?>"></label>
-                                        <label class="settings-field">Logo path<input data-field="logo_path" type="text" value="<?php echo e($company['logo_path'] ?? ''); ?>"></label>
+                                        <label class="settings-field">Logo file<input data-field="logo_file" type="file" accept="image/*"></label>
+                                        <label class="settings-field">Logo path (optional)<input data-field="logo_path" type="text" value="<?php echo e($company['logo_path'] ?? ''); ?>"></label>
                                         <label class="settings-field">Authorized Wi-Fi IP<input data-field="signature_ip" type="text" value="<?php echo e($company['signature_ip'] ?? ''); ?>"></label>
                                         <div class="settings-inline-actions">
                                             <button type="button" class="admin-action-link settings-company-save"><?php echo e(t('settings.save')); ?></button>

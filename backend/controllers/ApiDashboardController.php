@@ -48,10 +48,10 @@ $resolveAllowedRecipients = static function () use ($pdo, $role, $profile, $user
     if ($role === 'super_admin') {
         // Super admin can share with any active user.
     } elseif ($role === 'admin') {
-        $allowedRecipientsSql .= ' AND d.company_id = :company_id AND u.role <> "super_admin"';
+        $allowedRecipientsSql .= ' AND ((d.company_id = :company_id AND u.role IN ("employee", "department_manager", "admin")) OR u.role = "super_admin")';
         $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
     } elseif ($role === 'department_manager') {
-        $allowedRecipientsSql .= ' AND d.company_id = :company_id AND u.role = "department_manager"';
+        $allowedRecipientsSql .= ' AND ((d.company_id = :company_id AND u.role IN ("employee", "department_manager", "admin")) OR u.role = "super_admin")';
         $allowedRecipientsParams['company_id'] = (int) ($profile['company_id'] ?? 0);
     } else {
         $allowedRecipientsSql .= ' AND u.role = "employee"';
@@ -586,11 +586,9 @@ if ($action === 'sign_dashboard_document') {
 
     $documentId = (int) ($input['document_id'] ?? 0);
     $signatureData = trim((string) ($input['signature_data'] ?? ''));
-    $signaturePosX = (float) ($input['signature_pos_x'] ?? 86);
-    $signaturePosY = (float) ($input['signature_pos_y'] ?? 84);
+    $signaturePosX = 88.0;
+    $signaturePosY = 92.0;
     $signaturePage = max(1, (int) ($input['signature_page'] ?? 1));
-    $signaturePosX = max(4.0, min(96.0, $signaturePosX));
-    $signaturePosY = max(4.0, min(96.0, $signaturePosY));
 
     if ($documentId <= 0 || $signatureData === '') {
         jsonResponse(['success' => false, 'error' => 'document_id and signature_data are required'], 400);
@@ -687,17 +685,30 @@ if ($action === 'sign_dashboard_document') {
         'INSERT INTO digital_signatures (user_id, signature_type, signature_data)
          VALUES (:user_id, :signature_type, :signature_data)'
     );
-    $updateDocument = $pdo->prepare(
-        'UPDATE documents
-         SET file_blob = :file_blob,
-             file_path = :file_path,
-             file_mime_type = :file_mime_type,
-             status = :status,
-             signed_at = :signed_at,
-             signed_by_user_id = :signed_by_user_id,
-             signed_page = :signed_page
-         WHERE id = :id
-         LIMIT 1'
+    $insertSignedDocument = $pdo->prepare(
+        'INSERT INTO documents (
+            user_id,
+            document_type,
+            file_name,
+            file_path,
+            file_blob,
+            file_mime_type,
+            status,
+            signed_at,
+            signed_by_user_id,
+            signed_page
+         ) VALUES (
+            :user_id,
+            :document_type,
+            :file_name,
+            :file_path,
+            :file_blob,
+            :file_mime_type,
+            :status,
+            :signed_at,
+            :signed_by_user_id,
+            :signed_page
+         )'
     );
 
     $pdo->beginTransaction();
@@ -708,8 +719,21 @@ if ($action === 'sign_dashboard_document') {
             'signature_data' => $signatureData,
         ]);
 
-        $updateDocument->execute([
-            'id' => $documentId,
+        $sourceFileName = trim((string) ($document['file_name'] ?? 'document'));
+        $fileNameBase = pathinfo($sourceFileName, PATHINFO_FILENAME);
+        if ($fileNameBase === '') {
+            $fileNameBase = 'document';
+        }
+        $fileNameExt = pathinfo($sourceFileName, PATHINFO_EXTENSION);
+        $signedFileName = $fileNameBase . '_signed_' . appNow()->format('Ymd_His');
+        if ($fileNameExt !== '') {
+            $signedFileName .= '.' . $fileNameExt;
+        }
+
+        $insertSignedDocument->execute([
+            'user_id' => (int) ($document['user_id'] ?? 0),
+            'document_type' => (string) ($document['document_type'] ?? 'other'),
+            'file_name' => $signedFileName,
             'file_path' => '',
             'file_blob' => $signedBlob,
             'file_mime_type' => $signedMimeType,
@@ -718,6 +742,7 @@ if ($action === 'sign_dashboard_document') {
             'signed_by_user_id' => (int) ($user['id'] ?? 0),
             'signed_page' => $appliedSignaturePage,
         ]);
+        $signedDocumentId = (int) $pdo->lastInsertId();
 
         $pdo->commit();
     } catch (Throwable $e) {
@@ -730,12 +755,12 @@ if ($action === 'sign_dashboard_document') {
     jsonResponse([
         'success' => true,
         'ok' => true,
-        'signed_document_id' => $documentId,
-        'signed_file_name' => (string) ($document['file_name'] ?? 'document'),
+        'signed_document_id' => $signedDocumentId,
+        'signed_file_name' => (string) ($signedFileName ?? ($document['file_name'] ?? 'document')),
         'signed_file_mime_type' => $signedMimeType,
         'signature_page' => $appliedSignaturePage,
         'signed_at' => $signedAt,
-        'download_url' => appUrl('document-download', ['id' => $documentId]),
+        'download_url' => appUrl('document-download', ['id' => $signedDocumentId]),
     ]);
 }
 

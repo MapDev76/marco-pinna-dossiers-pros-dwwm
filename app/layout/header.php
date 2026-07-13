@@ -39,11 +39,16 @@ if (!$isPublicPage && $currentUser !== null) {
         ];
     } else {
         $companyName = t('common.app_name');
+        $companyLogoPath = null;
 
         if (isset($dashboardPlannerData['company']['name'])) {
             $plannerCompanyName = trim((string) $dashboardPlannerData['company']['name']);
             if ($plannerCompanyName !== '') {
                 $companyName = $plannerCompanyName;
+            }
+            $plannerCompanyLogo = trim((string) ($dashboardPlannerData['company']['logo_path'] ?? ''));
+            if ($plannerCompanyLogo !== '') {
+                $companyLogoPath = $plannerCompanyLogo;
             }
         }
 
@@ -51,7 +56,7 @@ if (!$isPublicPage && $currentUser !== null) {
             try {
                 $pdo = getPDO();
                 $statement = $pdo->prepare(
-                    'SELECT c.name AS company_name
+                    'SELECT c.name AS company_name, c.logo_path AS company_logo_path
                      FROM departments d
                      LEFT JOIN companies c ON c.id = d.company_id
                      WHERE d.id = :department_id
@@ -62,8 +67,21 @@ if (!$isPublicPage && $currentUser !== null) {
                 if (!empty($row['company_name'])) {
                     $companyName = (string) $row['company_name'];
                 }
+                if (!empty($row['company_logo_path'])) {
+                    $companyLogoPath = (string) $row['company_logo_path'];
+                }
             } catch (Throwable $e) {
                 $companyName = 'StaffEase Pro';
+            }
+        }
+
+        $companyLogoSrc = null;
+        if (is_string($companyLogoPath) && trim($companyLogoPath) !== '') {
+            $rawLogoPath = trim($companyLogoPath);
+            if (preg_match('/^(https?:)?\/\//i', $rawLogoPath) || str_starts_with($rawLogoPath, 'data:')) {
+                $companyLogoSrc = $rawLogoPath;
+            } else {
+                $companyLogoSrc = rtrim($basePath, '/') . '/' . ltrim($rawLogoPath, '/');
             }
         }
 
@@ -71,6 +89,7 @@ if (!$isPublicPage && $currentUser !== null) {
             'title' => $displayLabel,
             'subtitle' => trim($companyName),
             'subtitle_role' => trim(t('roles.' . (string) $role)),
+            'subtitle_logo_path' => $companyLogoSrc,
         ];
     }
 }
@@ -237,7 +256,12 @@ if (is_array($logoutIcon)) {
                                 </span>
                             <?php endif; ?>
                         </div>
-                        <div class="site-header-subtitle"><?php echo e($headerLeft['subtitle']); ?></div>
+                        <div class="site-header-subtitle-row">
+                            <?php if (!empty($headerLeft['subtitle_logo_path'])): ?>
+                                <img src="<?php echo e((string) $headerLeft['subtitle_logo_path']); ?>" alt="" class="site-company-logo-inline" loading="lazy" decoding="async">
+                            <?php endif; ?>
+                            <div class="site-header-subtitle"><?php echo e($headerLeft['subtitle']); ?></div>
+                        </div>
                         <?php if (!empty($headerLeft['subtitle_role'])): ?>
                             <div class="site-header-subrole"><?php echo e($headerLeft['subtitle_role']); ?></div>
                         <?php endif; ?>

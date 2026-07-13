@@ -22,6 +22,10 @@
 
   function collectPayload(scope) {
     const get = (field) => scope.querySelector(`[data-field="${field}"]`)?.value?.trim() || '';
+    const logoFileInput = scope.querySelector('[data-field="logo_file"]');
+    const logoFile = logoFileInput && logoFileInput.files && logoFileInput.files.length > 0
+      ? logoFileInput.files[0]
+      : null;
     return {
       name: get('name'),
       type: get('type') || 'other',
@@ -31,6 +35,7 @@
       phone: get('phone'),
       email: get('email'),
       logo_path: get('logo_path'),
+      logo_file: logoFile,
       signature_ip: get('signature_ip'),
     };
   }
@@ -43,6 +48,10 @@
           return;
         }
         el.selectedIndex = 0;
+        return;
+      }
+      if (el.type === 'file') {
+        el.value = '';
         return;
       }
       el.value = '';

@@ -43,76 +43,43 @@ function documentSigningBuildStamp(mixed $signatureStamp, int $targetMaxWidth): 
 }
 
 /**
- * Assemble a multi-page Imagick PDF object into a PDF binary via Ghostscript.
+ * Assemble a multi-page Imagick PDF object into a PDF binary via temporary file.
  *
- * Used as a fallback when Imagick cannot write a PDF blob directly (e.g. some
- * ImageMagick builds compiled without PDF write support).
+ * Used as a fallback when writeImagesBlob fails but Imagick can still write
+ * image sequences to disk. This implementation intentionally avoids shell calls.
  *
  * @param mixed $pdfDoc  An Imagick multi-page object.
  * @return string        Raw PDF bytes.
- * @throws RuntimeException when Ghostscript is not available or fails.
+ * @throws RuntimeException when fallback export fails.
  */
-function documentSigningWritePdfViaGhostscript(mixed $pdfDoc): string
+function documentSigningWritePdfViaTempFile(mixed $pdfDoc): string
 {
-    $gsBinary = trim((string) @shell_exec('command -v gs 2>/dev/null'));
-    if ($gsBinary === '') {
-        throw new RuntimeException('Ghostscript binary not available');
-    }
-
     $tempDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'staffease-sign-' . bin2hex(random_bytes(6));
     if (!@mkdir($tempDir, 0777, true) && !is_dir($tempDir)) {
         throw new RuntimeException('Unable to create temporary directory for PDF signing');
     }
 
-    $imagePaths = [];
     $outputPdf = $tempDir . '/signed-output.pdf';
 
     try {
         $pdfForExport = clone $pdfDoc;
         $pdfForExport->setFirstIterator();
-
-        $pageIndex = 0;
-        foreach ($pdfForExport as $pageImage) {
-            $pagePath = $tempDir . '/page-' . str_pad((string) $pageIndex, 3, '0', STR_PAD_LEFT) . '.png';
-            $pageClone = clone $pageImage;
-            $pageClone->setImageFormat('png');
-            $pageClone->writeImage($pagePath);
-            $pageClone->clear();
-            $pageClone->destroy();
-            $imagePaths[] = $pagePath;
-            $pageIndex++;
-        }
-
+        $pdfForExport->setImageFormat('pdf');
+        $pdfForExport->writeImages($outputPdf, true);
         $pdfForExport->clear();
         $pdfForExport->destroy();
 
-        if (empty($imagePaths)) {
-            throw new RuntimeException('No PDF pages rendered for Ghostscript output');
-        }
-
-        $escapedImages = implode(' ', array_map('escapeshellarg', $imagePaths));
-        $command = escapeshellcmd($gsBinary)
-            . ' -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -dAutoRotatePages=/None'
-            . ' -sOutputFile=' . escapeshellarg($outputPdf)
-            . ' ' . $escapedImages . ' 2>&1';
-        @shell_exec($command);
-
         if (!is_file($outputPdf)) {
-            throw new RuntimeException('Ghostscript did not generate a PDF output file');
+            throw new RuntimeException('Temporary PDF export did not generate an output file');
         }
 
         $signedPdf = @file_get_contents($outputPdf);
         if (!is_string($signedPdf) || $signedPdf === '') {
-            throw new RuntimeException('Unable to read Ghostscript PDF output');
+            throw new RuntimeException('Unable to read temporary PDF output');
         }
 
         return $signedPdf;
     } finally {
-        foreach ($imagePaths as $imagePath) {
-            if (is_string($imagePath) && $imagePath !== '' && file_exists($imagePath)) {
-                @unlink($imagePath);
-            }
-        }
         if (file_exists($outputPdf)) {
             @unlink($outputPdf);
         }
@@ -214,7 +181,7 @@ function documentSigningApply(
                 $signedBlob = (string) $pdfDoc->writeImagesBlob();
             } catch (Throwable $writeError) {
                 $pdfDoc->setFirstIterator();
-                $signedBlob = documentSigningWritePdfViaGhostscript($pdfDoc);
+                $signedBlob = documentSigningWritePdfViaTempFile($pdfDoc);
             }
             $signedMimeType = 'application/pdf';
 

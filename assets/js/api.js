@@ -31,6 +31,33 @@
         };
       }
     },
+    postFormData: async function(url, payload){
+      const fd = new FormData();
+      Object.entries(payload || {}).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (value instanceof File) {
+          if (value.size > 0) fd.append(key, value);
+          return;
+        }
+        fd.append(key, String(value));
+      });
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: fd,
+      });
+      const raw = await res.text();
+      try {
+        return JSON.parse(raw || '{}');
+      } catch (_error) {
+        return {
+          success: false,
+          ok: false,
+          status: res.status,
+          error: (raw || '').trim() || 'Server returned a non-JSON response.',
+        };
+      }
+    },
     uploadForm: async function(form){
       const fd = new FormData(form);
       const res = await fetch(form.action, { method: 'POST', body: fd });
@@ -38,8 +65,14 @@
     },
     companies: {
       list(url){ return AppAPI.postJSON(url, { action: 'list' }); },
-      create(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'create' }, payload)); },
-      update(url, payload){ return AppAPI.postJSON(url, Object.assign({ action: 'update' }, payload)); },
+      create(url, payload){
+        const body = Object.assign({ action: 'create' }, payload || {});
+        return (body.logo_file instanceof File) ? AppAPI.postFormData(url, body) : AppAPI.postJSON(url, body);
+      },
+      update(url, payload){
+        const body = Object.assign({ action: 'update' }, payload || {});
+        return (body.logo_file instanceof File) ? AppAPI.postFormData(url, body) : AppAPI.postJSON(url, body);
+      },
       setSignatureIp(url, companyId, ip){ return AppAPI.postJSON(url, { action: 'set_signature_ip', company_id: companyId, ip }); },
       delete(url, id){ return AppAPI.postJSON(url, { action: 'delete', id }); }
     },

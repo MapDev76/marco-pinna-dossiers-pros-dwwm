@@ -116,6 +116,7 @@ try {
         'SELECT u.id,
                 u.role,
                 CONCAT(u.first_name, " ", u.last_name) AS full_name,
+                                d.name AS department_name,
                 d.company_id
          FROM users u
          LEFT JOIN departments d ON d.id = u.department_id
@@ -125,18 +126,19 @@ try {
     $recipientParams = ['current_user_id' => (int) $currentUser['id']];
 
     if ($employeeCompanyId > 0) {
-        $recipientSql .= ' AND d.company_id = :company_id';
+        $recipientSql .= in_array($currentRole, ['admin', 'department_manager'], true)
+            ? ' AND (d.company_id = :company_id OR u.role = "super_admin")'
+            : ' AND d.company_id = :company_id';
         $recipientParams['company_id'] = $employeeCompanyId;
     }
 
     if ($currentRole === 'employee') {
-        $recipientSql .= ' AND (u.role = "admin" OR (u.role = "department_manager" AND u.department_id = :employee_department_id))';
-        $recipientParams['employee_department_id'] = $employeeDepartmentId;
+        $recipientSql .= ' AND (u.role = "admin" OR u.role = "department_manager")';
     } elseif ($currentRole === 'department_manager') {
-        $recipientSql .= ' AND (u.role = "employee" OR (u.role = "department_manager" AND u.department_id <> :manager_department_id))';
+        $recipientSql .= ' AND (u.role IN ("employee", "admin") OR (u.role = "department_manager" AND u.department_id <> :manager_department_id) OR u.role = "super_admin")';
         $recipientParams['manager_department_id'] = $employeeDepartmentId;
     } elseif ($currentRole === 'admin') {
-        $recipientSql .= ' AND u.role = "employee"';
+        $recipientSql .= ' AND (u.role IN ("employee", "department_manager", "admin") OR u.role = "super_admin")';
     }
 
     $recipientSql .= ' ORDER BY FIELD(u.role, "employee", "department_manager", "admin", "super_admin"), full_name ASC';
@@ -531,10 +533,10 @@ $messageRecipients = array_values(array_filter(
             return in_array($role, ['admin', 'department_manager'], true);
         }
         if ($currentRole === 'department_manager') {
-            return in_array($role, ['employee', 'department_manager'], true);
+            return in_array($role, ['employee', 'department_manager', 'admin', 'super_admin'], true);
         }
         if ($currentRole === 'admin') {
-            return $role === 'employee';
+            return in_array($role, ['employee', 'department_manager', 'admin', 'super_admin'], true);
         }
         return in_array($role, ['employee', 'department_manager', 'admin', 'super_admin'], true);
     }
@@ -1368,10 +1370,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'sign_document') {
         $requestId = (int) ($_POST['request_id'] ?? 0);
         $signatureData = trim((string) ($_POST['signature_data'] ?? ''));
-        $signaturePosX = (float) ($_POST['signature_pos_x'] ?? 86);
-        $signaturePosY = (float) ($_POST['signature_pos_y'] ?? 84);
-        $signaturePosX = max(4.0, min(96.0, $signaturePosX));
-        $signaturePosY = max(4.0, min(96.0, $signaturePosY));
+        $signaturePage = max(1, (int) ($_POST['signature_page'] ?? 1));
+        $signaturePosX = 88.0;
+        $signaturePosY = 92.0;
 
         if ($requestId <= 0) {
             $error = t('employee.select_valid_document', ['fallback' => 'Please select a valid document to sign.']);
@@ -1387,6 +1388,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         r.title,
                         r.message,
                         r.document_id,
+                        d.document_type,
                         d.file_name,
                         d.file_path,
                         d.file_blob,
@@ -1454,7 +1456,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $signatureData,
                             $signaturePosX,
                             $signaturePosY,
-                            1,
+                            $signaturePage,
                             $employeeName,
                             $signedAt
                         );
@@ -1468,17 +1470,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'INSERT INTO digital_signatures (user_id, signature_type, signature_data)
                              VALUES (:user_id, :signature_type, :signature_data)'
                         );
-                        $updateSignedDocument = $pdo->prepare(
-                            'UPDATE documents
-                             SET file_blob = :file_blob,
-                                 file_path = :file_path,
-                                 file_mime_type = :file_mime_type,
-                                 status = :status,
-                                 signed_at = :signed_at,
-                                 signed_by_user_id = :signed_by_user_id,
-                                 signed_page = :signed_page
-                             WHERE id = :id
-                             LIMIT 1'
+                        $insertSignedDocument = $pdo->prepare(
+                            'INSERT INTO documents (
+                                user_id,
+                                document_type,
+                                file_name,
+                                file_path,
+                                file_blob,
+                                file_mime_type,
+                                status,
+                                signed_at,
+                                signed_by_user_id,
+                                signed_page
+                             ) VALUES (
+                                :user_id,
+                                :document_type,
+                                :file_name,
+                                :file_path,
+                                :file_blob,
+                                :file_mime_type,
+                                :status,
+                                :signed_at,
+                                :signed_by_user_id,
+                                :signed_page
+                             )'
                         );
                         $updateRequest = $pdo->prepare(
                             'UPDATE requests
@@ -1501,9 +1516,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'signature_data' => $signatureData,
                             ]);
 
-                            $signedDocumentId = (int) ($signatureRequest['document_id'] ?? 0);
-                            $updateSignedDocument->execute([
-                                'id' => $signedDocumentId,
+                            $sourceFileName = trim((string) ($signatureRequest['file_name'] ?? 'document'));
+                            $fileNameBase = pathinfo($sourceFileName, PATHINFO_FILENAME);
+                            if ($fileNameBase === '') {
+                                $fileNameBase = 'document';
+                            }
+                            $fileNameExt = pathinfo($sourceFileName, PATHINFO_EXTENSION);
+                            $signedFileName = $fileNameBase . '_signed_' . appNow()->format('Ymd_His');
+                            if ($fileNameExt !== '') {
+                                $signedFileName .= '.' . $fileNameExt;
+                            }
+
+                            $insertSignedDocument->execute([
+                                'user_id' => (int) ($signatureRequest['sender_id'] ?? $currentUser['id']),
+                                'document_type' => (string) ($signatureRequest['document_type'] ?? 'other'),
+                                'file_name' => $signedFileName,
                                 'file_path' => '',
                                 'file_blob' => $signResult['blob'],
                                 'file_mime_type' => $signResult['mime_type'],
@@ -1512,6 +1539,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'signed_by_user_id' => (int) $currentUser['id'],
                                 'signed_page' => $signResult['page'],
                             ]);
+                            $signedDocumentId = (int) $pdo->lastInsertId();
 
                             $updateRequest->execute([
                                 'status' => 'approved',
@@ -1535,7 +1563,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             $recipientIds = array_values(array_unique(array_filter($recipientIds, static fn (int $id): bool => $id > 0)));
                             $signedNotificationTitle = t('employee.signed_document_received_title', ['fallback' => 'Signed document received']);
-                            $signedNotificationMessage = t('employee.signed_document_received_message', ['fallback' => '{employee} signed "{document}" on {time}.', 'employee' => $employeeName, 'document' => (string) ($signatureRequest['file_name'] ?? 'document'), 'time' => $signedAt]);
+                            $signedNotificationMessage = t('employee.signed_document_received_message', ['fallback' => '{employee} signed "{document}" on {time}.', 'employee' => $employeeName, 'document' => $signedFileName, 'time' => $signedAt]);
 
                             foreach ($recipientIds as $recipientId) {
                                 $insertNotification->execute([

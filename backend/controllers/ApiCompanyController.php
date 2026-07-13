@@ -28,24 +28,103 @@ $raw = file_get_contents('php://input');
 $input = json_decode($raw, true) ?: $_POST;
 $action = $input['action'] ?? ($_GET['action'] ?? 'list');
 
+$resolveAdminCompanyId = static function () use ($pdo, $profile): int {
+    $adminCompanyId = (int) currentUserCompanyId($profile);
+    if ($adminCompanyId > 0) {
+        return $adminCompanyId;
+    }
+
+    $userStmt = $pdo->prepare(
+        'SELECT d.company_id
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         WHERE u.id = :user_id
+         LIMIT 1'
+    );
+    $userStmt->execute(['user_id' => (int) ($profile['id'] ?? 0)]);
+    return (int) ($userStmt->fetchColumn() ?: 0);
+};
+
+$storeUploadedLogo = static function (string $field = 'logo_file'): ?string {
+    $file = $_FILES[$field] ?? null;
+    if (!is_array($file)) {
+        return null;
+    }
+
+    $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($error === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($error !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('Logo upload failed.');
+    }
+
+    $tmpPath = (string) ($file['tmp_name'] ?? '');
+    $fileSize = (int) ($file['size'] ?? 0);
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath) || $fileSize <= 0 || $fileSize > (4 * 1024 * 1024)) {
+        throw new RuntimeException('Invalid logo upload. Max size is 4MB.');
+    }
+
+    $mime = 'application/octet-stream';
+    if (function_exists('finfo_open')) {
+        $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo) {
+            $detected = @finfo_file($finfo, $tmpPath);
+            if (is_string($detected) && $detected !== '') {
+                $mime = strtolower(trim($detected));
+            }
+            @finfo_close($finfo);
+        }
+    }
+
+    $allowed = [
+        'image/png' => 'png',
+        'image/jpeg' => 'jpg',
+        'image/jpg' => 'jpg',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+        'image/svg+xml' => 'svg',
+    ];
+    if (!isset($allowed[$mime])) {
+        throw new RuntimeException('Unsupported logo format. Use PNG, JPG, WEBP, GIF or SVG.');
+    }
+
+    $uploadDir = __DIR__ . '/../../public/uploads/company-logos';
+    if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+        throw new RuntimeException('Unable to create logo upload directory.');
+    }
+
+    $fileName = 'company-logo-' . date('Ymd-His') . '-' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
+    $destination = $uploadDir . '/' . $fileName;
+    if (!@move_uploaded_file($tmpPath, $destination)) {
+        throw new RuntimeException('Unable to store uploaded logo.');
+    }
+
+    return 'uploads/company-logos/' . $fileName;
+};
+
 try {
     switch ($action) {
         case 'list':
-            if (!$isSuperAdmin) {
-                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
-            }
             $rows = $companyModel->directoryWithAdminsAndDepartments();
+            if ($isAdmin && !$isSuperAdmin) {
+                $adminCompanyId = $resolveAdminCompanyId();
+                $rows = array_values(array_filter(
+                    $rows,
+                    static fn (array $row): bool => (int) ($row['id'] ?? 0) === $adminCompanyId
+                ));
+            }
             jsonResponse(['ok' => true, 'companies' => $rows]);
             break;
 
         case 'create':
-            if (!$isSuperAdmin) {
-                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
-            }
             $name = trim((string) ($input['name'] ?? ''));
             if ($name === '') {
                 jsonResponse(['ok' => false, 'error' => 'Name is required'], 400);
             }
+
+            $uploadedLogoPath = $storeUploadedLogo('logo_file');
+            $logoPathInput = trim((string) ($input['logo_path'] ?? ''));
 
             $data = [
                 'name' => $name,
@@ -55,7 +134,7 @@ try {
                 'zip_code' => $input['zip_code'] ?? null,
                 'phone' => $input['phone'] ?? null,
                 'email' => $input['email'] ?? null,
-                'logo_path' => $input['logo_path'] ?? null,
+                'logo_path' => $uploadedLogoPath ?? ($logoPathInput !== '' ? $logoPathInput : null),
                 'signature_ip' => $input['signature_ip'] ?? null,
             ];
 
@@ -78,13 +157,20 @@ try {
             break;
 
         case 'update':
-            if (!$isSuperAdmin) {
-                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
-            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['ok' => false, 'error' => 'Invalid id'], 400);
             }
+
+            if ($isAdmin && !$isSuperAdmin) {
+                $adminCompanyId = $resolveAdminCompanyId();
+                if ($adminCompanyId <= 0 || $id !== $adminCompanyId) {
+                    jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+                }
+            }
+
+            $uploadedLogoPath = $storeUploadedLogo('logo_file');
+            $logoPathInput = trim((string) ($input['logo_path'] ?? ''));
 
             $data = [
                 'name' => $input['name'] ?? '',
@@ -94,7 +180,7 @@ try {
                 'zip_code' => $input['zip_code'] ?? null,
                 'phone' => $input['phone'] ?? null,
                 'email' => $input['email'] ?? null,
-                'logo_path' => $input['logo_path'] ?? null,
+                'logo_path' => $uploadedLogoPath ?? ($logoPathInput !== '' ? $logoPathInput : null),
                 'signature_ip' => $input['signature_ip'] ?? null,
             ];
 
@@ -123,18 +209,7 @@ try {
             }
 
             if ($isAdmin) {
-                $adminCompanyId = (int) currentUserCompanyId($profile);
-                if ($adminCompanyId <= 0) {
-                    $userStmt = $pdo->prepare(
-                        'SELECT d.company_id
-                         FROM users u
-                         LEFT JOIN departments d ON d.id = u.department_id
-                         WHERE u.id = :user_id
-                         LIMIT 1'
-                    );
-                    $userStmt->execute(['user_id' => (int) ($profile['id'] ?? 0)]);
-                    $adminCompanyId = (int) ($userStmt->fetchColumn() ?: 0);
-                }
+                $adminCompanyId = $resolveAdminCompanyId();
 
                 if ($adminCompanyId <= 0 || $companyId !== $adminCompanyId) {
                     jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);

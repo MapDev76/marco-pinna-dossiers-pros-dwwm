@@ -89,6 +89,7 @@ $dashboardPlannerData = [
         'id' => $companyId,
         'name' => $profile['company_name'] ?? ($currentUser['company_name'] ?? ''),
         'type' => $profile['company_type'] ?? ($currentUser['company_type'] ?? ''),
+        'logo_path' => null,
         'signature_ip' => null,
     ],
     'companies' => [],
@@ -151,11 +152,13 @@ if ($role === 'super_admin') {
     if ($plannerCompanyId !== null && $plannerCompanyId > 0) {
         $companyName = '';
         $companyType = '';
+        $companyLogoPath = null;
         $companySignatureIp = null;
         foreach ($allCompanies as $companyRow) {
             if ((int) ($companyRow['id'] ?? 0) === $plannerCompanyId) {
                 $companyName = (string) ($companyRow['name'] ?? '');
                 $companyType = (string) ($companyRow['type'] ?? '');
+                $companyLogoPath = $companyRow['logo_path'] ?? null;
                 $companySignatureIp = $companyRow['signature_ip'] ?? null;
                 break;
             }
@@ -227,6 +230,7 @@ if ($role === 'super_admin') {
             'id' => $plannerCompanyId,
             'name' => $companyName,
             'type' => $companyType,
+            'logo_path' => $companyLogoPath,
             'signature_ip' => $companySignatureIp,
         ];
         $dashboardPlannerData['active_department_id'] = $departmentRows[0]['id'] ?? null;
@@ -361,6 +365,7 @@ if ($role === 'admin' && $companyId !== null) {
         'id' => (int) $companyId,
         'name' => (string) ($adminCompany['name'] ?? ($profile['company_name'] ?? '')),
         'type' => (string) ($adminCompany['type'] ?? ($profile['company_type'] ?? '')),
+        'logo_path' => $adminCompany['logo_path'] ?? null,
         'signature_ip' => $adminCompany['signature_ip'] ?? null,
     ];
     $dashboardPlannerData['companies'] = array_values(array_filter(
@@ -558,6 +563,16 @@ if ($role === 'department_manager' && $departmentId !== null) {
     $dashboardPlannerData['attendances'] = $attendanceStatement->fetchAll();
 }
 
+if (($dashboardPlannerData['company']['logo_path'] ?? null) === null) {
+    $fallbackCompanyId = (int) ($dashboardPlannerData['company']['id'] ?? 0);
+    if ($fallbackCompanyId > 0) {
+        $fallbackCompany = $companyModel->findById($fallbackCompanyId);
+        if ($fallbackCompany) {
+            $dashboardPlannerData['company']['logo_path'] = $fallbackCompany['logo_path'] ?? null;
+        }
+    }
+}
+
 $stats = [
     'users' => $userModel->count(),
     'companies' => $companyModel->count(),
@@ -605,14 +620,14 @@ $resolveDashboardAllowedMessageRecipients = static function () use ($pdo, $role,
         if ($companyScopeId <= 0) {
             return [];
         }
-        $sql .= ' AND d.company_id = :company_id AND u.role <> "super_admin"';
+        $sql .= ' AND (d.company_id = :company_id OR u.role = "super_admin")';
         $params['company_id'] = $companyScopeId;
     } elseif ($role === 'department_manager') {
         $companyScopeId = (int) ($companyId ?? 0);
         if ($companyScopeId <= 0) {
             return [];
         }
-        $sql .= ' AND d.company_id = :company_id';
+        $sql .= ' AND (d.company_id = :company_id OR u.role = "super_admin")';
         $params['company_id'] = $companyScopeId;
     } else {
         return [];
@@ -852,10 +867,10 @@ if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
     ];
 
     if ($role === 'admin') {
-        $recipientSql .= ' AND d.company_id = :company_id AND u.role <> "super_admin"';
+        $recipientSql .= ' AND ((d.company_id = :company_id AND u.role IN ("employee", "department_manager", "admin")) OR u.role = "super_admin")';
         $recipientParams['company_id'] = (int) ($companyId ?? 0);
     } elseif ($role === 'department_manager') {
-        $recipientSql .= ' AND d.company_id = :company_id AND u.role = "department_manager"';
+        $recipientSql .= ' AND ((d.company_id = :company_id AND u.role IN ("employee", "department_manager", "admin")) OR u.role = "super_admin")';
         $recipientParams['company_id'] = (int) ($companyId ?? 0);
     }
 

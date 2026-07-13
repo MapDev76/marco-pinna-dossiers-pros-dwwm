@@ -22,6 +22,21 @@ $requestTypeLabels = [
     'other' => t('common.other', ['fallback' => 'Other']),
     'admin_note' => t('common.admin_note', ['fallback' => 'Admin note']),
 ];
+$basePath = $basePath ?? (function () {
+    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+    return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
+})();
+$resolveCompanyLogoUrl = static function (?string $rawPath) use ($basePath): string {
+    $path = trim((string) $rawPath);
+    if ($path === '') {
+        return '';
+    }
+    if (preg_match('/^(https?:)?\/\//i', $path) || str_starts_with($path, 'data:')) {
+        return $path;
+    }
+
+    return rtrim($basePath, '/') . '/' . ltrim($path, '/');
+};
 
 ?>
 
@@ -58,14 +73,16 @@ $requestTypeLabels = [
                         <?php endif; ?>
 
                         <?php foreach (($moduleRows['company_directory'] ?? []) as $company): ?>
+                            <?php $companyLogoUrl = $resolveCompanyLogoUrl((string) ($company['logo_path'] ?? '')); ?>
+                            <a class="dashboard-company-card-link" href="<?php echo e(appUrl('dashboard', ['settings_company_id' => (int) ($company['id'] ?? 0)])); ?>">
                             <article class="dashboard-company-card">
                                 <div class="dashboard-company-card-head">
                                     <div>
                                         <h3><?php echo e($company['name']); ?></h3>
                                         <p><?php echo e($company['city'] ?? '-'); ?></p>
                                     </div>
-                                    <?php if (!empty($company['logo_path'])): ?>
-                                        <img src="<?php echo e($company['logo_path']); ?>" alt="<?php echo e($company['name']); ?> logo" class="dashboard-company-logo" loading="lazy" decoding="async">
+                                    <?php if ($companyLogoUrl !== ''): ?>
+                                        <img src="<?php echo e($companyLogoUrl); ?>" alt="<?php echo e($company['name']); ?> logo" class="dashboard-company-logo" loading="lazy" decoding="async">
                                     <?php endif; ?>
                                 </div>
 
@@ -79,6 +96,7 @@ $requestTypeLabels = [
                                 <p><strong><?php echo e(t('common.department_heads')); ?>:</strong> <?php echo e(empty($company['heads']) ? t('common.none') : implode(', ', $company['heads'])); ?></p>
                                 <p><strong><?php echo e(t('common.departments')); ?>:</strong> <?php echo e(empty($company['departments']) ? t('common.none') : implode(', ', $company['departments'])); ?></p>
                             </article>
+                            </a>
                         <?php endforeach; ?>
                     </div>
                 </section>
