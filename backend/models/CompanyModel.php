@@ -127,6 +127,12 @@ class CompanyModel
             $payload[$column] = $payload[$column] ?? null;
         }
 
+        // `is_active` is NOT NULL in the schema: default new companies to active
+        // when the caller does not explicitly provide a value.
+        if (in_array('is_active', $columns, true) && !array_key_exists('is_active', $data)) {
+            $payload['is_active'] = 1;
+        }
+
         $statement->execute($payload);
 
         return (int) $this->pdo->lastInsertId();
@@ -163,6 +169,15 @@ class CompanyModel
         foreach ($fields as $field) {
             $payload[$field] = $payload[$field] ?? null;
         }
+
+        // `is_active` is NOT NULL in the schema: if the caller did not explicitly
+        // provide it (e.g. logo-only updates), keep the company's current value
+        // instead of nulling it out, which would violate the NOT NULL constraint.
+        if (in_array('is_active', $fields, true) && !array_key_exists('is_active', $data)) {
+            $current = $this->findById($id);
+            $payload['is_active'] = $current['is_active'] ?? 1;
+        }
+
         $payload['id'] = $id;
         $statement->execute($payload);
     }

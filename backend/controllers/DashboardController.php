@@ -76,8 +76,10 @@ $pageTitle = match ($role) {
 
 $viewFile = __DIR__ . '/../../public/views/admin/dashboard.php';
 
+$isSuperAdminScopedToCompany = $role === 'super_admin' && (int) ($_GET['settings_company_id'] ?? 0) > 0;
+
 $dashboardCalendarToday = date('Y-m-d');
-$dashboardCalendarMode = in_array($role, ['admin', 'department_manager'], true) ? 'week' : 'month';
+$dashboardCalendarMode = (in_array($role, ['admin', 'department_manager'], true) || $isSuperAdminScopedToCompany) ? 'week' : 'month';
 $dashboardCalendarScopeLabel = '';
 $dashboardCalendarEvents = [];
 $dashboardPlannerData = [

@@ -14,14 +14,9 @@ $creatorPhoneHref = '+33744907701';
         <img src="<?php echo e($basePath); ?>/assets/images/MapDev76.jpg" alt="<?php echo e(t('creator.title', ['fallback' => 'App creator'])); ?>" class="creator-photo" loading="lazy" decoding="async">
         <div>
             <p class="commercial-eyebrow"><?php echo e(t('common.app_creator')); ?></p>
-            <h1 id="creator-title"><?php echo e(t('creator.title', ['fallback' => 'App creator'])); ?></h1>
-            <p><?php echo e(t('creator.subtitle', ['fallback' => 'This page describes the creator of StaffEase Pro.'])); ?></p>
             <p class="creator-email-line"><strong><?php echo e($creatorName); ?></strong></p>
         </div>
     </section>
-
-    <h2><?php echo e(t('creator.section_title', ['fallback' => 'About the creator'])); ?></h2>
-    <p><?php echo e(t('creator.section_body', ['fallback' => 'StaffEase Pro was ideated and developed by the creator of this application.'])); ?></p>
 
     <h2><?php echo e(t('creator.vision_title', ['fallback' => 'Visione prodotto'])); ?></h2>
     <p><?php echo e(t('creator.vision_body', ['fallback' => 'L obiettivo e costruire una suite moderna e leggera che unisca gestione del personale, operations e comunicazione in un flusso semplice e scalabile per aziende piccole e grandi.'])); ?></p>
@@ -46,9 +41,5 @@ $creatorPhoneHref = '+33744907701';
         </p>
         <p class="creator-email-note"><?php echo e(t('common.creator_contact_email_note', ['fallback' => 'Support, demo, business account creation and commercial information.'])); ?></p>
     </section>
-
-    <p class="creator-cta-note">
-        <?php echo e(t('commercial.cta_body', ['fallback' => 'If you want to free your company from large and expensive software, contact me and let us build the solution that fits your organization.'])); ?>
-    </p>
 
 </article>

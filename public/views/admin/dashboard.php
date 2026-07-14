@@ -112,14 +112,14 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                         <div class="dashboard-company-card-head">
                             <div>
                                 <h3><?php echo e($plannerCompanyName !== '' ? $plannerCompanyName : t('common.company', ['fallback' => 'Company'])); ?></h3>
-                                <p><?php echo e(t('common.company_dashboard', ['fallback' => 'Company dashboard'])); ?></p>
+                                <p><?php echo e(t('common.dashboard')); ?></p>
                             </div>
                             <?php if ($plannerCompanyLogoUrl !== ''): ?>
                                 <img src="<?php echo e($plannerCompanyLogoUrl); ?>" alt="<?php echo e($plannerCompanyName !== '' ? $plannerCompanyName : 'Company'); ?> logo" class="dashboard-company-logo" loading="lazy" decoding="async">
                             <?php endif; ?>
                         </div>
                         <div class="settings-inline-actions" style="margin-top: 0.55rem;">
-                            <a class="admin-action-link admin-action-link-secondary" href="<?php echo e(appUrl('dashboard')); ?>"><?php echo e(t('common.back', ['fallback' => 'Back'])); ?></a>
+                            <a class="admin-action-link admin-action-link-secondary" href="<?php echo e(appUrl('dashboard')); ?>"><?php echo e(t('common.back_to_dashboard')); ?></a>
                         </div>
                     </section>
                 <?php endif; ?>

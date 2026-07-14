@@ -1,8 +1,5 @@
 <?php $currentUser = currentUser(); ?>
 <article class="legal-page" aria-labelledby="contacts-title">
-    <h1 id="contacts-title"><?php echo e(t('contacts.title', ['fallback' => 'Contacts'])); ?></h1>
-    <p><?php echo e(t('contacts.subtitle', ['fallback' => 'For support and information, use the references below.'])); ?></p>
-
     <section class="commercial-card creator-contact-card">
         <h2><?php echo e(t('contacts.direct_title', ['fallback' => 'Contatto diretto'])); ?></h2>
         <p><?php echo e(t('contacts.direct_body', ['fallback' => 'Per assistenza tecnica, demo commerciale e attivazione account, usa i contatti ufficiali qui sotto.'])); ?></p>

@@ -34,7 +34,12 @@ $requiresApiClient = ($isDashboardRoute || $isMySpaceRoute) && isLoggedIn();
 $hasFlashUi = $flashSuccess !== null || $flashError !== null || (($loginError ?? null) !== null);
 $useFullAppStyles = $isDashboardRoute || $isMySpaceRoute;
 // Compact dashboard mode: removes padding and some UI elements for admins/managers to show more content.
-$isCompactDashboard = $isDashboardRoute && isLoggedIn() && in_array((currentUser()['role'] ?? ''), ['admin', 'department_manager'], true);
+// Super admins get the same compact, admin-like view once they drill into a specific company (settings_company_id).
+$isSuperAdminScopedToCompany = $isDashboardRoute && isLoggedIn()
+        && (string) (currentUser()['role'] ?? '') === 'super_admin'
+        && (int) ($_GET['settings_company_id'] ?? 0) > 0;
+$isCompactDashboard = $isDashboardRoute && isLoggedIn()
+        && (in_array((currentUser()['role'] ?? ''), ['admin', 'department_manager'], true) || $isSuperAdminScopedToCompany);
 $bodyClasses = [];
 if ($isDashboardRoute) {
         $bodyClasses[] = 'route-dashboard';
@@ -182,7 +187,7 @@ require __DIR__ . '/app/layout/header.php';
 $currentRole = (string) (currentUser()['role'] ?? '');
 $hasScopedCompanyContext = isset($_GET['settings_company_id']) && (int) $_GET['settings_company_id'] > 0;
 ?>
-<?php if ($currentRole !== 'super_admin' || ($currentRole === 'super_admin' && $hasScopedCompanyContext)): ?>
+<?php if ($currentRole !== 'super_admin' || $currentRole === 'super_admin'): ?>
 <?php require __DIR__ . '/app/layout/sidebar.php'; ?>
 <?php endif; ?>
 <?php require __DIR__ . '/app/layout/settings-panel.php'; ?>
