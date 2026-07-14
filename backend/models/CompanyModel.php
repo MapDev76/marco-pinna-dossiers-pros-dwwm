@@ -112,6 +112,10 @@ class CompanyModel
             $columns[] = 'signature_ip';
         }
 
+        if ($this->hasCompanyColumn('is_active')) {
+            $columns[] = 'is_active';
+        }
+
         $placeholders = array_map(static fn (string $column): string => ':' . $column, $columns);
         $statement = $this->pdo->prepare(
             'INSERT INTO companies (' . implode(', ', $columns) . ')
@@ -143,6 +147,10 @@ class CompanyModel
 
         if ($this->hasCompanyColumn('signature_ip')) {
             $fields[] = 'signature_ip';
+        }
+
+        if ($this->hasCompanyColumn('is_active')) {
+            $fields[] = 'is_active';
         }
 
         $assignments = array_map(static fn (string $column): string => $column . ' = :' . $column, $fields);
@@ -209,6 +217,10 @@ class CompanyModel
             $selectParts[] = 'c.signature_ip';
         }
 
+        if ($this->hasCompanyColumn('is_active')) {
+            $selectParts[] = 'c.is_active';
+        }
+
         $groupByParts = ['c.id', 'c.name', 'c.city'];
 
         if ($this->hasCompanyColumn('logo_path')) {
@@ -217,6 +229,10 @@ class CompanyModel
 
         if ($this->hasCompanyColumn('signature_ip')) {
             $groupByParts[] = 'c.signature_ip';
+        }
+
+        if ($this->hasCompanyColumn('is_active')) {
+            $groupByParts[] = 'c.is_active';
         }
 
         $joins = [
@@ -244,6 +260,7 @@ class CompanyModel
         foreach ($rows as &$row) {
             $row['logo_path'] = $row['logo_path'] ?? null;
             $row['signature_ip'] = $row['signature_ip'] ?? null;
+            $row['is_active'] = array_key_exists('is_active', $row) ? (int) $row['is_active'] : 1;
             $row['admins'] = empty($row['admins']) ? [] : array_values(array_filter(explode('||', (string) $row['admins'])));
             $row['departments'] = empty($row['departments']) ? [] : array_values(array_filter(explode('||', (string) $row['departments'])));
             $row['heads'] = empty($row['heads']) ? [] : array_values(array_filter(explode('||', (string) $row['heads'])));

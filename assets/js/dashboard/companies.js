@@ -160,6 +160,36 @@
     }
   }
 
+  async function toggleCompanyActive(card, button) {
+    const id = parseInt(card?.dataset.companyId || '0', 10) || 0;
+    if (!id || !button) return;
+
+    const currentActive = Number(button.getAttribute('data-company-active') || '1') === 1;
+    const nextActive = currentActive ? 0 : 1;
+
+    try {
+      const res = await AppAPI.postJSON(apiUrl, {
+        action: 'set_active',
+        company_id: id,
+        is_active: nextActive,
+      });
+      if (!res?.ok) {
+        notifyError('Status update failed: ' + (res?.error || 'unknown'));
+        return;
+      }
+
+      if (feedback?.reloadSettingsTabWithSuccess) {
+        feedback.reloadSettingsTabWithSuccess('companies', 'Done', nextActive === 1 ? 'Company activated successfully.' : 'Company deactivated successfully.');
+      } else {
+        notifySuccess(nextActive === 1 ? 'Company activated successfully.' : 'Company deactivated successfully.');
+        location.reload();
+      }
+    } catch (error) {
+      notifyError('Error updating company status.');
+      console.error(error);
+    }
+  }
+
   panel.addEventListener('click', (event) => {
     const createButton = event.target.closest('.settings-company-create');
     if (createButton) {
@@ -207,6 +237,13 @@
     if (deleteButton) {
       const card = getCard(deleteButton);
       if (card) deleteCompany(card);
+      return;
+    }
+
+    const toggleButton = event.target.closest('.settings-company-toggle');
+    if (toggleButton) {
+      const card = getCard(toggleButton);
+      if (card) toggleCompanyActive(card, toggleButton);
     }
   });
 })();

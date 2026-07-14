@@ -738,6 +738,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <span><?php echo e(t('crud.city')); ?></span>
                         <span><?php echo e(t('crud.email')); ?></span>
                         <span><?php echo e(t('crud.phone')); ?></span>
+                        <span><?php echo e(t('common.status')); ?></span>
                         <span>Action</span>
                     </div>
 
@@ -758,7 +759,15 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <span><?php echo e($company['city'] ?? '--'); ?></span>
                                     <span><?php echo e($company['email'] ?? '--'); ?></span>
                                     <span><?php echo e($company['phone'] ?? '--'); ?></span>
+                                    <span><?php echo ((int) ($company['is_active'] ?? 1) === 1) ? 'Active' : 'Inactive'; ?></span>
                                     <div class="settings-inline-actions">
+                                        <?php if ($currentRole === 'super_admin'): ?>
+                                            <button type="button"
+                                                    class="admin-action-link admin-action-link-secondary settings-company-toggle"
+                                                    data-company-active="<?php echo (int) ($company['is_active'] ?? 1); ?>">
+                                                <?php echo ((int) ($company['is_active'] ?? 1) === 1) ? 'Deactivate' : 'Activate'; ?>
+                                            </button>
+                                        <?php endif; ?>
                                         <button type="button" class="admin-action-link admin-action-link-secondary settings-company-edit"><?php echo e(t('settings.edit')); ?></button>
                                         <button type="button" class="admin-action-link admin-action-link-secondary settings-action-icon-danger settings-company-delete"><?php echo e(t('schedule.delete')); ?></button>
                                     </div>

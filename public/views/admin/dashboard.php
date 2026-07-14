@@ -4,6 +4,7 @@ $currentUser = currentUser();
 $role = $currentUser['role'] ?? 'employee';
 $profile = $profile ?? [];
 $moduleRows = $moduleRows ?? [];
+$dashboardPlannerData = isset($dashboardPlannerData) && is_array($dashboardPlannerData) ? $dashboardPlannerData : [];
 $roleLabels = [
     'super_admin' => t('roles.super_admin'),
     'admin' => t('roles.admin'),
@@ -37,6 +38,11 @@ $resolveCompanyLogoUrl = static function (?string $rawPath) use ($basePath): str
 
     return rtrim($basePath, '/') . '/' . ltrim($path, '/');
 };
+$selectedCompanyId = (int) ($_GET['settings_company_id'] ?? 0);
+$isSuperAdminCompanyDashboard = ($role === 'super_admin' && $selectedCompanyId > 0);
+$plannerCompany = is_array($dashboardPlannerData['company'] ?? null) ? $dashboardPlannerData['company'] : [];
+$plannerCompanyName = trim((string) ($plannerCompany['name'] ?? ''));
+$plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_path'] ?? ''));
 
 ?>
 
@@ -49,7 +55,7 @@ $resolveCompanyLogoUrl = static function (?string $rawPath) use ($basePath): str
     </header>
 
         <section class="dashboard-main" aria-label="<?php echo e(t('common.quick_actions')); ?>">
-            <?php if ($role === 'super_admin'): ?>
+            <?php if ($role === 'super_admin' && !$isSuperAdminCompanyDashboard): ?>
                 <div class="admin-grid">
                     <section class="admin-card admin-stat">
                         <span class="admin-stat-value"><?php echo e($stats['users'] ?? 0); ?></span>
@@ -100,7 +106,23 @@ $resolveCompanyLogoUrl = static function (?string $rawPath) use ($basePath): str
                         <?php endforeach; ?>
                     </div>
                 </section>
-            <?php elseif ($role === 'admin' || $role === 'department_manager'): ?>
+            <?php elseif ($role === 'admin' || $role === 'department_manager' || $isSuperAdminCompanyDashboard): ?>
+                <?php if ($isSuperAdminCompanyDashboard): ?>
+                    <section class="admin-card dashboard-directory-card">
+                        <div class="dashboard-company-card-head">
+                            <div>
+                                <h3><?php echo e($plannerCompanyName !== '' ? $plannerCompanyName : t('common.company', ['fallback' => 'Company'])); ?></h3>
+                                <p><?php echo e(t('common.company_dashboard', ['fallback' => 'Company dashboard'])); ?></p>
+                            </div>
+                            <?php if ($plannerCompanyLogoUrl !== ''): ?>
+                                <img src="<?php echo e($plannerCompanyLogoUrl); ?>" alt="<?php echo e($plannerCompanyName !== '' ? $plannerCompanyName : 'Company'); ?> logo" class="dashboard-company-logo" loading="lazy" decoding="async">
+                            <?php endif; ?>
+                        </div>
+                        <div class="settings-inline-actions" style="margin-top: 0.55rem;">
+                            <a class="admin-action-link admin-action-link-secondary" href="<?php echo e(appUrl('dashboard')); ?>"><?php echo e(t('common.back', ['fallback' => 'Back'])); ?></a>
+                        </div>
+                    </section>
+                <?php endif; ?>
                 <section class="admin-card dashboard-calendar-shell">
                     <div class="dashboard-calendar-headline">
                         <div class="dashboard-calendar-headline-main">

@@ -123,9 +123,7 @@ $publicUiVersion = (string) (@filemtime($publicUiFile) ?: time());
 $uiHintsFile = __DIR__ . '/assets/js/ui-hints.js';
 $uiHintsVersion = (string) (@filemtime($uiHintsFile) ?: time());
 
-$dashboardBundleFile = __DIR__ . '/assets/js/dashboard.bundle.min.js';
-$hasDashboardBundle = is_file($dashboardBundleFile);
-$dashboardBundleVersion = (string) (@filemtime($dashboardBundleFile) ?: time());
+
 
 $employeeSpaceFile = __DIR__ . '/assets/js/employee-space.js';
 $employeeSpaceVersion = (string) (@filemtime($employeeSpaceFile) ?: time());
@@ -146,9 +144,6 @@ $employeeSpaceVersion = (string) (@filemtime($employeeSpaceFile) ?: time());
         <link rel="icon" href="<?php echo $basePath; ?>/assets/images/faviconStaffeasePro.jpg" type="image/jpeg">
                 <link rel="preload" href="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.png" as="image" fetchpriority="high">
                 <link rel="preload" href="<?php echo $basePath; ?>/assets/css/<?php echo e($stylesheetFile); ?>?v=<?php echo e($cssVersion); ?>" as="style">
-                <?php if ($isDashboardRoute && $hasDashboardBundle): ?>
-                <link rel="preload" href="<?php echo $basePath; ?>/assets/js/dashboard.bundle.min.js?v=<?php echo e($dashboardBundleVersion); ?>" as="script">
-                <?php endif; ?>
         <link rel="stylesheet" href="<?php echo $basePath; ?>/assets/css/<?php echo e($stylesheetFile); ?>?v=<?php echo e($cssVersion); ?>">
                 <?php if ($hasFlashUi): ?>
                 <script defer src="<?php echo $basePath; ?>/assets/js/flash.js?v=<?php echo filemtime(__DIR__ . '/assets/js/flash.js'); ?>"></script>
@@ -183,7 +178,11 @@ require __DIR__ . '/app/layout/header.php';
 ?>
 
 <?php if ($isDashboardRoute && isLoggedIn()): ?>
-<?php if ((currentUser()['role'] ?? '') !== 'super_admin'): ?>
+<?php
+$currentRole = (string) (currentUser()['role'] ?? '');
+$hasScopedCompanyContext = isset($_GET['settings_company_id']) && (int) $_GET['settings_company_id'] > 0;
+?>
+<?php if ($currentRole !== 'super_admin' || ($currentRole === 'super_admin' && $hasScopedCompanyContext)): ?>
 <?php require __DIR__ . '/app/layout/sidebar.php'; ?>
 <?php endif; ?>
 <?php require __DIR__ . '/app/layout/settings-panel.php'; ?>
@@ -264,9 +263,6 @@ require $viewFile;
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
         window.DashboardPlannerData = <?php echo json_encode($dashboardPlannerData ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
-<?php if ($hasDashboardBundle): ?>
-<script defer src="<?php echo $basePath; ?>/assets/js/dashboard.bundle.min.js?v=<?php echo e($dashboardBundleVersion); ?>"></script>
-<?php else: ?>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/sidebar.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/sidebar.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/navigator.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/navigator.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/calendar-renderer.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/calendar-renderer.js'); ?>"></script>
@@ -280,7 +276,6 @@ require $viewFile;
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/companies.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/companies.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/attendances.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/attendances.js'); ?>"></script>
 <script defer src="<?php echo $basePath; ?>/assets/js/dashboard/print.js?v=<?php echo filemtime(__DIR__ . '/assets/js/dashboard/print.js'); ?>"></script>
-<?php endif; ?>
 <?php endif; ?>
 
 <?php if ($isMySpaceRoute && isLoggedIn()): ?>

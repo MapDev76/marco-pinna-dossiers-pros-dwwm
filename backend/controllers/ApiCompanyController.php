@@ -22,6 +22,29 @@ if (!$isSuperAdmin && !$isAdmin) {
 }
 
 $pdo = getPDO();
+
+try {
+    $logoColStmt = $pdo->query("SHOW COLUMNS FROM companies LIKE 'logo_path'");
+    $hasLogoColumn = (bool) $logoColStmt->fetch();
+    if (!$hasLogoColumn) {
+        $pdo->exec("ALTER TABLE companies ADD COLUMN logo_path VARCHAR(255) NULL AFTER email");
+    }
+
+    $signatureColStmt = $pdo->query("SHOW COLUMNS FROM companies LIKE 'signature_ip'");
+    $hasSignatureColumn = (bool) $signatureColStmt->fetch();
+    if (!$hasSignatureColumn) {
+        $pdo->exec("ALTER TABLE companies ADD COLUMN signature_ip VARCHAR(45) NULL AFTER logo_path");
+    }
+
+    $activeColStmt = $pdo->query("SHOW COLUMNS FROM companies LIKE 'is_active'");
+    $hasActiveColumn = (bool) $activeColStmt->fetch();
+    if (!$hasActiveColumn) {
+        $pdo->exec("ALTER TABLE companies ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER signature_ip");
+    }
+} catch (Throwable $e) {
+    // Keep API usable even if ALTER is not allowed in current environment.
+}
+
 $companyModel = new CompanyModel($pdo);
 
 $raw = file_get_contents('php://input');
@@ -61,7 +84,7 @@ $storeUploadedLogo = static function (string $field = 'logo_file'): ?string {
 
     $tmpPath = (string) ($file['tmp_name'] ?? '');
     $fileSize = (int) ($file['size'] ?? 0);
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath) || $fileSize <= 0 || $fileSize > (4 * 1024 * 1024)) {
+    if ($tmpPath === '' || (!is_uploaded_file($tmpPath) && !is_file($tmpPath)) || $fileSize <= 0 || $fileSize > (4 * 1024 * 1024)) {
         throw new RuntimeException('Invalid logo upload. Max size is 4MB.');
     }
 
@@ -97,7 +120,11 @@ $storeUploadedLogo = static function (string $field = 'logo_file'): ?string {
     $fileName = 'company-logo-' . date('Ymd-His') . '-' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
     $destination = $uploadDir . '/' . $fileName;
     if (!@move_uploaded_file($tmpPath, $destination)) {
-        throw new RuntimeException('Unable to store uploaded logo.');
+        if (!@rename($tmpPath, $destination)) {
+            if (!@copy($tmpPath, $destination)) {
+                throw new RuntimeException('Unable to store uploaded logo.');
+            }
+        }
     }
 
     return 'uploads/company-logos/' . $fileName;
@@ -227,6 +254,26 @@ try {
             $stmt->execute(['ip' => $ip ?: null, 'id' => $companyId]);
 
             jsonResponse(['ok' => true]);
+            break;
+
+        case 'set_active':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+            }
+
+            $companyId = (int) ($input['company_id'] ?? 0);
+            $isActive = (int) ((int) ($input['is_active'] ?? 1) > 0 ? 1 : 0);
+            if ($companyId <= 0) {
+                jsonResponse(['ok' => false, 'error' => 'Invalid company_id'], 400);
+            }
+
+            $stmt = $pdo->prepare('UPDATE companies SET is_active = :is_active WHERE id = :id');
+            $stmt->execute([
+                'is_active' => $isActive,
+                'id' => $companyId,
+            ]);
+
+            jsonResponse(['ok' => true, 'is_active' => $isActive]);
             break;
 
         default:

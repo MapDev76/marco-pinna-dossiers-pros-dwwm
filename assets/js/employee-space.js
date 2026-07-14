@@ -166,6 +166,39 @@
     emptySignatureMessage: 'Please draw your signature before confirming attendance.',
   });
 
+  initSignatureModal({
+    modalSelector: '[data-employee-document-sign-modal]',
+    formSelector: '[data-employee-document-sign-form]',
+    openButtonsSelector: '[data-employee-document-sign-open]',
+    closeButtonsSelector: '[data-employee-document-sign-close]',
+    isOpenAllowed: () => true,
+    onBeforeOpen: (triggerButton, form) => {
+      const docsModal = document.querySelector('[data-employee-documents-inbox-modal]');
+      if (docsModal && !docsModal.hidden) {
+        docsModal.setAttribute('data-was-open-before-sign', '1');
+        docsModal.hidden = true;
+      }
+      const requestInput = form.querySelector('[data-employee-document-sign-request-id]');
+      if (!requestInput || !triggerButton) {
+        return;
+      }
+      const requestId = String(triggerButton.getAttribute('data-employee-document-sign-request-id') || '').trim();
+      requestInput.value = requestId;
+    },
+    onAfterClose: (form) => {
+      const requestInput = form.querySelector('[data-employee-document-sign-request-id]');
+      if (requestInput) {
+        requestInput.value = '';
+      }
+      const docsModal = document.querySelector('[data-employee-documents-inbox-modal]');
+      if (docsModal && docsModal.getAttribute('data-was-open-before-sign') === '1') {
+        docsModal.hidden = false;
+        docsModal.removeAttribute('data-was-open-before-sign');
+      }
+    },
+    emptySignatureMessage: 'Please draw your signature before signing this document.',
+  });
+
   const employeeDocumentsModal = document.querySelector('[data-employee-documents-inbox-modal]');
   if (employeeDocumentsModal) {
     if (employeeDocumentsModal.parentElement !== document.body) {
@@ -223,12 +256,6 @@
   }
 
   const employeeDocumentShareForm = document.querySelector('#employee-document-share-form');
-  const employeeDocumentScope = employeeDocumentShareForm
-    ? employeeDocumentShareForm.querySelector('[data-employee-document-recipient-scope]')
-    : null;
-  const employeeDocumentRecipientWrap = employeeDocumentShareForm
-    ? employeeDocumentShareForm.querySelector('[data-employee-document-recipient-wrap]')
-    : null;
   const employeeDocumentRecipients = employeeDocumentShareForm
     ? employeeDocumentShareForm.querySelector('[data-employee-document-recipient-ids]')
     : null;
@@ -238,64 +265,22 @@
   const employeeDocumentExistingInput = employeeDocumentShareForm
     ? employeeDocumentShareForm.querySelector('[data-employee-document-existing-id]')
     : null;
-  const employeeDocumentShareExistingButton = employeeDocumentShareForm
-    ? employeeDocumentShareForm.querySelector('[data-employee-document-share-existing-submit]')
-    : null;
-  const employeeDocumentShareNow = employeeDocumentShareForm
-    ? employeeDocumentShareForm.querySelector('[data-employee-document-share-now]')
-    : null;
-  const employeeDocumentRequireSignature = employeeDocumentShareForm
-    ? employeeDocumentShareForm.querySelector('[data-employee-document-require-signature]')
-    : null;
   const employeeDocumentShareSubmit = employeeDocumentShareForm
     ? employeeDocumentShareForm.querySelector('[data-employee-document-share-submit]')
     : null;
 
-  const syncEmployeeDocumentRecipientMode = () => {
-    if (!employeeDocumentScope || !employeeDocumentRecipients || !employeeDocumentRecipientWrap) {
-      return;
-    }
-
-    const shareNow = !employeeDocumentShareNow || !!employeeDocumentShareNow.checked;
-    const isAll = String(employeeDocumentScope.value || 'selected') === 'all';
-    const hideRecipients = !shareNow || isAll;
-    employeeDocumentScope.disabled = !shareNow;
-    employeeDocumentRecipients.disabled = hideRecipients;
-    employeeDocumentRecipientWrap.classList.toggle('is-hidden', hideRecipients);
-    if (hideRecipients) {
-      Array.from(employeeDocumentRecipients.options || []).forEach((option) => {
-        option.selected = false;
-      });
-    }
-
-    if (employeeDocumentRequireSignature) {
-      employeeDocumentRequireSignature.disabled = !shareNow;
-      if (!shareNow) {
-        employeeDocumentRequireSignature.checked = false;
-      }
-    }
-
-    if (employeeDocumentShareSubmit) {
-      const shareLabel = String(employeeDocumentShareSubmit.getAttribute('data-label-share-now') || 'Share document').trim();
-      const draftLabel = String(employeeDocumentShareSubmit.getAttribute('data-label-save-draft') || 'Save document draft').trim();
-      employeeDocumentShareSubmit.textContent = shareNow ? shareLabel : draftLabel;
-    }
-
-    if (employeeDocumentShareExistingButton) {
-      employeeDocumentShareExistingButton.disabled = !shareNow;
-    }
-  };
-
   const shareExistingButtons = Array.from(document.querySelectorAll('[data-employee-document-share-existing-id]'));
 
-  if (employeeDocumentScope) {
-    employeeDocumentScope.addEventListener('change', syncEmployeeDocumentRecipientMode);
-    syncEmployeeDocumentRecipientMode();
+  if (employeeDocumentExistingInput && employeeDocumentExistingInput.value) {
+    const preselectedId = String(employeeDocumentExistingInput.value).trim();
+    const preselectedButton = shareExistingButtons.find((button) => String(button.getAttribute('data-employee-document-share-existing-id') || '').trim() === preselectedId);
+    if (preselectedButton) {
+      preselectedButton.classList.add('is-active');
+    }
   }
 
-  if (employeeDocumentShareNow) {
-    employeeDocumentShareNow.addEventListener('change', syncEmployeeDocumentRecipientMode);
-    syncEmployeeDocumentRecipientMode();
+  if (employeeDocumentShareSubmit) {
+    employeeDocumentShareSubmit.textContent = 'Condividi documento';
   }
 
   shareExistingButtons.forEach((button) => {
@@ -318,6 +303,13 @@
       employeeDocumentExistingInput.value = docId;
       if (employeeDocumentFileInput) {
         employeeDocumentFileInput.value = '';
+      }
+      if (employeeDocumentsModal && employeeDocumentsModal.hidden) {
+        employeeDocumentsModal.hidden = false;
+      }
+      const formTop = employeeDocumentShareForm ? employeeDocumentShareForm.offsetTop : 0;
+      if (employeeDocumentsModal) {
+        employeeDocumentsModal.scrollTo({ top: Math.max(0, formTop - 12), behavior: 'smooth' });
       }
     });
   });
@@ -344,16 +336,6 @@
       }
       employeeDocumentExistingInput.value = '';
       shareExistingButtons.forEach((item) => item.classList.remove('is-active'));
-    });
-  }
-
-  if (employeeDocumentShareExistingButton && employeeDocumentShareForm) {
-    employeeDocumentShareExistingButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      if (!employeeDocumentExistingInput || !employeeDocumentExistingInput.value) {
-        return;
-      }
-      employeeDocumentShareForm.requestSubmit();
     });
   }
 

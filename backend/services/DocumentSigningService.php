@@ -158,7 +158,7 @@ function documentSigningApply(
             $pageWidth = max(1, (int) $pdfDoc->getImageWidth());
             $pageHeight = max(1, (int) $pdfDoc->getImageHeight());
 
-            $targetStampWidth = max(140, (int) round($pageWidth * 0.22));
+            $targetStampWidth = max(36, (int) round($pageWidth * 0.055));
             $pageStamp = documentSigningBuildStamp($signatureStamp, $targetStampWidth);
 
             $stampWidth = max(1, (int) $pageStamp->getImageWidth());
@@ -198,7 +198,7 @@ function documentSigningApply(
 
             $imgWidth = max(1, (int) $imageDoc->getImageWidth());
             $imgHeight = max(1, (int) $imageDoc->getImageHeight());
-            $targetStampWidth = max(100, (int) round($imgWidth * 0.22));
+            $targetStampWidth = max(28, (int) round($imgWidth * 0.055));
 
             $imageStamp = documentSigningBuildStamp($signatureStamp, $targetStampWidth);
             $stampWidth = max(1, (int) $imageStamp->getImageWidth());

@@ -96,6 +96,8 @@ foreach (preg_split('/\s+/', $employeeDisplayName) as $part) {
 $employeeInitials = $employeeInitials !== '' ? substr($employeeInitials, 0, 2) : 'ST';
 $canSignNow = (bool) ($employeeUiState['can_sign_now'] ?? false);
 $unreadDocumentsCount = (int) ($employeeUiState['unread_documents_count'] ?? 0);
+$shareDocumentIdPrefill = (int) ($employeeUiState['share_document_id'] ?? 0);
+$shareDocumentNamePrefill = trim((string) ($employeeUiState['share_document_name'] ?? ''));
 $primaryShift = is_array($currentShiftCard) ? $currentShiftCard : (!empty($todayTimelineShifts) ? $todayTimelineShifts[0] : null);
 $todayDateValue = isset($todayDate) && is_string($todayDate) ? $todayDate : date('Y-m-d');
 $todayCardDateLabel = $formatLongDate($todayDateValue);
@@ -397,7 +399,6 @@ if (is_array($primaryShift)) {
                 <div>
                     <span class="employee-stage-eyebrow"><?php echo e(t('employee.documents')); ?></span>
                     <h3 id="employee-documents-inbox-title"><?php echo e(t('employee.manage_documents', ['fallback' => 'Manage documents'])); ?></h3>
-                    <p class="crud-modal-subtitle"><?php echo e(t('employee.documents_inbox_hint', ['fallback' => 'Manage received and sent files, signatures, and archive actions.'])); ?></p>
                 </div>
                 <button type="button" class="dashboard-modal-close" data-employee-documents-inbox-close aria-label="<?php echo e(t('employee.cancel')); ?>">&times;</button>
             </div>
@@ -409,27 +410,21 @@ if (is_array($primaryShift)) {
                     </div>
                     <form method="post" enctype="multipart/form-data" class="admin-form crud-form" id="employee-document-share-form">
                         <input type="hidden" name="action" value="share_document_no_signature">
-                        <input type="hidden" name="document_id" value="" data-employee-document-existing-id>
+                        <input type="hidden" name="document_id" value="<?php echo (int) $shareDocumentIdPrefill; ?>" data-employee-document-existing-id>
+
+                        <?php if ($shareDocumentIdPrefill > 0): ?>
+                            <div class="span-2 company-card-chip" data-employee-document-prefill>
+                                Documento firmato pronto da condividere:
+                                <strong><?php echo e($shareDocumentNamePrefill !== '' ? $shareDocumentNamePrefill : ('#' . $shareDocumentIdPrefill)); ?></strong>
+                            </div>
+                        <?php endif; ?>
 
                         <label class="span-2">
                             <?php echo e(t('crud.document')); ?>
                             <input type="file" name="document_file" data-employee-document-file>
                         </label>
 
-                        <label class="span-2 crud-inline-choice" for="employee-document-share-now">
-                            <input type="checkbox" id="employee-document-share-now" name="share_now" value="1" checked data-employee-document-share-now>
-                            <span class="company-card-chip"><?php echo e(t('crud.attach_send_employees', ['fallback' => 'Send now to selected recipients'])); ?></span>
-                        </label>
-
-                        <label>
-                            <?php echo e(t('crud.recipients')); ?>
-                            <select name="recipient_scope" data-employee-document-recipient-scope>
-                                <option value="selected"><?php echo e(t('employee.selected_recipients', ['fallback' => 'Selected recipients'])); ?></option>
-                                <option value="all"><?php echo e(t('employee.all_available_recipients', ['fallback' => 'All available recipients'])); ?></option>
-                            </select>
-                        </label>
-
-                        <label class="span-2" data-employee-document-recipient-wrap>
+                        <label class="span-2">
                             <?php echo e(t('crud.recipients')); ?>
                             <select name="recipient_ids[]" multiple size="5" data-employee-document-recipient-ids>
                                 <?php foreach (($documentShareRecipients ?? []) as $recipient): ?>
@@ -451,11 +446,6 @@ if (is_array($primaryShift)) {
                             </select>
                         </label>
 
-                        <label class="span-2 employee-documents-signature-toggle">
-                            <input type="checkbox" name="require_signature" value="1" data-employee-document-require-signature>
-                            <span><?php echo e(t('employee.request_signature', ['fallback' => 'Request digital signature for this document'])); ?></span>
-                        </label>
-
                         <label class="span-2">
                             <?php echo e(t('employee.title')); ?>
                             <input type="text" name="title" maxlength="255" placeholder="<?php echo e(t('employee.document_notification')); ?>">
@@ -467,14 +457,7 @@ if (is_array($primaryShift)) {
                         </label>
 
                         <div class="employee-attendance-dialog-actions span-2">
-                            <button
-                                type="submit"
-                                class="admin-action-link"
-                                data-employee-document-share-submit
-                                data-label-share-now="<?php echo e(t('crud.attach_send_employees', ['fallback' => 'Share document'])); ?>"
-                                data-label-save-draft="<?php echo e(t('employee.document_save_draft_button', ['fallback' => 'Save document draft'])); ?>"
-                            ><?php echo e(t('crud.attach_send_employees', ['fallback' => 'Share document'])); ?></button>
-                            <button type="button" class="admin-action-link admin-action-link-secondary" data-employee-document-share-existing-submit><?php echo e(t('crud.select_document', ['fallback' => 'Send selected document'])); ?></button>
+                            <button type="submit" class="admin-action-link" data-employee-document-share-submit><?php echo e(t('crud.attach_send_employees', ['fallback' => 'Share document'])); ?></button>
                         </div>
                     </form>
                 </section>
@@ -519,6 +502,26 @@ if (is_array($primaryShift)) {
                                         <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $documentMessage['document_id'], 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space']); ?>" title="<?php echo e(t('employee.download_document', ['fallback' => 'Download'])); ?>">
                                             <img src="<?php echo e($basePath . '/assets/icons/circle-arrow-out-up-left.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
                                         </a>
+                                        <?php if (!empty($documentMessage['can_sign']) && !empty($documentMessage['request_id'])): ?>
+                                            <button
+                                                type="button"
+                                                class="company-card-chip employee-doc-sign-chip"
+                                                title="<?php echo e(t('employee.sign_document', ['fallback' => 'Sign document'])); ?>"
+                                                data-employee-document-sign-open
+                                                data-employee-document-sign-request-id="<?php echo (int) ($documentMessage['request_id'] ?? 0); ?>"
+                                                data-document-sign-preview-url="<?php echo e(appUrl('document-download', ['id' => (int) ($documentMessage['document_id'] ?? 0), 'preview' => '1', 'request_id' => (int) ($documentMessage['request_id'] ?? 0), 'mark_read' => '1', 'from' => 'my-space'])); ?>"
+                                            >
+                                                <img src="<?php echo e($basePath . '/assets/icons/signature.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                                <span><?php echo e(t('employee.sign_document', ['fallback' => 'Sign'])); ?></span>
+                                            </button>
+                                        <?php endif; ?>
+                                        <button type="button"
+                                                class="company-card-action"
+                                                title="<?php echo e(t('crud.attach_send_employees', ['fallback' => 'Share document'])); ?>"
+                                                data-employee-document-share-existing-id="<?php echo (int) ($documentMessage['document_id'] ?? 0); ?>"
+                                                data-employee-document-share-existing-name="<?php echo e((string) ($documentMessage['file_name'] ?? t('employee.document'))); ?>">
+                                            <img src="<?php echo e($basePath . '/assets/icons/mail-plus.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                        </button>
                                     <?php else: ?>
                                         <span class="company-card-chip"><?php echo e(t('employee.file_not_available')); ?></span>
                                     <?php endif; ?>
@@ -570,11 +573,25 @@ if (is_array($primaryShift)) {
                                         </a>
                                         <button type="button"
                                                 class="company-card-action"
-                                                title="<?php echo e(t('crud.select_document', ['fallback' => 'Select document to share'])); ?>"
+                                                title="<?php echo e(t('crud.attach_send_employees', ['fallback' => 'Share document'])); ?>"
                                                 data-employee-document-share-existing-id="<?php echo (int) ($documentMessage['document_id'] ?? 0); ?>"
                                                 data-employee-document-share-existing-name="<?php echo e((string) ($documentMessage['file_name'] ?? t('employee.document'))); ?>">
-                                            <span aria-hidden="true">↗</span>
+                                            <img src="<?php echo e($basePath . '/assets/icons/mail-plus.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
                                         </button>
+                                        <form method="post" class="employee-inline-form">
+                                            <input type="hidden" name="action" value="archive_outgoing_document">
+                                            <input type="hidden" name="document_id" value="<?php echo (int) ($documentMessage['document_id'] ?? 0); ?>">
+                                            <button type="submit" class="company-card-action" title="<?php echo e(t('employee.document_archived', ['fallback' => 'Archive'])); ?>">
+                                                <img src="<?php echo e($basePath . '/assets/icons/notebook.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                            </button>
+                                        </form>
+                                        <form method="post" class="employee-inline-form" onsubmit="return confirm('<?php echo e(t('employee.confirm_delete_document', ['fallback' => 'Delete this document?'])); ?>');">
+                                            <input type="hidden" name="action" value="delete_outgoing_document">
+                                            <input type="hidden" name="document_id" value="<?php echo (int) ($documentMessage['document_id'] ?? 0); ?>">
+                                            <button type="submit" class="company-card-action" title="<?php echo e(t('employee.document_deleted', ['fallback' => 'Delete'])); ?>">
+                                                <img src="<?php echo e($basePath . '/assets/icons/x.svg'); ?>" alt="" aria-hidden="true" class="company-card-action-icon">
+                                            </button>
+                                        </form>
                                     <?php else: ?>
                                         <span class="company-card-chip"><?php echo e(t('employee.file_not_available')); ?></span>
                                     <?php endif; ?>
@@ -584,6 +601,42 @@ if (is_array($primaryShift)) {
                     </div>
                 </section>
             </div>
+        </div>
+    </div>
+
+    <div class="employee-attendance-modal" data-employee-document-sign-modal hidden>
+        <div class="employee-attendance-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-document-sign-title">
+            <div class="employee-attendance-dialog-head">
+                <div>
+                    <span class="employee-stage-eyebrow"><?php echo e(t('employee.documents')); ?></span>
+                    <h3 id="employee-document-sign-title"><?php echo e(t('employee.sign_document', ['fallback' => 'Sign document'])); ?></h3>
+                </div>
+            </div>
+
+            <form method="post" class="admin-form employee-sign-form" data-employee-document-sign-form>
+                <input type="hidden" name="action" value="sign_document">
+                <input type="hidden" name="request_id" value="" data-employee-document-sign-request-id>
+                <input type="hidden" name="signature_data" value="" data-signature-data>
+                <input type="hidden" name="signature_page" value="1">
+
+                <div class="employee-signature-pad-shell">
+                    <canvas width="520" height="180" data-signature-canvas aria-label="<?php echo e(t('employee.digital_signature')); ?>"></canvas>
+                    <small class="employee-signature-error" data-signature-error></small>
+                    <div class="employee-signature-pad-actions">
+                        <button type="button" class="admin-action-link admin-action-link-secondary" data-signature-clear><?php echo e(t('employee.clear_signature')); ?></button>
+                        <small><?php echo e(t('employee.sign_hint')); ?></small>
+                    </div>
+                </div>
+
+                <div class="employee-doc-sign-preview">
+                    <iframe data-document-sign-preview-frame title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>" loading="lazy"></iframe>
+                </div>
+
+                <div class="employee-attendance-dialog-actions">
+                    <button type="button" class="admin-action-link admin-action-link-secondary" data-employee-document-sign-close><?php echo e(t('employee.cancel')); ?></button>
+                    <button type="submit" class="admin-action-link"><?php echo e(t('employee.sign_document', ['fallback' => 'Sign document'])); ?></button>
+                </div>
+            </form>
         </div>
     </div>
     <?php endif; ?>

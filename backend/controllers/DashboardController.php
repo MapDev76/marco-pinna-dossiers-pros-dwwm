@@ -233,6 +233,7 @@ if ($role === 'super_admin') {
             'logo_path' => $companyLogoPath,
             'signature_ip' => $companySignatureIp,
         ];
+        $dashboardCalendarScopeLabel = trim(($companyName !== '' ? $companyName : t('common.company', ['fallback' => 'Company'])) . ' ' . t('common.calendar', ['fallback' => 'Calendar']));
         $dashboardPlannerData['active_department_id'] = $departmentRows[0]['id'] ?? null;
         $dashboardPlannerData['active_shift_id'] = $resolvePreferredShiftId($shiftRows, isset($departmentRows[0]['id']) ? (int) $departmentRows[0]['id'] : null);
 
