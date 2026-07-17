@@ -92,6 +92,21 @@
             inset 0 1px 0 rgba(255, 255, 255, 1);
     }
 
+    .app-fixed-footer-inner {
+        padding: 7px 10px;
+        gap: 8px;
+    }
+
+    .app-fixed-footer-back {
+        padding: 5px 10px;
+        font-size: 0.76rem;
+    }
+
+    .app-fixed-footer-link {
+        font-size: 0.76rem;
+        padding: 4px 6px;
+    }
+
     .content:has(.login-form) {
         width: min(520px, calc(100vw - 32px));
         max-height: calc(100vh - 120px);

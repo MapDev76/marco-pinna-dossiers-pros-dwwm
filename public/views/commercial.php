@@ -4,6 +4,22 @@ $basePath = $basePath ?? (function () {
 	$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
 	return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
 })();
+$localeCode = strtolower(substr((string) appLocale(), 0, 2));
+$commercialSeoCopyByLocale = [
+	'it' => [
+		'title' => 'Perche scegliere StaffEase Pro per la gestione turni',
+		'body' => 'StaffEase Pro supporta la gestione turni hotel, il controllo presenze, la firma digitale e la condivisione documenti aziendali. E una soluzione cloud per coordinare reparti e personale con meno errori e piu velocita operativa.',
+	],
+	'fr' => [
+		'title' => 'Pourquoi choisir StaffEase Pro pour vos plannings',
+		'body' => 'StaffEase Pro facilite le planning des equipes, le suivi des presences, la signature numerique et la gestion documentaire RH. C est une solution cloud pensee pour coordonner les services avec plus de fiabilite et de rapidite.',
+	],
+	'en' => [
+		'title' => 'Why choose StaffEase Pro for shift planning',
+		'body' => 'StaffEase Pro improves hotel staff scheduling, attendance control, digital signatures and HR document management. It is a cloud platform built to coordinate departments with greater accuracy and faster daily operations.',
+	],
+];
+$commercialSeoCopy = $commercialSeoCopyByLocale[$localeCode] ?? $commercialSeoCopyByLocale['en'];
 ?>
 <article class="home-page commercial-page" aria-labelledby="commercial-title">
 	<section class="commercial-hero">
@@ -92,5 +108,10 @@ $basePath = $basePath ?? (function () {
 			<div class="commercial-video-placeholder" aria-label="<?php echo e(t('commercial.video_slot_3', ['fallback' => 'Spazio video 3'])); ?>">3</div>
 			<h3><?php echo e(t('commercial.feature_3_title', ['fallback' => 'Centralizzazione della gestione dei dipendenti'])); ?></h3>
 		</div>
+	</section>
+
+	<section class="commercial-project-note" aria-label="<?php echo e($commercialSeoCopy['title']); ?>">
+		<h2><?php echo e($commercialSeoCopy['title']); ?></h2>
+		<p><?php echo e($commercialSeoCopy['body']); ?></p>
 	</section>
 </article>

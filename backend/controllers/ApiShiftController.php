@@ -67,6 +67,255 @@ $resolveShiftCompanyId = static function (PDO $pdo, array $shift): int {
 
 $adminCompanyId = $currentRole === 'admin' ? $resolveUserCompanyId($pdo, $currentUser) : 0;
 
+$normalizeWeekdays = static function ($rawValue): array {
+    if (is_string($rawValue)) {
+        $decoded = json_decode($rawValue, true);
+        $rawValue = is_array($decoded) ? $decoded : [];
+    }
+    if (!is_array($rawValue)) {
+        $rawValue = [];
+    }
+
+    $weekdays = [];
+    foreach ($rawValue as $candidate) {
+        $weekday = (int) $candidate;
+        if ($weekday >= 0 && $weekday <= 6) {
+            $weekdays[$weekday] = $weekday;
+        }
+    }
+
+    return array_values($weekdays);
+};
+
+$normalizeMonths = static function ($rawValue): array {
+    if (is_string($rawValue)) {
+        $decoded = json_decode($rawValue, true);
+        $rawValue = is_array($decoded) ? $decoded : [];
+    }
+    if (!is_array($rawValue)) {
+        $rawValue = [];
+    }
+
+    $months = [];
+    foreach ($rawValue as $candidate) {
+        $month = (int) $candidate;
+        if ($month >= 1 && $month <= 12) {
+            $months[$month] = $month;
+        }
+    }
+
+    if (empty($months)) {
+        for ($month = 1; $month <= 12; $month++) {
+            $months[$month] = $month;
+        }
+    }
+
+    return array_values($months);
+};
+
+$buildDateRange = static function (string $rangeStart, string $rangeEnd): array {
+    $start = new DateTimeImmutable($rangeStart);
+    $end = new DateTimeImmutable($rangeEnd);
+    if ($end < $start) {
+        [$start, $end] = [$end, $start];
+    }
+    return [$start, $end];
+};
+
+$collectRestDates = static function (
+    DateTimeImmutable $start,
+    DateTimeImmutable $end,
+    array $restWeekdays,
+    string $repeatMode,
+    string $scaleMode,
+    array $monthNumbers
+): array {
+    if (empty($restWeekdays)) {
+        return [];
+    }
+
+    $restWeekdaySet = array_fill_keys(array_map('intval', $restWeekdays), true);
+    $monthSet = array_fill_keys(array_map('intval', $monthNumbers), true);
+    $result = [];
+
+    if ($repeatMode === 'weekly') {
+        foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
+            $weekday = (int) $date->format('w');
+            $monthNumber = (int) $date->format('n');
+            if (!isset($restWeekdaySet[$weekday]) || !isset($monthSet[$monthNumber])) {
+                continue;
+            }
+            $result[$date->format('Y-m-d')] = true;
+        }
+        return array_keys($result);
+    }
+
+    $monthCursor = new DateTimeImmutable($start->format('Y-m-01'));
+    $monthIndex = 0;
+    while ($monthCursor <= $end) {
+        $monthNumber = (int) $monthCursor->format('n');
+        if (!isset($monthSet[$monthNumber])) {
+            $monthCursor = $monthCursor->modify('+1 month');
+            $monthIndex++;
+            continue;
+        }
+
+        $monthEnd = $monthCursor->modify('last day of this month');
+        $windowStart = $monthCursor > $start ? $monthCursor : $start;
+        $windowEnd = $monthEnd < $end ? $monthEnd : $end;
+
+        foreach (array_keys($restWeekdaySet) as $weekday) {
+            $candidates = [];
+            foreach (new DatePeriod($windowStart, new DateInterval('P1D'), $windowEnd->modify('+1 day')) as $date) {
+                if ((int) $date->format('w') === (int) $weekday) {
+                    $candidates[] = $date;
+                }
+            }
+
+            if (empty($candidates)) {
+                continue;
+            }
+
+            if ($scaleMode === 'monthly') {
+                $picked = $candidates[0];
+            } else {
+                $pickIndex = $monthIndex % count($candidates);
+                $picked = $candidates[$pickIndex];
+            }
+
+            $result[$picked->format('Y-m-d')] = true;
+        }
+
+        $monthCursor = $monthCursor->modify('+1 month');
+        $monthIndex++;
+    }
+
+    return array_keys($result);
+};
+
+$generateScheduleSlots = static function (
+    PDO $pdo,
+    array $workShiftIdsByDepartment,
+    string $rangeStart,
+    string $rangeEnd,
+    array $workWeekdays,
+    array $monthNumbers,
+    array $weeklyRestWeekdays,
+    bool $includeRestday,
+    array $restdayWeekdays,
+    string $restdayRepeatMode,
+    string $restdayScaleMode,
+    bool $replaceWorkSlots
+) use ($buildDateRange, $collectRestDates): void {
+    if (empty($workShiftIdsByDepartment)) {
+        return;
+    }
+
+    [$start, $end] = $buildDateRange($rangeStart, $rangeEnd);
+    $workWeekdaySet = array_fill_keys(array_map('intval', $workWeekdays), true);
+    if (empty($workWeekdaySet)) {
+        $workWeekdaySet = array_fill_keys([0, 1, 2, 3, 4, 5, 6], true);
+    }
+    $monthSet = array_fill_keys(array_map('intval', $monthNumbers), true);
+    $weeklyRestSet = array_fill_keys(array_map('intval', $weeklyRestWeekdays), true);
+
+    $workDates = [];
+    foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
+        $weekday = (int) $date->format('w');
+        $monthNumber = (int) $date->format('n');
+        if (!isset($monthSet[$monthNumber])) {
+            continue;
+        }
+        if (!isset($workWeekdaySet[$weekday])) {
+            continue;
+        }
+        if (isset($weeklyRestSet[$weekday])) {
+            continue;
+        }
+        $workDates[] = $date->format('Y-m-d');
+    }
+
+    $deleteWorkStmt = $pdo->prepare(
+        'DELETE FROM user_shifts
+         WHERE shift_id = :shift_id
+           AND user_id IS NULL
+           AND status = "open"
+           AND work_date BETWEEN :range_start AND :range_end'
+    );
+    $existingStmt = $pdo->prepare(
+        'SELECT id FROM user_shifts
+         WHERE shift_id = :shift_id
+           AND work_date = :work_date
+         LIMIT 1'
+    );
+    $insertStmt = $pdo->prepare(
+        'INSERT INTO user_shifts (shift_id, user_id, work_date, status)
+         VALUES (:shift_id, NULL, :work_date, "open")'
+    );
+
+    foreach ($workShiftIdsByDepartment as $departmentId => $shiftIds) {
+        $departmentShiftIds = array_values(array_unique(array_filter(array_map('intval', is_array($shiftIds) ? $shiftIds : []))));
+        if (empty($departmentShiftIds)) {
+            continue;
+        }
+
+        foreach ($departmentShiftIds as $shiftId) {
+            if ($replaceWorkSlots) {
+                $deleteWorkStmt->execute([
+                    'shift_id' => $shiftId,
+                    'range_start' => $start->format('Y-m-d'),
+                    'range_end' => $end->format('Y-m-d'),
+                ]);
+            }
+
+            foreach ($workDates as $workDate) {
+                $existingStmt->execute([
+                    'shift_id' => $shiftId,
+                    'work_date' => $workDate,
+                ]);
+                if ($existingStmt->fetchColumn()) {
+                    continue;
+                }
+
+                $insertStmt->execute([
+                    'shift_id' => $shiftId,
+                    'work_date' => $workDate,
+                ]);
+            }
+        }
+
+        if (!$includeRestday) {
+            continue;
+        }
+
+        $restDates = $collectRestDates($start, $end, $restdayWeekdays, $restdayRepeatMode, $restdayScaleMode, $monthNumbers);
+        if (empty($restDates)) {
+            continue;
+        }
+
+        $templateIds = ensureDepartmentAbsenceShiftTemplates($pdo, (int) $departmentId);
+        $restShiftId = (int) ($templateIds['rest'] ?? 0);
+        if ($restShiftId <= 0) {
+            continue;
+        }
+
+        foreach ($restDates as $restDate) {
+            $existingStmt->execute([
+                'shift_id' => $restShiftId,
+                'work_date' => $restDate,
+            ]);
+            if ($existingStmt->fetchColumn()) {
+                continue;
+            }
+
+            $insertStmt->execute([
+                'shift_id' => $restShiftId,
+                'work_date' => $restDate,
+            ]);
+        }
+    }
+};
+
 try {
     switch ($action) {
         case 'list':
@@ -146,19 +395,24 @@ try {
             $description = $input['description'] ?? null;
             $startTime = $input['start_time'];
             $endTime = $input['end_time'];
-            $weeklyRestWeekdaysRaw = $input['weekly_rest_weekdays'] ?? [];
-            if (is_string($weeklyRestWeekdaysRaw)) {
-                $decodedWeeklyRest = json_decode($weeklyRestWeekdaysRaw, true);
-                $weeklyRestWeekdaysRaw = is_array($decodedWeeklyRest) ? $decodedWeeklyRest : [];
+            $rangeStart = trim((string) ($input['range_start'] ?? ''));
+            $rangeEnd = trim((string) ($input['range_end'] ?? ''));
+            $workWeekdays = $normalizeWeekdays($input['work_weekdays'] ?? [0, 1, 2, 3, 4, 5, 6]);
+            if (empty($workWeekdays)) {
+                $workWeekdays = [0, 1, 2, 3, 4, 5, 6];
             }
-            $weeklyRestWeekdays = [];
-            if (is_array($weeklyRestWeekdaysRaw)) {
-                foreach ($weeklyRestWeekdaysRaw as $weekdayRaw) {
-                    $weekday = (int) $weekdayRaw;
-                    if ($weekday >= 0 && $weekday <= 6) {
-                        $weeklyRestWeekdays[$weekday] = true;
-                    }
-                }
+            $monthNumbers = $normalizeMonths($input['month_numbers'] ?? []);
+            $weeklyRestWeekdays = $normalizeWeekdays($input['weekly_rest_weekdays'] ?? []);
+            $includeRestdayRaw = strtolower(trim((string) ($input['include_restday'] ?? '0')));
+            $includeRestday = in_array($includeRestdayRaw, ['1', 'true', 'yes', 'on'], true);
+            $restdayWeekdays = $normalizeWeekdays($input['restday_weekdays'] ?? []);
+            $restdayRepeatMode = strtolower(trim((string) ($input['restday_repeat_mode'] ?? 'weekly')));
+            if (!in_array($restdayRepeatMode, ['weekly', 'monthly'], true)) {
+                $restdayRepeatMode = 'weekly';
+            }
+            $restdayScaleMode = strtolower(trim((string) ($input['restday_scale_mode'] ?? 'weekly')));
+            if (!in_array($restdayScaleMode, ['weekly', 'monthly'], true)) {
+                $restdayScaleMode = 'weekly';
             }
 
             $lookupTemplateShift = $pdo->prepare(
@@ -206,51 +460,33 @@ try {
             }
 
             if ($requestedKind === 'work') {
-                $rangeStart = trim((string) ($input['range_start'] ?? ''));
-                $rangeEnd = trim((string) ($input['range_end'] ?? ''));
                 if ($rangeStart === '' || $rangeEnd === '') {
                     jsonResponse(['ok' => false, 'error' => 'range_start and range_end required'], 400);
                 }
 
-                $start = new DateTimeImmutable($rangeStart);
-                $end = new DateTimeImmutable($rangeEnd);
-                if ($end < $start) {
-                    [$start, $end] = [$end, $start];
-                }
-
-                $datesToInsert = [];
-                foreach (new DatePeriod($start, new DateInterval('P1D'), $end->modify('+1 day')) as $date) {
-                    $weekday = (int) $date->format('w');
-                    if (!empty($weeklyRestWeekdays[$weekday])) {
+                $workShiftIdsByDepartment = [];
+                foreach ($createDepartmentIds as $index => $departmentId) {
+                    $shiftId = (int) ($createdShiftIds[$index] ?? 0);
+                    if ($shiftId <= 0) {
                         continue;
                     }
-                    $datesToInsert[] = $date->format('Y-m-d');
+                    $workShiftIdsByDepartment[(int) $departmentId] = [$shiftId];
                 }
 
-                if (!empty($datesToInsert)) {
-                    $existingStmt = $pdo->prepare(
-                        'SELECT id FROM user_shifts WHERE shift_id = :shift_id AND work_date = :work_date LIMIT 1'
-                    );
-                    $insertStmt = $pdo->prepare(
-                        'INSERT INTO user_shifts (shift_id, user_id, work_date, status)
-                         VALUES (:shift_id, NULL, :work_date, "open")'
-                    );
-                    foreach ($createdShiftIds as $createdShiftId) {
-                        foreach ($datesToInsert as $workDate) {
-                            $existingStmt->execute([
-                                'shift_id' => $createdShiftId,
-                                'work_date' => $workDate,
-                            ]);
-                            if ($existingStmt->fetchColumn()) {
-                                continue;
-                            }
-                            $insertStmt->execute([
-                                'shift_id' => $createdShiftId,
-                                'work_date' => $workDate,
-                            ]);
-                        }
-                    }
-                }
+                $generateScheduleSlots(
+                    $pdo,
+                    $workShiftIdsByDepartment,
+                    $rangeStart,
+                    $rangeEnd,
+                    $workWeekdays,
+                    $monthNumbers,
+                    $weeklyRestWeekdays,
+                    $includeRestday,
+                    $restdayWeekdays,
+                    $restdayRepeatMode,
+                    $restdayScaleMode,
+                    false
+                );
             }
 
             $firstShiftId = (int) ($createdShiftIds[0] ?? 0);
@@ -260,7 +496,9 @@ try {
                 'shift' => $shift,
                 'shift_ids' => $createdShiftIds,
                 'department_ids' => $createDepartmentIds,
-                'weekly_rest_weekdays' => array_values(array_map('intval', array_keys($weeklyRestWeekdays))),
+                'weekly_rest_weekdays' => $weeklyRestWeekdays,
+                'work_weekdays' => $workWeekdays,
+                'month_numbers' => $monthNumbers,
             ]);
             break;
 
@@ -321,6 +559,48 @@ try {
             }
 
             $shiftModel->update($id, $resolvedPayload);
+
+            $regenerateSlotsRaw = strtolower(trim((string) ($input['regenerate_slots'] ?? '0')));
+            $regenerateSlots = in_array($regenerateSlotsRaw, ['1', 'true', 'yes', 'on'], true);
+            if ($regenerateSlots && strtolower((string) ($resolvedPayload['kind'] ?? 'work')) === 'work') {
+                $rangeStart = trim((string) ($input['range_start'] ?? ''));
+                $rangeEnd = trim((string) ($input['range_end'] ?? ''));
+                if ($rangeStart !== '' && $rangeEnd !== '') {
+                    $workWeekdays = $normalizeWeekdays($input['work_weekdays'] ?? [0, 1, 2, 3, 4, 5, 6]);
+                    if (empty($workWeekdays)) {
+                        $workWeekdays = [0, 1, 2, 3, 4, 5, 6];
+                    }
+                    $monthNumbers = $normalizeMonths($input['month_numbers'] ?? []);
+                    $weeklyRestWeekdays = $normalizeWeekdays($input['weekly_rest_weekdays'] ?? []);
+                    $includeRestdayRaw = strtolower(trim((string) ($input['include_restday'] ?? '0')));
+                    $includeRestday = in_array($includeRestdayRaw, ['1', 'true', 'yes', 'on'], true);
+                    $restdayWeekdays = $normalizeWeekdays($input['restday_weekdays'] ?? []);
+                    $restdayRepeatMode = strtolower(trim((string) ($input['restday_repeat_mode'] ?? 'weekly')));
+                    if (!in_array($restdayRepeatMode, ['weekly', 'monthly'], true)) {
+                        $restdayRepeatMode = 'weekly';
+                    }
+                    $restdayScaleMode = strtolower(trim((string) ($input['restday_scale_mode'] ?? 'weekly')));
+                    if (!in_array($restdayScaleMode, ['weekly', 'monthly'], true)) {
+                        $restdayScaleMode = 'weekly';
+                    }
+
+                    $generateScheduleSlots(
+                        $pdo,
+                        [$resolvedDepartmentId => [$id]],
+                        $rangeStart,
+                        $rangeEnd,
+                        $workWeekdays,
+                        $monthNumbers,
+                        $weeklyRestWeekdays,
+                        $includeRestday,
+                        $restdayWeekdays,
+                        $restdayRepeatMode,
+                        $restdayScaleMode,
+                        true
+                    );
+                }
+            }
+
             jsonResponse(['ok' => true]);
             break;
 

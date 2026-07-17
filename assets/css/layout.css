@@ -176,6 +176,68 @@ body {
     padding-bottom: 0.25rem;
 }
 
+body.route-dashboard,
+body.route-my-space {
+    padding-bottom: 74px;
+}
+
+.app-fixed-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1030;
+    background: linear-gradient(180deg, rgba(18, 18, 18, 0.94), rgba(8, 8, 8, 0.98));
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.28);
+}
+
+.app-fixed-footer-inner {
+    max-width: 1420px;
+    margin: 0 auto;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-fixed-footer-back {
+    border: 1px solid rgba(221, 176, 49, 0.9);
+    background: #f7efe2;
+    color: #1f2937;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.app-fixed-footer-links {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.app-fixed-footer-link {
+    color: #f7efe2;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.app-fixed-footer-link:hover,
+.app-fixed-footer-link:focus-visible {
+    background: rgba(221, 176, 49, 0.22);
+    color: #ffffff;
+}
+
 .content:has(.login-form) p {
     max-width: 440px;
     margin-left: auto;

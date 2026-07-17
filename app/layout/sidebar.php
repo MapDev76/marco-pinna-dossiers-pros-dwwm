@@ -72,7 +72,7 @@ $sidebarIconUrl = static function (string $icon) use ($basePath): string {
             </section>
         <?php endforeach; ?>
 
-        <?php if (in_array($sidebarRole, ['admin', 'department_manager'], true)): ?>
+        <?php if (in_array($sidebarRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
             <section class="dashboard-sidebar-group dashboard-sidebar-departments-panel">
                 <button type="button" class="dashboard-sidebar-group-title dashboard-sidebar-department-toggle" data-sidebar-department-toggle aria-expanded="false">
                     <span>📁</span> <?php echo e(t('common.departments_panel')); ?>

@@ -4,6 +4,22 @@ $basePath = $basePath ?? (function () {
 	$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
 	return $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
 })();
+$localeCode = strtolower(substr((string) appLocale(), 0, 2));
+$homeSeoCopyByLocale = [
+	'it' => [
+		'title' => 'Software gestione personale per hotel e team operativi',
+		'body' => 'StaffEase Pro e un software di gestione turni e presenze pensato per hotel, ristorazione e aziende di servizi. La piattaforma unisce pianificazione staff, firma digitale dipendenti, gestione documenti HR e comunicazioni interne in un unico ambiente web.',
+	],
+	'fr' => [
+		'title' => 'Logiciel de gestion du personnel pour hotels et equipes',
+		'body' => 'StaffEase Pro est un logiciel de planning du personnel et de pointage pour hotels, restauration et entreprises de services. La plateforme centralise plannings, signatures numeriques, documents RH et communication interne dans un seul espace web.',
+	],
+	'en' => [
+		'title' => 'Workforce management software for hotels and operations teams',
+		'body' => 'StaffEase Pro is a workforce management app for hotels, hospitality and service businesses. It combines shift scheduling, attendance tracking, digital employee signatures, HR document workflows and internal communication in one platform.',
+	],
+];
+$homeSeoCopy = $homeSeoCopyByLocale[$localeCode] ?? $homeSeoCopyByLocale['en'];
 ?>
 <section class="home-page" aria-labelledby="home-title">
 	<h1 id="home-title"><?php echo e(t('home.welcome_title')); ?></h1>
@@ -66,6 +82,11 @@ $basePath = $basePath ?? (function () {
 				<p class="simple-div-title"><?php echo e(t('home.feature_requests_title')); ?></p>
 				<p class="simple-div-content"><?php echo e(t('home.feature_requests_body')); ?></p>
 			</article>
+		</section>
+
+		<section class="simple-div" aria-label="<?php echo e($homeSeoCopy['title']); ?>">
+			<p class="simple-div-title"><?php echo e($homeSeoCopy['title']); ?></p>
+			<p class="simple-div-content"><?php echo e($homeSeoCopy['body']); ?></p>
 		</section>
 
 		<aside class="simple-div home-video-teaser">

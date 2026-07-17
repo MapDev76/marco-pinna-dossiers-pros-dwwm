@@ -38,7 +38,7 @@ $resolveCompanyLogoUrl = static function (?string $rawPath) use ($basePath): str
 
     return rtrim($basePath, '/') . '/' . ltrim($path, '/');
 };
-$selectedCompanyId = (int) ($_GET['settings_company_id'] ?? 0);
+$selectedCompanyId = (int) ($_GET['settings_company_id'] ?? ($dashboardPlannerData['company']['id'] ?? 0));
 $isSuperAdminCompanyDashboard = ($role === 'super_admin' && $selectedCompanyId > 0);
 $plannerCompany = is_array($dashboardPlannerData['company'] ?? null) ? $dashboardPlannerData['company'] : [];
 $plannerCompanyName = trim((string) ($plannerCompany['name'] ?? ''));

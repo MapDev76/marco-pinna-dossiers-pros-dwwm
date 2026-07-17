@@ -145,6 +145,9 @@ try {
             break;
 
         case 'create':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+            }
             $name = trim((string) ($input['name'] ?? ''));
             if ($name === '') {
                 jsonResponse(['ok' => false, 'error' => 'Name is required'], 400);
@@ -184,16 +187,12 @@ try {
             break;
 
         case 'update':
+            if (!$isSuperAdmin) {
+                jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
+            }
             $id = (int) ($input['id'] ?? 0);
             if ($id <= 0) {
                 jsonResponse(['ok' => false, 'error' => 'Invalid id'], 400);
-            }
-
-            if ($isAdmin && !$isSuperAdmin) {
-                $adminCompanyId = $resolveAdminCompanyId();
-                if ($adminCompanyId <= 0 || $id !== $adminCompanyId) {
-                    jsonResponse(['ok' => false, 'error' => 'Forbidden'], 403);
-                }
             }
 
             $uploadedLogoPath = $storeUploadedLogo('logo_file');

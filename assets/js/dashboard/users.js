@@ -24,13 +24,64 @@
   }
 
   function getCreateCard() { return document.querySelector('[data-user-create-row]'); }
+  function getRoleFieldValue(scope) {
+    if (!scope) return 'employee';
+    return String(scope.querySelector('[data-field="role"]')?.value || 'employee').trim();
+  }
+
+  function roleAllowsMultipleDepartments(role) {
+    return String(role || '').trim() === 'department_manager';
+  }
+
+  function enforceDepartmentSelectionMode(scope, changedDepartmentId) {
+    if (!scope) return;
+    const singleSelect = scope.querySelector('select[data-field="department_id"]');
+    if (singleSelect) return;
+    const select = scope.querySelector('select[data-field="department_ids"]');
+    if (!select) return;
+
+    const role = getRoleFieldValue(scope);
+    if (roleAllowsMultipleDepartments(role)) {
+      syncDepartmentDropdown(select);
+      return;
+    }
+
+    const options = Array.from(select.options || []);
+    const selectedIds = options
+      .filter((option) => option.selected)
+      .map((option) => parseInt(option.value || '0', 10) || 0)
+      .filter((id) => id > 0);
+
+    const keepId = Number.isInteger(changedDepartmentId) && changedDepartmentId > 0
+      ? changedDepartmentId
+      : (selectedIds[selectedIds.length - 1] || 0);
+
+    options.forEach((option) => {
+      const id = parseInt(option.value || '0', 10) || 0;
+      option.selected = keepId > 0 && id === keepId;
+    });
+
+    syncDepartmentDropdown(select);
+  }
+
   function getSelectedDepartmentIds(scope) {
     if (!scope) return [];
+    const single = scope.querySelector('select[data-field="department_id"]');
+    if (single) {
+      const id = parseInt(single.value || '0', 10) || 0;
+      return id > 0 ? [id] : [];
+    }
     const multi = scope.querySelector('select[data-field="department_ids"]');
     if (!multi) return [];
-    return Array.from(multi.selectedOptions || [])
+    const selected = Array.from(multi.selectedOptions || [])
       .map((option) => parseInt(option.value || '0', 10) || 0)
       .filter((id, index, array) => id > 0 && array.indexOf(id) === index);
+
+    if (roleAllowsMultipleDepartments(getRoleFieldValue(scope))) {
+      return selected;
+    }
+
+    return selected.length ? [selected[selected.length - 1]] : [];
   }
 
   function resetCreateUserForm() {
@@ -39,6 +90,10 @@
       const el = card.querySelector('[data-field="' + f + '"]'); if (!el) return;
       if (el.tagName === 'SELECT') el.selectedIndex = 0; else el.value = '';
     });
+    const singleDepartment = card.querySelector('select[data-field="department_id"]');
+    if (singleDepartment) {
+      singleDepartment.selectedIndex = 0;
+    }
     const departments = card.querySelector('select[data-field="department_ids"]');
     if (departments) {
       Array.from(departments.options || []).forEach((option) => {
@@ -142,12 +197,27 @@
         const option = Array.from(select.options || []).find((opt) => (parseInt(opt.value || '0', 10) || 0) === value);
         if (option) {
           option.selected = !!input.checked;
+          const scope = select.closest('.settings-list-item-wrap[data-user-id], [data-user-create-row]');
+          if (scope) {
+            enforceDepartmentSelectionMode(scope, value);
+          }
           select.dispatchEvent(new Event('change', { bubbles: true }));
         }
       });
 
       select.addEventListener('change', () => syncDepartmentDropdown(select));
       syncDepartmentDropdown(select);
+    });
+  }
+
+  function bindRoleSelectionRules() {
+    document.addEventListener('change', (ev) => {
+      const roleSelect = ev.target;
+      if (!(roleSelect instanceof HTMLSelectElement)) return;
+      if (roleSelect.getAttribute('data-field') !== 'role') return;
+      const scope = roleSelect.closest('.settings-list-item-wrap[data-user-id], [data-user-create-row]');
+      if (!scope) return;
+      enforceDepartmentSelectionMode(scope);
     });
   }
 
@@ -337,5 +407,6 @@
   });
 
   initDepartmentDropdowns();
+  bindRoleSelectionRules();
   resetCreateUserForm();
 })();

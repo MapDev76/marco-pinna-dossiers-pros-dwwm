@@ -221,6 +221,18 @@ $weekdayLabels = $isFrLocale
         6 => 'Saturday',
     ];
 
+$monthLabels = $isFrLocale
+    ? [
+        1 => 'Janvier', 2 => 'Fevrier', 3 => 'Mars', 4 => 'Avril',
+        5 => 'Mai', 6 => 'Juin', 7 => 'Juillet', 8 => 'Aout',
+        9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Decembre',
+    ]
+    : [
+        1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+        5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+        9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
+    ];
+
 $localizedShiftKindLabel = static function (string $kind) use ($isFrLocale): string {
     $kind = strtolower(trim($kind));
     if ($kind === 'rest') {
@@ -675,7 +687,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
         </div>
 
         <div class="settings-tabs" role="tablist" aria-label="<?php echo e(t('settings.management_rubrics')); ?>">
-            <?php if (in_array($currentRole, ['super_admin', 'admin'], true)): ?>
+            <?php if ($currentRole === 'super_admin'): ?>
                 <button type="button" class="settings-tab" data-settings-tab="companies"><?php echo e(t('common.companies')); ?></button>
             <?php endif; ?>
             <button type="button" class="settings-tab" data-settings-tab="users"><?php echo e(t('settings.users')); ?></button>
@@ -691,7 +703,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
         </div>
 
         <div class="crud-modal-body settings-modal-body">
-            <?php if (in_array($currentRole, ['super_admin', 'admin'], true)): ?>
+            <?php if ($currentRole === 'super_admin'): ?>
             <section class="crud-panel settings-panel" data-settings-panel="companies" hidden>
                 <div class="settings-panel-head">
                     <div>
@@ -2092,7 +2104,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             </select>
                         </label>
                         <label class="settings-field"><?php echo e(t('common.department')); ?>
-                            <select data-field="department_ids" multiple size="4">
+                            <select data-field="department_id">
+                                <option value=""><?php echo e(t('crud.select_department')); ?></option>
                                 <?php foreach ($visibleDepartments as $department): ?>
                                     <option value="<?php echo (int) ($department['id'] ?? 0); ?>"><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
                                 <?php endforeach; ?>
@@ -2161,7 +2174,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             </select>
                                         </label>
                                         <label class="settings-field"><?php echo e(t('common.department')); ?>
-                                            <select data-field="department_ids" multiple size="4">
+                                            <select data-field="department_id">
+                                                <option value=""><?php echo e(t('crud.select_department')); ?></option>
                                                 <?php foreach ($visibleDepartments as $department): ?>
                                                     <?php $departmentOptionId = (int) ($department['id'] ?? 0); ?>
                                                     <option value="<?php echo $departmentOptionId; ?>" <?php echo in_array($departmentOptionId, $userDepartmentIds, true) ? 'selected' : ''; ?>><?php echo e($department['name'] ?? t('settings.department_default')); ?></option>
@@ -2225,6 +2239,20 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <?php endif; ?>
                             <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-field="range_start" type="date" value=""></label>
                             <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-field="range_end" type="date" value=""></label>
+                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Jours de travail' : 'Work weekdays'); ?>
+                                <select data-field="work_weekdays" multiple size="4">
+                                    <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
+                                        <option value="<?php echo (int) $weekdayValue; ?>" selected><?php echo e($weekdayLabel); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Mois a couvrir' : 'Months to cover'); ?>
+                                <select data-field="month_numbers" multiple size="4">
+                                    <?php foreach ($monthLabels as $monthValue => $monthLabel): ?>
+                                        <option value="<?php echo (int) $monthValue; ?>" selected><?php echo e($monthLabel); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
                             <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Repos hebdomadaires' : 'Weekly rest days'); ?>
                                 <select data-field="weekly_rest_weekdays" multiple size="4">
                                     <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
@@ -2232,6 +2260,31 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <?php endforeach; ?>
                                 </select>
                                 <small class="settings-shift-create-hint"><?php echo e($isFrLocale ? 'Les jours selectionnes ne generent pas de postes ouverts.' : 'Selected days will not generate open slots.'); ?></small>
+                            </label>
+                            <label class="settings-field"><?php echo e($isFrLocale ? 'Inclure rest day' : 'Include rest day'); ?>
+                                <select data-field="include_restday">
+                                    <option value="0" selected><?php echo e($isFrLocale ? 'Non' : 'No'); ?></option>
+                                    <option value="1"><?php echo e($isFrLocale ? 'Oui' : 'Yes'); ?></option>
+                                </select>
+                            </label>
+                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Jours rest day' : 'Rest day weekdays'); ?>
+                                <select data-field="restday_weekdays" multiple size="4">
+                                    <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
+                                        <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </label>
+                            <label class="settings-field"><?php echo e($isFrLocale ? 'Repetition rest day' : 'Rest day repetition'); ?>
+                                <select data-field="restday_repeat_mode">
+                                    <option value="weekly" selected><?php echo e($isFrLocale ? 'Hebdomadaire' : 'Weekly'); ?></option>
+                                    <option value="monthly"><?php echo e($isFrLocale ? 'Mensuelle' : 'Monthly'); ?></option>
+                                </select>
+                            </label>
+                            <label class="settings-field"><?php echo e($isFrLocale ? 'Echelle rest day' : 'Rest day scale'); ?>
+                                <select data-field="restday_scale_mode">
+                                    <option value="weekly" selected><?php echo e($isFrLocale ? 'Semaine' : 'Week'); ?></option>
+                                    <option value="monthly"><?php echo e($isFrLocale ? 'Mois' : 'Month'); ?></option>
+                                </select>
                             </label>
                         </div>
 
@@ -2404,6 +2457,61 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             </label>
                                             <label class="settings-field"><?php echo e(t('schedule.start')); ?><input data-field="start_time" type="time" value="<?php echo e(substr((string) ($shift['start_time'] ?? ''), 0, 5)); ?>"></label>
                                             <label class="settings-field"><?php echo e(t('schedule.end')); ?><input data-field="end_time" type="time" value="<?php echo e(substr((string) ($shift['end_time'] ?? ''), 0, 5)); ?>"></label>
+                                            <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-field="range_start" type="date" value="<?php echo e(date('Y-m-01')); ?>"></label>
+                                            <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-field="range_end" type="date" value="<?php echo e(date('Y-m-t')); ?>"></label>
+                                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Jours de travail' : 'Work weekdays'); ?>
+                                                <select data-field="work_weekdays" multiple size="4">
+                                                    <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
+                                                        <option value="<?php echo (int) $weekdayValue; ?>" selected><?php echo e($weekdayLabel); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
+                                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Mois a couvrir' : 'Months to cover'); ?>
+                                                <select data-field="month_numbers" multiple size="4">
+                                                    <?php foreach ($monthLabels as $monthValue => $monthLabel): ?>
+                                                        <option value="<?php echo (int) $monthValue; ?>" selected><?php echo e($monthLabel); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
+                                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Repos hebdomadaires' : 'Weekly rest days'); ?>
+                                                <select data-field="weekly_rest_weekdays" multiple size="4">
+                                                    <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
+                                                        <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
+                                            <label class="settings-field"><?php echo e($isFrLocale ? 'Inclure rest day' : 'Include rest day'); ?>
+                                                <select data-field="include_restday">
+                                                    <option value="0" selected><?php echo e($isFrLocale ? 'Non' : 'No'); ?></option>
+                                                    <option value="1"><?php echo e($isFrLocale ? 'Oui' : 'Yes'); ?></option>
+                                                </select>
+                                            </label>
+                                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Jours rest day' : 'Rest day weekdays'); ?>
+                                                <select data-field="restday_weekdays" multiple size="4">
+                                                    <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
+                                                        <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </label>
+                                            <label class="settings-field"><?php echo e($isFrLocale ? 'Repetition rest day' : 'Rest day repetition'); ?>
+                                                <select data-field="restday_repeat_mode">
+                                                    <option value="weekly" selected><?php echo e($isFrLocale ? 'Hebdomadaire' : 'Weekly'); ?></option>
+                                                    <option value="monthly"><?php echo e($isFrLocale ? 'Mensuelle' : 'Monthly'); ?></option>
+                                                </select>
+                                            </label>
+                                            <label class="settings-field"><?php echo e($isFrLocale ? 'Echelle rest day' : 'Rest day scale'); ?>
+                                                <select data-field="restday_scale_mode">
+                                                    <option value="weekly" selected><?php echo e($isFrLocale ? 'Semaine' : 'Week'); ?></option>
+                                                    <option value="monthly"><?php echo e($isFrLocale ? 'Mois' : 'Month'); ?></option>
+                                                </select>
+                                            </label>
+                                            <label class="settings-field">
+                                                <?php echo e($isFrLocale ? 'Rigenerare slots' : 'Regenerate slots'); ?>
+                                                <select data-field="regenerate_slots">
+                                                    <option value="0" selected><?php echo e($isFrLocale ? 'Non' : 'No'); ?></option>
+                                                    <option value="1"><?php echo e($isFrLocale ? 'Oui' : 'Yes'); ?></option>
+                                                </select>
+                                            </label>
                                             <div class="settings-inline-actions">
                                                 <button type="button" class="admin-action-link settings-shift-save" data-shift-id="<?php echo (int) ($shift['id'] ?? 0); ?>"><?php echo e(t('settings.save')); ?></button>
                                                 <button type="button" class="admin-action-link admin-action-link-secondary settings-shift-cancel"><?php echo e(t('employee.cancel')); ?></button>

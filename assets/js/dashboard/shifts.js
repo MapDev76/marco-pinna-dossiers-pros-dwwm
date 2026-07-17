@@ -307,6 +307,30 @@
         option.selected = false;
       });
     }
+    const workWeekdaySelect = row.querySelector('select[data-field="work_weekdays"]');
+    if (workWeekdaySelect) {
+      Array.from(workWeekdaySelect.options || []).forEach((option) => {
+        option.selected = true;
+      });
+    }
+    const monthNumbersSelect = row.querySelector('select[data-field="month_numbers"]');
+    if (monthNumbersSelect) {
+      Array.from(monthNumbersSelect.options || []).forEach((option) => {
+        option.selected = true;
+      });
+    }
+    const includeRestday = row.querySelector('select[data-field="include_restday"]');
+    if (includeRestday) includeRestday.value = '0';
+    const restdayWeekdaySelect = row.querySelector('select[data-field="restday_weekdays"]');
+    if (restdayWeekdaySelect) {
+      Array.from(restdayWeekdaySelect.options || []).forEach((option) => {
+        option.selected = false;
+      });
+    }
+    const restdayRepeatMode = row.querySelector('select[data-field="restday_repeat_mode"]');
+    if (restdayRepeatMode) restdayRepeatMode.value = 'weekly';
+    const restdayScaleMode = row.querySelector('select[data-field="restday_scale_mode"]');
+    if (restdayScaleMode) restdayScaleMode.value = 'weekly';
     syncChoiceState(row);
   }
 
@@ -321,6 +345,16 @@
 
     const single = parseInt(row.querySelector('select[data-field="department_id"]')?.value || '0', 10) || 0;
     return single > 0 ? [single] : [];
+  }
+
+  function getSelectedIntValues(row, field, min = 0, max = 999) {
+    if (!row) return [];
+    const select = row.querySelector(`select[data-field="${field}"]`);
+    if (!select) return [];
+    const values = Array.from(select.selectedOptions || [])
+      .map((option) => parseInt(option.value || '0', 10) || 0)
+      .filter((value) => value >= min && value <= max);
+    return Array.from(new Set(values));
   }
 
   function getSharedShiftIds(row) {
@@ -352,6 +386,12 @@
     const weekly_rest_weekdays = Array.from(row.querySelectorAll('select[data-field="weekly_rest_weekdays"] option:checked'))
       .map((option) => parseInt(option.value || '0', 10) || 0)
       .filter((value, index, array) => value >= 0 && value <= 6 && array.indexOf(value) === index);
+    const work_weekdays = getSelectedIntValues(row, 'work_weekdays', 0, 6);
+    const month_numbers = getSelectedIntValues(row, 'month_numbers', 1, 12);
+    const include_restday = (row.querySelector('select[data-field="include_restday"]')?.value || '0') === '1';
+    const restday_weekdays = getSelectedIntValues(row, 'restday_weekdays', 0, 6);
+    const restday_repeat_mode = (row.querySelector('select[data-field="restday_repeat_mode"]')?.value || 'weekly').trim() || 'weekly';
+    const restday_scale_mode = (row.querySelector('select[data-field="restday_scale_mode"]')?.value || 'weekly').trim() || 'weekly';
 
     if (!departmentIds.length) return notifyError('Choose at least one department for the new shift.');
     if (!name) return notifyError('Enter a shift title.');
@@ -376,7 +416,13 @@
         kind,
         range_start,
         range_end,
+        work_weekdays,
+        month_numbers,
         weekly_rest_weekdays,
+        include_restday,
+        restday_weekdays,
+        restday_repeat_mode,
+        restday_scale_mode,
       });
       if (res?.ok) {
         if (feedback?.reloadSettingsTabWithSuccess) {
@@ -420,6 +466,19 @@
     }
     if (shiftIds.length === 1) {
       payloadBase.department_id = parseInt(row.dataset.shiftDepartmentId || '0', 10) || null;
+    }
+    const regenerateSlots = (row.querySelector('select[data-field="regenerate_slots"]')?.value || '0') === '1';
+    if (regenerateSlots) {
+      payloadBase.regenerate_slots = 1;
+      payloadBase.range_start = row.querySelector('input[data-field="range_start"]')?.value || '';
+      payloadBase.range_end = row.querySelector('input[data-field="range_end"]')?.value || '';
+      payloadBase.work_weekdays = getSelectedIntValues(row, 'work_weekdays', 0, 6);
+      payloadBase.month_numbers = getSelectedIntValues(row, 'month_numbers', 1, 12);
+      payloadBase.weekly_rest_weekdays = getSelectedIntValues(row, 'weekly_rest_weekdays', 0, 6);
+      payloadBase.include_restday = (row.querySelector('select[data-field="include_restday"]')?.value || '0') === '1';
+      payloadBase.restday_weekdays = getSelectedIntValues(row, 'restday_weekdays', 0, 6);
+      payloadBase.restday_repeat_mode = (row.querySelector('select[data-field="restday_repeat_mode"]')?.value || 'weekly').trim() || 'weekly';
+      payloadBase.restday_scale_mode = (row.querySelector('select[data-field="restday_scale_mode"]')?.value || 'weekly').trim() || 'weekly';
     }
     try {
       const results = await Promise.all(
@@ -495,7 +554,7 @@
     if (!option) return;
     const select = option.parentElement;
     if (!select || select.tagName !== 'SELECT') return;
-    if (!['department_ids', 'weekly_rest_weekdays'].includes(select.getAttribute('data-field') || '') || !select.multiple) return;
+    if (!['department_ids', 'weekly_rest_weekdays', 'work_weekdays', 'month_numbers', 'restday_weekdays'].includes(select.getAttribute('data-field') || '') || !select.multiple) return;
     ev.preventDefault();
     option.selected = !option.selected;
     select.dispatchEvent(new Event('change', { bubbles: true }));

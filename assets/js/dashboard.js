@@ -24,8 +24,33 @@
   const iconsBase = String(config.iconsBase || '/assets/icons/');
   const pdfjsLibSrc = String(config.pdfjsLibSrc || '/assets/js/vendor/pdfjs/pdf.min.js');
   const pdfjsWorkerSrc = String(config.pdfjsWorkerSrc || '/assets/js/vendor/pdfjs/pdf.worker.min.js');
+  const plannerData = window.DashboardPlannerData || {};
+  const currentUser = window.DashboardCurrentUser || {};
   let pdfjsLibGlobal = window.pdfjsLib || null;
   let pdfjsLoadPromise = null;
+
+  const ensureSuperAdminCompanyScope = () => {
+    const role = String(currentUser.role || '').toLowerCase();
+    if (role !== 'super_admin') return;
+
+    const url = new URL(window.location.href);
+    const routeParam = String(url.searchParams.get('route') || '').toLowerCase();
+    const isDashboardRoute = routeParam === 'dashboard' || /\/dashboard\/?$/i.test(url.pathname);
+    if (!isDashboardRoute) return;
+
+    const currentCompanyId = Number(url.searchParams.get('settings_company_id') || 0);
+    if (currentCompanyId > 0) return;
+
+    const plannerCompanyId = Number(plannerData?.company?.id || 0);
+    const firstCompanyId = Number((Array.isArray(plannerData?.companies) ? plannerData.companies[0]?.id : 0) || 0);
+    const fallbackCompanyId = plannerCompanyId > 0 ? plannerCompanyId : firstCompanyId;
+    if (fallbackCompanyId <= 0) return;
+
+    url.searchParams.set('settings_company_id', String(fallbackCompanyId));
+    window.location.replace(url.toString());
+  };
+
+  ensureSuperAdminCompanyScope();
 
   const configurePdfWorker = () => {
     if (pdfjsLibGlobal && pdfjsLibGlobal.GlobalWorkerOptions) {
@@ -133,28 +158,6 @@
     const crudBody = document.getElementById('crud-modal-body');
     let lastFocusedElement = null;
     let activeModal = null;
-    let requestedMessageDocument = null;
-
-    const plannerData = window.DashboardPlannerData || {};
-    const currentUser = window.DashboardCurrentUser || {};
-
-    const collectDepartmentEmployeeIds = (recipientSelect) => {
-      if (!recipientSelect) return [];
-      const selectedDepartmentId = Number(plannerData.active_department_id || currentUser.department_id || 0);
-      const fallbackToAnyDepartment = selectedDepartmentId <= 0;
-
-      return Array.from(recipientSelect.options || [])
-        .filter((option) => {
-          if (!option || !option.value) return false;
-          const role = String(option.getAttribute('data-role') || '').toLowerCase();
-          const departmentId = Number(option.getAttribute('data-department-id') || 0);
-          if (role !== 'employee') return false;
-          return fallbackToAnyDepartment ? departmentId > 0 : departmentId === selectedDepartmentId;
-        })
-        .map((option) => Number(option.value))
-        .filter((id) => Number.isInteger(id) && id > 0);
-    };
-
     const focusableSelector = [
       'a[href]',
       'button:not([disabled])',
@@ -197,7 +200,7 @@
 
     /**
      * setModalContent(entity)
-     * Given an entity name (companies|users|departments|documents|messages),
+    * Given an entity name (companies|users|departments|documents),
      * initialize the form fields and wire local UI handlers for that template's
      * controls. Templates are copied from the `<template>` nodes included in
      * `app/layout/crud-modal.php`.
@@ -226,6 +229,11 @@
         const uploadShareNowInput = crudBody.querySelector('#crud-document-share-now');
         const uploadSubmitButton = crudBody.querySelector('#crud-document-share-submit');
         const uploadShareExistingButton = crudBody.querySelector('#crud-document-share-existing-submit');
+        const uploadRequestTypeInput = crudBody.querySelector('#crud-document-request-type');
+        const uploadShiftRow = crudBody.querySelector('[data-document-shift-row]');
+        const uploadShiftInput = crudBody.querySelector('#crud-document-shift-id');
+        const uploadTitleInput = crudBody.querySelector('#crud-document-title');
+        const uploadMessageInput = crudBody.querySelector('#crud-document-message');
 
         const closeDashboardSignModal = () => {
           const signModal = document.querySelector('[data-dashboard-document-sign-modal]');
@@ -539,6 +547,30 @@
           window.addEventListener('resize', () => pad.resize(), { once: true });
         };
 
+        const syncDocumentRequestMode = () => {
+          const requestType = String(uploadRequestTypeInput ? uploadRequestTypeInput.value || 'notification' : 'notification');
+          const shareNow = !uploadShareNowInput || !!uploadShareNowInput.checked;
+          const showShiftPicker = requestType === 'shift_coverage' && shareNow;
+
+          if (uploadShiftRow) {
+            uploadShiftRow.classList.toggle('is-hidden', !showShiftPicker);
+          }
+          if (uploadShiftInput) {
+            uploadShiftInput.disabled = !showShiftPicker;
+            if (!showShiftPicker) {
+              uploadShiftInput.value = '';
+            }
+          }
+
+          if (uploadRequireSignatureInput) {
+            const canAskSignature = requestType === 'notification' && shareNow;
+            uploadRequireSignatureInput.disabled = !canAskSignature;
+            if (!canAskSignature) {
+              uploadRequireSignatureInput.checked = false;
+            }
+          }
+        };
+
         const syncUploadRecipientMode = () => {
           if (!uploadScopeInput || !uploadRecipientsInput || !uploadRecipientsLabel) return;
           const shareNow = !uploadShareNowInput || !!uploadShareNowInput.checked;
@@ -552,15 +584,12 @@
               option.selected = false;
             });
           }
-          if (uploadRequireSignatureInput) {
-            uploadRequireSignatureInput.disabled = !shareNow;
-            if (!shareNow) uploadRequireSignatureInput.checked = false;
-          }
           if (uploadSubmitButton) {
             uploadSubmitButton.textContent = shareNow
               ? tr('Upload and share document', 'Televerser et partager le document')
               : tr('Save document draft', 'Enregistrer le brouillon du document');
           }
+          syncDocumentRequestMode();
         };
 
         const getRecipientsPayload = () => {
@@ -590,6 +619,10 @@
           uploadShareNowInput.addEventListener('change', syncUploadRecipientMode);
           syncUploadRecipientMode();
         }
+        if (uploadRequestTypeInput) {
+          uploadRequestTypeInput.addEventListener('change', syncDocumentRequestMode);
+          syncDocumentRequestMode();
+        }
 
         if (uploadForm && uploadFileInput) {
           uploadForm.addEventListener('submit', async (event) => {
@@ -608,9 +641,17 @@
 
             const shareNow = !uploadShareNowInput || !!uploadShareNowInput.checked;
             const { recipientScope, recipientIds } = getRecipientsPayload();
+            const requestType = String(uploadRequestTypeInput ? uploadRequestTypeInput.value || 'notification' : 'notification');
+            const shiftId = Number(uploadShiftInput ? uploadShiftInput.value || 0 : 0);
+            const requestTitle = String(uploadTitleInput ? uploadTitleInput.value || '' : '').trim();
+            const requestMessage = String(uploadMessageInput ? uploadMessageInput.value || '' : '').trim();
 
             if (shareNow && recipientScope !== 'all' && recipientIds.length === 0) {
               notifyError(tr('Select at least one recipient.', 'Selectionnez au moins un destinataire.'));
+              return;
+            }
+            if (shareNow && requestType === 'shift_coverage' && shiftId <= 0) {
+              notifyError(tr('Select a shift for coverage request.', 'Selectionnez un quart pour la demande de remplacement.'));
               return;
             }
 
@@ -625,6 +666,10 @@
                 document_type: 'other',
                 recipient_scope: recipientScope,
                 recipient_ids: recipientIds,
+                request_type: requestType,
+                shift_id: shiftId,
+                title: requestTitle,
+                message: requestMessage,
                 share_now: shareNow,
                 require_signature: !!(uploadRequireSignatureInput && uploadRequireSignatureInput.checked),
               });
@@ -661,8 +706,16 @@
             }
 
             const { recipientScope, recipientIds } = getRecipientsPayload();
+            const requestType = String(uploadRequestTypeInput ? uploadRequestTypeInput.value || 'notification' : 'notification');
+            const shiftId = Number(uploadShiftInput ? uploadShiftInput.value || 0 : 0);
+            const requestTitle = String(uploadTitleInput ? uploadTitleInput.value || '' : '').trim();
+            const requestMessage = String(uploadMessageInput ? uploadMessageInput.value || '' : '').trim();
             if (recipientScope !== 'all' && recipientIds.length === 0) {
               notifyError(tr('Select at least one recipient.', 'Selectionnez au moins un destinataire.'));
+              return;
+            }
+            if (requestType === 'shift_coverage' && shiftId <= 0) {
+              notifyError(tr('Select a shift for coverage request.', 'Selectionnez un quart pour la demande de remplacement.'));
               return;
             }
 
@@ -673,6 +726,10 @@
                 document_id: documentId,
                 recipient_scope: recipientScope,
                 recipient_ids: recipientIds,
+                request_type: requestType,
+                shift_id: shiftId,
+                title: requestTitle,
+                message: requestMessage,
                 require_signature: !!(uploadRequireSignatureInput && uploadRequireSignatureInput.checked),
               });
 
@@ -694,73 +751,28 @@
           button.addEventListener('click', (event) => {
             event.preventDefault();
             const isAlreadyActive = button.classList.contains('is-active');
-            crudBody.querySelectorAll('[data-document-share-existing-id]').forEach((item) => item.classList.remove('is-active'));
+            crudBody.querySelectorAll('[data-document-share-existing-id]').forEach((item) => {
+              item.classList.remove('is-active');
+              const defaultTitle = String(item.getAttribute('data-document-share-select-title') || tr('Add to send selection', 'Ajouter a la selection d envoi'));
+              item.title = defaultTitle;
+              const iconNode = item.querySelector('[data-document-share-select-icon]');
+              if (iconNode) {
+                iconNode.textContent = '+';
+              }
+            });
             if (!isAlreadyActive) {
               button.classList.add('is-active');
               const documentName = String(button.getAttribute('data-document-share-existing-name') || 'document');
-              notifySuccess(tr(`Selected for sharing: ${documentName}`, `Selectionne pour partage : ${documentName}`));
+              button.title = String(button.getAttribute('data-document-share-unselect-title') || tr('Remove from send selection', 'Retirer de la selection d envoi'));
+              const iconNode = button.querySelector('[data-document-share-select-icon]');
+              if (iconNode) {
+                iconNode.textContent = '✓';
+              }
+              notifySuccess(tr(`Added to send selection: ${documentName}`, `Ajoute a la selection d envoi : ${documentName}`));
+            } else {
+              button.title = String(button.getAttribute('data-document-share-select-title') || tr('Add to send selection', 'Ajouter a la selection d envoi'));
+              notifySuccess(tr('Removed from send selection.', 'Retire de la selection d envoi.'));
             }
-          });
-        });
-
-        const updateDocumentCardStatus = (button, nextStatus) => {
-          const card = button.closest('.company-card');
-          if (!card) return;
-
-          const statusChip = card.querySelector('[data-document-status-chip]');
-          if (statusChip) {
-            statusChip.textContent = String(nextStatus || 'valid');
-          }
-
-          const archiveButton = card.querySelector('[data-document-archive-id]');
-          const restoreButton = card.querySelector('[data-document-restore-id]');
-          const signButton = card.querySelector('[data-dashboard-document-sign-open]');
-          const isArchived = String(nextStatus || '') === 'archived';
-
-          if (archiveButton) archiveButton.hidden = isArchived;
-          if (restoreButton) restoreButton.hidden = !isArchived;
-          if (signButton) signButton.hidden = isArchived;
-        };
-
-        const handleDocumentStatusAction = async (button, actionName, successMessage) => {
-          if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-            notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
-            return;
-          }
-
-          const documentId = Number(button.getAttribute('data-document-archive-id') || button.getAttribute('data-document-restore-id') || 0);
-          if (!documentId) {
-            notifyError(tr('Invalid document id.', 'ID document invalide.'));
-            return;
-          }
-
-          button.disabled = true;
-          try {
-            const response = await window.AppAPI.postJSON(apiDashboard, {
-              action: actionName,
-              document_id: documentId,
-            });
-            if (!response || response.ok === false || response.success === false) {
-              throw new Error((response && (response.error || response.message)) || tr('Unable to update document status.', 'Impossible de mettre a jour le statut du document.'));
-            }
-            updateDocumentCardStatus(button, response.status || (actionName === 'archive_document' ? 'archived' : 'valid'));
-            notifySuccess(successMessage);
-          } catch (error) {
-            notifyError((error && error.message) || tr('Unable to update document status.', 'Impossible de mettre a jour le statut du document.'));
-          } finally {
-            button.disabled = false;
-          }
-        };
-
-        crudBody.querySelectorAll('[data-document-archive-id]').forEach((button) => {
-          button.addEventListener('click', async () => {
-            await handleDocumentStatusAction(button, 'archive_document', tr('Document archived successfully.', 'Document archive avec succes.'));
-          });
-        });
-
-        crudBody.querySelectorAll('[data-document-restore-id]').forEach((button) => {
-          button.addEventListener('click', async () => {
-            await handleDocumentStatusAction(button, 'restore_document', tr('Document restored successfully.', 'Document restaure avec succes.'));
           });
         });
 
@@ -807,198 +819,6 @@
             openDashboardSignModal(button);
           });
         });
-        return;
-      }
-
-      if (entity === 'messages') {
-        const messageHeading = crudBody.querySelector('#crud-message-form-heading');
-        const messageKind = crudBody.querySelector('#crud-message-kind');
-        const requestType = crudBody.querySelector('#crud-message-request-type');
-        const messageTitle = crudBody.querySelector('#crud-message-title');
-        const messageBody = crudBody.querySelector('#crud-message-body');
-        const documentId = crudBody.querySelector('#crud-message-document-id');
-        const recipients = crudBody.querySelector('#crud-message-recipient-ids');
-        const messageSubmit = crudBody.querySelector('#crud-message-submit');
-        const resetMessage = crudBody.querySelector('[data-crud-reset-message]');
-
-        const removeMessageCard = (card) => {
-          if (!card || !card.parentElement) return;
-          card.remove();
-          const remaining = crudBody.querySelectorAll('[data-message-card-id]').length;
-          if (remaining === 0) {
-            const grid = crudBody.querySelector('.company-grid');
-            if (grid) {
-              grid.innerHTML = '<div class="crud-empty-state">No messages available.</div>';
-            }
-          }
-        };
-
-        const archiveMessageCard = (button) => {
-          const card = button.closest('.company-card');
-          if (!card) return;
-          const statusChip = card.querySelector('[data-message-status-chip]');
-          if (statusChip) {
-            statusChip.textContent = 'archived';
-          }
-          button.hidden = true;
-        };
-
-        const syncKind = () => {
-          const isNotification = messageKind && messageKind.value === 'notification';
-          if (requestType) {
-            requestType.disabled = isNotification;
-            requestType.closest('label')?.classList.toggle('is-hidden', isNotification);
-          }
-          if (messageHeading) messageHeading.textContent = isNotification ? tr('Create notification', 'Creer une notification') : tr('Create request', 'Creer une demande');
-          if (messageSubmit) messageSubmit.textContent = isNotification ? tr('Send notification', 'Envoyer la notification') : tr('Send request', 'Envoyer la demande');
-        };
-
-        const resetMessageForm = () => {
-          if (messageKind) messageKind.value = 'request';
-          if (requestType) requestType.value = 'leave';
-          if (messageTitle) messageTitle.value = '';
-          if (messageBody) messageBody.value = '';
-          if (documentId) documentId.value = '';
-          if (recipients) Array.from(recipients.options).forEach((option) => { option.selected = false; });
-          syncKind();
-        };
-
-        const applyRequestedDocument = () => {
-          if (!requestedMessageDocument || !documentId) return;
-          const requestedId = Number(requestedMessageDocument.id || 0);
-          if (requestedId > 0) {
-            documentId.value = String(requestedId);
-            if (messageTitle && !messageTitle.value) {
-              messageTitle.value = tr('Planning document: ', 'Document planning : ') + (requestedMessageDocument.name || tr('Document', 'Document'));
-            }
-            if (messageBody && !messageBody.value) {
-              messageBody.value = tr('Please review the attached planning document.', 'Veuillez consulter le document de planning joint.');
-            }
-            if (messageKind) {
-              messageKind.value = 'notification';
-              syncKind();
-            }
-
-            if (recipients) {
-              const wanted = new Set((requestedMessageDocument.recipientIds || []).map((id) => Number(id)));
-              if (wanted.size > 0) {
-                Array.from(recipients.options).forEach((option) => {
-                  option.selected = wanted.has(Number(option.value || 0));
-                });
-              }
-            }
-          }
-          requestedMessageDocument = null;
-        };
-
-        if (messageKind) {
-          messageKind.addEventListener('change', syncKind);
-        }
-
-        crudBody.querySelectorAll('[data-message-archive-id]').forEach((button) => {
-          button.addEventListener('click', async () => {
-            if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
-              return;
-            }
-
-            const messageId = Number(button.getAttribute('data-message-archive-id') || 0);
-            if (!messageId) {
-              notifyError(tr('Invalid message id.', 'ID message invalide.'));
-              return;
-            }
-
-            button.disabled = true;
-            try {
-              const response = await window.AppAPI.postJSON(apiDashboard, {
-                action: 'archive_message',
-                message_id: messageId,
-              });
-              if (!response || response.ok === false || response.success === false) {
-                throw new Error((response && (response.error || response.message)) || tr('Unable to archive message.', 'Impossible d archiver le message.'));
-              }
-
-              archiveMessageCard(button);
-              notifySuccess(tr('Message archived successfully.', 'Message archive avec succes.'));
-            } catch (error) {
-              notifyError((error && error.message) || tr('Unable to archive message.', 'Impossible d archiver le message.'));
-            } finally {
-              button.disabled = false;
-            }
-          });
-        });
-
-        crudBody.querySelectorAll('[data-message-delete-id]').forEach((button) => {
-          button.addEventListener('click', async () => {
-            if (!apiDashboard || !window.AppAPI || typeof window.AppAPI.postJSON !== 'function') {
-              notifyError(tr('Dashboard API is not available.', 'API dashboard indisponible.'));
-              return;
-            }
-
-            const messageId = Number(button.getAttribute('data-message-delete-id') || 0);
-            const messageName = String(button.getAttribute('data-message-delete-name') || 'message');
-            if (!messageId) {
-              notifyError(tr('Invalid message id.', 'ID message invalide.'));
-              return;
-            }
-
-            if (!window.confirm(tr('Delete message "' + messageName + '"? This action cannot be undone.', 'Supprimer le message "' + messageName + '" ? Cette action est irreversible.'))) {
-              return;
-            }
-
-            button.disabled = true;
-            try {
-              const response = await window.AppAPI.postJSON(apiDashboard, {
-                action: 'delete_message',
-                message_id: messageId,
-              });
-              if (!response || response.ok === false || response.success === false) {
-                throw new Error((response && (response.error || response.message)) || tr('Unable to delete message.', 'Impossible de supprimer le message.'));
-              }
-
-              removeMessageCard(button.closest('.company-card'));
-              notifySuccess(tr('Message deleted successfully.', 'Message supprime avec succes.'));
-            } catch (error) {
-              notifyError((error && error.message) || tr('Unable to delete message.', 'Impossible de supprimer le message.'));
-            } finally {
-              button.disabled = false;
-            }
-          });
-        });
-
-        crudBody.querySelectorAll('[data-message-print-id]').forEach((button) => {
-          button.addEventListener('click', () => {
-            const printDocumentUrl = String(button.getAttribute('data-message-document-print-url') || '').trim();
-            if (printDocumentUrl) {
-              window.open(printDocumentUrl, '_blank', 'noopener');
-              return;
-            }
-
-            const title = String(button.getAttribute('data-message-print-title') || 'Message');
-            const body = String(button.getAttribute('data-message-print-body') || '');
-            const sender = String(button.getAttribute('data-message-print-sender') || '');
-            const recipient = String(button.getAttribute('data-message-print-recipient') || '');
-            const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
-            if (!printWindow) {
-              notifyError(tr('Unable to open print window.', 'Impossible d ouvrir la fenetre d impression.'));
-              return;
-            }
-
-            const escapedTitle = escapeHtml(title);
-            const escapedBody = escapeHtml(body).replace(/\n/g, '<br>');
-            const escapedSender = escapeHtml(sender);
-            const escapedRecipient = escapeHtml(recipient);
-            printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapedTitle}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#222}h1{margin:0 0 16px 0;font-size:26px}.meta{margin-bottom:16px;color:#555}.box{border:1px solid #ddd;border-radius:10px;padding:14px}</style></head><body><h1>${escapedTitle}</h1><div class="meta">${escapedSender}${escapedRecipient ? ' -> ' + escapedRecipient : ''}</div><div class="box">${escapedBody}</div></body></html>`);
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
-          });
-        });
-
-        if (resetMessage) resetMessage.addEventListener('click', resetMessageForm);
-        syncKind();
-        resetMessageForm();
-        applyRequestedDocument();
         return;
       }
 
@@ -1214,7 +1034,6 @@
         if (!targetModal) return;
         lastFocusedElement = document.activeElement;
         closeAll();
-        openButtons.forEach((item) => item.classList.remove('is-active'));
         button.classList.add('is-active');
 
         if (targetId === 'crud-modal' && crudModal) {
@@ -1228,8 +1047,6 @@
                 ? tr('Create, edit and assign users by role and department.', 'Creez, modifiez et assignez les utilisateurs par role et departement.')
                 : entity === 'departments'
                   ? tr('Create, edit and assign departments by company and head.', 'Creez, modifiez et assignez les departements par entreprise et responsable.')
-                  : entity === 'messages'
-                    ? tr('Create requests or notifications and send them to selected users.', 'Creez des demandes ou notifications et envoyez-les aux utilisateurs selectionnes.')
                     : entity === 'documents'
                         ? tr('Upload, share and manage documents from this panel.', 'Televersez, partagez et gerez les documents depuis ce panneau.')
                 : tr('Common CRUD shell', 'Conteneur CRUD commun');

@@ -151,6 +151,10 @@ if ($role === 'super_admin') {
         }
     }
 
+    if ($requestedCompanyId <= 0 && $plannerCompanyId !== null && $plannerCompanyId > 0) {
+        redirectTo('dashboard', ['settings_company_id' => $plannerCompanyId]);
+    }
+
     if ($plannerCompanyId !== null && $plannerCompanyId > 0) {
         $companyName = '';
         $companyType = '';
@@ -591,7 +595,6 @@ $moduleRows = [
     'company_directory_departments' => [],
     'departments' => [],
     'documents' => [],
-    'messages' => [],
     'team' => [],
     'notifications' => [],
     'shifts' => [],
@@ -603,92 +606,10 @@ $modalCompanies = [];
 $modalUsers = [];
 $modalDepartments = [];
 $modalDocuments = [];
-$modalMessages = [];
 $modalDocumentRecipients = [];
+$modalDocumentRequests = [];
+$modalOpenShiftChoices = [];
 
-$resolveDashboardAllowedMessageRecipients = static function () use ($pdo, $role, $companyId, $currentUser): array {
-    $sql = 'SELECT u.id
-            FROM users u
-            LEFT JOIN departments d ON d.id = u.department_id
-            WHERE u.status = "active"
-              AND u.id <> :current_user_id';
-    $params = [
-        'current_user_id' => (int) ($currentUser['id'] ?? 0),
-    ];
-
-    if ($role === 'super_admin') {
-        // Super admin can message everyone.
-    } elseif ($role === 'admin') {
-        $companyScopeId = (int) ($companyId ?? 0);
-        if ($companyScopeId <= 0) {
-            return [];
-        }
-        $sql .= ' AND (d.company_id = :company_id OR u.role = "super_admin")';
-        $params['company_id'] = $companyScopeId;
-    } elseif ($role === 'department_manager') {
-        $companyScopeId = (int) ($companyId ?? 0);
-        if ($companyScopeId <= 0) {
-            return [];
-        }
-        $sql .= ' AND (d.company_id = :company_id OR u.role = "super_admin")';
-        $params['company_id'] = $companyScopeId;
-    } else {
-        return [];
-    }
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
-
-    return array_fill_keys($ids, true);
-};
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $dashboardAction = $_POST['dashboard_action'] ?? '';
-
-    if ($dashboardAction === 'create_message') {
-        $messageKind = trim((string) ($_POST['message_kind'] ?? 'request'));
-        $requestType = trim((string) ($_POST['request_type'] ?? 'leave'));
-        $messageTitle = trim((string) ($_POST['message_title'] ?? ''));
-        $messageBody = trim((string) ($_POST['message_body'] ?? ''));
-        $documentId = ($_POST['document_id'] ?? '') !== '' ? (int) $_POST['document_id'] : null;
-        $recipientIds = $_POST['recipient_ids'] ?? [];
-        $recipientIds = array_values(array_filter(array_map('intval', is_array($recipientIds) ? $recipientIds : [$recipientIds])));
-
-        $allowedRecipientSet = $resolveDashboardAllowedMessageRecipients();
-        $recipientIds = array_values(array_filter(
-            $recipientIds,
-            static fn (int $recipientId): bool => isset($allowedRecipientSet[$recipientId])
-        ));
-
-        if ($messageTitle === '' || $messageBody === '' || empty($recipientIds)) {
-            setFlash('error', t('flash.message_required_fields'));
-        } else {
-            $messageType = $messageKind === 'notification' ? 'notification' : $requestType;
-            $insertStatement = $pdo->prepare(
-                'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
-                 VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
-            );
-
-            $status = $messageType === 'notification' ? 'unread' : 'pending';
-            foreach ($recipientIds as $recipientId) {
-                $insertStatement->execute([
-                    'user_id' => (int) $currentUser['id'],
-                    'recipient_id' => $recipientId,
-                    'type' => $messageType,
-                    'title' => $messageTitle,
-                    'message' => $messageBody,
-                    'status' => $status,
-                    'document_id' => $documentId,
-                ]);
-            }
-
-            setFlash('success', t('flash.message_sent_success'));
-        }
-
-        redirectTo('dashboard');
-    }
-}
 
 if ($role === 'super_admin') {
     $moduleRows['company_directory'] = $companyModel->directoryWithAdminsAndDepartments();
@@ -704,17 +625,6 @@ if ($role === 'super_admin') {
          INNER JOIN users u ON u.id = d.user_id
          LEFT JOIN departments dep ON dep.id = u.department_id
          ORDER BY d.upload_date DESC, d.id DESC'
-    )->fetchAll();
-    $modalMessages = $pdo->query(
-        'SELECT r.id, r.recipient_id, r.document_id, r.type, r.title, r.message, r.status, r.created_at,
-                CONCAT(u.first_name, " ", u.last_name) AS sender_name,
-                CONCAT(ru.first_name, " ", ru.last_name) AS recipient_name,
-                doc.file_name AS document_name
-         FROM requests r
-         INNER JOIN users u ON u.id = r.user_id
-         LEFT JOIN users ru ON ru.id = r.recipient_id
-         LEFT JOIN documents doc ON doc.id = r.document_id
-         ORDER BY r.created_at DESC, r.id DESC'
     )->fetchAll();
 }
 
@@ -751,25 +661,6 @@ if ($role === 'admin' && $companyId !== null) {
     );
     $modalDocuments->execute(['company_id' => $companyId]);
     $modalDocuments = $modalDocuments->fetchAll();
-    $modalMessages = $pdo->prepare(
-        'SELECT r.id, r.recipient_id, r.document_id, r.type, r.title, r.message, r.status, r.created_at,
-                CONCAT(u.first_name, " ", u.last_name) AS sender_name,
-                CONCAT(ru.first_name, " ", ru.last_name) AS recipient_name,
-                doc.file_name AS document_name
-         FROM requests r
-         INNER JOIN users u ON u.id = r.user_id
-         LEFT JOIN users ru ON ru.id = r.recipient_id
-         LEFT JOIN documents doc ON doc.id = r.document_id
-         LEFT JOIN departments dep ON dep.id = u.department_id
-         WHERE dep.company_id = :company_id_sender
-            OR EXISTS (SELECT 1 FROM users rx LEFT JOIN departments dx ON dx.id = rx.department_id WHERE rx.id = r.recipient_id AND dx.company_id = :company_id_recipient)
-         ORDER BY r.created_at DESC, r.id DESC'
-    );
-    $modalMessages->execute([
-        'company_id_sender' => $companyId,
-        'company_id_recipient' => $companyId,
-    ]);
-    $modalMessages = $modalMessages->fetchAll();
 }
 
 if ($role === 'department_manager' && $departmentId !== null) {
@@ -796,26 +687,6 @@ if ($role === 'department_manager' && $departmentId !== null) {
     );
     $modalDocuments->execute(['department_id' => $departmentId]);
     $modalDocuments = $modalDocuments->fetchAll();
-    $modalMessages = $pdo->prepare(
-        'SELECT r.id, r.recipient_id, r.document_id, r.type, r.title, r.message, r.status, r.created_at,
-                CONCAT(u.first_name, " ", u.last_name) AS sender_name,
-                CONCAT(ru.first_name, " ", ru.last_name) AS recipient_name,
-                doc.file_name AS document_name
-         FROM requests r
-         INNER JOIN users u ON u.id = r.user_id
-         LEFT JOIN users ru ON ru.id = r.recipient_id
-         LEFT JOIN documents doc ON doc.id = r.document_id
-         LEFT JOIN departments dep_sender ON dep_sender.id = u.department_id
-         LEFT JOIN departments dep_recipient ON dep_recipient.id = ru.department_id
-         WHERE dep_sender.company_id = :company_id_sender
-            OR dep_recipient.company_id = :company_id_recipient
-         ORDER BY r.created_at DESC, r.id DESC'
-    );
-    $modalMessages->execute([
-        'company_id_sender' => (int) ($companyId ?? 0),
-        'company_id_recipient' => (int) ($companyId ?? 0),
-    ]);
-    $modalMessages = $modalMessages->fetchAll();
 }
 
 if ($role === 'employee') {
@@ -831,23 +702,6 @@ if ($role === 'employee') {
     );
     $modalDocuments->execute(['user_id' => $currentUser['id']]);
     $modalDocuments = $modalDocuments->fetchAll();
-    $modalMessages = $pdo->prepare(
-        'SELECT r.id, r.recipient_id, r.document_id, r.type, r.title, r.message, r.status, r.created_at,
-                CONCAT(u.first_name, " ", u.last_name) AS sender_name,
-                CONCAT(ru.first_name, " ", ru.last_name) AS recipient_name,
-                doc.file_name AS document_name
-         FROM requests r
-         INNER JOIN users u ON u.id = r.user_id
-         LEFT JOIN users ru ON ru.id = r.recipient_id
-         LEFT JOIN documents doc ON doc.id = r.document_id
-         WHERE r.user_id = :user_id_sender OR r.recipient_id = :user_id_recipient
-         ORDER BY r.created_at DESC, r.id DESC'
-    );
-    $modalMessages->execute([
-        'user_id_sender' => $currentUser['id'],
-        'user_id_recipient' => $currentUser['id'],
-    ]);
-    $modalMessages = $modalMessages->fetchAll();
 }
 
 if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
@@ -886,12 +740,69 @@ if (in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
     } catch (Throwable $e) {
         $modalDocumentRecipients = [];
     }
+
+    $requestSql =
+        'SELECT r.id,
+                r.type,
+                r.title,
+                r.status,
+                r.document_id,
+                  r.shift_id,
+                CONCAT(sender.first_name, " ", sender.last_name) AS sender_name,
+                CONCAT(recipient.first_name, " ", recipient.last_name) AS recipient_name,
+                  s.name AS shift_name,
+                sender_dep.company_id AS sender_company_id,
+                recipient_dep.company_id AS recipient_company_id
+         FROM requests r
+         INNER JOIN users sender ON sender.id = r.user_id
+         LEFT JOIN users recipient ON recipient.id = r.recipient_id
+              LEFT JOIN shifts s ON s.id = r.shift_id
+         LEFT JOIN departments sender_dep ON sender_dep.id = sender.department_id
+         LEFT JOIN departments recipient_dep ON recipient_dep.id = recipient.department_id
+              WHERE r.document_id IS NOT NULL OR r.type = "shift_coverage"';
+    $requestParams = [];
+
+    if ($role === 'admin' || $role === 'department_manager') {
+        $requestSql .= ' AND (sender_dep.company_id = :company_id_sender OR recipient_dep.company_id = :company_id_recipient)';
+        $requestParams['company_id_sender'] = (int) ($companyId ?? 0);
+        $requestParams['company_id_recipient'] = (int) ($companyId ?? 0);
+    }
+
+    $requestSql .= ' ORDER BY r.created_at DESC, r.id DESC LIMIT 120';
+    $requestStmt = $pdo->prepare($requestSql);
+    $requestStmt->execute($requestParams);
+    $modalDocumentRequests = $requestStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    if ($role === 'super_admin') {
+        $shiftStmt = $pdo->query(
+            'SELECT s.id, s.name, s.start_time, s.end_time, d.name AS department_name
+             FROM shifts s
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE s.kind IN ("work", "overtime")
+             ORDER BY d.name ASC, s.name ASC, s.start_time ASC
+             LIMIT 200'
+        );
+        $modalOpenShiftChoices = $shiftStmt ? ($shiftStmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+    } elseif ((int) ($companyId ?? 0) > 0) {
+        $shiftStmt = $pdo->prepare(
+            'SELECT s.id, s.name, s.start_time, s.end_time, d.name AS department_name
+             FROM shifts s
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE d.company_id = :company_id
+               AND s.kind IN ("work", "overtime")
+             ORDER BY d.name ASC, s.name ASC, s.start_time ASC
+             LIMIT 200'
+        );
+        $shiftStmt->execute(['company_id' => (int) $companyId]);
+        $modalOpenShiftChoices = $shiftStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
 }
 
 $dashboardModalCompanies = $modalCompanies;
 $dashboardModalUsers = $modalUsers;
 $dashboardModalDepartments = $modalDepartments;
 $dashboardModalDocuments = $modalDocuments;
-$dashboardModalMessages = $modalMessages;
 $dashboardModalDocumentRecipients = $modalDocumentRecipients;
+$dashboardModalDocumentRequests = $modalDocumentRequests;
+$dashboardModalOpenShiftChoices = $modalOpenShiftChoices;
 $moduleRows['notifications'] = $userModel->userNotifications((int) $currentUser['id']);

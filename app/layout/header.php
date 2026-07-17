@@ -147,14 +147,6 @@ if ($route === 'home') {
         ];
         $rightIcons[] = [
             'type' => 'button',
-            'title' => t('employee.messages', ['fallback' => 'Messages']),
-            'target' => 'crud-modal',
-            'entity' => 'messages',
-            'icon' => 'mail.svg',
-            'alt' => t('employee.messages', ['fallback' => 'Messages']),
-        ];
-        $rightIcons[] = [
-            'type' => 'button',
             'title' => t('common.print'),
             'target' => 'modal-print',
             'icon' => 'print-outline.svg',
@@ -209,21 +201,62 @@ if ($isPublicInfoRoute) {
     $mobileMenuItems[] = ['type' => 'link', 'href' => appUrl('creator'), 'label' => t('common.app_creator')];
 }
 
-foreach ($rightIcons as $iconItem) {
-    if (($iconItem['type'] ?? 'link') === 'button') {
-        $mobileMenuItems[] = [
-            'type' => 'button',
-            'label' => (string) ($iconItem['title'] ?? t('common.action')),
-            'target' => (string) ($iconItem['target'] ?? ''),
-            'entity' => (string) ($iconItem['entity'] ?? ''),
-        ];
-        continue;
+$isLeadershipDashboard = $route === 'dashboard' && $currentUser !== null
+    && in_array((string) ($currentUser['role'] ?? ''), ['super_admin', 'admin', 'department_manager'], true);
+
+if ($isLeadershipDashboard) {
+    $isItalianLocale = str_starts_with(strtolower((string) $locale), 'it');
+    $isFrenchLocale = str_starts_with(strtolower((string) $locale), 'fr');
+    $settingsLabel = $isItalianLocale ? 'Parametri' : ($isFrenchLocale ? 'Parametres' : t('common.settings'));
+    $connectionLabel = $isItalianLocale ? 'Connessione' : ($isFrenchLocale ? 'Connexion' : 'Connection');
+    $connectionRouteParams = [
+        'modal' => 'settings',
+        'settings_tab' => 'attendances',
+    ];
+    if (($currentUser['role'] ?? '') === 'super_admin' && isset($_GET['settings_company_id']) && (int) $_GET['settings_company_id'] > 0) {
+        $connectionRouteParams['settings_company_id'] = (int) $_GET['settings_company_id'];
     }
+
+    $mobileMenuItems[] = [
+        'type' => 'button',
+        'label' => $settingsLabel,
+        'target' => 'modal-settings',
+        'entity' => 'settings',
+    ];
     $mobileMenuItems[] = [
         'type' => 'link',
-        'href' => (string) ($iconItem['href'] ?? appUrl('home')),
-        'label' => (string) ($iconItem['title'] ?? t('common.action')),
+        'href' => appUrl('dashboard', $connectionRouteParams),
+        'label' => $connectionLabel,
     ];
+    $mobileMenuItems[] = [
+        'type' => 'button',
+        'label' => t('common.documents'),
+        'target' => 'crud-modal',
+        'entity' => 'documents',
+    ];
+    $mobileMenuItems[] = [
+        'type' => 'button',
+        'label' => t('common.print'),
+        'target' => 'modal-print',
+        'entity' => '',
+    ];
+} else {
+    foreach ($rightIcons as $iconItem) {
+        if (($iconItem['type'] ?? 'link') === 'button') {
+            $mobileMenuItems[] = [
+                'type' => 'button',
+                'label' => (string) ($iconItem['title'] ?? t('common.action')),
+                'target' => (string) ($iconItem['target'] ?? ''),
+                'entity' => (string) ($iconItem['entity'] ?? ''),
+            ];
+            continue;
+        }
+        $mobileMenuItems[] = [
+            'type' => 'link',
+            'href' => (string) ($iconItem['href'] ?? appUrl('home')),
+            'label' => (string) ($iconItem['title'] ?? t('common.action')),
+        ];
+    }
 }
 
 if (is_array($logoutIcon)) {

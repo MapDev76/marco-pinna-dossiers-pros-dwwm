@@ -28,6 +28,12 @@ function appBasePath(): string
 
 function appUsesPrettyUrls(): bool
 {
+    $requestUri = strtolower((string) ($_SERVER['REQUEST_URI'] ?? ''));
+    $hasExplicitRouteParam = isset($_GET['route']) || str_contains($requestUri, 'route=');
+    if ($hasExplicitRouteParam) {
+        return false;
+    }
+
     $serverSoftware = strtolower((string) ($_SERVER['SERVER_SOFTWARE'] ?? ''));
     return str_contains($serverSoftware, 'apache');
 }

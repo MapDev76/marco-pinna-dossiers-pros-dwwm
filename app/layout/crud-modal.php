@@ -40,13 +40,8 @@ $modalDocumentScopeHint = match ($modalCurrentRole) {
     'department_manager' => ($modalIsFr ? 'Portee manager: partage limite aux managers de votre entreprise.' : ($modalIsIt ? 'Ambito manager: condivisione limitata ai manager della tua azienda.' : 'Manager scope: sharing is limited to managers in your company.')),
     default => ($modalIsFr ? 'Selectionnez les destinataires autorises.' : ($modalIsIt ? 'Seleziona i destinatari consentiti.' : 'Select the allowed recipients.')),
 };
-
-$modalMessageScopeHint = match ($modalCurrentRole) {
-    'super_admin' => ($modalIsFr ? 'Portee super admin: messages vers tous les utilisateurs actifs.' : ($modalIsIt ? 'Ambito super admin: messaggi verso tutti gli utenti attivi.' : 'Super admin scope: messages can be sent to all active users.')),
-    'admin' => ($modalIsFr ? 'Portee admin: messages limites a votre entreprise.' : ($modalIsIt ? 'Ambito admin: messaggi limitati alla tua azienda.' : 'Admin scope: messages are limited to your company.')),
-    'department_manager' => ($modalIsFr ? 'Portee manager: messages vers tous les collegues de votre entreprise.' : ($modalIsIt ? 'Ambito manager: messaggi a tutti i colleghi della tua azienda.' : 'Manager scope: messages can be sent to all colleagues in your company.')),
-    default => ($modalIsFr ? 'Selectionnez les destinataires autorises.' : ($modalIsIt ? 'Seleziona i destinatari consentiti.' : 'Select the allowed recipients.')),
-};
+$modalCanRequestSignature = in_array($modalCurrentRole, ['admin', 'department_manager'], true);
+$modalCanRequestShiftCoverage = in_array($modalCurrentRole, ['admin', 'department_manager'], true);
 
 $basePath = $basePath ?? (function () {
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
@@ -356,11 +351,31 @@ $basePath = $basePath ?? (function () {
             <form class="admin-form crud-form" id="crud-document-share-form" enctype="multipart/form-data">
                 <label class="span-2">
                     <?php echo e(t('crud.document')); ?>
-                    <input type="file" id="crud-document-file" required>
+                    <input type="file" id="crud-document-file">
                 </label>
                 <label class="span-2 crud-inline-choice" for="crud-document-share-now">
                     <input type="checkbox" id="crud-document-share-now" value="1" checked>
                     <span class="company-card-chip">Invia subito ai destinatari selezionati</span>
+                </label>
+                <label>
+                    Tipo richiesta
+                    <select id="crud-document-request-type">
+                        <option value="notification">Notifica documento</option>
+                        <?php if ($modalCanRequestShiftCoverage): ?>
+                            <option value="shift_coverage">Richiesta sostituzione turno</option>
+                        <?php endif; ?>
+                    </select>
+                </label>
+                <label class="crud-document-shift-row is-hidden" data-document-shift-row>
+                    Turno da coprire
+                    <select id="crud-document-shift-id">
+                        <option value="">Seleziona turno</option>
+                        <?php foreach (($dashboardModalOpenShiftChoices ?? []) as $shiftChoice): ?>
+                            <option value="<?php echo (int) ($shiftChoice['id'] ?? 0); ?>">
+                                <?php echo e((string) (($shiftChoice['department_name'] ?? '') . ' - ' . ($shiftChoice['name'] ?? 'Shift') . ' (' . substr((string) ($shiftChoice['start_time'] ?? '00:00:00'), 0, 5) . '-' . substr((string) ($shiftChoice['end_time'] ?? '00:00:00'), 0, 5) . ')')); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </label>
                 <label>
                     <?php echo e(t('crud.recipients')); ?>
@@ -396,13 +411,22 @@ $basePath = $basePath ?? (function () {
                         <?php endforeach; ?>
                     </select>
                 </label>
-                <label class="span-2 crud-inline-choice" for="crud-document-require-signature">
-                    <input type="checkbox" id="crud-document-require-signature" value="1">
-                    <span class="company-card-chip">Demander une signature numerique</span>
+                <?php if ($modalCanRequestSignature): ?>
+                    <label class="span-2 crud-inline-choice" for="crud-document-require-signature">
+                        <input type="checkbox" id="crud-document-require-signature" value="1">
+                        <span class="company-card-chip">Demander une signature numerique</span>
+                    </label>
+                <?php endif; ?>
+                <label class="span-2">
+                    Titolo
+                    <input type="text" id="crud-document-title" maxlength="255" placeholder="Titolo richiesta/notifica">
+                </label>
+                <label class="span-2">
+                    <?php echo e(t('crud.message')); ?>
+                    <textarea id="crud-document-message" rows="3" placeholder="Messaggio breve per i destinatari"></textarea>
                 </label>
                 <div class="form-actions span-2">
-                    <button type="submit" id="crud-document-share-submit" class="admin-action-link">Partager le document</button>
-                    <button type="button" id="crud-document-share-existing-submit" class="admin-action-link admin-action-link-secondary">Invia documento selezionato</button>
+                    <button type="button" id="crud-document-share-existing-submit" class="admin-action-link admin-action-link-secondary">Invia documento selezionato nel messaggio</button>
                 </div>
             </form>
         </section>
@@ -461,28 +485,12 @@ $basePath = $basePath ?? (function () {
                             <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
                                 <button type="button"
                                         class="company-card-action"
-                                        title="Invia documento"
+                                        title="Aggiungi alla selezione invio"
+                                        data-document-share-select-title="Aggiungi alla selezione invio"
+                                        data-document-share-unselect-title="Rimuovi dalla selezione invio"
                                         data-document-share-existing-id="<?php echo (int) ($document['id'] ?? 0); ?>"
                                         data-document-share-existing-name="<?php echo e($document['file_name'] ?? 'Document'); ?>">
-                                    <span aria-hidden="true">↗</span>
-                                </button>
-                            <?php endif; ?>
-                            <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
-                                <button type="button"
-                                        class="company-card-action"
-                                        title="Archivia documento"
-                                        data-document-archive-id="<?php echo (int) ($document['id'] ?? 0); ?>"
-                                        data-document-archive-name="<?php echo e($document['file_name'] ?? 'Document'); ?>"
-                                        <?php if ((string) ($document['status'] ?? 'valid') === 'archived'): ?>hidden<?php endif; ?>>
-                                    <span aria-hidden="true">🗄</span>
-                                </button>
-                                <button type="button"
-                                        class="company-card-action"
-                                        title="Ripristina documento"
-                                        data-document-restore-id="<?php echo (int) ($document['id'] ?? 0); ?>"
-                                        data-document-restore-name="<?php echo e($document['file_name'] ?? 'Document'); ?>"
-                                        <?php if ((string) ($document['status'] ?? '') !== 'archived'): ?>hidden<?php endif; ?>>
-                                    <span aria-hidden="true">↺</span>
+                                    <span aria-hidden="true" data-document-share-select-icon>+</span>
                                 </button>
                             <?php endif; ?>
                             <?php if (in_array($modalCurrentRole, ['super_admin', 'admin', 'department_manager'], true)): ?>
@@ -512,121 +520,6 @@ $basePath = $basePath ?? (function () {
                 <?php endforeach; ?>
             </div>
         </section>
-    </div>
-</template>
 
-<template id="crud-template-messages">
-    <div class="crud-panel-grid crud-panel-grid-wide" data-crud-entity="messages">
-        <section class="crud-panel">
-            <h3 id="crud-message-form-heading"><?php echo e(t('crud.create_message')); ?></h3>
-            <form method="post" action="<?php echo appUrl('dashboard'); ?>" class="admin-form crud-form" id="crud-message-form">
-                <input type="hidden" name="dashboard_action" value="create_message">
-                <label>
-                    <?php echo e(t('crud.message_kind')); ?>
-                    <select name="message_kind" id="crud-message-kind">
-                        <option value="request"><?php echo e(t('crud.message_request')); ?></option>
-                        <option value="notification"><?php echo e(t('crud.message_notification')); ?></option>
-                    </select>
-                </label>
-                <label>
-                    <?php echo e(t('crud.request_type')); ?>
-                    <select name="request_type" id="crud-message-request-type">
-                        <option value="shift_coverage"><?php echo e(t('crud.request_shift_coverage')); ?></option>
-                        <option value="leave"><?php echo e(t('crud.request_leave')); ?></option>
-                        <option value="permission"><?php echo e(t('crud.request_permission')); ?></option>
-                        <option value="document_signature"><?php echo e(t('crud.request_document_signature')); ?></option>
-                    </select>
-                </label>
-                <label class="span-2">
-                    <?php echo e(t('crud.title')); ?>
-                    <input type="text" name="message_title" id="crud-message-title" required>
-                </label>
-                <label class="span-2">
-                    <?php echo e(t('crud.message')); ?>
-                    <textarea name="message_body" id="crud-message-body" rows="4" required></textarea>
-                </label>
-                <label>
-                    <?php echo e(t('crud.attach_document')); ?>
-                    <select name="document_id" id="crud-message-document-id">
-                        <option value=""><?php echo e(t('crud.none')); ?></option>
-                        <?php foreach (($dashboardModalDocuments ?? []) as $document): ?>
-                            <option value="<?php echo (int) $document['id']; ?>"><?php echo e($document['file_name'] ?? 'Document'); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <label class="span-2">
-                    <?php echo e(t('crud.recipients')); ?>
-                    <select name="recipient_ids[]" id="crud-message-recipient-ids" multiple size="6" required>
-                        <?php foreach (($dashboardModalUsers ?? []) as $user): ?>
-                            <option value="<?php echo (int) $user['id']; ?>"
-                                    data-role="<?php echo e($user['role'] ?? ''); ?>"
-                                    data-department-id="<?php echo (int) ($user['department_id'] ?? 0); ?>">
-                                <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <p class="crud-modal-subtitle span-2"><?php echo e($modalMessageScopeHint); ?></p>
-                <div class="form-actions span-2">
-                    <button type="submit" id="crud-message-submit"><?php echo e(t('crud.send_message')); ?></button>
-                    <button type="button" class="admin-action-link admin-action-link-secondary" data-crud-reset-message><?php echo e(t('crud.reset')); ?></button>
-                </div>
-            </form>
-        </section>
-
-        <section class="crud-panel">
-            <h3><?php echo e(t('crud.messages_list')); ?></h3>
-            <div class="company-grid">
-                <?php if (empty($dashboardModalMessages ?? [])): ?>
-                    <div class="crud-empty-state"><?php echo e(t('crud.no_messages')); ?></div>
-                <?php endif; ?>
-                <?php foreach (($dashboardModalMessages ?? []) as $message): ?>
-                    <article class="company-card company-card--stacked" data-message-card-id="<?php echo (int) ($message['id'] ?? 0); ?>">
-                        <div class="company-card-head">
-                            <div class="company-card-title"><?php echo e($message['title'] ?? t('crud.message_title_default')); ?></div>
-                            <div class="company-card-meta"><?php echo e($message['sender_name'] ?? ''); ?> <?php echo !empty($message['recipient_name']) ? '→ ' . e($message['recipient_name']) : ''; ?></div>
-                        </div>
-                        <div class="company-card-actions company-card-actions--inline">
-                            <span class="company-card-chip"><?php echo e($message['type'] ?? t('crud.message_request')); ?></span>
-                            <span class="company-card-chip" data-message-status-chip><?php echo e($message['status'] ?? t('crud.pending')); ?></span>
-                            <?php if (!empty($message['document_id'])): ?>
-                                <a class="company-card-action" target="_blank" rel="noopener" href="<?php echo appUrl('document-download', ['id' => (int) $message['document_id'], 'preview' => '1']); ?>" title="<?php echo e(t('crud.preview', ['fallback' => 'Preview'])); ?>">
-                                    <img src="<?php echo $basePath; ?>/assets/icons/document.svg" alt="" aria-hidden="true" class="company-card-action-icon">
-                                </a>
-                                <a class="company-card-action" href="<?php echo appUrl('document-download', ['id' => (int) $message['document_id']]); ?>" title="<?php echo e(t('crud.download_document')); ?>">
-                                    <img src="<?php echo $basePath; ?>/assets/icons/circle-arrow-out-up-left.svg" alt="" aria-hidden="true" class="company-card-action-icon">
-                                </a>
-                            <?php endif; ?>
-                            <button type="button"
-                                    class="company-card-action"
-                                    title="Stampa messaggio"
-                                    data-message-print-id="<?php echo (int) ($message['id'] ?? 0); ?>"
-                                    data-message-print-title="<?php echo e($message['title'] ?? t('crud.message_title_default')); ?>"
-                                    data-message-print-body="<?php echo e($message['message'] ?? ''); ?>"
-                                    data-message-print-sender="<?php echo e($message['sender_name'] ?? ''); ?>"
-                                    data-message-print-recipient="<?php echo e($message['recipient_name'] ?? ''); ?>"
-                                    data-message-document-print-url="<?php echo !empty($message['document_id']) ? e(appUrl('document-download', ['id' => (int) $message['document_id'], 'disposition' => 'inline', 'print_preview' => '1'])) : ''; ?>">
-                                <img src="<?php echo $basePath; ?>/assets/icons/printer.svg" alt="" aria-hidden="true" class="company-card-action-icon">
-                            </button>
-                            <button type="button"
-                                    class="company-card-action"
-                                    title="Archivia messaggio"
-                                    data-message-archive-id="<?php echo (int) ($message['id'] ?? 0); ?>"
-                                    data-message-archive-name="<?php echo e($message['title'] ?? t('crud.message_title_default')); ?>"
-                                    <?php if ((string) ($message['status'] ?? '') === 'archived'): ?>hidden<?php endif; ?>>
-                                <span aria-hidden="true">🗄</span>
-                            </button>
-                            <button type="button"
-                                    class="company-card-action is-danger"
-                                    title="Cancella messaggio"
-                                    data-message-delete-id="<?php echo (int) ($message['id'] ?? 0); ?>"
-                                    data-message-delete-name="<?php echo e($message['title'] ?? t('crud.message_title_default')); ?>">
-                                <span aria-hidden="true">×</span>
-                            </button>
-                        </div>
-                    </article>
-                <?php endforeach; ?>
-            </div>
-        </section>
     </div>
 </template>

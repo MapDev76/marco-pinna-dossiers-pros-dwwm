@@ -73,42 +73,6 @@ $enforceDocumentScope = static function (array $documentRow) use ($role, $profil
     }
 };
 
-$enforceMessageScope = static function (array $messageRow) use ($role, $profile, $user): void {
-    $senderUserId = (int) ($messageRow['sender_user_id'] ?? 0);
-    $recipientUserId = (int) ($messageRow['recipient_user_id'] ?? 0);
-    $senderCompanyId = (int) ($messageRow['sender_company_id'] ?? 0);
-    $recipientCompanyId = (int) ($messageRow['recipient_company_id'] ?? 0);
-    $senderDepartmentId = (int) ($messageRow['sender_department_id'] ?? 0);
-    $recipientDepartmentId = (int) ($messageRow['recipient_department_id'] ?? 0);
-
-    if ($role === 'super_admin') {
-        return;
-    }
-
-    if ($role === 'admin') {
-        $profileCompanyId = (int) ($profile['company_id'] ?? 0);
-        if ($profileCompanyId > 0 && ($profileCompanyId === $senderCompanyId || $profileCompanyId === $recipientCompanyId)) {
-            return;
-        }
-        jsonResponse(['success' => false, 'error' => 'Message out of scope'], 403);
-    }
-
-    if ($role === 'department_manager') {
-        $profileCompanyId = (int) ($profile['company_id'] ?? 0);
-        if ($profileCompanyId > 0 && ($profileCompanyId === $senderCompanyId || $profileCompanyId === $recipientCompanyId)) {
-            return;
-        }
-        jsonResponse(['success' => false, 'error' => 'Message out of scope'], 403);
-    }
-
-    $currentUserId = (int) ($user['id'] ?? 0);
-    if ($currentUserId > 0 && ($currentUserId === $senderUserId || $currentUserId === $recipientUserId)) {
-        return;
-    }
-
-    jsonResponse(['success' => false, 'error' => 'Message out of scope'], 403);
-};
-
 if ($action === 'save_planning_document' || $action === 'save_dashboard_document') {
     if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
         jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
@@ -302,68 +266,6 @@ if ($action === 'archive_document' || $action === 'restore_document') {
     ]);
 }
 
-if ($action === 'archive_message' || $action === 'delete_message') {
-    $messageId = (int) ($input['message_id'] ?? 0);
-    if ($messageId <= 0) {
-        jsonResponse(['success' => false, 'error' => 'message_id is required'], 400);
-    }
-
-    $messageLookup = $pdo->prepare(
-        'SELECT r.id,
-                r.user_id AS sender_user_id,
-                r.recipient_id AS recipient_user_id,
-                su.department_id AS sender_department_id,
-                ru.department_id AS recipient_department_id,
-                sd.company_id AS sender_company_id,
-                rd.company_id AS recipient_company_id
-         FROM requests r
-         LEFT JOIN users su ON su.id = r.user_id
-         LEFT JOIN users ru ON ru.id = r.recipient_id
-         LEFT JOIN departments sd ON sd.id = su.department_id
-         LEFT JOIN departments rd ON rd.id = ru.department_id
-         WHERE r.id = :id
-         LIMIT 1'
-    );
-    $messageLookup->execute(['id' => $messageId]);
-    $messageRow = $messageLookup->fetch(PDO::FETCH_ASSOC) ?: null;
-    if (!$messageRow) {
-        jsonResponse(['success' => false, 'error' => 'Message not found'], 404);
-    }
-
-    $enforceMessageScope($messageRow);
-
-    if ($action === 'archive_message') {
-        try {
-            $archiveMessage = $pdo->prepare('UPDATE requests SET status = :status WHERE id = :id LIMIT 1');
-            $archiveMessage->execute([
-                'status' => 'archived',
-                'id' => $messageId,
-            ]);
-        } catch (Throwable $e) {
-            jsonResponse([
-                'success' => false,
-                'error' => 'Unable to archive message. Please verify requests.status schema supports archived state.',
-            ], 500);
-        }
-
-        jsonResponse([
-            'success' => true,
-            'ok' => true,
-            'message_id' => $messageId,
-            'status' => 'archived',
-        ]);
-    }
-
-    $deleteMessage = $pdo->prepare('DELETE FROM requests WHERE id = :id LIMIT 1');
-    $deleteMessage->execute(['id' => $messageId]);
-
-    jsonResponse([
-        'success' => true,
-        'ok' => true,
-        'message_id' => $messageId,
-    ]);
-}
-
 if ($action === 'upload_and_share_document') {
     if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
         jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
@@ -373,6 +275,8 @@ if ($action === 'upload_and_share_document') {
     $fileContentB64 = trim((string) ($input['file_content_b64'] ?? ''));
     $fileMimeType = trim((string) ($input['file_mime_type'] ?? ''));
     $documentType = trim((string) ($input['document_type'] ?? 'other'));
+    $requestType = trim((string) ($input['request_type'] ?? 'notification'));
+    $shiftId = (int) ($input['shift_id'] ?? 0);
     $requestTitle = trim((string) ($input['title'] ?? ''));
     $requestMessage = trim((string) ($input['message'] ?? ''));
     $recipientScope = trim((string) ($input['recipient_scope'] ?? 'selected'));
@@ -380,7 +284,25 @@ if ($action === 'upload_and_share_document') {
     $requireSignature = !empty($input['require_signature']);
     $shareNow = !array_key_exists('share_now', $input) || !empty($input['share_now']);
 
-    if ($fileName === '' || $fileContentB64 === '') {
+    $canRequestSignature = in_array($role, ['admin', 'department_manager'], true);
+    if (!$canRequestSignature) {
+        $requireSignature = false;
+    }
+
+    $allowedRequestTypes = ['notification'];
+    if (in_array($role, ['admin', 'department_manager'], true)) {
+        $allowedRequestTypes[] = 'shift_coverage';
+    }
+    if (!in_array($requestType, $allowedRequestTypes, true)) {
+        $requestType = 'notification';
+    }
+
+    if ($requireSignature) {
+        $requestType = 'document_signature';
+    }
+
+    $requiresDocument = $requestType !== 'shift_coverage';
+    if ($requiresDocument && ($fileName === '' || $fileContentB64 === '')) {
         jsonResponse(['success' => false, 'error' => 'file_name and file_content_b64 are required'], 400);
     }
 
@@ -388,17 +310,21 @@ if ($action === 'upload_and_share_document') {
         $documentType = 'other';
     }
 
-    $decoded = base64_decode($fileContentB64, true);
-    if (!is_string($decoded) || $decoded === '') {
-        jsonResponse(['success' => false, 'error' => 'Invalid file payload'], 400);
-    }
-    if (strlen($decoded) > 8 * 1024 * 1024) {
-        jsonResponse(['success' => false, 'error' => 'File payload too large'], 400);
-    }
+    $decoded = '';
+    $safeBaseName = '';
+    if ($requiresDocument) {
+        $decoded = base64_decode($fileContentB64, true);
+        if (!is_string($decoded) || $decoded === '') {
+            jsonResponse(['success' => false, 'error' => 'Invalid file payload'], 400);
+        }
+        if (strlen($decoded) > 8 * 1024 * 1024) {
+            jsonResponse(['success' => false, 'error' => 'File payload too large'], 400);
+        }
 
-    $safeBaseName = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $fileName) ?: ('document-' . date('Ymd-His'));
-    if (mb_strlen($safeBaseName) > 180) {
-        $safeBaseName = mb_substr($safeBaseName, 0, 180);
+        $safeBaseName = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $fileName) ?: ('document-' . date('Ymd-His'));
+        if (mb_strlen($safeBaseName) > 180) {
+            $safeBaseName = mb_substr($safeBaseName, 0, 180);
+        }
     }
 
     [$allowedRecipientIds, $allowedRecipientSet] = $resolveAllowedRecipients();
@@ -416,15 +342,46 @@ if ($action === 'upload_and_share_document') {
     }
 
     if ($requestTitle === '') {
-        $requestTitle = $requireSignature ? 'Document to sign' : 'Shared document';
+        $requestTitle = match ($requestType) {
+            'document_signature' => 'Document to sign',
+            'shift_coverage' => 'Shift coverage request',
+            default => 'Shared document',
+        };
     }
     if ($requestMessage === '') {
-        $requestMessage = $requireSignature
-            ? 'Please review and sign the attached document.'
-            : 'Please review the attached document.';
+        $requestMessage = match ($requestType) {
+            'document_signature' => 'Please review and sign the attached document.',
+            'shift_coverage' => 'A shift replacement is requested. Please review and confirm availability.',
+            default => 'Please review the attached document.',
+        };
     }
 
-    if ($fileMimeType === '') {
+    if ($requestType === 'shift_coverage' && $shareNow) {
+        if ($shiftId <= 0) {
+            jsonResponse(['success' => false, 'error' => 'shift_id is required for shift_coverage requests'], 400);
+        }
+
+        $scopeShift = $pdo->prepare(
+            'SELECT s.id, s.kind, d.company_id
+             FROM shifts s
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE s.id = :id
+             LIMIT 1'
+        );
+        $scopeShift->execute(['id' => $shiftId]);
+        $shiftRow = $scopeShift->fetch(PDO::FETCH_ASSOC) ?: null;
+        if (!$shiftRow || !in_array((string) ($shiftRow['kind'] ?? ''), ['work', 'overtime'], true)) {
+            jsonResponse(['success' => false, 'error' => 'Invalid shift selected'], 400);
+        }
+
+        if ($role !== 'super_admin' && (int) ($profile['company_id'] ?? 0) !== (int) ($shiftRow['company_id'] ?? 0)) {
+            jsonResponse(['success' => false, 'error' => 'Shift out of scope'], 403);
+        }
+    } else {
+        $shiftId = 0;
+    }
+
+    if ($requiresDocument && $fileMimeType === '') {
         $extension = strtolower(pathinfo($safeBaseName, PATHINFO_EXTENSION));
         $mimeByExtension = [
             'pdf' => 'application/pdf',
@@ -444,26 +401,29 @@ if ($action === 'upload_and_share_document') {
          VALUES (:user_id, :document_type, :file_name, :file_path, :file_blob, :file_mime_type, :status)'
     );
     $insertRequest = $pdo->prepare(
-        'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
-         VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
+        'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id, shift_id)
+         VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id, :shift_id)'
     );
 
+    $documentId = 0;
     $pdo->beginTransaction();
     try {
-        $insertDocument->execute([
-            'user_id' => (int) ($user['id'] ?? 0),
-            'document_type' => $documentType,
-            'file_name' => $safeBaseName,
-            'file_path' => '',
-            'file_blob' => $decoded,
-            'file_mime_type' => $fileMimeType,
-            'status' => 'valid',
-        ]);
+        if ($requiresDocument) {
+            $insertDocument->execute([
+                'user_id' => (int) ($user['id'] ?? 0),
+                'document_type' => $documentType,
+                'file_name' => $safeBaseName,
+                'file_path' => '',
+                'file_blob' => $decoded,
+                'file_mime_type' => $fileMimeType,
+                'status' => 'valid',
+            ]);
 
-        $documentId = (int) $pdo->lastInsertId();
+            $documentId = (int) $pdo->lastInsertId();
+        }
+
         if ($shareNow) {
-            $requestType = $requireSignature ? 'document_signature' : 'notification';
-            $requestStatus = $requireSignature ? 'pending' : 'unread';
+            $requestStatus = in_array($requestType, ['document_signature', 'shift_coverage'], true) ? 'pending' : 'unread';
             foreach ($recipientIds as $recipientId) {
                 $insertRequest->execute([
                     'user_id' => (int) ($user['id'] ?? 0),
@@ -472,7 +432,8 @@ if ($action === 'upload_and_share_document') {
                     'title' => $requestTitle,
                     'message' => $requestMessage,
                     'status' => $requestStatus,
-                    'document_id' => $documentId,
+                    'document_id' => $documentId > 0 ? $documentId : null,
+                    'shift_id' => $shiftId > 0 ? $shiftId : null,
                 ]);
             }
         }
@@ -493,7 +454,7 @@ if ($action === 'upload_and_share_document') {
         'recipient_count' => $shareNow ? count($recipientIds) : 0,
         'shared' => $shareNow,
         'requires_signature' => $requireSignature,
-        'download_url' => appUrl('document-download', ['id' => $documentId]),
+        'download_url' => $documentId > 0 ? appUrl('document-download', ['id' => $documentId]) : null,
     ]);
 }
 
@@ -506,6 +467,26 @@ if ($action === 'share_existing_document') {
     $recipientScope = trim((string) ($input['recipient_scope'] ?? 'selected'));
     $recipientIdsRaw = $input['recipient_ids'] ?? [];
     $requireSignature = !empty($input['require_signature']);
+    $requestType = trim((string) ($input['request_type'] ?? 'notification'));
+    $shiftId = (int) ($input['shift_id'] ?? 0);
+    $requestTitle = trim((string) ($input['title'] ?? ''));
+    $requestMessage = trim((string) ($input['message'] ?? ''));
+
+    $canRequestSignature = in_array($role, ['admin', 'department_manager'], true);
+    if (!$canRequestSignature) {
+        $requireSignature = false;
+    }
+
+    $allowedRequestTypes = ['notification'];
+    if (in_array($role, ['admin', 'department_manager'], true)) {
+        $allowedRequestTypes[] = 'shift_coverage';
+    }
+    if (!in_array($requestType, $allowedRequestTypes, true)) {
+        $requestType = 'notification';
+    }
+    if ($requireSignature) {
+        $requestType = 'document_signature';
+    }
 
     if ($documentId <= 0) {
         jsonResponse(['success' => false, 'error' => 'document_id is required'], 400);
@@ -543,16 +524,48 @@ if ($action === 'share_existing_document') {
         jsonResponse(['success' => false, 'error' => 'At least one valid recipient is required'], 400);
     }
 
-    $requestType = $requireSignature ? 'document_signature' : 'notification';
-    $requestStatus = $requireSignature ? 'pending' : 'unread';
-    $requestTitle = $requireSignature ? 'Document to sign' : 'Shared document';
-    $requestMessage = $requireSignature
-        ? 'Please review and sign the attached document.'
-        : 'Please review the attached document.';
+    if ($requestType === 'shift_coverage') {
+        if ($shiftId <= 0) {
+            jsonResponse(['success' => false, 'error' => 'shift_id is required for shift_coverage requests'], 400);
+        }
+        $scopeShift = $pdo->prepare(
+            'SELECT s.id, s.kind, d.company_id
+             FROM shifts s
+             INNER JOIN departments d ON d.id = s.department_id
+             WHERE s.id = :id
+             LIMIT 1'
+        );
+        $scopeShift->execute(['id' => $shiftId]);
+        $shiftRow = $scopeShift->fetch(PDO::FETCH_ASSOC) ?: null;
+        if (!$shiftRow || !in_array((string) ($shiftRow['kind'] ?? ''), ['work', 'overtime'], true)) {
+            jsonResponse(['success' => false, 'error' => 'Invalid shift selected'], 400);
+        }
+        if ($role !== 'super_admin' && (int) ($profile['company_id'] ?? 0) !== (int) ($shiftRow['company_id'] ?? 0)) {
+            jsonResponse(['success' => false, 'error' => 'Shift out of scope'], 403);
+        }
+    } else {
+        $shiftId = 0;
+    }
+
+    $requestStatus = in_array($requestType, ['document_signature', 'shift_coverage'], true) ? 'pending' : 'unread';
+    if ($requestTitle === '') {
+        $requestTitle = match ($requestType) {
+            'document_signature' => 'Document to sign',
+            'shift_coverage' => 'Shift coverage request',
+            default => 'Shared document',
+        };
+    }
+    if ($requestMessage === '') {
+        $requestMessage = match ($requestType) {
+            'document_signature' => 'Please review and sign the attached document.',
+            'shift_coverage' => 'A shift replacement is requested. Please review and confirm availability.',
+            default => 'Please review the attached document.',
+        };
+    }
 
     $insertRequest = $pdo->prepare(
-        'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id)
-         VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id)'
+        'INSERT INTO requests (user_id, recipient_id, type, title, message, status, document_id, shift_id)
+         VALUES (:user_id, :recipient_id, :type, :title, :message, :status, :document_id, :shift_id)'
     );
 
     try {
@@ -564,7 +577,8 @@ if ($action === 'share_existing_document') {
                 'title' => $requestTitle,
                 'message' => $requestMessage,
                 'status' => $requestStatus,
-                'document_id' => $documentId,
+                'document_id' => $requestType === 'shift_coverage' ? null : $documentId,
+                'shift_id' => $shiftId > 0 ? $shiftId : null,
             ]);
         }
     } catch (Throwable $e) {
