@@ -127,7 +127,7 @@ $storeUploadedLogo = static function (string $field = 'logo_file'): ?string {
         }
     }
 
-    return 'uploads/company-logos/' . $fileName;
+    return 'public/uploads/company-logos/' . $fileName;
 };
 
 try {

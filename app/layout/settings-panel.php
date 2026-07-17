@@ -151,6 +151,10 @@ $resolveCompanyLogoUrl = static function (?string $rawPath) use ($basePath): str
         return $path;
     }
 
+    if (str_starts_with($path, 'uploads/')) {
+        $path = 'public/' . $path;
+    }
+
     return rtrim($basePath, '/') . '/' . ltrim($path, '/');
 };
 

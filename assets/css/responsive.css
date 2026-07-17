@@ -313,6 +313,44 @@
     }
 }
 
+/* Settings modal mobile hardening: avoid clipped content on small screens */
+@media (max-width: 760px) {
+    .dashboard-settings-modal {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .dashboard-settings-modal .crud-modal-card {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        min-height: 100dvh !important;
+        max-height: none !important;
+        height: auto !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: max(0.75rem, env(safe-area-inset-top)) 0.7rem max(0.85rem, env(safe-area-inset-bottom)) !important;
+        overflow: visible !important;
+        box-sizing: border-box;
+    }
+
+    .dashboard-settings-modal .crud-modal-body,
+    .dashboard-settings-modal .settings-modal-body {
+        max-height: none !important;
+        overflow: visible !important;
+        min-height: 0;
+        padding-bottom: max(0.9rem, env(safe-area-inset-bottom));
+    }
+
+    .dashboard-settings-modal .settings-list-wrap {
+        overflow: visible;
+    }
+}
 @media (max-width: 760px) {
     /* Small screens (mobile) */
     .content,

@@ -36,6 +36,10 @@ $resolveCompanyLogoUrl = static function (?string $rawPath) use ($basePath): str
         return $path;
     }
 
+    if (str_starts_with($path, 'uploads/')) {
+        $path = 'public/' . $path;
+    }
+
     return rtrim($basePath, '/') . '/' . ltrim($path, '/');
 };
 $selectedCompanyId = (int) ($_GET['settings_company_id'] ?? ($dashboardPlannerData['company']['id'] ?? 0));
@@ -119,7 +123,7 @@ $plannerCompanyLogoUrl = $resolveCompanyLogoUrl((string) ($plannerCompany['logo_
                             <?php endif; ?>
                         </div>
                         <div class="settings-inline-actions" style="margin-top: 0.55rem;">
-                            <a class="admin-action-link admin-action-link-secondary" href="<?php echo e(appUrl('dashboard')); ?>"><?php echo e(t('common.back_to_dashboard')); ?></a>
+                            <a class="admin-action-link admin-action-link-secondary" href="<?php echo e(appUrl('dashboard', ['view' => 'directory'])); ?>"><?php echo e(t('common.back_to_dashboard')); ?></a>
                         </div>
                     </section>
                 <?php endif; ?>

@@ -76,7 +76,8 @@ $pageTitle = match ($role) {
 
 $viewFile = __DIR__ . '/../../public/views/admin/dashboard.php';
 
-$isSuperAdminScopedToCompany = $role === 'super_admin' && (int) ($_GET['settings_company_id'] ?? 0) > 0;
+$isSuperAdminDirectoryView = $role === 'super_admin' && strtolower(trim((string) ($_GET['view'] ?? ''))) === 'directory';
+$isSuperAdminScopedToCompany = $role === 'super_admin' && !$isSuperAdminDirectoryView && (int) ($_GET['settings_company_id'] ?? 0) > 0;
 
 $dashboardCalendarToday = date('Y-m-d');
 $dashboardCalendarMode = (in_array($role, ['admin', 'department_manager'], true) || $isSuperAdminScopedToCompany) ? 'week' : 'month';
@@ -151,7 +152,7 @@ if ($role === 'super_admin') {
         }
     }
 
-    if ($requestedCompanyId <= 0 && $plannerCompanyId !== null && $plannerCompanyId > 0) {
+    if (!$isSuperAdminDirectoryView && $requestedCompanyId <= 0 && $plannerCompanyId !== null && $plannerCompanyId > 0) {
         redirectTo('dashboard', ['settings_company_id' => $plannerCompanyId]);
     }
 

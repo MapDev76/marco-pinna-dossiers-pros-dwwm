@@ -35,8 +35,10 @@
 
     const url = new URL(window.location.href);
     const routeParam = String(url.searchParams.get('route') || '').toLowerCase();
+    const viewParam = String(url.searchParams.get('view') || '').toLowerCase();
     const isDashboardRoute = routeParam === 'dashboard' || /\/dashboard\/?$/i.test(url.pathname);
     if (!isDashboardRoute) return;
+    if (viewParam === 'directory') return;
 
     const currentCompanyId = Number(url.searchParams.get('settings_company_id') || 0);
     if (currentCompanyId > 0) return;

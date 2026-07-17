@@ -81,6 +81,9 @@ if (!$isPublicPage && $currentUser !== null) {
             if (preg_match('/^(https?:)?\/\//i', $rawLogoPath) || str_starts_with($rawLogoPath, 'data:')) {
                 $companyLogoSrc = $rawLogoPath;
             } else {
+                if (str_starts_with($rawLogoPath, 'uploads/')) {
+                    $rawLogoPath = 'public/' . $rawLogoPath;
+                }
                 $companyLogoSrc = rtrim($basePath, '/') . '/' . ltrim($rawLogoPath, '/');
             }
         }

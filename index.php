@@ -273,6 +273,10 @@ $employeeSpaceVersion = (string) (@filemtime($employeeSpaceFile) ?: time());
                 <meta name="keywords" content="<?php echo e($metaKeywords); ?>">
                 <meta name="robots" content="<?php echo e($robotsContent); ?>">
                 <meta name="application-name" content="StaffEase Pro">
+                <link rel="icon" href="<?php echo $basePath; ?>/favicon.ico" type="image/x-icon" sizes="any">
+                <link rel="shortcut icon" href="<?php echo $basePath; ?>/favicon.ico">
+                <link rel="alternate icon" href="<?php echo $basePath; ?>/assets/images/faviconStaffeasePro.jpg" type="image/jpeg" sizes="48x48">
+                <link rel="apple-touch-icon" href="<?php echo $basePath; ?>/assets/images/LogoStaffeasePro.png" sizes="180x180">
                 <link rel="canonical" href="<?php echo e($canonicalUrl); ?>">
                 <meta property="og:title" content="<?php echo e($pageTitle); ?>">
                 <meta property="og:description" content="<?php echo e($metaDescription); ?>">
