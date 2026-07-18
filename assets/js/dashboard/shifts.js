@@ -16,6 +16,27 @@
     }
   }
 
+  function getLocale() {
+    return (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+  }
+
+  function tr(en, fr, it) {
+    const locale = getLocale();
+    if (locale.startsWith('fr')) return fr;
+    if (locale.startsWith('it')) return it;
+    return en;
+  }
+
+  function getDefaultShiftName(startTime, endTime) {
+    const start = (startTime || '09:00').slice(0, 5);
+    const end = (endTime || '17:00').slice(0, 5);
+    return tr(
+      `Shift ${start}-${end}`,
+      `Poste ${start}-${end}`,
+      `Turno ${start}-${end}`
+    );
+  }
+
   function getCurrentMonthRange() {
     const now = new Date();
     const y = now.getFullYear();
@@ -280,10 +301,16 @@
     const activeDepartmentId = Number(window.DashboardPlannerData?.active_department_id || 0);
     const month = getCurrentMonthRange();
     const deptSelect = row.querySelector('select[data-field="department_ids"]');
-    if (deptSelect && activeDepartmentId) {
-      Array.from(deptSelect.options || []).forEach((option) => {
-        option.selected = Number(option.value) === activeDepartmentId;
-      });
+    if (deptSelect) {
+      const options = Array.from(deptSelect.options || []);
+      if (activeDepartmentId) {
+        options.forEach((option) => {
+          option.selected = Number(option.value) === activeDepartmentId;
+        });
+      }
+      if (!options.some((option) => option.selected) && options.length) {
+        options[0].selected = true;
+      }
     }
     const defaults = {
       'input[data-field="name"]': '',
@@ -347,6 +374,20 @@
     return single > 0 ? [single] : [];
   }
 
+  function ensureCreateDepartmentSelection(row) {
+    if (!row) return [];
+    const selectedIds = getSelectedDepartmentIds(row);
+    if (selectedIds.length) return selectedIds;
+
+    const multi = row.querySelector('select[data-field="department_ids"]');
+    if (multi && multi.options.length) {
+      multi.options[0].selected = true;
+      return getSelectedDepartmentIds(row);
+    }
+
+    return [];
+  }
+
   function getSelectedIntValues(row, field, min = 0, max = 999) {
     if (!row) return [];
     const select = row.querySelector(`select[data-field="${field}"]`);
@@ -373,14 +414,14 @@
   async function createShift() {
     const row = getCreateRow();
     if (!row) return;
-    const departmentIds = getSelectedDepartmentIds(row);
+    const departmentIds = ensureCreateDepartmentSelection(row);
     const icon = row.querySelector('input[data-field="icon"]')?.value.trim() || getDefaultIcon();
     const color = row.querySelector('input[data-field="color"]')?.value.trim() || getDefaultColor();
     const description = row.querySelector('input[data-field="description"]')?.value.trim() || '';
     const kind = row.querySelector('select[data-field="kind"]')?.value || 'work';
-    const name = row.querySelector('input[data-field="name"]')?.value.trim() || '';
-    const range_start = row.querySelector('input[data-field="range_start"]')?.value || '';
-    const range_end = row.querySelector('input[data-field="range_end"]')?.value || '';
+    const providedName = row.querySelector('input[data-field="name"]')?.value.trim() || '';
+    let range_start = row.querySelector('input[data-field="range_start"]')?.value || '';
+    let range_end = row.querySelector('input[data-field="range_end"]')?.value || '';
     const start_time = row.querySelector('input[data-field="start_time"]')?.value || '';
     const end_time = row.querySelector('input[data-field="end_time"]')?.value || '';
     const weekly_rest_weekdays = Array.from(row.querySelectorAll('select[data-field="weekly_rest_weekdays"] option:checked'))
@@ -393,11 +434,34 @@
     const restday_repeat_mode = (row.querySelector('select[data-field="restday_repeat_mode"]')?.value || 'weekly').trim() || 'weekly';
     const restday_scale_mode = (row.querySelector('select[data-field="restday_scale_mode"]')?.value || 'weekly').trim() || 'weekly';
 
-    if (!departmentIds.length) return notifyError('Choose at least one department for the new shift.');
-    if (!name) return notifyError('Enter a shift title.');
+    if (!range_start || !range_end) {
+      const monthRange = getCurrentMonthRange();
+      range_start = range_start || monthRange.start;
+      range_end = range_end || monthRange.end;
+      const startInput = row.querySelector('input[data-field="range_start"]');
+      const endInput = row.querySelector('input[data-field="range_end"]');
+      if (startInput && !startInput.value) startInput.value = range_start;
+      if (endInput && !endInput.value) endInput.value = range_end;
+    }
+
+    const name = providedName || getDefaultShiftName(start_time || '09:00', end_time || '17:00');
+
+    if (!departmentIds.length) return notifyError(tr(
+      'Choose at least one department for the new shift.',
+      'Choisissez au moins un departement pour le nouveau poste.',
+      'Seleziona almeno un reparto per il nuovo turno.'
+    ));
     if (kind === 'work') {
-      if (!range_start || !range_end) return notifyError('Set both start and end date.');
-      if (range_end < range_start) return notifyError('End date must be after start date.');
+      if (!range_start || !range_end) return notifyError(tr(
+        'Set both start and end date.',
+        'Definissez la date de debut et la date de fin.',
+        'Imposta sia la data di inizio che quella di fine.'
+      ));
+      if (range_end < range_start) return notifyError(tr(
+        'End date must be after start date.',
+        'La date de fin doit etre apres la date de debut.',
+        'La data di fine deve essere successiva alla data di inizio.'
+      ));
     }
 
     const normalizedStart = kind === 'work' ? start_time : (start_time || '00:00');
@@ -426,17 +490,17 @@
       });
       if (res?.ok) {
         if (feedback?.reloadSettingsTabWithSuccess) {
-          feedback.reloadSettingsTabWithSuccess('shifts', 'Done', 'Shift created successfully.');
+          feedback.reloadSettingsTabWithSuccess('shifts', 'Done', tr('Shift created successfully.', 'Poste cree avec succes.', 'Turno creato con successo.'));
         } else {
-          notifySuccess('Shift created successfully.');
+          notifySuccess(tr('Shift created successfully.', 'Poste cree avec succes.', 'Turno creato con successo.'));
           location.reload();
         }
       } else {
-        notifyError('Failed to create shift: ' + (res?.error || 'unknown'));
+        notifyError(tr('Failed to create shift: ', 'Echec de creation du poste : ', 'Creazione turno non riuscita: ') + (res?.error || 'unknown'));
       }
     } catch (e) {
       console.error(e);
-      notifyError('Error creating shift.');
+      notifyError(tr('Error creating shift.', 'Erreur lors de la creation du poste.', 'Errore durante la creazione del turno.'));
     }
   }
 

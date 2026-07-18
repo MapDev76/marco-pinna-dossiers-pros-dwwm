@@ -778,6 +778,135 @@ if ($action === 'sign_dashboard_document') {
     ]);
 }
 
+if ($action === 'save_user_month_hours') {
+    if (!in_array($role, ['super_admin', 'admin', 'department_manager'], true)) {
+        jsonResponse(['success' => false, 'error' => t('common.unauthorized')], 403);
+    }
+
+    $targetUserId = (int) ($input['user_id'] ?? 0);
+    $monthKeyRaw = trim((string) ($input['month_key'] ?? ''));
+    $plannedHours = (float) ($input['planned_hours'] ?? 0);
+    $workedHoursOverrideRaw = trim((string) ($input['worked_hours_override'] ?? ''));
+    $workedHoursOverride = ($workedHoursOverrideRaw === '' ? null : (float) $workedHoursOverrideRaw);
+    $note = trim((string) ($input['note'] ?? ''));
+
+    if ($targetUserId <= 0 || !preg_match('/^\d{4}-\d{2}$/', $monthKeyRaw)) {
+        jsonResponse(['success' => false, 'error' => 'user_id and month_key (YYYY-MM) are required'], 400);
+    }
+
+    if ($plannedHours < 0) {
+        $plannedHours = 0;
+    }
+    if ($plannedHours > 744) {
+        $plannedHours = 744;
+    }
+    if ($workedHoursOverride !== null) {
+        if ($workedHoursOverride < 0) {
+            $workedHoursOverride = 0.0;
+        }
+        if ($workedHoursOverride > 744) {
+            $workedHoursOverride = 744.0;
+        }
+    }
+
+    $monthKeyDate = $monthKeyRaw . '-01';
+
+    $userLookup = $pdo->prepare(
+        'SELECT u.id,
+                u.department_id,
+                d.company_id
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         WHERE u.id = :user_id
+         LIMIT 1'
+    );
+    $userLookup->execute(['user_id' => $targetUserId]);
+    $targetUser = $userLookup->fetch(PDO::FETCH_ASSOC) ?: null;
+    if (!$targetUser) {
+        jsonResponse(['success' => false, 'error' => 'User not found'], 404);
+    }
+
+    if ($role === 'admin') {
+        $companyId = (int) ($profile['company_id'] ?? 0);
+        if ($companyId <= 0 || (int) ($targetUser['company_id'] ?? 0) !== $companyId) {
+            jsonResponse(['success' => false, 'error' => 'User is outside your company'], 403);
+        }
+    }
+
+    if ($role === 'department_manager') {
+        $managerDepartmentId = (int) ($profile['department_id'] ?? 0);
+        if ($managerDepartmentId <= 0) {
+            jsonResponse(['success' => false, 'error' => 'Department scope unavailable'], 403);
+        }
+
+        $isPrimaryDepartmentMatch = ((int) ($targetUser['department_id'] ?? 0) === $managerDepartmentId);
+        $isLinkedDepartmentMatch = false;
+        if (!$isPrimaryDepartmentMatch) {
+            $linkLookup = $pdo->prepare(
+                'SELECT 1
+                 FROM user_department_links
+                 WHERE user_id = :user_id
+                   AND department_id = :department_id
+                 LIMIT 1'
+            );
+            $linkLookup->execute([
+                'user_id' => $targetUserId,
+                'department_id' => $managerDepartmentId,
+            ]);
+            $isLinkedDepartmentMatch = (bool) $linkLookup->fetchColumn();
+        }
+
+        if (!$isPrimaryDepartmentMatch && !$isLinkedDepartmentMatch) {
+            jsonResponse(['success' => false, 'error' => 'User is outside your department'], 403);
+        }
+    }
+
+    $upsertPlan = $pdo->prepare(
+        'INSERT INTO user_month_hours_plans (user_id, month_key, planned_hours, worked_hours_override, note, updated_by_user_id)
+         VALUES (:user_id, :month_key, :planned_hours, :worked_hours_override, :note, :updated_by_user_id)
+         ON DUPLICATE KEY UPDATE
+           planned_hours = VALUES(planned_hours),
+           worked_hours_override = VALUES(worked_hours_override),
+           note = VALUES(note),
+           updated_by_user_id = VALUES(updated_by_user_id),
+           updated_at = CURRENT_TIMESTAMP'
+    );
+    $upsertPlan->execute([
+        'user_id' => $targetUserId,
+        'month_key' => $monthKeyDate,
+        'planned_hours' => round($plannedHours, 2),
+        'worked_hours_override' => $workedHoursOverride === null ? null : round($workedHoursOverride, 2),
+        'note' => ($note === '' ? null : mb_substr($note, 0, 255)),
+        'updated_by_user_id' => (int) ($user['id'] ?? 0),
+    ]);
+
+    $planLookup = $pdo->prepare(
+        'SELECT id,
+                user_id,
+                month_key,
+                planned_hours,
+                worked_hours_override,
+                note,
+                updated_by_user_id,
+                updated_at
+         FROM user_month_hours_plans
+         WHERE user_id = :user_id
+           AND month_key = :month_key
+         LIMIT 1'
+    );
+    $planLookup->execute([
+        'user_id' => $targetUserId,
+        'month_key' => $monthKeyDate,
+    ]);
+    $savedPlan = $planLookup->fetch(PDO::FETCH_ASSOC) ?: null;
+
+    jsonResponse([
+        'success' => true,
+        'ok' => true,
+        'plan' => $savedPlan,
+    ]);
+}
+
 if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_assign_open', 'clear_assignments_scope', 'auto_assign_forecast', 'employee_assignments', 'record_attendance_signature', 'update_attendance', 'cancel_attendance'], true)) {
     $allowedRoles = in_array($action, ['record_attendance_signature', 'update_attendance', 'cancel_attendance'], true)
         ? ['super_admin', 'admin', 'department_manager']
@@ -861,21 +990,45 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
 
         $checkInTime = $normalizeTimeOrNull($input['check_in_time'] ?? '');
         $checkOutTime = $normalizeTimeOrNull($input['check_out_time'] ?? '');
+        $signatureData = trim((string) ($input['signature_data'] ?? ''));
+
+        $signatureClause = '';
+        $signatureParams = [];
+        $digitalSignatureId = null;
+        if ($signatureData !== '') {
+            $insertSignature = $pdo->prepare(
+                'INSERT INTO digital_signatures (user_id, signature_type, signature_data)
+                 VALUES (:user_id, :signature_type, :signature_data)'
+            );
+            $insertSignature->execute([
+                'user_id' => (int) ($attendanceRow['user_id'] ?? 0),
+                'signature_type' => 'touchscreen',
+                'signature_data' => $signatureData,
+            ]);
+            $digitalSignatureId = (int) $pdo->lastInsertId();
+            $signatureClause = ', digital_signature_id = :digital_signature_id';
+            $signatureParams['digital_signature_id'] = $digitalSignatureId;
+        }
 
         $updateAttendance = $pdo->prepare(
             'UPDATE attendances
              SET status = :status,
                  check_in_time = :check_in_time,
                  check_out_time = :check_out_time,
+                 ' . ltrim($signatureClause, ', ') . ($signatureClause !== '' ? ',' : '') . '
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = :attendance_id'
         );
-        $updateAttendance->execute([
+        $updateParams = [
             'status' => $attendanceStatus,
             'check_in_time' => $checkInTime,
             'check_out_time' => $checkOutTime,
             'attendance_id' => $attendanceId,
-        ]);
+        ];
+        foreach ($signatureParams as $paramKey => $paramValue) {
+            $updateParams[$paramKey] = $paramValue;
+        }
+        $updateAttendance->execute($updateParams);
 
         jsonResponse([
             'success' => true,
@@ -884,6 +1037,7 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             'status' => $attendanceStatus,
             'check_in_time' => $checkInTime,
             'check_out_time' => $checkOutTime,
+            'digital_signature_id' => $digitalSignatureId,
         ]);
     }
 
@@ -893,6 +1047,8 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
         $targetUserId = (int) ($input['user_id'] ?? 0);
         $targetUserShiftId = (int) ($input['user_shift_id'] ?? 0);
         $signatureData = trim((string) ($input['signature_data'] ?? ''));
+        $checkInOverride = $normalizeTimeOrNull($input['check_in_time'] ?? '');
+        $checkOutOverride = $normalizeTimeOrNull($input['check_out_time'] ?? '');
         $attendanceStatus = trim((string) ($input['attendance_status'] ?? 'present'));
         if (!in_array($attendanceStatus, ['present', 'absent', 'late', 'early_departure'], true)) {
             $attendanceStatus = 'present';
@@ -970,27 +1126,30 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
                 'UPDATE attendances
                  SET status = :status,
                      digital_signature_id = :digital_signature_id,
-                     check_in_time = COALESCE(check_in_time, :check_in_time),
+                     check_in_time = COALESCE(:check_in_time, check_in_time),
+                     check_out_time = COALESCE(:check_out_time, check_out_time),
                      updated_at = CURRENT_TIMESTAMP
                  WHERE id = :id'
             );
             $updateAttendance->execute([
                 'status' => $attendanceStatus,
                 'digital_signature_id' => $digitalSignatureId,
-                'check_in_time' => $currentAppTime,
+                'check_in_time' => $checkInOverride ?: $currentAppTime,
+                'check_out_time' => $checkOutOverride,
                 'id' => $attendanceId,
             ]);
         } else {
             $insertAttendance = $pdo->prepare(
-                'INSERT INTO attendances (user_id, user_shift_id, digital_signature_id, work_date, check_in_time, status)
-                 VALUES (:user_id, :user_shift_id, :digital_signature_id, :work_date, :check_in_time, :status)'
+                'INSERT INTO attendances (user_id, user_shift_id, digital_signature_id, work_date, check_in_time, check_out_time, status)
+                 VALUES (:user_id, :user_shift_id, :digital_signature_id, :work_date, :check_in_time, :check_out_time, :status)'
             );
             $insertAttendance->execute([
                 'user_id' => $targetUserId,
                 'user_shift_id' => $targetUserShiftId,
                 'digital_signature_id' => $digitalSignatureId,
                 'work_date' => $workDate,
-                'check_in_time' => $currentAppTime,
+                'check_in_time' => $checkInOverride ?: $currentAppTime,
+                'check_out_time' => $checkOutOverride,
                 'status' => $attendanceStatus,
             ]);
             $attendanceId = (int) $pdo->lastInsertId();
@@ -1003,6 +1162,8 @@ if (in_array($action, ['assign_shift', 'move_shift', 'unassign_shift', 'auto_ass
             'digital_signature_id' => $digitalSignatureId,
             'work_date' => $workDate,
             'status' => $attendanceStatus,
+            'check_in_time' => $checkInOverride ?: $currentAppTime,
+            'check_out_time' => $checkOutOverride,
         ]);
     }
 

@@ -578,6 +578,20 @@ body.sidebar-plan-wide .dashboard-sidebar-scroll {
 .dashboard-sidebar-plan-count-row,
 .dashboard-sidebar-plan-select-row,
 .dashboard-sidebar-plan-toggle-row {
+.dashboard-sidebar-plan-week-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+}
+.dashboard-sidebar-plan-weekday-row {
+    padding: 0.45rem 0.55rem;
+    border: 1px solid rgba(157, 121, 16, 0.2);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.62);
+}
+.dashboard-sidebar-plan-weekday-row span {
+    font-weight: var(--font-weight-bold);
+}
     display: grid;
     gap: 0.22rem;
     font-size: 0.68rem;
@@ -1381,6 +1395,20 @@ body.sidebar-plan-wide .dashboard-sidebar-plan-preview {
     font-size: 0.72rem;
     font-weight: var(--font-weight-bold);
     color: var(--color-text);
+}
+
+.calendar-event-user-text {
+    display: grid;
+    min-width: 0;
+    gap: 0.08rem;
+}
+
+.calendar-event-user-hours {
+    display: block;
+    font-size: 0.60rem;
+    line-height: 1.1;
+    color: var(--color-text-light);
+    white-space: nowrap;
 }
 
 .calendar-event-user-initials {

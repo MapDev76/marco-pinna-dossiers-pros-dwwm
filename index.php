@@ -64,8 +64,7 @@ if ($isPublicRoute) {
 }
 // Precompute CSS version based on file modification time for cache busting. If the file is missing, use current time to avoid caching issues during development.
 $stylesheetBaseFile = $useFullAppStyles ? 'style.css' : 'public.css';
-$stylesheetMinFile = $useFullAppStyles ? 'style.min.css' : 'public.min.css';
-$stylesheetFile = is_file(__DIR__ . '/assets/css/' . $stylesheetMinFile) ? $stylesheetMinFile : $stylesheetBaseFile;
+$stylesheetFile = $stylesheetBaseFile;
 $cssVersion = (string) (@filemtime(__DIR__ . '/assets/css/' . $stylesheetFile) ?: time());
 
 $localeCode = strtolower(substr((string) $locale, 0, 2));

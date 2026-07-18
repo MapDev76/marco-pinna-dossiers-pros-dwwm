@@ -42,6 +42,25 @@
         .replace(/'/g, '&#39;');
     }
 
+    function getMonthlyHoursSummary(userId, dateValue) {
+      var runtime = window.DashboardMonthlyHoursReportRuntime;
+      if (!runtime || typeof runtime.getUserMonthSummary !== 'function') return null;
+      var normalizedUserId = Number(userId || 0);
+      var monthKey = String(dateValue || '').slice(0, 7);
+      if (!normalizedUserId || !/^\d{4}-\d{2}$/.test(monthKey)) return null;
+      try {
+        var summary = runtime.getUserMonthSummary(normalizedUserId, monthKey) || null;
+        if (!summary) return null;
+        return {
+          worked: Number(summary.worked || 0),
+          planned: Number(summary.planned || 0),
+          delta: Number(summary.delta || 0),
+        };
+      } catch (_error) {
+        return null;
+      }
+    }
+
     var iconsBase = String((window.DashboardConfig && window.DashboardConfig.iconsBase) || '/assets/icons/');
 
     function isIconAsset(icon) {
@@ -170,7 +189,11 @@
           var employeeInitials = employeeName.split(' ').filter(Boolean).map(function (chunk) { return chunk.charAt(0).toUpperCase(); }).slice(0, 2).join('');
           var employeeBadge = employeeInitials ? '<span class="calendar-event-user-badge" style="--event-user-color:' + shiftColor + '; background:' + shiftColor + '; color:#ffffff;">' + employeeInitials + '</span>' : '';
           var employeeFullName = employeeName || tr('Employee', 'Employe');
-          var employeeLabel = '<span class="calendar-event-user-fullname">' + employeeFullName + '</span>';
+          var monthSummary = getMonthlyHoursSummary(employeeId, employeeEvent.work_date || '');
+          var monthSummaryChip = monthSummary
+            ? ('<span class="calendar-event-user-hours">' + escapeHtml(tr('Month', 'Mois')) + ': ' + monthSummary.worked.toFixed(1) + 'h / ' + monthSummary.planned.toFixed(1) + 'h</span>')
+            : '';
+          var employeeLabel = '<span class="calendar-event-user-text"><span class="calendar-event-user-fullname">' + employeeFullName + '</span>' + monthSummaryChip + '</span>';
           if (isPastSlot) {
             return '\n              <span class="calendar-event-slot-card is-locked" title="Past day locked">\n                ' + employeeBadge + employeeLabel + '\n              </span>\n            ';
           }

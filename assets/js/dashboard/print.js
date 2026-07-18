@@ -135,6 +135,24 @@
     return departments[0] || null;
   }
 
+  function getUserMonthSummary(userId, monthDate) {
+    var runtime = window.DashboardMonthlyHoursReportRuntime;
+    if (!runtime || typeof runtime.getUserMonthSummary !== 'function') return null;
+    var normalizedUserId = Number(userId || 0);
+    if (!normalizedUserId || !(monthDate instanceof Date) || Number.isNaN(monthDate.getTime())) return null;
+    var monthKey = String(monthDate.getFullYear()) + '-' + String(monthDate.getMonth() + 1).padStart(2, '0');
+    try {
+      var summary = runtime.getUserMonthSummary(normalizedUserId, monthKey) || null;
+      if (!summary) return null;
+      return {
+        worked: Number(summary.worked || 0),
+        planned: Number(summary.planned || 0),
+      };
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function getSelectedPrintDepartments() {
     var checkboxes = document.querySelectorAll('[data-print-departments] [data-print-department-id]');
     var selectedIds = [];
@@ -438,9 +456,13 @@
       return '<div class="dashboard-print-legend-empty">' + escapeHtml(tr('No employees in selected department.', 'Aucun employe dans le departement selectionne.')) + '</div>';
     }
     return '<div class="dashboard-print-legend-list dashboard-print-employee-legend-list">' + rows.map(function (row) {
+      var monthSummary = getUserMonthSummary(row.userId, section && section.monthDate ? section.monthDate : null);
+      var hoursSummary = monthSummary
+        ? ('<small>' + escapeHtml(tr('Hours', 'Heures')) + ': ' + monthSummary.worked.toFixed(1) + 'h / ' + monthSummary.planned.toFixed(1) + 'h</small>')
+        : '';
       return '<span class="dashboard-print-legend-item dashboard-print-employee-legend-item"><strong>' +
         escapeHtml(row.employeeInitials || '--') +
-        '</strong><small>' + escapeHtml(row.employeeName || '') + '</small></span>';
+        '</strong><small>' + escapeHtml(row.employeeName || '') + '</small>' + hoursSummary + '</span>';
     }).join('') + '</div>';
   }
 

@@ -1,6 +1,8 @@
 (() => {
   const apiUrl = window.DashboardConfig?.apiUsers;
   const companyApiUrl = window.DashboardConfig?.apiCompanies;
+  const plannerData = window.DashboardPlannerData || {};
+  const currentUserRole = String(window.DashboardCurrentUser?.role || '').trim();
   const feedback = window.DashboardFeedback;
 
   function notifyError(message) {
@@ -17,6 +19,32 @@
       return;
     }
   }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  const locale = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+  const isFr = locale.startsWith('fr');
+  const isIt = locale.startsWith('it');
+  const tr = (en, fr, it) => (isFr ? fr : (isIt ? it : en));
+
+  function hoursBetweenTimes(startRaw, endRaw) {
+    const start = String(startRaw || '').slice(0, 5);
+    const end = String(endRaw || '').slice(0, 5);
+    if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return 0;
+    const [sh, sm] = start.split(':').map((v) => parseInt(v, 10));
+    const [eh, em] = end.split(':').map((v) => parseInt(v, 10));
+    let delta = ((eh * 60) + em) - ((sh * 60) + sm);
+    if (delta <= 0) delta += 24 * 60;
+    return Math.round((delta / 60) * 100) / 100;
+  }
+
 
   function isUsersPanelActive() {
     const panel = document.querySelector('.settings-panel[data-settings-panel="users"]');

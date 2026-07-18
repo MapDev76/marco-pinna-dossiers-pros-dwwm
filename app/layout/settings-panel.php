@@ -41,7 +41,7 @@ $visibleShifts = array_values(array_filter($shifts, static function (array $shif
     $kind = strtolower(trim((string) ($shift['kind'] ?? 'work')));
     $name = strtolower(trim((string) ($shift['name'] ?? '')));
     $isSystem = in_array($kind, ['rest', 'vacation', 'sick'], true)
-        || in_array($name, ['rest day', 'vacation', 'sick leave', 'repos', 'vacances', 'maladie'], true);
+        || in_array($name, ['rest day', 'vacation', 'sick leave', 'repos', 'vacances', 'maladie', 'riposo', 'ferie', 'malattia'], true);
     return !$isSystem;
 }));
 $visibleShiftGroupsMap = [];
@@ -204,7 +204,9 @@ $localizedSystemShiftName = static function (string $kind, string $defaultName =
     return $defaultName;
 };
 
-$isFrLocale = str_starts_with(strtolower((string) appLocale()), 'fr');
+$localeCode = strtolower((string) appLocale());
+$isFrLocale = str_starts_with($localeCode, 'fr');
+$isItLocale = str_starts_with($localeCode, 'it');
 $weekdayLabels = $isFrLocale
     ? [
         0 => 'Dimanche',
@@ -215,6 +217,16 @@ $weekdayLabels = $isFrLocale
         5 => 'Vendredi',
         6 => 'Samedi',
     ]
+    : ($isItLocale
+        ? [
+            0 => 'Domenica',
+            1 => 'Lunedi',
+            2 => 'Martedi',
+            3 => 'Mercoledi',
+            4 => 'Giovedi',
+            5 => 'Venerdi',
+            6 => 'Sabato',
+        ]
     : [
         0 => 'Sunday',
         1 => 'Monday',
@@ -223,7 +235,7 @@ $weekdayLabels = $isFrLocale
         4 => 'Thursday',
         5 => 'Friday',
         6 => 'Saturday',
-    ];
+    ]);
 
 $monthLabels = $isFrLocale
     ? [
@@ -231,13 +243,19 @@ $monthLabels = $isFrLocale
         5 => 'Mai', 6 => 'Juin', 7 => 'Juillet', 8 => 'Aout',
         9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Decembre',
     ]
+    : ($isItLocale
+        ? [
+            1 => 'Gennaio', 2 => 'Febbraio', 3 => 'Marzo', 4 => 'Aprile',
+            5 => 'Maggio', 6 => 'Giugno', 7 => 'Luglio', 8 => 'Agosto',
+            9 => 'Settembre', 10 => 'Ottobre', 11 => 'Novembre', 12 => 'Dicembre',
+        ]
     : [
         1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
         5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
         9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
-    ];
+    ]);
 
-$localizedShiftKindLabel = static function (string $kind) use ($isFrLocale): string {
+$localizedShiftKindLabel = static function (string $kind): string {
     $kind = strtolower(trim($kind));
     if ($kind === 'rest') {
         return t('settings.rest');
@@ -249,22 +267,40 @@ $localizedShiftKindLabel = static function (string $kind) use ($isFrLocale): str
         return t('settings.sick');
     }
     if ($kind === 'work') {
-        return $isFrLocale ? 'Travail' : 'Work';
+        return t('settings.kind_work');
     }
 
     return ucfirst($kind !== '' ? $kind : 'work');
 };
 
-$localizedSystemShiftDescription = static function (string $kind, string $fallback = '') use ($isFrLocale): string {
+$localizedSystemShiftDescription = static function (string $kind, string $fallback = '') use ($isFrLocale, $isItLocale): string {
     $kind = strtolower(trim($kind));
     if ($kind === 'rest') {
-        return $isFrLocale ? 'Modele systeme pour attribuer un jour de repos.' : 'System template for rest day assignment.';
+        if ($isFrLocale) {
+            return 'Modele systeme pour attribuer un jour de repos.';
+        }
+        if ($isItLocale) {
+            return 'Modello di sistema per assegnare un giorno di riposo.';
+        }
+        return 'System template for rest day assignment.';
     }
     if ($kind === 'vacation') {
-        return $isFrLocale ? 'Modele systeme pour attribuer des vacances.' : 'System template for vacation assignment.';
+        if ($isFrLocale) {
+            return 'Modele systeme pour attribuer des vacances.';
+        }
+        if ($isItLocale) {
+            return 'Modello di sistema per assegnare ferie.';
+        }
+        return 'System template for vacation assignment.';
     }
     if ($kind === 'sick') {
-        return $isFrLocale ? 'Modele systeme pour attribuer un conge maladie.' : 'System template for sick leave assignment.';
+        if ($isFrLocale) {
+            return 'Modele systeme pour attribuer un conge maladie.';
+        }
+        if ($isItLocale) {
+            return 'Modello di sistema per assegnare malattia.';
+        }
+        return 'System template for sick leave assignment.';
     }
 
     return $fallback;
@@ -820,6 +856,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
+
             </section>
             <?php endif; ?>
 
@@ -829,8 +866,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     foreach ($shifts as $shift) {
                         $shiftOptionKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
                         $shiftOptionNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
-                        $isWorkAssignable = $shiftOptionKindRaw === 'work'
-                            && !in_array($shiftOptionNameRaw, ['rest day', 'vacation', 'sick leave'], true);
+                                $isWorkAssignable = $shiftOptionKindRaw === 'work'
+                                    && !in_array($shiftOptionNameRaw, ['rest day', 'vacation', 'sick leave', 'repos', 'vacances', 'maladie', 'riposo', 'ferie', 'malattia'], true);
                         if (!$isWorkAssignable) {
                             continue;
                         }
@@ -1033,7 +1070,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 $shiftOptionKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
                                 $shiftOptionNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
                                 $isWorkAssignable = $shiftOptionKindRaw === 'work'
-                                    && !in_array($shiftOptionNameRaw, ['rest day', 'vacation', 'sick leave'], true);
+                                    && !in_array($shiftOptionNameRaw, ['rest day', 'vacation', 'sick leave', 'repos', 'vacances', 'maladie', 'riposo', 'ferie', 'malattia'], true);
                                 if (!$isWorkAssignable) {
                                     continue;
                                 }
@@ -1727,6 +1764,8 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 'shift_id' => (int) ($assignment['shift_id'] ?? 0),
                                 'shift_name' => (string) ($assignment['shift_name'] ?? t('settings.shift_default')),
                                 'department_name' => (string) ($assignment['department_name'] ?? t('settings.department_default')),
+                                'start_time' => (string) ($assignment['start_time'] ?? ''),
+                                'end_time' => (string) ($assignment['end_time'] ?? ''),
                                 'status' => (string) ($assignment['status'] ?? 'assigned'),
                             ];
                         }, $attendanceAssignableShifts);
@@ -1755,7 +1794,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                     ?>
                 </script>
 
-                <div class="settings-assignment-employee-modal" data-attendance-employee-modal hidden>
+                <div class="settings-assignment-employee-modal" data-attendance-employee-modal data-attendance-can-edit="<?php echo in_array($currentRole, ['super_admin', 'admin'], true) ? '1' : '0'; ?>" hidden>
                     <div class="settings-assignment-employee-window">
                         <header class="settings-assignment-employee-window-head">
                             <div>
@@ -1767,11 +1806,48 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                         <div class="settings-assignment-employee-window-grid">
                             <section class="settings-analytics-card">
+                                <div class="settings-analytics-item settings-attendance-hours-summary" data-attendance-hours-summary>
+                                        <div class="settings-analytics-item-head">
+                                            <strong><?php echo e(t('settings.employee_hours_report_title', ['fallback' => 'Monthly hours report'])); ?></strong>
+                                        </div>
+                                        <div class="settings-attendance-hours-toolbar">
+                                            <label class="settings-field settings-attendance-hours-month-field">
+                                                <span><?php echo e(t('settings.target_month', ['fallback' => 'Target month'])); ?></span>
+                                                <select data-attendance-hours-month-select>
+                                                    <option value=""><?php echo e(t('settings.target_month', ['fallback' => 'Target month'])); ?></option>
+                                                </select>
+                                            </label>
+                                            <small data-attendance-hours-month><?php echo e(t('settings.target_month', ['fallback' => 'Target month'])); ?>: --</small>
+                                        </div>
+                                        <div class="settings-attendance-hours-grid">
+                                            <div class="settings-attendance-hours-card">
+                                                <span class="settings-attendance-hours-label"><?php echo e(t('settings.hours_planned_label', ['fallback' => 'Planned (forecast)'])); ?></span>
+                                                <strong data-attendance-hours-assigned>0h</strong>
+                                            </div>
+                                            <div class="settings-attendance-hours-card">
+                                                <span class="settings-attendance-hours-label"><?php echo e(t('settings.hours_worked_label', ['fallback' => 'Worked (historical)'])); ?></span>
+                                                <strong data-attendance-hours-worked>0h</strong>
+                                            </div>
+                                            <div class="settings-attendance-hours-card">
+                                                <span class="settings-attendance-hours-label"><?php echo e(t('settings.assignments_metric', ['fallback' => 'Planned assignments'])); ?></span>
+                                                <strong data-attendance-hours-assignment-count>0</strong>
+                                            </div>
+                                            <div class="settings-attendance-hours-card">
+                                                <span class="settings-attendance-hours-label"><?php echo e(t('settings.signature_label', ['fallback' => 'Signed attendances'])); ?></span>
+                                                <strong data-attendance-hours-signed-count>0</strong>
+                                            </div>
+                                            <div class="settings-attendance-hours-card">
+                                                <span class="settings-attendance-hours-label"><?php echo e(t('settings.late', ['fallback' => 'Late arrivals'])); ?></span>
+                                                <strong data-attendance-hours-late-count>0</strong>
+                                            </div>
+                                        </div>
+                                </div>
                                 <label class="settings-field"><?php echo e(t('settings.assigned_shift')); ?>
                                     <select data-attendance-modal-user-shift>
                                         <option value=""><?php echo e(t('settings.select_assigned_shift')); ?></option>
                                     </select>
                                 </label>
+                                <small class="crud-modal-subtitle" data-attendance-existing-note hidden></small>
                                 <label class="settings-field"><?php echo e(t('settings.attendance_status')); ?>
                                     <select data-attendance-modal-status>
                                         <option value="present"><?php echo e(t('settings.present')); ?></option>
@@ -1780,6 +1856,14 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                         <option value="early_departure"><?php echo e(t('settings.early_departure')); ?></option>
                                     </select>
                                 </label>
+                                <div class="settings-assignment-modal-range-row">
+                                    <label class="settings-field"><?php echo e(t('settings.checkin_time')); ?>
+                                        <input type="time" data-attendance-modal-checkin>
+                                    </label>
+                                    <label class="settings-field"><?php echo e(t('settings.checkout_time')); ?>
+                                        <input type="time" data-attendance-modal-checkout>
+                                    </label>
+                                </div>
                                 <div class="employee-signature-pad-shell">
                                     <span><?php echo e(t('employee.digital_signature')); ?></span>
                                     <canvas width="520" height="180" data-attendance-signature-canvas aria-label="<?php echo e(t('settings.signature_pad_aria')); ?>"></canvas>
@@ -1809,6 +1893,42 @@ $departmentCreateHeadUsers = array_values(array_filter(
 
                         <div class="settings-assignment-employee-window-grid">
                             <section class="settings-analytics-card">
+                                <div class="settings-analytics-item settings-attendance-hours-summary" data-attendance-record-hours-summary>
+                                    <div class="settings-analytics-item-head">
+                                        <strong><?php echo e(t('settings.employee_hours_report_title', ['fallback' => 'Monthly hours report'])); ?></strong>
+                                    </div>
+                                    <div class="settings-attendance-hours-toolbar">
+                                        <label class="settings-field settings-attendance-hours-month-field">
+                                            <span><?php echo e(t('settings.target_month', ['fallback' => 'Target month'])); ?></span>
+                                            <select data-attendance-record-hours-month-select>
+                                                <option value=""><?php echo e(t('settings.target_month', ['fallback' => 'Target month'])); ?></option>
+                                            </select>
+                                        </label>
+                                        <small data-attendance-record-hours-month><?php echo e(t('settings.target_month', ['fallback' => 'Target month'])); ?>: --</small>
+                                    </div>
+                                    <div class="settings-attendance-hours-grid">
+                                        <div class="settings-attendance-hours-card">
+                                            <span class="settings-attendance-hours-label"><?php echo e(t('settings.hours_planned_label', ['fallback' => 'Planned (forecast)'])); ?></span>
+                                            <strong data-attendance-record-hours-assigned>0h</strong>
+                                        </div>
+                                        <div class="settings-attendance-hours-card">
+                                            <span class="settings-attendance-hours-label"><?php echo e(t('settings.hours_worked_label', ['fallback' => 'Worked (historical)'])); ?></span>
+                                            <strong data-attendance-record-hours-worked>0h</strong>
+                                        </div>
+                                        <div class="settings-attendance-hours-card">
+                                            <span class="settings-attendance-hours-label"><?php echo e(t('settings.assignments_metric', ['fallback' => 'Planned assignments'])); ?></span>
+                                            <strong data-attendance-record-hours-assignment-count>0</strong>
+                                        </div>
+                                        <div class="settings-attendance-hours-card">
+                                            <span class="settings-attendance-hours-label"><?php echo e(t('settings.signature_label', ['fallback' => 'Signed attendances'])); ?></span>
+                                            <strong data-attendance-record-hours-signed-count>0</strong>
+                                        </div>
+                                        <div class="settings-attendance-hours-card">
+                                            <span class="settings-attendance-hours-label"><?php echo e(t('settings.late', ['fallback' => 'Late arrivals'])); ?></span>
+                                            <strong data-attendance-record-hours-late-count>0</strong>
+                                        </div>
+                                    </div>
+                                </div>
                                 <label class="settings-field"><?php echo e(t('settings.attendance_status')); ?>
                                     <select data-attendance-record-status>
                                         <option value="present"><?php echo e(t('settings.present')); ?></option>
@@ -1824,6 +1944,16 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                     <label class="settings-field"><?php echo e(t('settings.checkout_time')); ?>
                                         <input type="time" data-attendance-record-checkout>
                                     </label>
+                                </div>
+                                <div class="employee-signature-pad-shell">
+                                    <span><?php echo e(t('employee.digital_signature')); ?> (<?php echo e(t('settings.optional', ['fallback' => 'optional'])); ?>)</span>
+                                    <small class="crud-modal-subtitle" data-attendance-record-signature-state><?php echo e(t('settings.signature_label')); ?>: --</small>
+                                    <canvas width="520" height="180" data-attendance-record-signature-canvas aria-label="<?php echo e(t('settings.signature_pad_aria')); ?>"></canvas>
+                                    <small class="employee-signature-error" data-attendance-record-signature-error></small>
+                                    <div class="employee-signature-pad-actions">
+                                        <button type="button" class="admin-action-link admin-action-link-secondary" data-attendance-record-signature-clear><?php echo e(t('employee.clear_signature')); ?></button>
+                                        <small><?php echo e(t('settings.signature_input_hint')); ?></small>
+                                    </div>
                                 </div>
                                 <div class="settings-inline-actions">
                                     <button type="button" class="admin-action-link" data-attendance-record-save><?php echo e(t('settings.save_changes')); ?></button>
@@ -1898,6 +2028,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
+
             </section>
 
             <?php if ($currentRole !== 'department_manager'): ?>
@@ -2203,6 +2334,39 @@ $departmentCreateHeadUsers = array_values(array_filter(
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
+
+                <section class="settings-hours-report" data-user-hours-report>
+                    <div class="settings-panel-head">
+                        <div>
+                            <h4><?php echo e(t('settings.employee_hours_report_title', ['fallback' => 'Monthly hours report'])); ?></h4>
+                            <p class="crud-modal-subtitle"><?php echo e(t('settings.employee_hours_report_hint', ['fallback' => 'Historical worked hours and monthly planned hours by employee.'])); ?></p>
+                        </div>
+                        <div class="settings-hours-report-controls">
+                            <label class="settings-field">
+                                <?php echo e(t('settings.target_month', ['fallback' => 'Target month'])); ?>
+                                <input type="month" data-hours-report-month value="<?php echo e(date('Y-m')); ?>">
+                            </label>
+                            <button type="button" class="admin-action-link admin-action-link-secondary" data-hours-report-refresh>
+                                <?php echo e(t('settings.refresh_hours_report_label', ['fallback' => 'Refresh report'])); ?>
+                            </button>
+                            <button type="button" class="admin-action-link" data-hours-report-print-all>
+                                <?php echo e(t('settings.print_hours_report_label', ['fallback' => 'Print monthly report'])); ?>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="settings-list-wrap settings-hours-report-wrap">
+                        <div class="settings-list-row settings-list-header settings-list-cols settings-list-cols-hours-report">
+                            <strong><?php echo e(t('settings.employee_label', ['fallback' => 'Employee'])); ?></strong>
+                            <span><?php echo e(t('settings.hours_worked_label', ['fallback' => 'Worked (historical)'])); ?></span>
+                            <span><?php echo e(t('settings.hours_planned_label', ['fallback' => 'Planned (forecast)'])); ?></span>
+                            <span><?php echo e(t('settings.hours_delta_label', ['fallback' => 'Delta'])); ?></span>
+                            <span><?php echo e(t('settings.hours_override_label', ['fallback' => 'Worked override'])); ?></span>
+                            <span><?php echo e(t('settings.note_label', ['fallback' => 'Note'])); ?></span>
+                            <span><?php echo e(t('common.action')); ?></span>
+                        </div>
+                        <div data-hours-report-body></div>
+                    </div>
+                </section>
             </section>
 
             <section class="crud-panel settings-panel" data-settings-panel="shifts" hidden>
@@ -2234,62 +2398,68 @@ $departmentCreateHeadUsers = array_values(array_filter(
                             <?php if ($currentRole === 'super_admin'): ?>
                                 <label class="settings-field settings-field-shift-kind"><?php echo e(t('crud.role')); ?>
                                     <select data-field="kind">
-                                        <option value="work" selected><?php echo e($isFrLocale ? 'Travail' : 'Work'); ?></option>
+                                        <option value="work" selected><?php echo e(t('settings.kind_work')); ?></option>
                                         <option value="rest"><?php echo e(t('settings.rest')); ?></option>
                                         <option value="vacation"><?php echo e(t('settings.vacation')); ?></option>
                                         <option value="sick"><?php echo e(t('settings.sick')); ?></option>
                                     </select>
                                 </label>
                             <?php endif; ?>
+                            <small class="settings-shift-create-hint"><?php echo e(t('settings.shift_create_quick_hint')); ?></small>
                             <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-field="range_start" type="date" value=""></label>
                             <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-field="range_end" type="date" value=""></label>
-                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Jours de travail' : 'Work weekdays'); ?>
-                                <select data-field="work_weekdays" multiple size="4">
-                                    <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
-                                        <option value="<?php echo (int) $weekdayValue; ?>" selected><?php echo e($weekdayLabel); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Mois a couvrir' : 'Months to cover'); ?>
-                                <select data-field="month_numbers" multiple size="4">
-                                    <?php foreach ($monthLabels as $monthValue => $monthLabel): ?>
-                                        <option value="<?php echo (int) $monthValue; ?>" selected><?php echo e($monthLabel); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Repos hebdomadaires' : 'Weekly rest days'); ?>
-                                <select data-field="weekly_rest_weekdays" multiple size="4">
-                                    <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
-                                        <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <small class="settings-shift-create-hint"><?php echo e($isFrLocale ? 'Les jours selectionnes ne generent pas de postes ouverts.' : 'Selected days will not generate open slots.'); ?></small>
-                            </label>
-                            <label class="settings-field"><?php echo e($isFrLocale ? 'Inclure rest day' : 'Include rest day'); ?>
-                                <select data-field="include_restday">
-                                    <option value="0" selected><?php echo e($isFrLocale ? 'Non' : 'No'); ?></option>
-                                    <option value="1"><?php echo e($isFrLocale ? 'Oui' : 'Yes'); ?></option>
-                                </select>
-                            </label>
-                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Jours rest day' : 'Rest day weekdays'); ?>
-                                <select data-field="restday_weekdays" multiple size="4">
-                                    <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
-                                        <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </label>
-                            <label class="settings-field"><?php echo e($isFrLocale ? 'Repetition rest day' : 'Rest day repetition'); ?>
-                                <select data-field="restday_repeat_mode">
-                                    <option value="weekly" selected><?php echo e($isFrLocale ? 'Hebdomadaire' : 'Weekly'); ?></option>
-                                    <option value="monthly"><?php echo e($isFrLocale ? 'Mensuelle' : 'Monthly'); ?></option>
-                                </select>
-                            </label>
-                            <label class="settings-field"><?php echo e($isFrLocale ? 'Echelle rest day' : 'Rest day scale'); ?>
-                                <select data-field="restday_scale_mode">
-                                    <option value="weekly" selected><?php echo e($isFrLocale ? 'Semaine' : 'Week'); ?></option>
-                                    <option value="monthly"><?php echo e($isFrLocale ? 'Mois' : 'Month'); ?></option>
-                                </select>
-                            </label>
+                            <details class="settings-shift-advanced" open>
+                                <summary><?php echo e(t('settings.shift_advanced_options')); ?></summary>
+                                <div class="settings-shift-advanced-grid">
+                                    <label class="settings-field settings-field-departments"><?php echo e(t('settings.work_weekdays_label')); ?>
+                                        <select data-field="work_weekdays" multiple size="4">
+                                            <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
+                                                <option value="<?php echo (int) $weekdayValue; ?>" selected><?php echo e($weekdayLabel); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field settings-field-departments"><?php echo e(t('settings.months_to_cover_label')); ?>
+                                        <select data-field="month_numbers" multiple size="4">
+                                            <?php foreach ($monthLabels as $monthValue => $monthLabel): ?>
+                                                <option value="<?php echo (int) $monthValue; ?>" selected><?php echo e($monthLabel); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field settings-field-departments"><?php echo e(t('settings.weekly_rest_days_label')); ?>
+                                        <select data-field="weekly_rest_weekdays" multiple size="4">
+                                            <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
+                                                <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <small class="settings-shift-create-hint"><?php echo e(t('settings.shift_rest_weekdays_hint')); ?></small>
+                                    </label>
+                                    <label class="settings-field"><?php echo e(t('settings.include_rest_day_label')); ?>
+                                        <select data-field="include_restday">
+                                            <option value="0" selected><?php echo e(t('settings.no_label')); ?></option>
+                                            <option value="1"><?php echo e(t('settings.yes_label')); ?></option>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field settings-field-departments"><?php echo e(t('settings.rest_day_weekdays_label')); ?>
+                                        <select data-field="restday_weekdays" multiple size="4">
+                                            <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
+                                                <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field"><?php echo e(t('settings.rest_day_repetition_label')); ?>
+                                        <select data-field="restday_repeat_mode">
+                                            <option value="weekly" selected><?php echo e(t('settings.repeat_weekly')); ?></option>
+                                            <option value="monthly"><?php echo e(t('settings.repeat_monthly')); ?></option>
+                                        </select>
+                                    </label>
+                                    <label class="settings-field"><?php echo e(t('settings.rest_day_scale_label')); ?>
+                                        <select data-field="restday_scale_mode">
+                                            <option value="weekly" selected><?php echo e(t('settings.scale_week')); ?></option>
+                                            <option value="monthly"><?php echo e(t('settings.scale_month')); ?></option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </details>
                         </div>
 
                         <div class="settings-shift-create-column settings-shift-create-column-right">
@@ -2371,7 +2541,7 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                 $shiftKindRaw = strtolower(trim((string) ($shift['kind'] ?? 'work')));
                                 $shiftNameRaw = strtolower(trim((string) ($shift['name'] ?? '')));
                                 $isSystemShiftTemplate = in_array($shiftKindRaw, ['rest', 'vacation', 'sick'], true)
-                                    || in_array($shiftNameRaw, ['rest day', 'vacation', 'sick leave'], true);
+                                    || in_array($shiftNameRaw, ['rest day', 'vacation', 'sick leave', 'repos', 'vacances', 'maladie', 'riposo', 'ferie', 'malattia'], true);
                             ?>
                             <?php
                                 $shiftKindValue = (string) ($shift['kind'] ?? 'work');
@@ -2463,57 +2633,57 @@ $departmentCreateHeadUsers = array_values(array_filter(
                                             <label class="settings-field"><?php echo e(t('schedule.end')); ?><input data-field="end_time" type="time" value="<?php echo e(substr((string) ($shift['end_time'] ?? ''), 0, 5)); ?>"></label>
                                             <label class="settings-field"><?php echo e(t('settings.from_date')); ?><input data-field="range_start" type="date" value="<?php echo e(date('Y-m-01')); ?>"></label>
                                             <label class="settings-field"><?php echo e(t('settings.to_date')); ?><input data-field="range_end" type="date" value="<?php echo e(date('Y-m-t')); ?>"></label>
-                                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Jours de travail' : 'Work weekdays'); ?>
+                                            <label class="settings-field settings-field-departments"><?php echo e(t('settings.work_weekdays_label')); ?>
                                                 <select data-field="work_weekdays" multiple size="4">
                                                     <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
                                                         <option value="<?php echo (int) $weekdayValue; ?>" selected><?php echo e($weekdayLabel); ?></option>
                                                     <?php endforeach; ?>
                                                 </select>
                                             </label>
-                                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Mois a couvrir' : 'Months to cover'); ?>
+                                            <label class="settings-field settings-field-departments"><?php echo e(t('settings.months_to_cover_label')); ?>
                                                 <select data-field="month_numbers" multiple size="4">
                                                     <?php foreach ($monthLabels as $monthValue => $monthLabel): ?>
                                                         <option value="<?php echo (int) $monthValue; ?>" selected><?php echo e($monthLabel); ?></option>
                                                     <?php endforeach; ?>
                                                 </select>
                                             </label>
-                                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Repos hebdomadaires' : 'Weekly rest days'); ?>
+                                            <label class="settings-field settings-field-departments"><?php echo e(t('settings.weekly_rest_days_label')); ?>
                                                 <select data-field="weekly_rest_weekdays" multiple size="4">
                                                     <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
                                                         <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
                                                     <?php endforeach; ?>
                                                 </select>
                                             </label>
-                                            <label class="settings-field"><?php echo e($isFrLocale ? 'Inclure rest day' : 'Include rest day'); ?>
+                                            <label class="settings-field"><?php echo e(t('settings.include_rest_day_label')); ?>
                                                 <select data-field="include_restday">
-                                                    <option value="0" selected><?php echo e($isFrLocale ? 'Non' : 'No'); ?></option>
-                                                    <option value="1"><?php echo e($isFrLocale ? 'Oui' : 'Yes'); ?></option>
+                                                    <option value="0" selected><?php echo e(t('settings.no_label')); ?></option>
+                                                    <option value="1"><?php echo e(t('settings.yes_label')); ?></option>
                                                 </select>
                                             </label>
-                                            <label class="settings-field settings-field-departments"><?php echo e($isFrLocale ? 'Jours rest day' : 'Rest day weekdays'); ?>
+                                            <label class="settings-field settings-field-departments"><?php echo e(t('settings.rest_day_weekdays_label')); ?>
                                                 <select data-field="restday_weekdays" multiple size="4">
                                                     <?php foreach ($weekdayLabels as $weekdayValue => $weekdayLabel): ?>
                                                         <option value="<?php echo (int) $weekdayValue; ?>"><?php echo e($weekdayLabel); ?></option>
                                                     <?php endforeach; ?>
                                                 </select>
                                             </label>
-                                            <label class="settings-field"><?php echo e($isFrLocale ? 'Repetition rest day' : 'Rest day repetition'); ?>
+                                            <label class="settings-field"><?php echo e(t('settings.rest_day_repetition_label')); ?>
                                                 <select data-field="restday_repeat_mode">
-                                                    <option value="weekly" selected><?php echo e($isFrLocale ? 'Hebdomadaire' : 'Weekly'); ?></option>
-                                                    <option value="monthly"><?php echo e($isFrLocale ? 'Mensuelle' : 'Monthly'); ?></option>
+                                                    <option value="weekly" selected><?php echo e(t('settings.repeat_weekly')); ?></option>
+                                                    <option value="monthly"><?php echo e(t('settings.repeat_monthly')); ?></option>
                                                 </select>
                                             </label>
-                                            <label class="settings-field"><?php echo e($isFrLocale ? 'Echelle rest day' : 'Rest day scale'); ?>
+                                            <label class="settings-field"><?php echo e(t('settings.rest_day_scale_label')); ?>
                                                 <select data-field="restday_scale_mode">
-                                                    <option value="weekly" selected><?php echo e($isFrLocale ? 'Semaine' : 'Week'); ?></option>
-                                                    <option value="monthly"><?php echo e($isFrLocale ? 'Mois' : 'Month'); ?></option>
+                                                    <option value="weekly" selected><?php echo e(t('settings.scale_week')); ?></option>
+                                                    <option value="monthly"><?php echo e(t('settings.scale_month')); ?></option>
                                                 </select>
                                             </label>
                                             <label class="settings-field">
-                                                <?php echo e($isFrLocale ? 'Rigenerare slots' : 'Regenerate slots'); ?>
+                                                <?php echo e(t('settings.regenerate_slots_label')); ?>
                                                 <select data-field="regenerate_slots">
-                                                    <option value="0" selected><?php echo e($isFrLocale ? 'Non' : 'No'); ?></option>
-                                                    <option value="1"><?php echo e($isFrLocale ? 'Oui' : 'Yes'); ?></option>
+                                                    <option value="0" selected><?php echo e(t('settings.no_label')); ?></option>
+                                                    <option value="1"><?php echo e(t('settings.yes_label')); ?></option>
                                                 </select>
                                             </label>
                                             <div class="settings-inline-actions">

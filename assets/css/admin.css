@@ -1681,6 +1681,7 @@ body.route-my-space {
 .settings-assignment-employee-window .settings-analytics-card:has(.settings-assignment-modal-range-row) > .settings-field:first-of-type,
 .settings-assignment-employee-window .settings-assignment-modal-range-row,
 .settings-assignment-employee-window .employee-signature-pad-shell,
+.settings-assignment-employee-window [data-attendance-existing-note],
 .settings-assignment-employee-window .settings-inline-actions {
     grid-column: 1 / -1;
 }
@@ -2486,6 +2487,37 @@ body.route-my-space {
     grid-column: 1 / -1;
 }
 
+.settings-shift-advanced {
+    border: 1px solid rgba(157, 121, 16, 0.3);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.58);
+    padding: 0.5rem 0.6rem;
+}
+
+.settings-shift-advanced > summary {
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: var(--font-weight-bold);
+    color: #5c4507;
+    list-style: none;
+}
+
+.settings-shift-advanced > summary::-webkit-details-marker {
+    display: none;
+}
+
+.settings-shift-advanced-grid {
+    margin-top: 0.55rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    align-items: start;
+}
+
+.settings-shift-advanced-grid .settings-field-departments {
+    grid-column: 1 / -1;
+}
+
 @media (min-width: 1101px) {
     .settings-create-row.settings-create-row-shift .settings-list-cols.settings-list-cols-shift-create {
         grid-template-columns: minmax(320px, 1.15fr) minmax(320px, 1.15fr) minmax(132px, 0.38fr);
@@ -2697,6 +2729,116 @@ body.route-my-space {
     font-weight: var(--font-weight-bold);
 }
 
+.settings-hours-report {
+    margin-top: 0.9rem;
+    border: 1px solid rgba(157, 121, 16, 0.24);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f7ecd0 0%, #f1ddb2 100%);
+    padding: 0.7rem;
+}
+
+.settings-hours-report-controls {
+    display: flex;
+    align-items: end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.settings-hours-report-controls .settings-field {
+    margin: 0;
+}
+
+.settings-list-cols-hours-report {
+    grid-template-columns: minmax(180px, 1.4fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(100px, 0.7fr) minmax(120px, 0.8fr) minmax(170px, 1.2fr) minmax(110px, 0.7fr);
+}
+
+.settings-hours-report-wrap .settings-list-row {
+    align-items: center;
+}
+
+.settings-hours-report-input {
+    width: 100%;
+    min-height: 34px;
+    padding: 0.34rem 0.48rem;
+}
+
+.settings-hours-report-delta {
+    font-weight: var(--font-weight-bold);
+}
+
+.settings-hours-report-delta.is-positive {
+    color: #166534;
+}
+
+.settings-hours-report-delta.is-negative {
+    color: #8b1b1b;
+}
+
+.settings-attendance-hours-summary {
+    gap: 0.5rem;
+}
+
+.settings-attendance-hours-summary .settings-analytics-item-head {
+    align-items: start;
+}
+
+.settings-attendance-hours-toolbar {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.settings-attendance-hours-month-field {
+    display: grid;
+    gap: 0.18rem;
+    margin: 0;
+    min-width: min(220px, 100%);
+}
+
+.settings-attendance-hours-month-field span {
+    font-size: 0.72rem;
+    color: var(--color-text-light);
+}
+
+.settings-attendance-hours-month-field select {
+    min-height: 34px;
+    padding: 0.28rem 0.52rem;
+    font-size: 0.86rem;
+}
+
+.settings-attendance-hours-summary .settings-analytics-item-head small {
+    font-size: 0.72rem;
+    color: var(--color-text-light);
+}
+
+.settings-attendance-hours-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.55rem;
+}
+
+.settings-attendance-hours-card {
+    display: grid;
+    gap: 0.18rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 12px;
+    border: 1px solid rgba(157, 121, 16, 0.18);
+    background: #fff;
+}
+
+.settings-attendance-hours-label {
+    font-size: 0.72rem;
+    color: var(--color-text-light);
+}
+
+.settings-attendance-hours-card strong {
+    font-size: 1.1rem;
+    line-height: 1.15;
+    color: var(--color-text);
+}
+
 .settings-list-cols-user .settings-inline-actions {
     justify-content: flex-start;
     flex-wrap: nowrap;
@@ -2742,6 +2884,77 @@ body.route-my-space {
 .schedule-card.is-highlight {
     border-color: rgba(157, 121, 16, 0.24);
     background: linear-gradient(180deg, #f3e1ab 0%, #e9cf8b 100%);
+}
+
+/* Settings panel layout redistribution for better space usage */
+.dashboard-settings-modal .settings-list-cols-user-create,
+.dashboard-settings-modal .settings-list-cols-user-edit {
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+}
+
+.dashboard-settings-modal .settings-list-cols-dept,
+.dashboard-settings-modal .settings-list-cols-company {
+    grid-template-columns: repeat(6, minmax(140px, 1fr));
+}
+
+.dashboard-settings-modal .settings-list-cols-dept-create,
+.dashboard-settings-modal .settings-list-cols-dept-edit,
+.dashboard-settings-modal .settings-list-cols-company-edit {
+    grid-template-columns: repeat(5, minmax(170px, 1fr));
+}
+
+.dashboard-settings-modal .settings-list-cols-shift-create {
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1.1fr) minmax(190px, 0.72fr);
+    align-items: start;
+    gap: 0.65rem;
+}
+
+.dashboard-settings-modal .settings-shift-create-column {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+}
+
+.dashboard-settings-modal .settings-shift-create-column .settings-field-departments,
+.dashboard-settings-modal .settings-shift-create-column .settings-field-shift-name,
+.dashboard-settings-modal .settings-shift-create-column .settings-field-shift-kind {
+    grid-column: 1 / -1;
+}
+
+.dashboard-settings-modal .settings-shift-create-actions {
+    align-content: end;
+    justify-items: stretch;
+    gap: 0.5rem;
+}
+
+.dashboard-settings-modal .settings-shift-create-actions .admin-action-link {
+    width: 100%;
+    max-width: none;
+}
+
+.dashboard-settings-modal .settings-list-cols-shift-edit {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    align-items: start;
+}
+
+.dashboard-settings-modal .settings-list-cols-shift-edit .settings-field-wide,
+.dashboard-settings-modal .settings-list-cols-shift-edit .settings-field-departments {
+    grid-column: 1 / -1;
+}
+
+.dashboard-settings-modal .settings-list-cols-shift-edit .settings-inline-actions,
+.dashboard-settings-modal [data-user-create-row] .settings-inline-actions,
+.dashboard-settings-modal [data-shift-create-row] .settings-inline-actions,
+.dashboard-settings-modal [data-dept-create-row] .settings-inline-actions,
+.dashboard-settings-modal [data-company-create-row] .settings-inline-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    justify-self: stretch;
+    flex-wrap: wrap;
+}
+
+.dashboard-settings-modal .settings-edit-drawer .settings-inline-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
 }
 
 .settings-card.is-selected {
@@ -3548,9 +3761,10 @@ body.route-my-space {
 /* Print modal controls are text-based; keep them fluid and readable. */
 .dashboard-modal .dashboard-print-actions .dashboard-sidebar-control-button,
 .crud-modal .dashboard-print-actions .dashboard-sidebar-control-button {
-    width: auto;
+    width: 100%;
     height: auto;
-    min-width: max-content;
+    min-width: 0;
+    max-width: 100%;
     min-height: 38px;
     padding: 0.4rem 0.75rem;
     font-size: 0.92rem;

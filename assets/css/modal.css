@@ -271,13 +271,47 @@
 .dashboard-settings-modal .crud-modal-card {
     width: calc(100vw - 20px);
     max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
     overflow: visible;
 }
 
 .dashboard-settings-modal .crud-modal-body {
-    max-height: calc(100vh - 128px);
+    max-height: calc(100vh - 210px);
     overflow: auto;
     padding-right: 0.15rem;
+}
+
+.dashboard-settings-modal.has-active-tab .settings-summary--compact {
+    display: none;
+}
+
+.dashboard-settings-modal.has-active-tab .settings-modal-head {
+    gap: 0.35rem;
+}
+
+.dashboard-settings-modal.has-active-tab .crud-modal-body {
+    max-height: calc(100vh - 150px);
+}
+
+.dashboard-settings-modal.has-active-tab .settings-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    margin-top: 0;
+    background: linear-gradient(180deg, #122b4b 0%, #081a34 100%);
+    padding-top: 0.25rem;
+    padding-bottom: 0.4rem;
+}
+
+.dashboard-settings-modal .settings-modal-body {
+    align-content: start;
+}
+
+.dashboard-settings-modal .settings-list-head,
+.dashboard-settings-modal .settings-edit-drawer,
+.dashboard-settings-modal .settings-list-wrap,
+.dashboard-settings-modal .settings-list-item-wrap {
+    overflow: visible;
 }
 
 .dashboard-settings-modal .crud-modal-body:has(.settings-picker-stack.is-open),
@@ -407,9 +441,9 @@
 
 .dashboard-print-actions {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0.32rem;
-    align-items: center;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.4rem;
+    align-items: stretch;
 }
 
 .dashboard-print-actions .dashboard-sidebar-control-button {
@@ -418,6 +452,9 @@
     white-space: nowrap;
     width: 100%;
     min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .dashboard-print-feedback {

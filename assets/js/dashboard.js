@@ -1205,6 +1205,14 @@
           }
         });
 
+        settingsModal.classList.toggle('has-active-tab', Boolean(tabName));
+
+        if (tabName) {
+          const modalBody = settingsModal.querySelector('.crud-modal-body');
+          if (modalBody) modalBody.scrollTop = 0;
+          settingsModal.scrollTop = 0;
+        }
+
         if (tabInput) {
           tabInput.value = tabName || '';
         }
@@ -1220,6 +1228,8 @@
           panel.classList.remove('is-active');
           panel.hidden = true;
         });
+
+        settingsModal.classList.remove('has-active-tab');
       };
 
       tabButtons.forEach((button) => {
@@ -1425,6 +1435,14 @@
       }
     };
 
+    const saveAssignmentRules = (rules) => {
+      try {
+        window.localStorage.setItem(RULES_STORAGE_KEY, JSON.stringify(rules && typeof rules === 'object' ? rules : {}));
+      } catch (_error) {
+        // Ignore storage failures.
+      }
+    };
+
     const toLocalDate = (value) => {
       if (!value) return new Date();
       const candidate = new Date(`${value}T12:00:00`);
@@ -1489,9 +1507,7 @@
 
     const sidebarPlanState = {
       departmentId: 0,
-      countsByShiftId: {},
-      restDays: 2,
-      distribution: 'balanced',
+      weekdayAssignments: {},
       periodMode: 'auto',
       weekStart: dateKey(startOfWeek(calendarToday)),
       monthKey: dateKey(calendarToday).slice(0, 7),
@@ -1951,17 +1967,24 @@
       if (!activeDepartment) return;
       const departmentId = Number(activeDepartment.id || 0);
       const workShifts = (activeDepartment.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+      const restShift = (activeDepartment.shifts || []).find((shift) => String(shift?.kind || '').toLowerCase() === 'rest') || null;
+
+      const buildDefaultWeekdayAssignments = () => {
+        const firstShiftId = Number(workShifts[0]?.id || 0);
+        const defaults = {};
+        for (let weekdayIndex = 0; weekdayIndex < 7; weekdayIndex += 1) {
+          if (weekdayIndex >= 5) {
+            defaults[String(weekdayIndex)] = restShift ? `rest:${Number(restShift.id || 0)}` : 'rest';
+          } else {
+            defaults[String(weekdayIndex)] = firstShiftId > 0 ? String(firstShiftId) : 'work';
+          }
+        }
+        return defaults;
+      };
 
       if (sidebarPlanState.departmentId !== departmentId) {
-        const firstShiftId = Number(workShifts[0]?.id || 0);
-        const countsByShiftId = {};
-        workShifts.forEach((shift, index) => {
-          countsByShiftId[String(shift.id)] = index === 0 ? 5 : 0;
-        });
         sidebarPlanState.departmentId = departmentId;
-        sidebarPlanState.countsByShiftId = countsByShiftId;
-        sidebarPlanState.restDays = 2;
-        sidebarPlanState.distribution = 'balanced';
+        sidebarPlanState.weekdayAssignments = buildDefaultWeekdayAssignments();
         sidebarPlanState.periodMode = 'auto';
         sidebarPlanState.weekStart = dateKey(startOfWeek(state.focusDate));
         sidebarPlanState.monthKey = dateKey(state.focusDate).slice(0, 7);
@@ -1975,17 +1998,21 @@
         return;
       }
 
-      const nextCounts = {};
-      workShifts.forEach((shift) => {
-        const key = String(shift.id);
-        nextCounts[key] = Number(sidebarPlanState.countsByShiftId[key] || 0);
-      });
-
-      const currentTotal = Object.values(nextCounts).reduce((sum, value) => sum + Number(value || 0), 0);
-      if (currentTotal === 0 && workShifts.length > 0) {
-        nextCounts[String(workShifts[0].id)] = Math.max(0, 7 - Number(sidebarPlanState.restDays || 0));
+      if (!sidebarPlanState.weekdayAssignments || Object.keys(sidebarPlanState.weekdayAssignments).length !== 7) {
+        sidebarPlanState.weekdayAssignments = buildDefaultWeekdayAssignments();
       }
-      sidebarPlanState.countsByShiftId = nextCounts;
+
+      for (let weekdayIndex = 0; weekdayIndex < 7; weekdayIndex += 1) {
+        const key = String(weekdayIndex);
+        const currentValue = String(sidebarPlanState.weekdayAssignments[key] || '').trim();
+        const isRestValue = currentValue === 'rest' || currentValue.startsWith('rest:');
+        const isExistingWorkShift = workShifts.some((shift) => String(shift.id) === currentValue);
+        if (!isRestValue && !isExistingWorkShift) {
+          sidebarPlanState.weekdayAssignments[key] = weekdayIndex >= 5
+            ? (restShift ? `rest:${Number(restShift.id || 0)}` : 'rest')
+            : (String(workShifts[0]?.id || '') || 'work');
+        }
+      }
     };
 
     const getSidebarPlanRange = () => {
@@ -2012,54 +2039,63 @@
       return { startDate: new Date(range.start), endDate: new Date(range.end), label: tr('Current calendar view', 'Vue calendrier courante') };
     };
 
-    const buildWeekPattern = (entries, strategy) => {
-      const list = Array.isArray(entries) ? entries.filter((entry) => Number(entry.count || 0) > 0) : [];
-      if (!list.length) return [];
+    const getSidebarWeekdayPlan = () => {
+      const activeDepartment = getActiveDepartment();
+      const workShifts = (activeDepartment?.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+      const restShift = getActiveRestTemplateShift();
+      const weekPattern = [];
 
-      if (strategy === 'consecutive') {
-        const sequence = [];
-        list.forEach((entry) => {
-          for (let index = 0; index < Number(entry.count || 0); index += 1) {
-            sequence.push({ type: entry.type, shiftId: Number(entry.shiftId || 0), label: entry.label });
-          }
+      for (let weekdayIndex = 0; weekdayIndex < 7; weekdayIndex += 1) {
+        const rawValue = String(sidebarPlanState.weekdayAssignments[String(weekdayIndex)] || '').trim();
+        if (!rawValue) {
+          weekPattern.push(null);
+          continue;
+        }
+
+        if (rawValue === 'rest' || rawValue.startsWith('rest:')) {
+          weekPattern.push({
+            type: 'rest',
+            shiftId: Number(restShift?.id || rawValue.split(':')[1] || 0),
+            label: tr('Rest day', 'Repos'),
+          });
+          continue;
+        }
+
+        const shiftId = Number(rawValue || 0);
+        const shift = workShifts.find((item) => Number(item.id || 0) === shiftId) || null;
+        weekPattern.push({
+          type: 'work',
+          shiftId,
+          label: shift ? summarizeShiftName(shift) : tr('Work day', 'Jour de travail'),
         });
-        return sequence;
       }
 
-      const buckets = list.map((entry) => ({
-        type: entry.type,
-        shiftId: Number(entry.shiftId || 0),
-        label: entry.label,
-        remaining: Number(entry.count || 0),
-      }));
+      return weekPattern;
+    };
 
-      const sequence = [];
-      let previousType = '';
-      let previousShiftId = 0;
-
-      while (sequence.length < 7) {
-        const available = buckets.filter((entry) => entry.remaining > 0);
-        if (!available.length) break;
-
-        available.sort((left, right) => {
-          if (strategy === 'alternating') {
-            const leftPenalty = (left.type === previousType && left.shiftId === previousShiftId) ? 1 : 0;
-            const rightPenalty = (right.type === previousType && right.shiftId === previousShiftId) ? 1 : 0;
-            if (leftPenalty !== rightPenalty) return leftPenalty - rightPenalty;
-          }
-          if (right.remaining !== left.remaining) return right.remaining - left.remaining;
-          if (left.type !== right.type) return left.type.localeCompare(right.type);
-          return left.shiftId - right.shiftId;
-        });
-
-        const picked = available[0];
-        picked.remaining -= 1;
-        sequence.push({ type: picked.type, shiftId: picked.shiftId, label: picked.label });
-        previousType = picked.type;
-        previousShiftId = picked.shiftId;
+    const syncSidebarPlanRulesForActiveUser = () => {
+      const activeUser = getActiveUser();
+      if (!activeUser) return;
+      const rules = loadAssignmentRules();
+      const userKey = String(Number(activeUser.id || 0));
+      const existingRule = (rules[userKey] && typeof rules[userKey] === 'object') ? rules[userKey] : {};
+      const offWeekdays = [];
+      for (let weekdayIndex = 0; weekdayIndex < 7; weekdayIndex += 1) {
+        const rawValue = String(sidebarPlanState.weekdayAssignments[String(weekdayIndex)] || '').trim();
+        if (rawValue === 'rest' || rawValue.startsWith('rest:')) {
+          offWeekdays.push((weekdayIndex + 1) % 7);
+        }
       }
-
-      return sequence;
+      rules[userKey] = {
+        scope: String(existingRule.scope || 'all'),
+        off_weekdays: offWeekdays,
+        special_dates: Array.isArray(existingRule.special_dates) ? existingRule.special_dates : [],
+        monthly_overrides: existingRule.monthly_overrides && typeof existingRule.monthly_overrides === 'object' ? existingRule.monthly_overrides : {},
+        rotating: existingRule.rotating && typeof existingRule.rotating === 'object'
+          ? existingRule.rotating
+          : { enabled: false, start_month: dateKey(state.focusDate).slice(0, 7) },
+      };
+      saveAssignmentRules(rules);
     };
 
     const getExistingAssignmentsByUserAndDate = (userId, dateValue) => {
@@ -2093,16 +2129,8 @@
       const workShifts = (activeDepartment.shifts || []).filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
       const allShifts = (activeDepartment.shifts || []).slice();
       const restShift = getActiveRestTemplateShift();
-      const countsByShift = workShifts.map((shift) => ({
-        type: 'work',
-        shiftId: Number(shift.id || 0),
-        count: Math.max(0, Number(sidebarPlanState.countsByShiftId[String(shift.id)] || 0)),
-        label: summarizeShiftName(shift),
-      }));
-      const restDays = Math.max(0, Number(sidebarPlanState.restDays || 0));
-      const totalDays = countsByShift.reduce((sum, entry) => sum + Number(entry.count || 0), 0) + restDays;
-
-      if (totalDays !== 7) {
+      const weekPattern = getSidebarWeekdayPlan();
+      if (weekPattern.length !== 7 || weekPattern.some((entry) => !entry)) {
         return {
           items: [],
           summary: {
@@ -2115,31 +2143,7 @@
             alreadyAssigned: 0,
             rangeLabel: '',
           },
-          error: tr('Weekly distribution must equal 7 days.', 'La distribution hebdomadaire doit etre egale a 7 jours.'),
-        };
-      }
-
-      const distributionEntries = [...countsByShift, {
-        type: 'rest',
-        shiftId: Number(restShift?.id || 0),
-        count: restDays,
-        label: tr('Rest day', 'Repos'),
-      }];
-      const weekPattern = buildWeekPattern(distributionEntries, String(sidebarPlanState.distribution || 'balanced'));
-      if (weekPattern.length !== 7) {
-        return {
-          items: [],
-          summary: {
-            total: 0,
-            planned: 0,
-            available: 0,
-            conflicts: 0,
-            past: 0,
-            unavailable: 0,
-            alreadyAssigned: 0,
-            rangeLabel: '',
-          },
-          error: tr('Unable to build a weekly pattern. Adjust the distribution.', 'Impossible de generer un schema hebdomadaire. Ajustez la distribution.'),
+          error: tr('Choose one shift or rest day for each weekday.', 'Choisissez un poste ou un repos pour chaque jour de la semaine.'),
         };
       }
 
@@ -2507,9 +2511,10 @@
     const setExpandedPlanStep = (planFlow, stepValue) => {
       if (!planFlow) return;
       const activeUser = getActiveUser();
-      const workDayTotal = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, value) => sum + Math.max(0, Number(value || 0)), 0);
-      const restDays = Math.max(0, Number(sidebarPlanState.restDays || 0));
-      const distributionValid = (workDayTotal + restDays) === 7;
+      const weekdayAssignments = sidebarPlanState.weekdayAssignments && typeof sidebarPlanState.weekdayAssignments === 'object'
+        ? Object.values(sidebarPlanState.weekdayAssignments).filter((value) => String(value || '').trim() !== '')
+        : [];
+      const distributionValid = weekdayAssignments.length === 7;
       const hasPreview = Array.isArray(sidebarPlanState.preview) && sidebarPlanState.preview.length > 0;
       const maxUnlockedStep = !activeUser ? 1 : (!distributionValid ? 2 : (!hasPreview ? 3 : 4));
 
@@ -2652,6 +2657,7 @@
       const users = activeDepartment.users || [];
       const shifts = activeDepartment.shifts || [];
       const workShifts = shifts.filter((shift) => String(shift?.kind || 'work').toLowerCase() === 'work');
+      const restShift = getActiveRestTemplateShift();
 
       ensureSidebarPlanDefaults(activeDepartment);
       if (workShifts.length > 0 && !workShifts.some((shift) => Number(shift.id) === Number(state.activeShiftId))) {
@@ -2665,15 +2671,19 @@
       const activeUserName = activeUser
         ? `${activeUser.first_name || ''} ${activeUser.last_name || ''}`.trim() || `${tr('Employee', 'Employe')} #${activeUser.id}`
         : '';
-      const distributionOptions = [
-        { value: 'balanced', label: tr('Balanced', 'Equilibre') },
-        { value: 'alternating', label: tr('Alternating', 'Alterne') },
-        { value: 'consecutive', label: tr('Consecutive blocks', 'Blocs consecutifs') },
-      ];
       const periodOptions = [
         { value: 'auto', label: tr('Current calendar view', 'Vue calendrier courante') },
         { value: 'week', label: tr('Specific week', 'Semaine specifique') },
         { value: 'month', label: tr('Full month', 'Mois complet') },
+      ];
+      const weekdayLabels = [
+        tr('Monday', 'Lundi'),
+        tr('Tuesday', 'Mardi'),
+        tr('Wednesday', 'Mercredi'),
+        tr('Thursday', 'Jeudi'),
+        tr('Friday', 'Vendredi'),
+        tr('Saturday', 'Samedi'),
+        tr('Sunday', 'Dimanche'),
       ];
       plannerDetail.innerHTML = `
         <div class="dashboard-sidebar-planner-title">
@@ -2722,27 +2732,24 @@
           </div>
           <div class="dashboard-sidebar-plan-step" data-plan-step="2">
             <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="2" role="button" tabindex="0" aria-expanded="false">
-              <span>${tr('Step 2', 'Etape 2')}: ${tr('Define weekly distribution', 'Definir la distribution hebdomadaire')}</span>
+              <span>${tr('Step 2', 'Etape 2')}: ${tr('Choose working and rest days', 'Choisir les jours de travail et de repos')}</span>
               <span class="dashboard-sidebar-plan-step-chevron" aria-hidden="true">▸</span>
             </strong>
-            <div class="dashboard-sidebar-plan-grid">
-              ${workShifts.map((shift) => `
-                <label class="dashboard-sidebar-plan-count-row">
-                  <span>${escapeHtml(shift.name || tr('Shift', 'Poste'))}</span>
-                  <input type="number" min="0" max="7" step="1" value="${Math.max(0, Number(sidebarPlanState.countsByShiftId[String(shift.id)] || 0))}" data-sidebar-plan-shift-count="${shift.id}">
-                </label>
-              `).join('')}
-              <label class="dashboard-sidebar-plan-count-row">
-                <span>${tr('Rest days / week', 'Jours de repos / semaine')}</span>
-                <input type="number" min="0" max="7" step="1" value="${Math.max(0, Number(sidebarPlanState.restDays || 0))}" data-sidebar-plan-rest-days>
-              </label>
+            <div class="dashboard-sidebar-plan-week-grid">
+              ${weekdayLabels.map((label, weekdayIndex) => {
+                const selectedValue = String(sidebarPlanState.weekdayAssignments[String(weekdayIndex)] || '');
+                return `
+                  <label class="dashboard-sidebar-plan-select-row dashboard-sidebar-plan-weekday-row">
+                    <span>${escapeHtml(label)}</span>
+                    <select data-sidebar-plan-weekday="${weekdayIndex}">
+                      ${workShifts.map((shift) => `<option value="${shift.id}" ${String(shift.id) === selectedValue ? 'selected' : ''}>${escapeHtml(summarizeShiftName(shift))}</option>`).join('')}
+                      <option value="${escapeHtml(restShift ? `rest:${Number(restShift.id || 0)}` : 'rest')}" ${(selectedValue === 'rest' || selectedValue.startsWith('rest:')) ? 'selected' : ''}>${escapeHtml(tr('Rest day', 'Jour de repos'))}</option>
+                    </select>
+                  </label>
+                `;
+              }).join('')}
             </div>
-            <label class="dashboard-sidebar-plan-select-row">
-              <span>${tr('Distribution mode', 'Mode de distribution')}</span>
-              <select data-sidebar-plan-distribution>
-                ${distributionOptions.map((option) => `<option value="${option.value}" ${option.value === sidebarPlanState.distribution ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
-              </select>
-            </label>
+            <p>${tr('Choose one rule per weekday: work on a specific shift or weekly rest.', 'Choisissez une regle par jour : travail sur un poste precis ou repos hebdomadaire.')}</p>
           </div>
           <div class="dashboard-sidebar-plan-step" data-plan-step="3">
             <strong class="dashboard-sidebar-plan-step-title" data-sidebar-plan-step-title="3" role="button" tabindex="0" aria-expanded="false">
@@ -2834,41 +2841,17 @@
         return;
       }
 
-      planFlow.querySelectorAll('[data-sidebar-plan-shift-count]').forEach((input) => {
+      planFlow.querySelectorAll('[data-sidebar-plan-weekday]').forEach((input) => {
         input.addEventListener('change', () => {
-          const shiftId = String(input.getAttribute('data-sidebar-plan-shift-count') || '0');
-          const value = Math.max(0, Math.min(7, Number(input.value || 0)));
-          sidebarPlanState.countsByShiftId[shiftId] = value;
+          const weekdayIndex = String(input.getAttribute('data-sidebar-plan-weekday') || '');
+          sidebarPlanState.weekdayAssignments[weekdayIndex] = String(input.value || '');
           sidebarPlanState.preview = [];
           sidebarPlanState.summary = null;
           sidebarPlanState.dayOverrides = {};
-          const total = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0) + Math.max(0, Number(sidebarPlanState.restDays || 0));
-          setExpandedPlanStep(planFlow, total === 7 ? '3' : '2');
+          syncSidebarPlanRulesForActiveUser();
+          setExpandedPlanStep(planFlow, '2');
         });
       });
-
-      const restDaysInput = planFlow.querySelector('[data-sidebar-plan-rest-days]');
-      if (restDaysInput) {
-        restDaysInput.addEventListener('change', () => {
-          sidebarPlanState.restDays = Math.max(0, Math.min(7, Number(restDaysInput.value || 0)));
-          sidebarPlanState.preview = [];
-          sidebarPlanState.summary = null;
-          sidebarPlanState.dayOverrides = {};
-          const total = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0) + Math.max(0, Number(sidebarPlanState.restDays || 0));
-          setExpandedPlanStep(planFlow, total === 7 ? '3' : '2');
-        });
-      }
-
-      const distributionInput = planFlow.querySelector('[data-sidebar-plan-distribution]');
-      if (distributionInput) {
-        distributionInput.addEventListener('change', () => {
-          sidebarPlanState.distribution = distributionInput.value || 'balanced';
-          sidebarPlanState.preview = [];
-          sidebarPlanState.summary = null;
-          sidebarPlanState.dayOverrides = {};
-          setExpandedPlanStep(planFlow, '3');
-        });
-      }
 
       const periodInput = planFlow.querySelector('[data-sidebar-plan-period]');
       if (periodInput) {
@@ -2917,6 +2900,7 @@
       const previewTrigger = planFlow.querySelector('[data-sidebar-plan-preview-trigger]');
       if (previewTrigger) {
         previewTrigger.addEventListener('click', () => {
+          syncSidebarPlanRulesForActiveUser();
           handleSidebarPlanPreview(planFlow);
           const hasPreview = Array.isArray(sidebarPlanState.preview) && sidebarPlanState.preview.length > 0;
           setExpandedPlanStep(planFlow, hasPreview ? '4' : '3');
@@ -2944,10 +2928,9 @@
           error: '',
         });
       }
-      const total = Object.values(sidebarPlanState.countsByShiftId || {}).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0) + Math.max(0, Number(sidebarPlanState.restDays || 0));
       const initialStep = Array.isArray(sidebarPlanState.preview) && sidebarPlanState.preview.length > 0
         ? '4'
-        : (total === 7 ? '3' : '2');
+        : '3';
       setExpandedPlanStep(planFlow, initialStep);
     };
 
@@ -3144,18 +3127,26 @@
       });
     };
 
+    const safeDashboardInit = (label, initializer) => {
+      try {
+        initializer();
+      } catch (error) {
+        console.error(`[dashboard:${label}]`, error);
+      }
+    };
+
     if (window.DashboardSidebar && typeof window.DashboardSidebar.init === 'function') {
-      window.DashboardSidebar.init({
+      safeDashboardInit('sidebar', () => window.DashboardSidebar.init({
         sidebar,
         sidebarHandle,
         plannerDepartmentButtons,
         setActiveDepartment,
         onTransferEmployeeDepartment: transferEmployeeToDepartment,
-      });
+      }));
     }
 
     if (window.DashboardNavigator && typeof window.DashboardNavigator.init === 'function') {
-      window.DashboardNavigator.init({
+      safeDashboardInit('navigator', () => window.DashboardNavigator.init({
         navigatorPanel,
         navigatorToggleButtons,
         calendarToday,
@@ -3166,11 +3157,11 @@
         addDays,
         renderCalendar,
         updateChrome,
-      });
+      }));
     }
 
     if (window.DashboardCalendar && typeof window.DashboardCalendar.init === 'function') {
-      window.DashboardCalendar.init({
+      safeDashboardInit('calendar', () => window.DashboardCalendar.init({
         calendarShell,
         events,
         attendances,
@@ -3185,11 +3176,11 @@
         getActiveShift,
         getAbsenceTemplateShiftId,
         getAbsenceTemplateShift,
-      });
+      }));
     }
 
     if (window.DashboardDnd && typeof window.DashboardDnd.init === 'function') {
-      window.DashboardDnd.init({
+      safeDashboardInit('dnd', () => window.DashboardDnd.init({
         calendarShell,
         state,
         events,
@@ -3199,13 +3190,12 @@
         safeParseJson,
         isUserAvailableForDate,
         getUserAvailabilityStatus,
-      });
+      }));
     }
 
-    initCalendarRangePicker();
-
-    renderSidebarPlanner();
-    renderCalendar();
-    publishPlannerRuntime();
+    safeDashboardInit('range-picker', () => initCalendarRangePicker());
+    safeDashboardInit('sidebar-render', () => renderSidebarPlanner());
+    safeDashboardInit('calendar-render', () => renderCalendar());
+    safeDashboardInit('runtime-publish', () => publishPlannerRuntime());
   })();
 })();

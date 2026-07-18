@@ -181,13 +181,29 @@
     .settings-list-cols-assignment-edit,
     .settings-list-cols-company,
     .settings-list-cols-company-edit,
+    .settings-list-cols-hours-report,
     .settings-list-cols-role,
     .settings-list-cols-role-edit {
         grid-template-columns: 1fr;
     }
 
+    .dashboard-settings-modal .settings-list-cols-user-create,
+    .dashboard-settings-modal .settings-list-cols-user-edit,
+    .dashboard-settings-modal .settings-list-cols-dept-create,
+    .dashboard-settings-modal .settings-list-cols-dept-edit,
+    .dashboard-settings-modal .settings-list-cols-company-edit,
+    .dashboard-settings-modal .settings-list-cols-shift-edit,
+    .dashboard-settings-modal .settings-list-cols-role-edit,
+    .dashboard-settings-modal .settings-list-cols-assignment-edit {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
     .settings-auto-rule-specials {
         grid-template-columns: 1fr;
+    }
+
+    .settings-attendance-hours-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
 
     .settings-list-cols-shift-create {
@@ -198,8 +214,8 @@
 
     .settings-create-row .settings-list-cols.settings-list-cols-shift-create,
     .settings-auto-assign-row .settings-list-cols.settings-list-cols-shift-create {
-        grid-template-columns: 1fr;
-        align-items: stretch;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        align-items: end;
         max-height: none;
         overflow: visible;
         padding-right: 0;
@@ -209,12 +225,24 @@
         grid-template-columns: 1fr;
     }
 
+    .settings-shift-advanced-grid {
+        grid-template-columns: 1fr;
+    }
+
     .settings-shift-create-actions {
         grid-template-columns: 1fr;
     }
 
     .settings-list-cols-shift-edit {
         grid-template-columns: 1fr;
+    }
+
+    .dashboard-settings-modal .settings-list-cols-shift-create {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-settings-modal .settings-shift-create-column {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .settings-shift-create-actions .admin-action-link {
@@ -525,6 +553,10 @@
     .settings-list-cols-company-edit,
     .settings-list-cols-role,
     .settings-list-cols-role-edit {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-settings-modal .settings-shift-create-column {
         grid-template-columns: 1fr;
     }
 

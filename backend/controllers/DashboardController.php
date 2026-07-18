@@ -101,6 +101,7 @@ $dashboardPlannerData = [
     'today' => $dashboardCalendarToday,
     'mode' => $dashboardCalendarMode,
     'assignments' => [],
+    'monthly_hours_plans' => [],
 ];
 
 $resolvePreferredDepartmentId = static function (array $departmentRows, string $preferredName = 'reception'): ?int {
@@ -579,6 +580,29 @@ if (($dashboardPlannerData['company']['logo_path'] ?? null) === null) {
             $dashboardPlannerData['company']['logo_path'] = $fallbackCompany['logo_path'] ?? null;
         }
     }
+}
+
+$plannerUserIds = array_values(array_unique(array_filter(array_map(
+    static fn (array $userRow): int => (int) ($userRow['id'] ?? 0),
+    is_array($dashboardPlannerData['users'] ?? null) ? $dashboardPlannerData['users'] : []
+), static fn (int $id): bool => $id > 0)));
+if (!empty($plannerUserIds)) {
+    $userPlaceholders = implode(', ', array_fill(0, count($plannerUserIds), '?'));
+    $planStatement = $pdo->prepare(
+        'SELECT id,
+                user_id,
+                month_key,
+                planned_hours,
+                worked_hours_override,
+                note,
+                updated_by_user_id,
+                updated_at
+         FROM user_month_hours_plans
+         WHERE user_id IN (' . $userPlaceholders . ')
+         ORDER BY month_key DESC, user_id ASC'
+    );
+    $planStatement->execute($plannerUserIds);
+    $dashboardPlannerData['monthly_hours_plans'] = $planStatement->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
 $stats = [
